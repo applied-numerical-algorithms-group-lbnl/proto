@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     double maxTime = 1.0;
     int outputInterval = 1;
     double t0 = 0.0;
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     periodicity.fill(true);
 
     InputArgs args;
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     DisjointBoxLayout layout(domain, boxSizeVect);
 
     double physDomainSize = 1.0;
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     dx.fill(physDomainSize / domainSize);
     double dt = 0.5 / domainSize;
 

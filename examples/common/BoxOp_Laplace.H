@@ -15,7 +15,7 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
 
     inline BoxOp_Laplace() : BoxOp<T, 1, 0, MEM>() {}
     inline BoxOp_Laplace(double a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
-    inline BoxOp_Laplace(std::array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
+    inline BoxOp_Laplace(Array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
 
     inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
     inline void flux(

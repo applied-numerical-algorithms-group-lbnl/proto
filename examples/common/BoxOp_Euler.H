@@ -147,7 +147,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     inline static constexpr int order() { return 4; }
     
     inline BoxOp_Euler() : BoxOp<T, NUMCOMPS, 1, MEM>() {}
-    inline BoxOp_Euler(std::array<double, DIM> a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
+    inline BoxOp_Euler(Array<double, DIM> a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
     inline BoxOp_Euler(double a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
     
     // Initialization
@@ -212,7 +212,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     // Apply Operator
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_Rhs,
-            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            Array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
             const BoxData<T, NUMCOMPS>&             a_U,
             T                                       a_scale = 1.0) const
     {

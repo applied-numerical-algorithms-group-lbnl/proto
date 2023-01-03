@@ -74,7 +74,7 @@ PROTO_KERNEL_END(f_stageUpdateF,f_stageUpdate)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 AMRRK4<OpType,T,C,MEM>::AMRRK4(
         AMRData<T, C, MEM>& a_data,
-        const std::array<T, DIM>& a_dx)
+        const Array<T, DIM>& a_dx)
 {
     define(a_data, a_dx, 0);
 }
@@ -91,7 +91,7 @@ void trimVector(std::vector<T>& a_vector, unsigned int a_size)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
         AMRData<T, C, MEM>& a_data,
-        const std::array<T, DIM>& a_dx)
+        const Array<T, DIM>& a_dx)
 {
     define(a_data, a_dx, 0);
 }
@@ -99,7 +99,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
         AMRData<T, C, MEM>& a_data,
-        const std::array<T, DIM>& a_dx,
+        const Array<T, DIM>& a_dx,
         int                 a_level)
 {
 
@@ -126,7 +126,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
         m_cfInterp.resize(numLevels - 1);
         
         m_data = &a_data;
-        std::array<T, DIM> dx = a_dx;
+        Array<T, DIM> dx = a_dx;
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
@@ -178,7 +178,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
         m_data = &a_data;
 
-        std::array<T, DIM> dx = a_dx;
+        Array<T, DIM> dx = a_dx;
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
@@ -361,7 +361,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
         auto& U0_i       = U0[*iter];
         auto& RHSTotal_i = RHSTotal[*iter];
 
-        std::array<BoxData<T, C, MEM>, DIM> fluxes;
+        Array<BoxData<T, C, MEM>, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
             fluxes[dir].define(layout[*iter].grow(dir, Side::Hi, 1));

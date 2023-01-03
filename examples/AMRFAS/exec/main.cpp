@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     int solveIter = 20;
     double tolerance = 1e-10;
     int refRatio = 4;
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     periodicity.fill(true);
     
     InputArgs args;
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     for (int nn = 0; nn < numIter; nn++)
     {
         // GRIDS
-        std::array<double, DIM> dx;
+        Array<double, DIM> dx;
         dx.fill(physDomainSize / domainSize);
         
         std::vector<Point> refRatios;

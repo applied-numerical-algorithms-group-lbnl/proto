@@ -12,7 +12,7 @@ AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, T a_cdx)
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
+AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
 {
     define(a_grid, a_cdx);
 }
@@ -20,13 +20,13 @@ AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, T a_cdx)
 {
-    std::array<T, DIM> cdx;
+    Array<T, DIM> cdx;
     cdx.fill(a_cdx);
     define(a_grid, cdx);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
+void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
 {
     int numLevels = a_grid.numLevels();
     m_dx.clear();

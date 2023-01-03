@@ -9,7 +9,7 @@ LevelOp<OpType, T, MEM>::LevelOp(T a_dx)
 }
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
-LevelOp<OpType, T, MEM>::LevelOp(std::array<T, DIM> a_dx)
+LevelOp<OpType, T, MEM>::LevelOp(Array<T, DIM> a_dx)
 {
     define(a_dx);
 }
@@ -17,13 +17,13 @@ LevelOp<OpType, T, MEM>::LevelOp(std::array<T, DIM> a_dx)
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::define(T a_dx)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_dx);
     define(dx);
 }
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::define(std::array<T, DIM> a_dx)
+void LevelOp<OpType, T, MEM>::define(Array<T, DIM> a_dx)
 {
     m_op.define(a_dx);
 }
@@ -62,7 +62,7 @@ void LevelOp<OpType, T, MEM>::operator()(
     {
         auto& out_i = a_output[iter];
         const auto& state_i = a_state[iter];
-        std::array<StateData, DIM> fluxes;
+        Array<StateData, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
             fluxes[dir].define(out_i.box().grow(dir, Side::Hi, 1));
@@ -89,7 +89,7 @@ void LevelOp<OpType, T, MEM>::setTime(T a_time)
 }
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
-std::array<T, DIM> LevelOp<OpType, T, MEM>::dx() const
+Array<T, DIM> LevelOp<OpType, T, MEM>::dx() const
 {
     return m_op.dx();
 }

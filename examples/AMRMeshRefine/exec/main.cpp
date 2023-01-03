@@ -23,7 +23,7 @@ PROTO_KERNEL_END(f_sin_0, f_sin);
 PROTO_KERNEL_START
 void f_tags_line_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     for (int ii = 0; ii < DIM; ii++)
     {
         x[ii] = (a_pt[ii] - a_origin[ii])*a_dx + a_dx/2.0;
@@ -41,7 +41,7 @@ PROTO_KERNEL_END(f_tags_line_0, f_tags_line);
 PROTO_KERNEL_START
 void f_tags_sphere_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     double r = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -75,7 +75,7 @@ PROTO_KERNEL_END(f_tags_corner_0, f_tags_corner);
 PROTO_KERNEL_START
 void f_gaussian_0(Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, double a_sigma)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     double rr = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     int refRatio = 2;
     int nestingDistance = 1;
     int TEST = -1;
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
     InputArgs args;

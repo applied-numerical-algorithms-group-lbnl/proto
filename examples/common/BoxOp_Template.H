@@ -22,7 +22,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
 
     inline BoxOp_Template() : BoxOp<T, 1, 0, MEM>() {}
     inline BoxOp_Template(double a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
-    inline BoxOp_Template(std::array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx)
+    inline BoxOp_Template(Array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx)
     {
         // Fill this out as needed if the operator has state other than that defined in BoxOp.H
         // or provided by auxiliary data
@@ -73,7 +73,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     /*
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_output,
-            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            Array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
             const BoxData<T, NUCOMPS>&              a_state,
             T                                       a_scale = 1.0) const
     {
@@ -127,7 +127,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     /*
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_output,
-            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            Array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
             const BoxData<T, NUCOMPS>&              a_state,
             const AuxData&                          a_aux,
             T                                       a_scale = 1.0) const

@@ -2,7 +2,7 @@ template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 AMRSolver_FASMultigrid<OpType, T, MEM>::AMRSolver_FASMultigrid(
     AMRGrid& a_grid,
-    std::array<T, DIM>&   a_dx)
+    Array<T, DIM>&   a_dx)
 {
     define(a_grid, a_dx);
 }
@@ -12,7 +12,7 @@ template<template<typename, MemType> class OpType,
 void
 AMRSolver_FASMultigrid<OpType, T, MEM>::define(
     AMRGrid& a_grid,
-    std::array<T, DIM>&   a_dx)
+    Array<T, DIM>&   a_dx)
 {
     m_residual.define(a_grid, Point::Zeros());
     m_amrOp = std::make_shared<AMROP>(a_grid, a_dx);

@@ -4,7 +4,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
-    std::array<T, DIM> a_dx)
+    Array<T, DIM> a_dx)
 {
     define(a_layout, a_refRatio, a_numLevels, a_dx);
 }
@@ -27,7 +27,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
-    std::array<T, DIM> a_dx)
+    Array<T, DIM> a_dx)
 {
     m_verbose = false;
     m_residual.define(a_layout, Point::Zeros());
@@ -43,7 +43,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::define(
     int                a_numLevels,
     T                  a_dx)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_dx);
     define(a_layout, a_refRatio, a_numLevels, dx);
 }
@@ -94,7 +94,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
     using Proto::pout;
 
     T res0 = resnorm(m_residual, a_state, a_force);
-    std::array<T, DIM> dx = m_mg->op().dx();
+    Array<T, DIM> dx = m_mg->op().dx();
     if (m_verbose)
     {
 #ifdef PR_HDF5
@@ -182,7 +182,7 @@ template<template<typename, MemType> class OpType,
 LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
-    std::array<T, DIM> a_dx,
+    Array<T, DIM> a_dx,
     int                a_level)
 {
     define(a_layout, a_refRatio, a_dx, a_level);
@@ -194,7 +194,7 @@ void
 LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
-    std::array<T, DIM> a_dx,
+    Array<T, DIM> a_dx,
     int a_level)
 {
     m_level = a_level;
@@ -234,7 +234,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
         }
         
         //FIXME: Assumes isotropic refinement
-        std::array<T, DIM> cdx;
+        Array<T, DIM> cdx;
         for (int dir = 0; dir < DIM; dir++) { cdx[dir] = a_dx[dir]*a_refRatio[dir]; }
         m_crseMG = std::make_shared<MGLevel>(crseLayout, a_refRatio, cdx, a_level - 1);
     }
