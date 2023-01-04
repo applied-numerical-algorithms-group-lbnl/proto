@@ -6,10 +6,6 @@
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBBoundaryData.H"
 
-#ifdef PR_OPS
-#include "Proto_Matrix.H"
-#endif
-
 namespace Proto
 {
     // Forward Declaration
@@ -182,6 +178,7 @@ namespace Proto
                 MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
         inline const MBBoundaryData<T, C, MEM>& bound(
                 MBIndex a_index, Point a_dir, unsigned int a_adjBlock) const;
+        inline bool compatible(const MBDisjointBoxLayout& a_layout) const;
 
         // Interpolation Interface
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point);

@@ -157,31 +157,6 @@ const DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block) 
 
 DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
 {
-    /*
-    Point boxSize = blockLayout(0).boxSize();
-    Point tileSize = Point::Zeros();
-    for (int bi = 0; bi < numBlocks(); bi++)
-    {
-        auto& layout = blockLayout(bi);
-        for (int di = 0; di < DIM; di++)
-        {
-            tileSize[di] = max(tileSize[di], layout.domain().box().high()[di]);
-            boxSize[di] = min(boxSize[di], layout.boxSize(di));
-        }
-    }
-    for (int di = 0; di < DIM; di++)
-    {
-        PROTO_ASSERT(tileSize[di] % boxSize[di] == 0, 
-                "MBDIsjointBoxLayout::levelLayout | Error: \
-                Tile size must be divisible by box size");
-        for (int bi = 0; bi < numBlocks(); bi++)
-        {
-            PROTO_ASSERT(blockLayout(bi).boxSize(di) % boxSize(di) == 0,
-                    "MBDisjointBoxLayout::levelLayout | Error: \
-                    The box sizes must be integer multiples of one another.");
-        }
-    }
-    */
     return m_layouts[0];
 }
 
@@ -204,6 +179,11 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned i
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
 {
     return m_partition->procStartIndex(a_proc);
+}
+
+bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
+{
+    return m_partition->compatible(*a_rhs.m_partition);
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

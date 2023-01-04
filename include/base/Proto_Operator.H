@@ -627,12 +627,14 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_ql2,
             const BoxData<T,1,MEM,1,1>& a_qr2);
 
+    /// Cofactor Vector On Face
     template <class T, MemType MEM>
     BoxData<T,DIM,MEM>
     cofactor(
             const BoxData<T,DIM,MEM>& a_X,
             int a_dir);
 
+    /// Compute Matrix of Cofactors
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     _cofactorMatrix(

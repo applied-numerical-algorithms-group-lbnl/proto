@@ -4,6 +4,7 @@
 #include "BoxOp_TestFlux.H"
 #include "BoxOp_TestSource.H"
 #include "BoxOp_TestDiag.H"
+
 using namespace Proto;
 
 TEST(BoxOp, Flux) {

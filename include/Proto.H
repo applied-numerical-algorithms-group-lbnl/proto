@@ -35,14 +35,14 @@
 #include "base/Proto_LevelOp.H"
 #include "base/Proto_MayDay.H"
 
+#ifdef PR_OPS
+#include "ProtoOps.H"
+#endif
 #ifdef PR_AMR
 #include "ProtoAMR.H"
 #endif
 #ifdef PR_MMB
 #include "ProtoMMB.H"
-#endif
-#ifdef PR_OPS
-#include "ProtoOps.H"
 #endif
 
 #endif

@@ -96,5 +96,9 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBInterpOpTests COMMAND MBInterpOpTests)
+        blt_add_executable(NAME MBLevelOpTests SOURCES MBLevelOpTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelOpTests COMMAND MBLevelOpTests)
     endif()
 endif()

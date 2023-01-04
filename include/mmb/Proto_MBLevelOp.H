@@ -7,7 +7,7 @@
 namespace Proto {
 
 template<template<typename, MemType> class OPType,
-    typename T, MemType MEM, typename MAP>
+    typename T, typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelOp
 {
     public:
@@ -43,7 +43,8 @@ class MBLevelOp
     MBMap<MAP, MEM>* m_map;
     std::vector<BOP> m_ops;
     
-}
+};
+
 #include "implem/Proto_MBLevelOpImplem.H"
 } // end namespace Proto
 #endif //end include guard
