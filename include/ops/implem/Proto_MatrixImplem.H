@@ -405,7 +405,10 @@ Matrix<T>::copyTo(Matrix<T>& a_rhs) const
 #ifdef PR_BLIS
     bli_copym(&m_object, &(a_rhs.m_object));
 #else
-    a_rhs.m_storage = m_storage;
+    // If we're copying a transpose, need to change order for mem linear copy
+    MatrixStorageType not_storage = 
+      (m_storage==ROW_MAJOR) ? COL_MAJOR : ROW_MAJOR;
+    a_rhs.m_storage = (m_transpose) ? not_storage : m_storage;
     proto_memcpy<HOST, HOST>(m_data.get(), a_rhs.m_data.get(), linearSize());
 #endif
 }
@@ -945,7 +948,7 @@ Matrix<T>::checkConditionNumber() const
     }
     else
     {
-        //Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 
@@ -959,9 +962,11 @@ void solveLS(Matrix<T>& A, Matrix<T>& B)
     int NRHS = B.N();
     int LDA = M;
     int LDB = std::max(M,N);
+    /*
     PROTO_ASSERT(B.M() == M,
             "solveLS | Error: Incompatible matrix dimensions. A.M() == %u, b.M() = %u.",
             A.M(), B.M());
+    */
 
     int LWORK[2] = {1,1};
     LWORK[0] = 2*M*N;
@@ -980,6 +985,40 @@ void solveLS(Matrix<T>& A, Matrix<T>& B)
             "solveLS | Error: GELS returned an error flag. Matrix may be singular.");
 }
 
+// Solve an underdetermined (min norm) Least Squares problem using SVD
+template<typename T>
+void solveUTLS(Matrix<T>& A, Matrix<T>& B)
+{
+    PR_TIME("solveUTLS");
+    /*
+    // TODO - check that the sizes of A, B and C are compatible
+    int M = A.M();
+    int N = A.N();
+    int NRHS = B.N();
+    int LDA = M;
+    int LDB = std::max(M,N);
+    PROTO_ASSERT(B.M() >= M,
+    "solveLS | Error: Incompatible matrix dimensions. A.M() == %u, b.M() = %u.",
+    A.M(), B.M());
+
+    int LWORK[2] = {1,1};
+    LWORK[0] = 2*M*N;
+
+    Matrix<T> WORK(2*M*N, 1);
+    WORK.set(0.0);
+
+    char TRANS = 'T';
+    int INFO;
+    T rcond = -1; // use machine precision
+   
+    PROTO_LAPACK(GELSD,gels)(&TRANS, &M, &N, &NRHS, A.data(), &LDA, 
+            B.data(), &LDB, WORK.data(), LWORK, &INFO);
+
+    PROTO_ASSERT(INFO == 0,
+            "solveUTLS | Error: GELSD returned an error flag.");
+    */
+}
+  
 template<typename T>
 void solveRRLS(Matrix<T>& A, Matrix<T>& b)
 {
