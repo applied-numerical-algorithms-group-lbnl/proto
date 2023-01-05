@@ -204,10 +204,10 @@ MBMap<Func, MEM>&& buildMap(
             \param a_order   Order of accuracy for differentiation (default: 4)
         */
         inline MBMap(MBDisjointBoxLayout& a_layout,
-                std::array<Point, DIM+1>& a_ghost,
+                Array<Point, DIM+1>& a_ghost,
                 unsigned int a_order = 4);
         inline void define(MBDisjointBoxLayout& a_layout,
-                std::array<Point, DIM+1>& a_ghost,
+                Array<Point, DIM+1>& a_ghost,
                 unsigned int a_order = 4);
         
         /// Compute Metric Terms
@@ -242,9 +242,9 @@ MBMap<Func, MEM>&& buildMap(
         
         // Find Cell
         inline bool contains(
-                const MBIndex& a_patch, const Point& a_cell, const std::array<T, 3>& a_X) const;
-        //inline std::vector<MBIndex> find(const std::array<T, 3>& a_X) const;
-        //inline MBIndex find(const std::array<T, 3>& a_X, unsigned int a_blockIndex) const;
+                const MBIndex& a_patch, const Point& a_cell, const Array<T, 3>& a_X) const;
+        //inline std::vector<MBIndex> find(const Array<T, 3>& a_X) const;
+        //inline MBIndex find(const Array<T, 3>& a_X, unsigned int a_blockIndex) const;
         private:
         
         unsigned int m_order;

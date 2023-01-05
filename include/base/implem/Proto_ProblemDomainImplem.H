@@ -1,17 +1,17 @@
 
-ProblemDomain::ProblemDomain(const Box& a_box, const array<bool,DIM> a_isPeriodic)
+ProblemDomain::ProblemDomain(const Box& a_box, const Array<bool,DIM> a_isPeriodic)
 {
     define(a_box,a_isPeriodic);
 }
 
 ProblemDomain::ProblemDomain(const Box& a_box, bool a_isPeriodic)
 {
-    std::array<bool, DIM> periodic;
+    Array<bool, DIM> periodic;
     for (int ii = 0; ii < DIM; ii++){periodic[ii] = a_isPeriodic;}
     define(a_box,periodic);
 }
 
-void ProblemDomain::define(const Box& a_box,const array<bool,DIM> a_isPeriodic)
+void ProblemDomain::define(const Box& a_box,const Array<bool,DIM> a_isPeriodic)
 {
     m_isDefined = true;
     m_isPeriodic = a_isPeriodic;

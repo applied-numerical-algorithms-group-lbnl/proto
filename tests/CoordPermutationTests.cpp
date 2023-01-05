@@ -5,8 +5,8 @@
 using namespace Proto;
 
 void compareMatrices(
-        std::array<std::array<int, DIM>, DIM>& M0,
-        std::array<std::array<int, DIM>, DIM>& M1)
+        Array<Array<int, DIM>, DIM>& M0,
+        Array<Array<int, DIM>, DIM>& M1)
 {
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -22,9 +22,9 @@ TEST(CoordPermutation, Identity)
     auto I = CoordPermutation::identity();
     auto M = I.matrix();
 #if DIM==2
-    std::array<std::array<int, DIM>, DIM> M0{{{{1,0}},{{0,1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{1,0}},{{0,1}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{1,0,0}},{{0,1,0}},{{0,0,1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{1,0,0}},{{0,1,0}},{{0,0,1}}}};
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
@@ -37,9 +37,9 @@ TEST(CoordPermutation, Clockwise)
     auto M = R.matrix();
     auto basis = Point::Ones().parallelUnit();
 #if DIM==2
-    std::array<std::array<int, DIM>, DIM> M0{{{{0,-1}},{{1,0}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{0,-1}},{{1,0}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{0,-1,0}},{{1,0,0}},{{0,0,1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{0,-1,0}},{{1,0,0}},{{0,0,1}}}};
     for (int ii = 0; ii < 3; ii++)
     {
         auto Ri = CoordPermutation::cw(ii);
@@ -62,9 +62,9 @@ TEST(CoordPermutation, CounterClockwise)
     auto M = R.matrix();
     auto basis = Point::Ones().parallelUnit();
 #if DIM==2
-    std::array<std::array<int, DIM>, DIM> M0{{{{0,1}},{{-1,0}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{0,1}},{{-1,0}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{0,1,0}},{{-1,0,0}},{{0,0,1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{0,1,0}},{{-1,0,0}},{{0,0,1}}}};
     for (int ii = 0; ii < 3; ii++)
     {
         auto Ri = CoordPermutation::ccw(ii);
@@ -86,9 +86,9 @@ TEST(CoordPermutation, Reverse)
     auto R = CoordPermutation::reverse();
     auto M = R.matrix();
 #if DIM==2
-    std::array<std::array<int, DIM>, DIM> M0{{{{-1,0}},{{0,-1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{-1,0}},{{0,-1}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{-1,0,0}},{{0,-1,0}},{{0,0,-1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{-1,0,0}},{{0,-1,0}},{{0,0,-1}}}};
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
@@ -100,9 +100,9 @@ TEST(CoordPermutation, InvertAxis)
     CoordPermutation R({{1,1,-1}});
     auto M = R.matrix();
 #if DIM==2
-    std::array<std::array<int, DIM>, DIM> M0{{{{1,0}},{{0,-1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{1,0}},{{0,-1}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{1,0,0}},{{0,-1,0}},{{0,0,1}}}};
+    Array<Array<int, DIM>, DIM> M0{{{{1,0,0}},{{0,-1,0}},{{0,0,1}}}};
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
@@ -149,8 +149,8 @@ TEST(CoordPermutation, Apply2D)
 
 TEST(CoordPermutation, Variadic)
 {
-    std::array<int, DIM> mapping;
-    std::array<int, DIM> mirror;
+    Array<int, DIM> mapping;
+    Array<int, DIM> mirror;
     mirror.fill(1);
     for (int ii = 0; ii < DIM; ii++)
     {

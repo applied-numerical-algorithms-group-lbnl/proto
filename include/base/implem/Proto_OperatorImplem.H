@@ -692,10 +692,10 @@ template <class T, MemType MEM>
 BoxData<T,1,MEM>
 jacobian(
         const BoxData<T,DIM,MEM>& a_X,
-        const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
     PR_TIME("Operator::jacobian");
-    std::array<BoxData<T,1,MEM>,DIM> dfdx;
+    Array<BoxData<T,1,MEM>,DIM> dfdx;
     for (int dir = 0; dir < DIM; dir++)
     {
         BoxData<T,DIM,MEM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
@@ -740,7 +740,7 @@ _edgeCrossProduct3D(
                              int a_edgedir)
 {
     PR_TIME("Operator::edgeCrossProduct");
-  std::array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
+  Array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
   for (int comp = 0; comp < DIM; comp++)
     {
       qlcomp2[comp] = slice(a_ql2,comp);
@@ -1060,11 +1060,11 @@ _matrixProductABT2(
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 _cofactorMatrix(
-        const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
         int a_dirNorm)                         
 {
   PR_TIME("Operator::cofactorMatrix");
-  array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
+  Array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
   for (int dir = 0; dir < DIM; dir++)
     {
       if (dir != a_dirNorm)
@@ -1129,7 +1129,7 @@ _faceGradient(
   // Compute different components of the gradient.
   PROTO_ASSERT((a_order == 2) || (a_order == 4),
                "_faceGradient defined only for orders = 2 and 4");
-  array<Stencil<T>,DIM> faceDerivs; 
+  Array<Stencil<T>,DIM> faceDerivs; 
   for (int dir = 0;dir < DIM;dir++)
     {
       if (dir == a_dirNorm)
@@ -1144,7 +1144,7 @@ _faceGradient(
             Stencil<T>::CellToFace(a_dirNorm,Side::Lo,a_order);
         }
     }
-  array<BoxData<T,C,MEM>,DIM> gradComps;
+  Array<BoxData<T,C,MEM>,DIM> gradComps;
   for (int dir = 0; dir < DIM; dir++)
     {
           gradComps[dir] = faceDerivs[dir](a_phi);

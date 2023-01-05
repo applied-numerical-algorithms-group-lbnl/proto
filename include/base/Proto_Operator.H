@@ -638,14 +638,14 @@ namespace Operator {
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     _cofactorMatrix(
-            const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
             int a_dirNorm);
 
     template <class T, MemType MEM>
     inline BoxData<T,1,MEM>
     jacobian(
             const BoxData<T,DIM,MEM>& a_X,
-            const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+            const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
 
     template<class T, MemType MEM>
     BoxData<T,3,MEM>

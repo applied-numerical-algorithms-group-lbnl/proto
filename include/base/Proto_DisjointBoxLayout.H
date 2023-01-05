@@ -14,7 +14,6 @@
 #include <iomanip>
 #include <stack>
 #include <memory>
-#include <array>
 #include <unordered_map>
 
 namespace Proto 

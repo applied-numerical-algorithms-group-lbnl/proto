@@ -1,5 +1,5 @@
 
-FinitePointSet::FinitePointSet(Box a_domain, std::array<bool, DIM> a_periodic)
+FinitePointSet::FinitePointSet(Box a_domain, Array<bool, DIM> a_periodic)
 {
     m_domain = ProblemDomain(a_domain, a_periodic);
 #ifdef PR_MPI

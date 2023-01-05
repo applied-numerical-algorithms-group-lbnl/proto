@@ -136,7 +136,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
    
         // fine correction stencil 
         m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
-        
+
         // define temporaries
         Point interpGhost = m_op->interpStencil(a_level-1).ghost();
         DisjointBoxLayout crseLayout = a_grid[a_level].coarsen(refRatio);

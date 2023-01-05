@@ -43,7 +43,7 @@ void MBMap<Func, MEM>::define(
         BoxData<double, DIM> X0(patch.box().grow(a_ghost[0].max()+3));
         Centering centering = PR_NODE;
         forallInPlace_p(*m_func, X0, block, blockSize, centering);
-        std::array<BoxData<double, DIM>, DIM> NT;
+        Array<BoxData<double, DIM>, DIM> NT;
         for (int d = 0; d < DIM; d++)
         {
             NT[d] = Operator::cofactor(X0, d);

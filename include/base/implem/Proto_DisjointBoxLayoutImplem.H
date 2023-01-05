@@ -1,5 +1,4 @@
 using std::shared_ptr;
-using std::array;
 
 // Default Constructor
 DisjointBoxLayout::DisjointBoxLayout()

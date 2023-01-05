@@ -1,7 +1,6 @@
 #pragma once
 #ifndef _PROTO_MORTON_H_
 #define _PROTO_MORTON_H_
-#include <array>
 #include <cstdint>
 #include <algorithm>
 #include "Proto_Point.H"
@@ -60,7 +59,7 @@ namespace Proto
         
         private:
 
-        std::array<vector<uint64_t>,DIM> m_morton1D;
+        Array<vector<uint64_t>,DIM> m_morton1D;
         
         // Public construction is not allowed. Morton is a singleton.
         inline Morton();

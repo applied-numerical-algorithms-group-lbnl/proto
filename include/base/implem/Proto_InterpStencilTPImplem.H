@@ -10,22 +10,22 @@ void InterpStencilTP<T>::define(int a_order, int a_refRatio)
 {
     if (a_refRatio  == 2)
     {
-      array<array<T,5> , 2 > coefs;
+      Array<Array<T,5> , 2 > coefs;
       if (a_order == 4)
         { 
           coefs =
-            {{
+            {
                 {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
                 {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
-              }};
+              };
         }
       else if (a_order== 5)
         {
           coefs =
-            {{
+            {
                 {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
                 {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
-              }};
+              };
           // PC:this is the same as the 4th order stencil! 
         }
       else
@@ -47,26 +47,26 @@ void InterpStencilTP<T>::define(int a_order, int a_refRatio)
         }
     } else if (a_refRatio == 4)
     {
-      array<array<T,5> , 4 > coefs;
+      Array<Array<T,5> , 4 > coefs;
       if (a_order == 4)
         {
           coefs =
-            {{
+            {
                 {-35.0/1024,294.0/1024,960.0/1024,-230.0/1024,35.0/1024},
                 {-13.0/1024,58.0/1024,1088.0/1024,-122.0/1024,13.0/1024},
                 {13.0/1024,-122.0/1024,1088.0/1024,58.0/1024,-13.0/1024},
                 {35.0/1024,-230.0/1024,960.0/1024,294.0/1024,-35.0/1024}
-              }};
+              };
         }
       else if (a_order == 5)
         {
           coefs =
-            {{
+            {
                 {-77.0/2048,616.0/2048,1878.0/2048,-432.0/2048,63.0/2048},
                 {-19.0/2048,88.0/2048,2218.0/2048,-272.0/2048,33.0/2048},
                 {33.0/2048,-272.0/2048,2218.0/2048,88.0/2048,-19.0/2048},
                 {63.0/2048,-432.0/2048,1878.0/2048,616.0/2048,-77.0/2048}                
-              }};
+              };
         }
         else
           {
@@ -93,7 +93,7 @@ void InterpStencilTP<T>::define(int a_order, int a_refRatio)
 
 template<typename T>
 Stencil<T> InterpStencilTP<T>::build1D5pt(
-    array<double,5>& a_coefs, int a_dir)
+    Array<double,5>& a_coefs, int a_dir)
 {
     return
           a_coefs[0]*Shift::Basis(a_dir,-2) +
@@ -126,7 +126,7 @@ void InterpStencilTP<T>::apply(
     BoxData<T, C, MEM>& a_input,
     T                   a_scale)
 {
-    std::array<BoxData<T, C, MEM>, DIM+1> stage;
+    Array<BoxData<T, C, MEM>, DIM+1> stage;
     stage[0].define(a_input.box());
     a_input.copyTo(stage[0]);
     for (int dir = 0; dir < DIM; dir++)
@@ -146,7 +146,7 @@ void InterpStencilTP<T>::apply(
     T                   a_scale)
 {
   PR_TIMERS("InterpStencilTP::apply");
-    std::array<BoxData<T, C, MEM>, DIM+1> stage;
+    Array<BoxData<T, C, MEM>, DIM+1> stage;
     // cout << "before first TP stencil" << endl;
     stage[1] = m_interp[0](a_input);
     for (int dir = 1; dir < DIM; dir++)

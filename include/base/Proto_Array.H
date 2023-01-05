@@ -16,6 +16,11 @@
 namespace Proto {
 
 template<typename T, size_t N>
+class ArrayIterator;
+template<typename T, size_t N>
+class ConstArrayIterator;
+
+template<typename T, size_t N>
 class Array {
 
 public:
@@ -143,22 +148,75 @@ public:
     ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
 
-    // This is both incorrect and unnecessary for the moment. -CLG 11/21/2022
-    /*
     ACCEL_DECORATION
-    inline T* begin();
+    inline ArrayIterator<T,N> begin();
     ACCEL_DECORATION
-    inline const T* begin() const;
+    inline ConstArrayIterator<T,N> begin() const;
     ACCEL_DECORATION
-    inline T* end();
+    inline ArrayIterator<T,N> end();
     ACCEL_DECORATION
-    inline const T* end() const;
-    */
+    inline ConstArrayIterator<T,N> end() const;
 
     inline void print() const;
 
 private:
     T m_data[N];
+};
+
+template<typename T, size_t N>
+class ArrayIterator
+{
+    public:
+    inline ArrayIterator(Array<T, N>& a_data, int a_index)
+    {
+        m_data = &a_data;
+        m_index = a_index;
+    }
+
+    inline T& operator*() {return (*m_data)[m_index]; } 
+    inline bool operator==(const ArrayIterator<T, N>& a_iter) const
+    {
+        if (a_iter.m_data != m_data) {return false;}
+        if (a_iter.m_index != m_index) {return false;}
+        return true;
+    }
+    inline bool operator !=(const ArrayIterator<T, N>& a_iter) const
+    {
+        return !(*this == a_iter);
+    }
+    inline ArrayIterator& operator++() {m_index++; return *this; }
+    inline ArrayIterator& operator--() {m_index--; return *this; }
+    private:
+    Array<T, N>* m_data;
+    int m_index;
+};
+
+template<typename T, size_t N>
+class ConstArrayIterator
+{
+    public:
+    inline ConstArrayIterator(const Array<T, N>& a_data, int a_index)
+    {
+        m_data = &a_data;
+        m_index = a_index;
+    }
+
+    inline const T& operator*() {return (*m_data)[m_index]; } 
+    inline bool operator==(const ConstArrayIterator<T, N>& a_iter) const
+    {
+        if (a_iter.m_data != m_data) {return false;}
+        if (a_iter.m_index != m_index) {return false;}
+        return true;
+    }
+    inline bool operator !=(const ConstArrayIterator<T, N>& a_iter) const
+    {
+        return !(*this == a_iter);
+    }
+    inline ConstArrayIterator& operator++() {m_index++; return *this; }
+    inline ConstArrayIterator& operator--() {m_index--; return *this; }
+    private:
+    const Array<T, N>* m_data;
+    int m_index;
 };
 
 // Premultiplication by a scalar

@@ -64,7 +64,7 @@ MBPointInterpOp::MBPointInterpOp(
     
     // Compute Matrices
     Matrix<double> C(M,N);
-    std::array<BoxData<double, DIM>, DIM> NT;
+    Array<BoxData<double, DIM>, DIM> NT;
     BoxData<double> J(Box::Kernel(1));
     auto C2C = Stencil<double>::cornersToCells(4);
     for (int ii = 0; ii < M; ii++)

@@ -135,7 +135,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     Point boxSize = boxData[0].high() - boxData[0].low() + Point::Ones();
 
     // BUILD DISJOINT BOX LAYOUT
-    array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
     ProblemDomain domain(domainBox, periodicity);
     DisjointBoxLayout layout(domain, boxSize);
@@ -163,7 +163,7 @@ void HDF5Handler::writeLevel(
     {
         varnames[ii] = "var" + to_string(ii + 1);
     }
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
     writeLevel(varnames, dx, a_data, a_filename, a_params...);
 }
@@ -175,14 +175,14 @@ void HDF5Handler::writeLevel(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
-        std::array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -207,7 +207,7 @@ void HDF5Handler::writeLevel(
     {
         varnames[ii] = "var" + to_string(ii + 1);
     }
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) {dx[ii] = a_dx;}
     writeLevel(varnames, dx, a_data, a_filename, a_params...);
 }
@@ -220,7 +220,7 @@ void HDF5Handler::writeLevel(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
@@ -296,7 +296,7 @@ void HDF5Handler::writeHeader(
 template<typename T, unsigned int C, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const LevelBoxData<T, C, DEVICE, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -317,7 +317,7 @@ void HDF5Handler::writeLevel(
 template<typename T, unsigned int C, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const LevelBoxData<T, C, HOST, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -361,7 +361,7 @@ void HDF5Handler::writeAMRData(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writeAMRData(a_varNames, dx, a_data, a_filename, a_params...);
 }
@@ -373,7 +373,7 @@ void HDF5Handler::writeAMRData(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     std::vector<std::string> varnames(C);
     for (int ii = 0; ii < C; ii++)
@@ -385,7 +385,7 @@ void HDF5Handler::writeAMRData(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const AMRData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -401,7 +401,7 @@ void HDF5Handler::writeAMRData(
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const AMRData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -654,7 +654,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
-        array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
+        Array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         Point a_refRatio,
         int a_level)
 {
@@ -829,7 +829,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
 template<typename T, unsigned int C, MemType MEM>
 void HDF5Handler::addPatch(hid_t* a_file,
         const BoxData<T, C, MEM>& a_data,
-        array<double, DIM>& a_dx0,
+        Array<double, DIM>& a_dx0,
         Point a_ghost)              // dx maybe ought to be type T instead of double
 {
     PR_TIMERS("HDF5Handler::addPatch");
@@ -986,14 +986,14 @@ void HDF5Handler::writeFluxRegister(
     {
         varnames[ii] = "var" + to_string(ii + 1);
     }
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
     writeFluxRegister(varnames, dx, a_register, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writeFluxRegister(
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         LevelFluxRegister<T, C, MEM>& a_register,
         std::string a_filename,
         Args... a_params)
@@ -1009,7 +1009,7 @@ void HDF5Handler::writeFluxRegister(
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writeFluxRegister(
         std::vector<std::string> a_varnames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         LevelFluxRegister<T, C, MEM>& a_register,
         std::string a_filename,
         Args... a_params)
@@ -1023,7 +1023,7 @@ void HDF5Handler::writeFluxRegister(
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writePatch(
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -1048,7 +1048,7 @@ void HDF5Handler::writePatch(
     {
         varnames[ii] = "var" + to_string(ii + 1);
     }
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writePatch(varnames, dx, a_data, a_filename, a_params...);
 }
@@ -1060,7 +1060,7 @@ void HDF5Handler::writePatch(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
     writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
@@ -1073,7 +1073,7 @@ void HDF5Handler::writePatch(
         std::string a_filename,
         Args... a_params)
 {
-    std::array<double, DIM> dx;
+    Array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
@@ -1081,7 +1081,7 @@ void HDF5Handler::writePatch(
 template<typename T, unsigned int C, typename... Args>
 void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const BoxData<T, C, HOST>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -1109,7 +1109,7 @@ void HDF5Handler::writePatch(
 template<typename T, unsigned int C, typename... Args>
 void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
-        array<double, DIM> a_dx,
+        Array<double, DIM> a_dx,
         const BoxData<T, C, DEVICE>& a_data,
         std::string a_filename,
         Args... a_params)

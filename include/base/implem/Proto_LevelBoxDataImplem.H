@@ -623,7 +623,7 @@ LevelBoxData<T, C, MEM, CTR>::integrate(double a_dx, unsigned int a_comp) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrate(std::array<double, DIM> a_dx, unsigned int a_comp) const
+LevelBoxData<T, C, MEM, CTR>::integrate(Array<double, DIM> a_dx, unsigned int a_comp) const
 {
     double factor = 1.0;
     for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
@@ -639,7 +639,7 @@ LevelBoxData<T, C, MEM, CTR>::integrateAbs(double a_dx, unsigned int a_comp) con
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrateAbs(std::array<double, DIM> a_dx, unsigned int a_comp) const
+LevelBoxData<T, C, MEM, CTR>::integrateAbs(Array<double, DIM> a_dx, unsigned int a_comp) const
 {
     double factor = 1.0;
     for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }

@@ -206,14 +206,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
 AMRData<T, C, MEM, CTR>::integrate(T a_cdx, unsigned int a_c)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_cdx);
     return integrate(dx, a_c);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
-AMRData<T, C, MEM, CTR>::integrate(const std::array<T, DIM>& a_cdx, unsigned int a_c)
+AMRData<T, C, MEM, CTR>::integrate(const Array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
     double integral = (*this)[0].integrate(a_cdx, a_c);
@@ -224,14 +224,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
 AMRData<T, C, MEM, CTR>::integrateAbs(T a_cdx, unsigned int a_c)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_cdx);
     return integrateAbs(dx, a_c);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
-AMRData<T, C, MEM, CTR>::integrateAbs(const std::array<T, DIM>& a_cdx, unsigned int a_c)
+AMRData<T, C, MEM, CTR>::integrateAbs(const Array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
     double integral = (*this)[0].integrateAbs(a_cdx, a_c);

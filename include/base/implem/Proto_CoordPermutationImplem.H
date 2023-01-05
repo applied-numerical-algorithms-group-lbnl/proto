@@ -7,29 +7,29 @@ CoordPermutation::CoordPermutation()
     }
 }
 /*
-CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix)
+CoordPermutation::CoordPermutation(Array<Array<int, DIM>, DIM> a_matrix)
 {
     m_matrix = a_matrix;
 }
 */
 
 CoordPermutation::CoordPermutation(
-        std::vector<std::array<int, 3>>& a_mapping)
+        std::vector<Array<int, 3>>& a_mapping)
 {
     define(a_mapping);
 }
 
 CoordPermutation::CoordPermutation(
-        std::initializer_list<std::array<int, 3>> a_mapping)
+        std::initializer_list<Array<int, 3>> a_mapping)
 {
-    std::vector<std::array<int, 3>> v(a_mapping);
+    std::vector<Array<int, 3>> v(a_mapping);
     define(v);
 }
 
 CoordPermutation::CoordPermutation(
-        std::initializer_list<std::array<Point, 2>> a_mapping)
+        std::initializer_list<Array<Point, 2>> a_mapping)
 {
-    std::vector<std::array<int, 3>> mapping;
+    std::vector<Array<int, 3>> mapping;
     for (auto map : a_mapping)
     {
         int c0, c1, s;
@@ -39,13 +39,13 @@ CoordPermutation::CoordPermutation(
             if (map[0][dir] != 0) {c0 = dir; s *= map[0][dir]; }
             if (map[1][dir] != 0) {c1 = dir; s *= map[1][dir]; }
         }
-        std::array<int, 3> arr{c0, c1, s/abs(s)};
+        Array<int, 3> arr{c0, c1, s/abs(s)};
         mapping.push_back(arr);
     }
     define(mapping);
 }
 
-void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
+void CoordPermutation::define(std::vector<Array<int, 3>>& a_mapping)
 {
     for (auto map : a_mapping)
     {
@@ -73,7 +73,7 @@ void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
             "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
 }
 
-void CoordPermutation::defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix)
+void CoordPermutation::defineMatrix(Array<Array<int, DIM>, DIM> a_matrix)
 {
     m_matrix = a_matrix;
     PROTO_ASSERT(this->isValid(),
@@ -146,7 +146,7 @@ Point CoordPermutation::operator()(Point a_pt) const
 
 CoordPermutation CoordPermutation::inverse() const
 {
-    std::array<std::array<int, DIM>, DIM> invMatrix;
+    Array<Array<int, DIM>, DIM> invMatrix;
     for (int jj = 0; jj < DIM; jj++)
     {
         for (int ii = 0; ii < DIM; ii++)
@@ -317,7 +317,7 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
 {
     auto A = a_A.matrix();
     auto B = a_B.matrix();
-    std::array<std::array<int, DIM>, DIM> M;
+    Array<Array<int, DIM>, DIM> M;
     for (int ii = 0; ii < DIM; ii++)
     {
         for (int jj = 0; jj < DIM; jj++)

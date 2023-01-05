@@ -94,7 +94,7 @@ namespace Proto
             Proto::forallInPlace_p. The input function must have the signature:
 
             <code>
-            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, std::array<T, DIM> a_dx, ... )
+            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, Array<T, DIM> a_dx, ... )
             </code>
 
             Unlike Proto::forall and its variants, this function cannot manage additional
@@ -202,7 +202,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrate(T a_cdx, unsigned int a_c = 0);
-        inline T integrate(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrate(const Array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Integral of Absolute Value
         /**
@@ -213,7 +213,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrateAbs(T a_cdx, unsigned int a_c = 0);
-        inline T integrateAbs(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrateAbs(const Array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**

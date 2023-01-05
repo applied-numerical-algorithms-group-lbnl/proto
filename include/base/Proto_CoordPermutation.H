@@ -5,7 +5,7 @@
 
 #include "Proto_Point.H"
 #include "Proto_Box.H"
-#include <array>
+#include "Proto_Array.H"
 
 namespace Proto
 {
@@ -43,13 +43,13 @@ namespace Proto
          *  coord 1 -> -coord 0
          *  coord 2 -> +coord 2
         */
-        inline CoordPermutation(std::initializer_list<std::array<int,  3>> a_args);
-        inline CoordPermutation(std::initializer_list<std::array<Point,2>> a_args);
-        inline CoordPermutation(std::vector<std::array<int, 3>>& a_args);
-        inline void define(std::vector<std::array<int, 3>>& a_args);
-        inline void defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix);
+        inline CoordPermutation(std::initializer_list<Array<int,  3>> a_args);
+        inline CoordPermutation(std::initializer_list<Array<Point,2>> a_args);
+        inline CoordPermutation(std::vector<Array<int, 3>>& a_args);
+        inline void define(std::vector<Array<int, 3>>& a_args);
+        inline void defineMatrix(Array<Array<int, DIM>, DIM> a_matrix);
         /// Direct Matrix Construction
-        //CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
+        //CoordPermutation(Array<Array<int, DIM>, DIM> a_matrix);
 
         /// Permute the coordinates of a Point
         inline Point operator()(Point a_pt) const;
@@ -78,7 +78,7 @@ namespace Proto
         inline void rotateBuffer(T* srcData, T* dstData,
                 const Box& srcBox, const Box& dstBox) const;
 
-        inline std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
+        inline Array<Array<int, DIM>, DIM> matrix() const {return m_matrix; }
         
         inline bool operator==(const CoordPermutation& a_rhs) const;
 
@@ -92,7 +92,7 @@ namespace Proto
         private:
         inline bool isValid() const; // checks if the permutation is valid
 
-        std::array<std::array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
+        Array<Array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
     };
 
     inline CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);

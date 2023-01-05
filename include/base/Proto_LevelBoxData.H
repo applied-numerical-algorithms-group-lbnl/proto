@@ -387,7 +387,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrate(std::array<double, DIM> a_dx, unsigned int a_comp = 0) const;
+        inline double integrate(Array<double, DIM> a_dx, unsigned int a_comp = 0) const;
         
         /// Integral of Absolute Value
         /**
@@ -405,7 +405,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrateAbs(std::array<double, DIM> a_dx, unsigned int a_comp = 0) const;
+        inline double integrateAbs(Array<double, DIM> a_dx, unsigned int a_comp = 0) const;
       
         /// Query Layout Compatibility
         template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>

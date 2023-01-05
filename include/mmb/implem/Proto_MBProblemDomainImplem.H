@@ -20,7 +20,7 @@ void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
 {
     PROTO_ASSERT(!m_closed,
         "MBProblemDomain::defineDomain | Error: ProblemDomain is closed.");
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     periodicity.fill(false);
     Box domainBox(a_domainSize);
     m_domains[a_blockID].define(domainBox, periodicity);

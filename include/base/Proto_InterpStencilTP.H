@@ -18,9 +18,9 @@ namespace Proto
         inline Point ghost() const;        
         private:
 
-        Stencil<T> build1D5pt(array<double,5>& a_coefs, int a_dir);
+        Stencil<T> build1D5pt(Array<double,5>& a_coefs, int a_dir);
 
-        std::array<InterpStencil<T>, DIM> m_interp;
+        Array<InterpStencil<T>, DIM> m_interp;
 
     }; //end class InterpStencilTP
 #include "implem/Proto_InterpStencilTPImplem.H"

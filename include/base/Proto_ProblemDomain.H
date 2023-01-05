@@ -9,15 +9,13 @@
 #endif
 #ifndef _PROTO_PROBLEMDOMAIN_H_
 #define _PROTO_PROBLEMDOMAIN_H_
-#include <array>
 
-using namespace std;
 namespace Proto
 {
     /// Represents a rectangular domain over which a problem can be defined, including periodic images.
     /**
         A ProblemDomain is specified by a Box defining the rectangular set of Points over which a 
-        problem may be defined, plus an array<bool,DIM> specifying whether or not each of the
+        problem may be defined, plus an Array<bool,DIM> specifying whether or not each of the
         coordinate directions is periodic. The Box is assumed to have the low corner to be all Zeros,
         and specifies the overall range of indices that contain all the boxes in a DisjointBoxLayout. 
     */
@@ -34,7 +32,7 @@ namespace Proto
             \param a_box        Domain Box
             \param a_isPeriodic Periodic flags
         */
-        inline ProblemDomain(const Box& a_box,const array<bool,DIM> a_isPeriodic);
+        inline ProblemDomain(const Box& a_box,const Array<bool,DIM> a_isPeriodic);
         
         /// Isotropic Constructor
         /**
@@ -54,7 +52,7 @@ namespace Proto
             \param a_box        Domain Box
             \param a_isPeriodic Periodic flags
         */
-        inline void define(const Box& a_box,const array<bool,DIM> a_isPeriodic);
+        inline void define(const Box& a_box,const Array<bool,DIM> a_isPeriodic);
 
         /// Box Intersection
         /**
@@ -134,7 +132,7 @@ namespace Proto
         inline Box box() const {return m_box;};
         
         /// Get Periodicity
-        inline array<bool,DIM> periodicity() const { return m_isPeriodic; }
+        inline Array<bool,DIM> periodicity() const { return m_isPeriodic; }
       
         /// Check Periodic Direction
         /**
@@ -181,7 +179,7 @@ namespace Proto
         protected:
         
         Box             m_box;
-        array<bool,DIM> m_isPeriodic;
+        Array<bool,DIM> m_isPeriodic;
         bool            m_isDefined;
         
     }; // end class ProblemDomain

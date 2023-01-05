@@ -79,7 +79,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) con
         MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
     }
 
-    vector<char> buffer(srcSize);
+    std::vector<char> buffer(srcSize);
     {
         void* b = (void*)&(buffer[0]);
         linearOut(b, a_info);
@@ -94,7 +94,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) con
         MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
     }
 
-    vector<char> buffer(sizeSource);
+    std::vector<char> buffer(sizeSource);
     {
         PR_TIMERS("linearIn / linearOut inside LDOP::op");
         void* b = (void*)&(buffer[0]);
@@ -197,7 +197,7 @@ LevelFluxRegister<T,C,MEM>::LevelFluxRegister(
         const DisjointBoxLayout& a_fineLayout,
         const DisjointBoxLayout& a_crseLayout,
         const Point& a_refRatio,
-        std::array<T,DIM> a_dxCrse)
+        Array<T,DIM> a_dxCrse)
 {
     define(a_fineLayout,a_crseLayout,a_refRatio,a_dxCrse);
 }
@@ -207,7 +207,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         const DisjointBoxLayout& a_crseLayout,
         const DisjointBoxLayout& a_fineLayout,
         const Point& a_refRatio,
-        std::array<T, DIM> a_dxCrse)
+        Array<T, DIM> a_dxCrse)
 {
     // Fine registers are defined relative to the fine patch coordinates, and coarse 
     // registers are defined relative to the coarse patch coordinates. What happens in 

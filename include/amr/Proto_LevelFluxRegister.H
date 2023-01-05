@@ -5,6 +5,7 @@
 #include "Proto_Register.H"
 #include "Proto_BoxData.H"
 #include "Proto_Copier.H"
+
 namespace Proto
 {
     // Forward Declarations
@@ -91,13 +92,13 @@ namespace Proto
         LevelFluxRegister(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,
                 const Point& a_refRatio,
-                std::array<T, DIM> a_dxCoarse);
+                Array<T, DIM> a_dxCoarse);
 
         /// Define function
         void define(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,
                 const Point& a_refRatio,
-                std::array<T, DIM> a_dxCoarse);
+                Array<T, DIM> a_dxCoarse);
 
         /// Increment Coarse
         /**
@@ -144,21 +145,21 @@ namespace Proto
 
         DisjointBoxLayout  m_crseLayout;
         DisjointBoxLayout  m_fineLayout;
-        std::array<T, DIM> m_dxCrse;
+        Array<T, DIM> m_dxCrse;
         FluxRegisterCopier<T,C,MEM> m_copier;
         Point              m_refRatio;
 
         // Registers for coarse data
-        vector<vector<Register<T,C,MEM> > >              m_crseRegisters;
+        std::vector<std::vector<Register<T,C,MEM> > >              m_crseRegisters;
         // Registers for fine data on coarse layout
-        vector<vector<shared_ptr<BoxData<T,C,MEM> > > >  m_crseIncrement;
+        std::vector<std::vector<shared_ptr<BoxData<T,C,MEM> > > >  m_crseIncrement;
         // Registers for fine data
-        vector<vector<Register<T,C,MEM> > >              m_fineRegisters; 
+        std::vector<std::vector<Register<T,C,MEM> > >              m_fineRegisters; 
         // crseIndices is a map because there are in general multiple registers for each (dir, side)
-        vector<unordered_map<unsigned int,unsigned int> >m_crseIndices;
+        std::vector<unordered_map<unsigned int,unsigned int> >m_crseIndices;
         // fineIndices are not a map because there is at most one register for each (dir, side)
-        vector<array<array<int,2>, DIM> >                m_fineIndices;
-        array<array<Stencil<T>,2>,DIM>                   m_avgFlux;
+        std::vector<Array<Array<int,2>, DIM> >                m_fineIndices;
+        Array<Array<Stencil<T>,2>,DIM>                   m_avgFlux;
     }; //end class LevelFluxRegister
 #include "implem/Proto_LevelFluxRegisterImplem.H"
 } // end namespace Proto

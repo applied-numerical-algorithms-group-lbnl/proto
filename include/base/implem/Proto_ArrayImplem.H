@@ -273,23 +273,24 @@ inline const T& Array<T,N>::operator[](size_t i) const
     return m_data[i];
 }
 
-/*
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::begin() { return this->data(); }
+inline ArrayIterator<T,N> Array<T,N>::begin() { return ArrayIterator<T,N>(*this, 0); }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::begin() const { return this->data(); }
+inline ConstArrayIterator<T,N> Array<T,N>::begin() const
+{ return ConstArrayIterator<T,N>(*this, 0); }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::end() { return this->data()+N; }
+inline ArrayIterator<T,N> Array<T,N>::end() { return ArrayIterator<T,N>(*this, N); }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::end() const { return this->data()+N; }
-*/
+inline ConstArrayIterator<T,N> Array<T,N>::end() const
+{ return ConstArrayIterator<T,N>(*this, N); }
+
 template<typename T, size_t N>
 inline void Array<T,N>::print() const {
     std::cout << "( ";
