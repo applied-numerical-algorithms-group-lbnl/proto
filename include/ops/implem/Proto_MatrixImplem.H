@@ -405,7 +405,10 @@ Matrix<T>::copyTo(Matrix<T>& a_rhs) const
 #ifdef PR_BLIS
     bli_copym(&m_object, &(a_rhs.m_object));
 #else
-    a_rhs.m_storage = m_storage;
+    // If we're copying a transpose, need to change order for mem linear copy
+    MatrixStorageType not_storage = 
+      (m_storage==ROW_MAJOR) ? COL_MAJOR : ROW_MAJOR;
+    a_rhs.m_storage = (m_transpose) ? not_storage : m_storage;
     proto_memcpy<HOST, HOST>(m_data.get(), a_rhs.m_data.get(), linearSize());
 #endif
 }
@@ -945,7 +948,7 @@ Matrix<T>::checkConditionNumber() const
     }
     else
     {
-        //Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 
