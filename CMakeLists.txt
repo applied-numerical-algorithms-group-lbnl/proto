@@ -41,16 +41,21 @@ option(MEMCHECK "turns on code in BoxData that checks that copying/aliasing is w
 option(MEMTRACK "print the amount of data allocated per protoMalloc" OFF)
 option(TIMERS "whether to turn on timers" ON)
 
+set(VERBOSE 0 CACHE STRING "Verbosity of output")
 set(DIM 3 CACHE STRING "Dimensionality of examples")
 set(STACK 4294967296 CACHE STRING "Stack size")
-message(STATUS "Dimensionality: ${DIM}\n   Stack size: ${STACK}")
+message(STATUS "Dimensionality: ${DIM}")
+message(STATUS "Stack size: ${STACK}")
+message(STATUS "Verbosity: ${VERBOSE}")
 
+add_compile_definitions(PR_VERBOSE=${VERBOSE})
 add_compile_definitions(DIM=${DIM})
 add_compile_definitions(PR_STACK_ALLOC=${STACK})
 if (DEBUG)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
 options are: Debug Release RelWithDebInfo" FORCE)
 else()
+    set(VERBOSE 0 CACHE STRING "Verbosity of output")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type, \
 options are: Debug Release RelWithDebInfo" FORCE)
 endif()
