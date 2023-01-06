@@ -1,24 +1,28 @@
 #pragma once
-
+#ifndef __PROTO_ASSERT__
+#define __PROTO_ASSERT__
 #include <cassert>
 #include <cstdio>
 #include <stdio.h>
 #include <cstdlib>
 #include <string>
 #include <sstream>
+#include <vector>
 
-std::vector<std::string> split_string (const std::string &s, char delim) {
-    std::vector<std::string> result;
-    std::stringstream ss (s);
-    std::string item;
+namespace ProtoUtils
+{
+    inline std::vector<std::string> split_string (const std::string &s, char delim) {
+        std::vector<std::string> result;
+        std::stringstream ss (s);
+        std::string item;
 
-    while (getline (ss, item, delim)) {
-        result.push_back (item);
+        while (getline (ss, item, delim)) {
+            result.push_back (item);
+        }
+
+        return result;
     }
-
-    return result;
 }
-
 // Custom Assert macro with printf-style reporting
 #ifdef __CUDA_ARCH__
 
@@ -52,7 +56,7 @@ std::vector<std::string> split_string (const std::string &s, char delim) {
 #define PR_DEBUG_MSG(N, stmt, args...) \
     if (N <= PR_VERBOSE) \
     { \
-        auto words = split_string(__FILE__, '/'); \
+        auto words = ProtoUtils::split_string(__FILE__, '/'); \
         string filename = words[words.size()-1]; \
         char prefix[100]; \
         char message[500]; \
@@ -79,3 +83,4 @@ std::vector<std::string> split_string (const std::string &s, char delim) {
 
 #endif
 #endif
+#endif // end include guard

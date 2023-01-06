@@ -27,15 +27,15 @@ int main(int argc, char* argv[])
     PR_TIMERS("main");
     int nGhost = 4;  
     int numLevels = 3;
-    array<array<double,DIM > , DIM> arr;
+    Array<Array<double,DIM > , DIM> arr;
     arr[0][0] = 1.0;
     arr[0][1] = 0.0; 
     arr[1][0] = 0.0;
     arr[1][1] = 1.0;
 #if DIM==2
-    array<double,DIM> coef = {0.025,0.025};
-    //array<double,DIM> coef = {0.0,0.0};
-    //array<double,DIM> coef = {0.0,0.025};
+    Array<double,DIM> coef = {0.025,0.025};
+    //Array<double,DIM> coef = {0.0,0.0};
+    //Array<double,DIM> coef = {0.0,0.025};
     Point waveNumber(1,1);
 #endif  
 
@@ -45,10 +45,10 @@ int main(int argc, char* argv[])
     arr[2][0] = 0.0;
     arr[2][1] = 0.0;
     arr[2][2] = 1.0;
-    array<double,DIM> coef = {0.025,0.025,.025};
+    Array<double,DIM> coef = {0.025,0.025,.025};
     Point waveNumber(1,1,1);
     
-    //array<double,DIM> coef = {0.0,0.0,0.0};
+    //Array<double,DIM> coef = {0.0,0.0,0.0};
 #endif
 
     cout << "waveNumber = " << waveNumber << endl;
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
         double h = length/nx;            
         PatchMap mapping(arr,coef,h);
         BoxData<double,DIM> X = mapping.map(bx,nGhost+2);
-        std::array<BoxData<double,DIM>,DIM> NT;
+        Array<BoxData<double,DIM>,DIM> NT;
         
         for (int dir = 0; dir < DIM;dir++)
         {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
         BoxData<double> divNonNorm(bx);
         divNonNorm.setToZero();
-        std::array<BoxData<double,1>,DIM> dfdxi;
+        Array<BoxData<double,1>,DIM> dfdxi;
         
         for (int dir = 0; dir < DIM; dir++)         
         {

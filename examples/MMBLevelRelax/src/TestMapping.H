@@ -8,11 +8,11 @@ class PatchMap
     public:  
     
     double m_h;
-    array<array<double,DIM>,DIM> m_array;
-    array<double,DIM> m_coef;
+    Array<Array<double,DIM>,DIM> m_array;
+    Array<double,DIM> m_coef;
     
-    PatchMap(const array<array<double,DIM>,DIM>& a_array,
-             const array<double,DIM> a_coef,
+    PatchMap(const Array<Array<double,DIM>,DIM>& a_array,
+             const Array<double,DIM> a_coef,
              const double& a_h)
     {
         m_h = a_h;
@@ -41,8 +41,8 @@ class PatchMap
         forallInPlace_p(
             [] PROTO_LAMBDA(const Point& a_pt,
                             Var<double,DIM>& a_pos,
-                            const array<array<double,DIM>,DIM>& a_jac0,
-                            const array<double,DIM>& a_coef,
+                            const Array<Array<double,DIM>,DIM>& a_jac0,
+                            const Array<double,DIM>& a_coef,
                             const double& a_h)
             {
                 for (int dir0 = 0;dir0 < DIM;dir0++)
