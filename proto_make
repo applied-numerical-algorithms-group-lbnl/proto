@@ -1,0 +1,47 @@
+#!/usr/bin/python
+from argparse import *
+import os
+import glob
+import platform
+import subprocess
+import shutil
+
+parser = ArgumentParser()
+
+parser.add_argument('--DIM', type=int, help="Dimensionality [2]", default='2')
+parser.add_argument('--MPI', help="Use MPI [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--AMR', help="Use AMR library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--MMB', help="Use MMB library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--OPS', help="Use build in Linear Algebra interface [ON]",
+        choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
+parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
+args = parser.parse_args()
+print(args)
+
+test_files = glob.glob('./tests/*.cpp')
+example_dirs = os.listdir('./examples')
+targets = []
+for f in test_files:
+    targets.append(f.split('/')[-1].split('.')[0])
+for e in example_dirs:
+    if (e == 'common'): continue
+    if (e == 'archived'): continue
+    if (e == 'CMakeLists.txt'): continue
+    targets.append(e)
+print(targets)
+
+if (os.path.exists('./build')):
+    shutil.rmtree('./build')
+
+CMAKE_FLAGS = ""
+CMAKE_FLAGS += "-D DIM=" + str(args.DIM) + " "
+CMAKE_FLAGS += "-D MPI=" + args.MPI + " "
+CMAKE_FLAGS += "-D AMR=" + args.AMR + " "
+CMAKE_FLAGS += "-D MMB=" + args.MMB + " "
+CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
+CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
+CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
+
+print(CMAKE_FLAGS)
