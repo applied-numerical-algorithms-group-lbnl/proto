@@ -14,7 +14,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
         if (patch != Point::Zeros()) { patches.push_back(patch); }
     }
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     periodicity.fill(true);
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
@@ -75,9 +75,9 @@ TEST(Operator, ConvolveFace) {
     {
         double dx = 1.0/domainSize;
         Box B = Box::Cube(domainSize);
-        std::array<BoxData<double, 1, HOST>, DIM> data;
-        std::array<BoxData<double, 1, HOST>, DIM> soln;
-        std::array<BoxData<double, 1, HOST>, DIM> err;
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box Bd = B.grow(1).grow(dir,-1);
@@ -160,9 +160,9 @@ TEST(Operator, DeconvolveFace) {
     {
         double dx = 1.0/domainSize;
         Box B = Box::Cube(domainSize);
-        std::array<BoxData<double, 1, HOST>, DIM> data;
-        std::array<BoxData<double, 1, HOST>, DIM> soln;
-        std::array<BoxData<double, 1, HOST>, DIM> err;
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box Bd = B.grow(1).grow(dir,-1);
@@ -268,7 +268,7 @@ TEST(Operator, Cofactor)
     Point offset(1,2,3,4,5,6);
     Point k(1,2,3,4,5,6);
     int ghostSize = 3;
-    std::array<double, DIM> scale;
+    Array<double, DIM> scale;
     for (int ii = 0; ii < DIM; ii++) {scale[ii] = pow(0.5, ii);}
 
     // Define Mapping
@@ -284,16 +284,13 @@ TEST(Operator, Cofactor)
     }
     
     // Compute Metrics
-    std::array<BoxData<double, DIM, HOST>, DIM> NT;
-    std::cout << "X.box: " << X.box() << std::endl;
+    Array<BoxData<double, DIM, HOST>, DIM> NT;
     for (int dir = 0; dir < DIM; dir++)
     {
         NT[dir] = Operator::cofactor(X, dir);
-        std::cout << "NT[" << dir << "].box: " << NT[dir].box() << std::endl;
     }
     BoxData<double, 1, HOST> J;
     J = Operator::jacobian(X, NT); 
-    std::cout << "J.box: " << J.box() << std::endl;
     
     BoxData<double, 1, HOST> Div_0(domainBox, 0);
 
