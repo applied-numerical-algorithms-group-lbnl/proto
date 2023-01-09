@@ -5,7 +5,7 @@
 #include "Proto_FinitePointSet.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
-#include "Proto_InterpStencilTP.H"
+#include "Proto_InterpStencil.H"
 
 //#define PR_AMR_REFRATIO 2
 

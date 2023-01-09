@@ -1,138 +1,143 @@
-template<class T>
-void InterpStencil<T>::define(Point a_ratio)
+
+template<typename T>
+InterpStencil<T>::InterpStencil(Point a_refRatio)
 {
-    for (int ii = 0; ii < DIM; ii++)
+    define(a_refRatio);
+}
+
+template<typename T>
+void InterpStencil<T>::define(Point a_refRatio)
+{
+    for (int dir = 0; dir < DIM; dir++)
     {
-        PROTO_ASSERT(a_ratio[ii] > 0,
-                "InterpStencil(Point ratio) invalid. All ratios must be 1 or greater");
+        m_interp[dir].define(dir, a_refRatio[dir]); 
     }
-    m_r = a_ratio;
-    m_k = Box(a_ratio);
-    m_s.resize(m_k.size());
-    m_closed = false;
-}
-
-template<class T>
-void InterpStencil<T>::close()
-{
-    if (m_closed == true) { return; }
-    for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
+#if 0
+    if (a_refRatio  == 2)
     {
-        Stencil<T>& S = (*this)(*iter);
-        S.destRatio() = m_k.high() + Point::Ones();
-        S.destShift() = *iter;
-    }
-    m_closed = true;
-}
-
-template<class T>
-Stencil<T>& InterpStencil<T>::operator()(Point a_p)
-{
-    PROTO_ASSERT(!m_closed,
-        "InterpStencil::operator() | Error: \
-        Components of InterpStencil are read-only once closed. Use InterpStencil::get instead.");
-    PROTO_ASSERT(m_k.contains(a_p),
-        "InterpStencil::operator() | Error: \
-        p is not in the InterStencil kernel");
-    return m_s[m_k.index(a_p)];
-}
-
-template<class T>
-const Stencil<T>& InterpStencil<T>::get(Point a_p) const
-{
-    PROTO_ASSERT(m_k.contains(a_p),
-        "InterpStencil::operator() | Error: \
-        p is not a member of the InterStencil kernel");
-    return m_s[m_k.index(a_p)];
-}
-
-template<class T>
-Box InterpStencil<T>::span() const
-{
-    Box span;
-    for (int ii = 0; ii < m_s.size(); ii++)
+      Array<Array<T,5> , 2 > coefs;
+      if (a_order == 4)
+        { 
+          coefs =
+            {
+                {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
+                {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
+              };
+        }
+      else if (a_order== 5)
+        {
+          coefs =
+            {
+                {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
+                {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
+              };
+          // PC:this is the same as the 4th order stencil! 
+        }
+      else
+        {
+          MayDay<void>::Abort(
+                              "InterpStencil::Build | Error: Invalid order. Must be 4 or 5.");  
+        }
+      for (int dir = 0; dir < DIM; dir++)
+        {
+            Point refRatio = Point::Ones();
+            refRatio[dir] = a_refRatio;
+            m_interp[dir].define(refRatio);
+            for (int k = 0; k < 2; k++)
+            {
+                m_interp[dir](Point::Basis(dir, k)) =
+                    build1D5pt(coefs[k], dir);
+            }
+            m_interp[dir].close();
+        }
+    } else if (a_refRatio == 4)
     {
-        span = span & m_s[ii].span().low();
-        span = span & m_s[ii].span().high();
+      Array<Array<T,5> , 4 > coefs;
+      if (a_order == 4)
+        {
+          coefs =
+            {
+                {-35.0/1024,294.0/1024,960.0/1024,-230.0/1024,35.0/1024},
+                {-13.0/1024,58.0/1024,1088.0/1024,-122.0/1024,13.0/1024},
+                {13.0/1024,-122.0/1024,1088.0/1024,58.0/1024,-13.0/1024},
+                {35.0/1024,-230.0/1024,960.0/1024,294.0/1024,-35.0/1024}
+              };
+        }
+      else if (a_order == 5)
+        {
+          coefs =
+            {
+                {-77.0/2048,616.0/2048,1878.0/2048,-432.0/2048,63.0/2048},
+                {-19.0/2048,88.0/2048,2218.0/2048,-272.0/2048,33.0/2048},
+                {33.0/2048,-272.0/2048,2218.0/2048,88.0/2048,-19.0/2048},
+                {63.0/2048,-432.0/2048,1878.0/2048,616.0/2048,-77.0/2048}                
+              };
+        }
+        else
+          {
+            MayDay<void>::Abort(
+                                "InterpStencil::Build | Error: Invalid order. Must be 4 or 5.");  
+          }
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Point refRatio = Point::Ones();
+            refRatio[dir] = a_refRatio;
+            m_interp[dir].define(refRatio);
+            for (int k = 0; k < 4; k++)
+            {
+                m_interp[dir](Point::Basis(dir, k)) =
+                    build1D5pt(coefs[k], dir);
+            }
+            m_interp[dir].close();
+        }
+    } else {
+        MayDay<void>::Abort(
+            "InterpStencil::Build | Error: Invalid refinement ratio. Must be 2 or 4.");
     }
-    return span;
+#endif
 }
 
-template<class T>
+template<typename T>
+Stencil<T> InterpStencil<T>::build1D5pt(
+    Array<double,5>& a_coefs, int a_dir)
+{
+    return
+          a_coefs[0]*Shift::Basis(a_dir,-2) +
+          a_coefs[1]*Shift::Basis(a_dir,-1) +
+          a_coefs[2]*Shift::Zeros() +
+          a_coefs[3]*Shift::Basis(a_dir,1) +
+          a_coefs[4]*Shift::Basis(a_dir,2);
+}
+
+template<typename T>
 Point InterpStencil<T>::ghost() const
 {
-    Box spanBox = span();
-    int v[DIM];
-    for (int ii = 0; ii < DIM; ii++)
+    Point span_0 = m_interp[0].ghost();
+    for (int jj = 1; jj < DIM; jj++)
     {
-        v[ii] = std::max(std::abs(spanBox.low()[ii]), std::abs(spanBox.high()[ii]));
-    }
-    return Point(v);
-}
-
-template<class T>
-void InterpStencil<T>::print() const
-{
-    for (auto iter = begin(); iter != end(); ++iter)
-    {
-        (*iter).print();
-    }
-}
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
-        const BoxData<T,C,MEMTYPE,D,E>& a_src,
-        Box                             a_box,
-        T                               a_scale)
-{
-    if (!m_closed){this->close();}
-
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(a_box & b);
-        ret.m_scale.push_back(a_scale);
-    }
-    return ret;
-}
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
-        const BoxData<T,C,MEMTYPE,D,E>& a_src,
-		T                               a_scale)
-{
-    if (!m_closed){this->close();}
-    
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        //compute range for building the output BoxData, if necessary
-        if (ii == 0)
+        Point span = m_interp[jj].ghost();
+        for (int dir = 0; dir < DIM; dir++)
         {
-            ret.m_range = m_s[ii].range(bsrc); //initialize
-        } else {
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).low();
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
+            span_0[dir] = max(span[dir], span_0[dir]);
         }
-
-        //compute the largest possible computation box (different from range) 
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(b);
-        ret.m_scale.push_back(a_scale);
     }
-    return ret;
+    return span_0;
+}
+
+template<typename T>
+template<unsigned int C, MemType MEM>
+void InterpStencil<T>::apply(
+    BoxData<T, C, MEM>& a_output,
+    BoxData<T, C, MEM>& a_input,
+    T                   a_scale)
+{
+  PR_TIMERS("InterpStencil::apply");
+    Array<BoxData<T, C, MEM>, DIM+1> stage;
+    stage[1] = m_interp[0](a_input);
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        stage[dir+1] = m_interp[dir](stage[dir]);
+    }
+    Stencil<T> idOp = 1.0*Shift::Zeros();
+    a_output |= idOp(stage[DIM]);
 }

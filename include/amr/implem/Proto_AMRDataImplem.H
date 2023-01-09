@@ -21,10 +21,10 @@ void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
         for (int ii = a_level;ii + 1 < a_newgrid.numLevels();ii++)          
         {
           Point refratio = a_newgrid.refRatio(ii);
-          InterpStencilTP<double > stencil(a_order,refratio[0]);
+          InterpStencil<double > stencil(a_order,refratio[0]);
           PR_assert(refratio == Point::Ones()*refratio[0]);
           
-        //PC: Need to extend InterpStencilTP to non-isotropic case !!
+        //PC: Need to extend InterpStencil to non-isotropic case !!
           
           auto newleveldata =std::make_shared<LevelBoxData<T, C, MEM, CTR> >
             (a_newgrid[ii+1], m_ghost);

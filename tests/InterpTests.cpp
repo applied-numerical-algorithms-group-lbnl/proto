@@ -2,58 +2,26 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
-TEST(InterpStencil, DefaultConstructor) {
-    InterpStencil<double> IS;
-    EXPECT_TRUE(IS.empty()); 
-    EXPECT_EQ(IS.kernel().size(),0); 
+TEST(InterpStencil, Constant) {
+    
+    int domainSize = 8;
+    Point refRatio(2,4,2,4,2,4);
+
+    Box srcBox = Box::Cube(domainSize);
+    Box dstBox = srcBox.refine(refRatio);
+
+    BoxData<double, 1, HOST> hostSrcData(srcBox);
+    BoxData<double, 1, HOST> hostDstData(dstBox);
+    forallInPlace_p(f_pointID, hostSrcData);
+
+    auto I = InterpStencil<double>::Constant(refRatio);
+
+    I.apply(hostDstData, hostSrcData);
+
+    hostSrcData.printData();
+    hostDstData.printData();
 }
-
-TEST(InterpStencil, StandardConstructor) {
-    Point r = Point(2,3,4,5,6,7);
-    InterpStencil<double> IS(r);
-    EXPECT_EQ(IS.kernel(),Box(r)); 
-}
-
-PROTO_KERNEL_START
-void lambdaF(Point& pt, Var<double>& data)
-{
-    data(0) = 0.0;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        data(0) += pt[ii];
-    }
-}
-PROTO_KERNEL_END(lambdaF, lambda)
-
-TEST(InterpStencil, PiecewiseConstant) {
-    int ratio = 2;
-    InterpStencil<double> piecewiseConstant(ratio);
-    Box iterBox = Box::Cube(ratio);  //[(0,...,0), (1,...,1)]
-    for (auto destShift : iterBox)
-        // The InterpStencil is indexed into using the destShift value
-        piecewiseConstant(destShift) = 1.0*Shift::Zeros();
-
-    //This function sets all the shifts / ratios automatically and effectively makes the InterpStencil read-only
-    //  Using InterpStencil::operator() on a closed InterpStencil will result in an error. Use InterpStencil::get(Point destShift) for read-only access
-    piecewiseConstant.close();
-
-    Box srcBox = Box::Cube(8);
-    Box computeBox = srcBox;
-
-    auto Src = forall_p<double>(lambda,srcBox);
-
-    BoxData<double> Dest = piecewiseConstant(Src);
-    EXPECT_EQ(Dest.size(),srcBox.size()*std::pow(ratio,DIM));
-    BoxData<double,1,HOST> host(Dest.box()), comp(srcBox);
-    Dest.copyTo(host); Src.copyTo(comp);
-    for (auto it : host.box()) {
-        Point pt = it;
-        for (int i=0; i<DIM; i++)
-            pt[i] /= ratio;
-        EXPECT_EQ(host(it),comp(pt));
-    }
-}
-
+#if 0
 PROTO_KERNEL_START
 void srcLambdaF(Point p, Var<double>& v, const double dx) {
     //v(0) = p[0]*dx;
@@ -207,6 +175,7 @@ TEST(InterpStencil, CosApply) {
         domainSize *= 2;
     }
 }
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

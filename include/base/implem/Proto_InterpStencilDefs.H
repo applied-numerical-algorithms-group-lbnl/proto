@@ -1,22 +1,24 @@
 template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
+InterpStencil<T> InterpStencil<T>::Constant(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Box K = Box(a_ratio);
-    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    auto S = 1.0*Shift::Zeros(); 
+    for (int dir = 0; dir < DIM; dir++)
     {
-        Stencil<T>& S = ret(*iter);
-        S = 1.0*Shift::Zeros();
-        S.destRatio() = a_ratio;
-        S.destShift() = (*iter);
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
+        {
+            Id.set(S, shift);
+        }
     }
     return ret;
 }
 
 template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
+InterpStencil<T> InterpStencil<T>::Linear(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
+    #if 0
     Box K = Box(a_ratio);
     Box U = Box::Cube(2);
     for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
@@ -45,6 +47,7 @@ InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
         S.destRatio() = a_ratio;
         S.destShift() = p;
     }
+#endif
     return ret;    
 }
 
@@ -76,6 +79,7 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
 {
     //can make it anisotropic later...
     InterpStencil<T> ret(Point::Ones(a_ratio));
+#if 0
     Box K = Box(Point::Ones(a_ratio));
     Box U = Box::Cube(3).shift(Point::Ones(-1));
 
@@ -98,9 +102,11 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
         S.destRatio() = Point::Ones(a_ratio);
         S.destShift() = n;
     }
+#endif
     return ret;    
 }
 
+#if 0
 // helper function for Build(...)
 /*
     Returns <x^p> over the coarse cell shifted by s
@@ -438,3 +444,4 @@ InterpStencil<T> InterpStencil<T>::Build(int a_order, Point a_refRatio)
     }
     return ret; //should never get here, this is just to stifle a compiler warning
 }
+#endif
