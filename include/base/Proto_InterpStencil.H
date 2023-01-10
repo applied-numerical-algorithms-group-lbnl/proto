@@ -13,7 +13,7 @@ namespace Proto
 
         inline static InterpStencil<T> Constant(Point a_refRatio);
         inline static InterpStencil<T> Linear(Point a_refRatio);
-        inline static InterpStencil<T> Quadratic(int a_refRatio);
+        inline static InterpStencil<T> Quadratic(Point a_refRatio);
         inline static InterpStencil<T> Cubic(Point a_refRatio);
         inline static InterpStencil<T> Quartic(Point a_refRatio);
 
@@ -21,8 +21,8 @@ namespace Proto
         InterpStencil(Point a_refRatio);
         void define(Point a_refRatio);
         
-        template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT>
-        inline void apply(BoxData<T, C, MEM>& a_output, BoxData<T, C, MEM>& a_input, T a_scale = 1.0);
+        template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT, unsigned char D, unsigned char E>
+        inline void apply(BoxData<T,C,MEM,D,E>& a_output, BoxData<T,C,MEM,D,E>& a_input, T a_scale = 1.0);
         inline Point ghost() const;
         inline Box span() const;
 

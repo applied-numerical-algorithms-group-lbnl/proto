@@ -18,36 +18,21 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::Linear(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    #if 0
-    Box K = Box(a_ratio);
-    Box U = Box::Cube(2);
-    for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
+    for (int dir = 0; dir < DIM; dir++)
     {
-        Point p = *kiter;
-        Point q = a_ratio - p;
-        Stencil<double>& S = ret(*kiter);
-        for (auto uiter = U.begin(); uiter != U.end(); ++ uiter)
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
         {
-            Point e = *uiter;
-            double coef = 1.0;
-            for (int ii = 0; ii < DIM; ii++)
-            {
-                if (e[ii] == 0)
-                {
-                    coef *= q[ii]/((double)a_ratio[ii]);
-                } else {
-                    coef *= p[ii]/((double)a_ratio[ii]);
-                }
-            }
-            if (coef != 0)
-            {
-                S += coef*Shift(e);
-            }
+            double r = a_ratio[dir];
+            double s = shift;
+            double p = s/r;
+            double q = (r - s)/r;
+
+            auto S = q*Shift::Zeros() + p*Shift::Basis(dir, 1);
+
+            Id.set(S, shift);
         }
-        S.destRatio() = a_ratio;
-        S.destShift() = p;
     }
-#endif
     return ret;    
 }
 
@@ -75,10 +60,25 @@ inline double qcoef(int a_ni, int a_r, int a_side)
 }
 
 template<class T>
-InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
+InterpStencil<T> InterpStencil<T>::Quadratic(Point a_ratio)
 {
-    //can make it anisotropic later...
-    InterpStencil<T> ret(Point::Ones(a_ratio));
+    InterpStencil<T> ret(a_ratio);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
+        {
+            Stencil<T> S;
+            for (int ii = -1; ii <= 1; ii++)
+            {
+                T coef = qcoef(shift, a_ratio[dir], ii);
+                S += coef*Shift::Basis(dir,ii);
+            }
+            Id.set(S, shift);
+        }
+    }
+    return ret;    
+
 #if 0
     Box K = Box(Point::Ones(a_ratio));
     Box U = Box::Cube(3).shift(Point::Ones(-1));
@@ -103,7 +103,6 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
         S.destShift() = n;
     }
 #endif
-    return ret;    
 }
 
 #if 0

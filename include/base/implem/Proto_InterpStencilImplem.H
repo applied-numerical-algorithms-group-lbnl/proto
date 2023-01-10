@@ -125,10 +125,10 @@ Point InterpStencil<T>::ghost() const
 }
 
 template<typename T>
-template<unsigned int C, MemType MEM>
+template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void InterpStencil<T>::apply(
-    BoxData<T, C, MEM>& a_output,
-    BoxData<T, C, MEM>& a_input,
+    BoxData<T, C, MEM, D, E>& a_output,
+    BoxData<T, C, MEM, D, E>& a_input,
     T                   a_scale)
 {
   PR_TIMERS("InterpStencil::apply");

@@ -4,22 +4,127 @@
 
 TEST(InterpStencil, Constant) {
     
+    constexpr unsigned int C = 3;
+    constexpr unsigned char D = 1;
+
     int domainSize = 8;
     Point refRatio(2,4,2,4,2,4);
 
     Box srcBox = Box::Cube(domainSize);
     Box dstBox = srcBox.refine(refRatio);
 
-    BoxData<double, 1, HOST> hostSrcData(srcBox);
-    BoxData<double, 1, HOST> hostDstData(dstBox);
+    BoxData<double, C, HOST, D> hostSrcData(srcBox);
+    BoxData<double, C, HOST, D> hostDstData(dstBox);
+    BoxData<double, C, HOST, D> hostSlnData(dstBox);
     forallInPlace_p(f_pointID, hostSrcData);
+    
+    for (auto p : srcBox)
+    {
+        Box b = Box(p,p).refine(refRatio);
+        for (auto q : b)
+        {
+            for (int cc = 0; cc < C; cc++)
+            for (int dd = 0; dd < D; dd++)
+            {
+                hostSlnData(q,cc,dd) = hostSrcData(p,cc,dd);
+            }
+        }
+    }
 
     auto I = InterpStencil<double>::Constant(refRatio);
 
     I.apply(hostDstData, hostSrcData);
 
-    hostSrcData.printData();
-    hostDstData.printData();
+    hostSlnData -= hostDstData;
+    EXPECT_LT(hostSlnData.absMax(), 1e-12);
+}
+
+TEST(InterpStencil, Linear) {
+    HDF5Handler h5;
+
+    constexpr unsigned int C = 3;
+    constexpr unsigned char D = 1;
+
+    int domainSize = 128;
+    Point refRatio(2,4,2,4,2,4);
+    Array<double, DIM> k{1,2,3,4,5,6};
+    Array<double, DIM> offset{1,2,3,4,5,6};
+
+    int N = 2;
+    double err[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        Array<double, DIM> cdx(1.0/domainSize);
+        Array<double, DIM> fdx = cdx;
+        fdx /= (Array<double, DIM>)refRatio;
+        Box srcBox = Box::Cube(domainSize);
+        Box dstBox = srcBox.refine(refRatio);
+
+        BoxData<double, C, HOST, D> hostSrcData(srcBox.grow(PR_NODE));
+        BoxData<double, C, HOST, D> hostDstData(dstBox);
+        BoxData<double, C, HOST, D> hostSlnData(dstBox);
+        forallInPlace_p(f_phi, hostSrcData, cdx, k, offset);
+        forallInPlace_p(f_phi, hostSlnData, fdx, k, offset);
+
+        auto I = InterpStencil<double>::Linear(refRatio);
+
+        I.apply(hostDstData, hostSrcData);
+        
+        hostSlnData -= hostDstData;
+        err[nn] = hostSlnData.absMax();
+        domainSize *= 2;
+    }
+    
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii]) / log(2.0);
+        EXPECT_LT(std::abs(1-rate), 0.01);
+    }
+}
+
+TEST(InterpStencil, Quadratic) {
+    HDF5Handler h5;
+
+    constexpr unsigned int C = 3;
+    constexpr unsigned char D = 1;
+
+    int domainSize = 32;
+    Point refRatio(2,4,2,4,2,4);
+    Array<double, DIM> k{1,2,3,4,5,6};
+    Array<double, DIM> offset{1,2,3,4,5,6};
+
+    int N = 6;
+    double err[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        Array<double, DIM> cdx(1.0/domainSize);
+        Array<double, DIM> fdx = cdx;
+        fdx /= (Array<double, DIM>)refRatio;
+        Box srcBox = Box::Cube(domainSize);
+        Box dstBox = srcBox.refine(refRatio);
+
+        BoxData<double, C, HOST, D> hostSrcData(srcBox.grow(1));
+        BoxData<double, C, HOST, D> hostDstData(dstBox);
+        BoxData<double, C, HOST, D> hostSlnData(dstBox);
+        forallInPlace_p(f_phi, hostSrcData, cdx, k, offset);
+        forallInPlace_p(f_phi, hostSlnData, fdx, k, offset);
+
+        auto I = InterpStencil<double>::Quadratic(refRatio);
+
+        I.apply(hostDstData, hostSrcData);
+        
+        hostSlnData -= hostDstData;
+        err[nn] = hostSlnData.absMax();
+        std::cout << "error: " << err[nn] << std::endl;
+        domainSize *= 2;
+    }
+    
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii]) / log(2.0);
+        std::cout << "rate: " << rate << std::endl;
+        //EXPECT_LT(std::abs(2.0-rate), 0.01);
+    }
 }
 #if 0
 PROTO_KERNEL_START
