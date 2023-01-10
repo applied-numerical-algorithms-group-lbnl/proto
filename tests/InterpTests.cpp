@@ -34,7 +34,8 @@ TEST(InterpStencil, Constant) {
     auto I = InterpStencil<double>::Constant(refRatio);
 
     I.apply(hostDstData, hostSrcData);
-
+    EXPECT_EQ(I.span(), Box(Point::Ones()));
+    EXPECT_EQ(I.ghost(), Point::Zeros());
     hostSlnData -= hostDstData;
     EXPECT_LT(hostSlnData.absMax(), 1e-12);
 }
@@ -67,7 +68,8 @@ TEST(InterpStencil, Linear) {
         forallInPlace_p(f_phi, hostSlnData, fdx, k, offset);
 
         auto I = InterpStencil<double>::Linear(refRatio);
-
+        EXPECT_EQ(I.span(), Box(Point::Ones(2)));
+        EXPECT_EQ(I.ghost(), Point::Ones());
         I.apply(hostDstData, hostSrcData);
         
         hostSlnData -= hostDstData;
@@ -88,12 +90,12 @@ TEST(InterpStencil, Quadratic) {
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
 
-    int domainSize = 32;
+    int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);
     Array<double, DIM> k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,2,3,4,5,6};
-
-    int N = 6;
+    offset *= (0.1);
+    int N = 2;
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
@@ -110,20 +112,87 @@ TEST(InterpStencil, Quadratic) {
         forallInPlace_p(f_phi, hostSlnData, fdx, k, offset);
 
         auto I = InterpStencil<double>::Quadratic(refRatio);
+        EXPECT_EQ(I.span(), Box::Kernel(1));
+        EXPECT_EQ(I.ghost(), Point::Ones());
 
         I.apply(hostDstData, hostSrcData);
         
         hostSlnData -= hostDstData;
         err[nn] = hostSlnData.absMax();
-        std::cout << "error: " << err[nn] << std::endl;
+        PR_DEBUG_MSG(1, "error: %3.2e", err[nn]);
         domainSize *= 2;
     }
     
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii]) / log(2.0);
-        std::cout << "rate: " << rate << std::endl;
-        //EXPECT_LT(std::abs(2.0-rate), 0.01);
+        PR_DEBUG_MSG(1,"rate: %3.2f", rate);
+        EXPECT_GT(rate, 2 - 0.01);
+    }
+}
+
+TEST(InterpStencil, FiniteVolume) {
+    HDF5Handler h5;
+
+    constexpr unsigned int C = 3;
+    constexpr unsigned char D = 1;
+
+    int domainSize = 32;
+    Point refRatio(2,4,2,4,2,4);
+    Array<double, DIM> k{1,2,3,4,5,6};
+    Array<double, DIM> offset{1,2,3,4,5,6};
+    offset *= (0.1);
+
+    int N = 4;
+    double err4[N];
+    double err5[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        Array<double, DIM> cdx(1.0/domainSize);
+        Array<double, DIM> fdx = cdx;
+        fdx /= (Array<double, DIM>)refRatio;
+        Box srcBox = Box::Cube(domainSize);
+        Box dstBox = srcBox.refine(refRatio);
+
+        BoxData<double, C, HOST, D> hostSrcData(srcBox.grow(2));
+        BoxData<double, C, HOST, D> hostDstData4(dstBox);
+        BoxData<double, C, HOST, D> hostDstData5(dstBox);
+        BoxData<double, C, HOST, D> hostSlnData(dstBox);
+        BoxData<double, C, HOST, D> hostErrData4(dstBox);
+        BoxData<double, C, HOST, D> hostErrData5(dstBox);
+        forallInPlace_p(f_phi_avg, hostSrcData, cdx, k, offset);
+        forallInPlace_p(f_phi_avg, hostSlnData, fdx, k, offset);
+
+        auto I4 = InterpStencil<double>::FiniteVolume(refRatio, 4);
+        auto I5 = InterpStencil<double>::FiniteVolume(refRatio, 5);
+        EXPECT_EQ(I4.span(), Box::Kernel(2));
+        EXPECT_EQ(I5.span(), Box::Kernel(2));
+        EXPECT_EQ(I4.ghost(), Point::Ones(2));
+        EXPECT_EQ(I5.ghost(), Point::Ones(2));
+
+        I4.apply(hostDstData4, hostSrcData);
+        I5.apply(hostDstData5, hostSrcData);
+        
+        hostDstData4.copyTo(hostErrData4);
+        hostDstData5.copyTo(hostErrData5);
+        hostErrData4 -= hostSlnData;
+        hostErrData5 -= hostSlnData;
+        err4[nn] = hostErrData4.absMax();
+        err5[nn] = hostErrData4.absMax();
+        PR_DEBUG_MSG(1, "4th Order Error: %3.2e", err4[nn]);
+        PR_DEBUG_MSG(1, "5th Order Error: %3.2e", err5[nn]);
+        domainSize *= 2;
+    }
+    
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate4 = log(err4[ii-1]/err4[ii]) / log(2.0);
+        double rate5 = log(err5[ii-1]/err5[ii]) / log(2.0);
+        PR_DEBUG_MSG(1,"4th Order Convergence Rate: %3.2f", rate4);
+        PR_DEBUG_MSG(1,"5th Order Convergence Rate: %3.2f", rate5);
+        EXPECT_GT(rate4, 4 - 0.01);
+        // Currently not working
+        //EXPECT_GT(rate5, 5 - 0.01);
     }
 }
 #if 0

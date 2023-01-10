@@ -105,6 +105,88 @@ InterpStencil<T> InterpStencil<T>::Quadratic(Point a_ratio)
 #endif
 }
 
+template<class T>
+InterpStencil<T> InterpStencil<T>::FiniteVolume(Point a_ratio, int a_order)
+{
+    InterpStencil<T> ret(a_ratio);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        int r = a_ratio[dir];
+        auto& Id = ret.m_interp[dir];
+        std::vector<Array<T,5>> coefs;
+        coefs.resize(r);
+        switch (r)
+        {
+            case 2:
+            {
+                switch (a_order)
+                {
+                    case 4:
+                    case 5:
+                    {
+                        coefs = 
+                        {
+                            {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
+                            {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
+                        };
+                        break;
+                    }
+                    default:
+                        MayDay<void>::Abort(
+                            "InterpStencil::FiniteVolume | Error: Case not implemented.");
+                }
+                break;
+            }
+            case 4:
+            {
+                switch (a_order)
+                {
+                    case 4:
+                    {
+                        coefs = 
+                        {
+                            {-35.0/1024,294.0/1024,960.0/1024,-230.0/1024,35.0/1024},
+                            {-13.0/1024,58.0/1024,1088.0/1024,-122.0/1024,13.0/1024},
+                            {13.0/1024,-122.0/1024,1088.0/1024,58.0/1024,-13.0/1024},
+                            {35.0/1024,-230.0/1024,960.0/1024,294.0/1024,-35.0/1024}
+                        };
+                        break;
+                    }
+                    case 5:
+                    {
+                        coefs = 
+                        {
+                            {-77.0/2048,616.0/2048,1878.0/2048,-432.0/2048,63.0/2048},
+                            {-19.0/2048,88.0/2048,2218.0/2048,-272.0/2048,33.0/2048},
+                            {33.0/2048,-272.0/2048,2218.0/2048,88.0/2048,-19.0/2048},
+                            {63.0/2048,-432.0/2048,1878.0/2048,616.0/2048,-77.0/2048}                
+                        };
+                        break;
+                    }
+                    default:
+                        MayDay<void>::Abort(
+                            "InterpStencil::FiniteVolume | Error: Case not implemented.");
+                }
+                break;
+            }
+            default:
+                MayDay<void>::Abort(
+                    "InterpStencil::FiniteVolume | Error: Case not implemented.");
+        }
+        for (int shift = 0; shift < r; shift++)
+        {
+            Stencil<T> S;
+            Box b = Box(Point::Basis(dir, -2), Point::Basis(dir,2));
+            for (int ii = 0; ii < 5; ii++)
+            {
+                S += coefs[shift][ii]*Shift(b[ii]);
+            }
+            Id.set(S, shift);
+        }
+    }
+    return ret;
+}
+
 #if 0
 // helper function for Build(...)
 /*

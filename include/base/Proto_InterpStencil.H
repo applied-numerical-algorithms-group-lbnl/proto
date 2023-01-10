@@ -14,8 +14,7 @@ namespace Proto
         inline static InterpStencil<T> Constant(Point a_refRatio);
         inline static InterpStencil<T> Linear(Point a_refRatio);
         inline static InterpStencil<T> Quadratic(Point a_refRatio);
-        inline static InterpStencil<T> Cubic(Point a_refRatio);
-        inline static InterpStencil<T> Quartic(Point a_refRatio);
+        inline static InterpStencil<T> FiniteVolume(Point a_refRatio, int a_order = 5);
 
         InterpStencil(){};
         InterpStencil(Point a_refRatio);

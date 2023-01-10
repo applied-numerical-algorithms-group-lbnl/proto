@@ -12,101 +12,6 @@ void InterpStencil<T>::define(Point a_refRatio)
     {
         m_interp[dir].define(dir, a_refRatio[dir]); 
     }
-#if 0
-    if (a_refRatio  == 2)
-    {
-      Array<Array<T,5> , 2 > coefs;
-      if (a_order == 4)
-        { 
-          coefs =
-            {
-                {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
-                {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
-              };
-        }
-      else if (a_order== 5)
-        {
-          coefs =
-            {
-                {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
-                {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
-              };
-          // PC:this is the same as the 4th order stencil! 
-        }
-      else
-        {
-          MayDay<void>::Abort(
-                              "InterpStencil::Build | Error: Invalid order. Must be 4 or 5.");  
-        }
-      for (int dir = 0; dir < DIM; dir++)
-        {
-            Point refRatio = Point::Ones();
-            refRatio[dir] = a_refRatio;
-            m_interp[dir].define(refRatio);
-            for (int k = 0; k < 2; k++)
-            {
-                m_interp[dir](Point::Basis(dir, k)) =
-                    build1D5pt(coefs[k], dir);
-            }
-            m_interp[dir].close();
-        }
-    } else if (a_refRatio == 4)
-    {
-      Array<Array<T,5> , 4 > coefs;
-      if (a_order == 4)
-        {
-          coefs =
-            {
-                {-35.0/1024,294.0/1024,960.0/1024,-230.0/1024,35.0/1024},
-                {-13.0/1024,58.0/1024,1088.0/1024,-122.0/1024,13.0/1024},
-                {13.0/1024,-122.0/1024,1088.0/1024,58.0/1024,-13.0/1024},
-                {35.0/1024,-230.0/1024,960.0/1024,294.0/1024,-35.0/1024}
-              };
-        }
-      else if (a_order == 5)
-        {
-          coefs =
-            {
-                {-77.0/2048,616.0/2048,1878.0/2048,-432.0/2048,63.0/2048},
-                {-19.0/2048,88.0/2048,2218.0/2048,-272.0/2048,33.0/2048},
-                {33.0/2048,-272.0/2048,2218.0/2048,88.0/2048,-19.0/2048},
-                {63.0/2048,-432.0/2048,1878.0/2048,616.0/2048,-77.0/2048}                
-              };
-        }
-        else
-          {
-            MayDay<void>::Abort(
-                                "InterpStencil::Build | Error: Invalid order. Must be 4 or 5.");  
-          }
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            Point refRatio = Point::Ones();
-            refRatio[dir] = a_refRatio;
-            m_interp[dir].define(refRatio);
-            for (int k = 0; k < 4; k++)
-            {
-                m_interp[dir](Point::Basis(dir, k)) =
-                    build1D5pt(coefs[k], dir);
-            }
-            m_interp[dir].close();
-        }
-    } else {
-        MayDay<void>::Abort(
-            "InterpStencil::Build | Error: Invalid refinement ratio. Must be 2 or 4.");
-    }
-#endif
-}
-
-template<typename T>
-Stencil<T> InterpStencil<T>::build1D5pt(
-    Array<double,5>& a_coefs, int a_dir)
-{
-    return
-          a_coefs[0]*Shift::Basis(a_dir,-2) +
-          a_coefs[1]*Shift::Basis(a_dir,-1) +
-          a_coefs[2]*Shift::Zeros() +
-          a_coefs[3]*Shift::Basis(a_dir,1) +
-          a_coefs[4]*Shift::Basis(a_dir,2);
 }
 
 template<typename T>
@@ -123,6 +28,19 @@ Point InterpStencil<T>::ghost() const
     }
     return span_0;
 }
+
+template<typename T>
+Box InterpStencil<T>::span() const
+{
+    Box b = m_interp[0].span();
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        b = b & m_interp[dir].span().low();
+        b = b & m_interp[dir].span().high();
+    }
+    return b;
+}
+
 
 template<typename T>
 template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
