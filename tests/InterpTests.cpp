@@ -16,6 +16,8 @@ TEST(InterpStencil, Constant) {
     BoxData<double, C, HOST, D> hostSrcData(srcBox);
     BoxData<double, C, HOST, D> hostDstData(dstBox);
     BoxData<double, C, HOST, D> hostSlnData(dstBox);
+    BoxData<double, C, HOST, D> hostErrData(dstBox);
+    
     forallInPlace_p(f_pointID, hostSrcData);
     
     for (auto p : srcBox)
@@ -32,14 +34,27 @@ TEST(InterpStencil, Constant) {
     }
 
     auto I = InterpStencil<double>::Constant(refRatio);
-
-    I.apply(hostDstData, hostSrcData);
     EXPECT_EQ(I.span(), Box(Point::Ones()));
     EXPECT_EQ(I.ghost(), Point::Zeros());
-    hostSlnData -= hostDstData;
-    EXPECT_LT(hostSlnData.absMax(), 1e-12);
+    
+    hostDstData |= I(hostSrcData);
+    hostDstData.copyTo(hostErrData);
+    hostErrData -= hostSlnData;
+    EXPECT_LT(hostErrData.absMax(), 1e-12);
+    
+    BoxData<double, C, HOST, D> hostOutData = I(hostSrcData);
+    EXPECT_EQ(hostOutData.box(), dstBox);
+    hostOutData.copyTo(hostErrData);
+    hostErrData -= hostSlnData;
+    EXPECT_LT(hostErrData.absMax(), 1e-12);
+    
+    hostDstData.setVal(7);
+    hostDstData += I(hostSrcData);
+    hostSlnData += 7;
+    hostDstData.copyTo(hostErrData);
+    hostErrData -= hostSlnData;
+    EXPECT_LT(hostErrData.absMax(), 1e-12);
 }
-
 TEST(InterpStencil, Linear) {
     HDF5Handler h5;
 
@@ -50,6 +65,15 @@ TEST(InterpStencil, Linear) {
     Point refRatio(2,4,2,4,2,4);
     Array<double, DIM> k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,2,3,4,5,6};
+
+    auto I0 = InterpStencil<double>::Linear(refRatio);
+    Box b0 = Box::Cube(8);
+    Box domainSln = b0.grow(PR_NODE);
+    Box range = I0.range(domainSln);
+    Box rangeSln = b0.refine(refRatio);
+    Box domain = I0.domain(rangeSln); 
+    EXPECT_EQ(range,rangeSln);
+    EXPECT_EQ(domain,domainSln);
 
     int N = 2;
     double err[N];
@@ -70,7 +94,7 @@ TEST(InterpStencil, Linear) {
         auto I = InterpStencil<double>::Linear(refRatio);
         EXPECT_EQ(I.span(), Box(Point::Ones(2)));
         EXPECT_EQ(I.ghost(), Point::Ones());
-        I.apply(hostDstData, hostSrcData);
+        hostDstData |= I(hostSrcData);
         
         hostSlnData -= hostDstData;
         err[nn] = hostSlnData.absMax();
@@ -80,7 +104,7 @@ TEST(InterpStencil, Linear) {
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii]) / log(2.0);
-        EXPECT_LT(std::abs(1-rate), 0.01);
+        EXPECT_GT(rate, 2.0 - 0.01);
     }
 }
 
@@ -92,6 +116,17 @@ TEST(InterpStencil, Quadratic) {
 
     int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);
+    
+    auto I0 = InterpStencil<double>::Quadratic(refRatio);
+
+    Box b0 = Box::Cube(8);
+    Box domainSln = b0.grow(1);
+    Box range = I0.range(domainSln);
+    Box rangeSln = b0.refine(refRatio);
+    Box domain = I0.domain(rangeSln); 
+    EXPECT_EQ(range,rangeSln);
+    EXPECT_EQ(domain,domainSln);
+    
     Array<double, DIM> k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,2,3,4,5,6};
     offset *= (0.1);
@@ -115,7 +150,7 @@ TEST(InterpStencil, Quadratic) {
         EXPECT_EQ(I.span(), Box::Kernel(1));
         EXPECT_EQ(I.ghost(), Point::Ones());
 
-        I.apply(hostDstData, hostSrcData);
+        hostDstData |= I(hostSrcData);
         
         hostSlnData -= hostDstData;
         err[nn] = hostSlnData.absMax();
@@ -127,7 +162,7 @@ TEST(InterpStencil, Quadratic) {
     {
         double rate = log(err[ii-1]/err[ii]) / log(2.0);
         PR_DEBUG_MSG(1,"rate: %3.2f", rate);
-        EXPECT_GT(rate, 2 - 0.01);
+        EXPECT_GT(rate, 3 - 0.01);
     }
 }
 
@@ -137,13 +172,13 @@ TEST(InterpStencil, FiniteVolume) {
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
 
-    int domainSize = 32;
+    int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);
     Array<double, DIM> k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,2,3,4,5,6};
     offset *= (0.1);
 
-    int N = 4;
+    int N = 2;
     double err4[N];
     double err5[N];
     for (int nn = 0; nn < N; nn++)
@@ -170,8 +205,8 @@ TEST(InterpStencil, FiniteVolume) {
         EXPECT_EQ(I4.ghost(), Point::Ones(2));
         EXPECT_EQ(I5.ghost(), Point::Ones(2));
 
-        I4.apply(hostDstData4, hostSrcData);
-        I5.apply(hostDstData5, hostSrcData);
+        hostDstData4 |= I4(hostSrcData);
+        hostDstData5 |= I5(hostSrcData);
         
         hostDstData4.copyTo(hostErrData4);
         hostDstData5.copyTo(hostErrData5);
@@ -191,8 +226,7 @@ TEST(InterpStencil, FiniteVolume) {
         PR_DEBUG_MSG(1,"4th Order Convergence Rate: %3.2f", rate4);
         PR_DEBUG_MSG(1,"5th Order Convergence Rate: %3.2f", rate5);
         EXPECT_GT(rate4, 4 - 0.01);
-        // Currently not working
-        //EXPECT_GT(rate5, 5 - 0.01);
+        EXPECT_GT(rate5, 5 - 0.01);
     }
 }
 #if 0

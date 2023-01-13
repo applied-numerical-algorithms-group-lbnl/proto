@@ -68,7 +68,7 @@ template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 LazyStencil<T,C,MEMTYPE,D,E> InterpStencil1D<T>::operator()(
         const BoxData<T,C,MEMTYPE,D,E>& a_src,
         Box                             a_box,
-        T                               a_scale)
+        T                               a_scale) const
 {
     LazyStencil<T,C,MEMTYPE,D,E> ret;
     if (m_s.size() <= 0){return ret;}
@@ -89,7 +89,7 @@ template<class T>
 template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil1D<T>::operator()(
         const BoxData<T,C,MEMTYPE,D,E>& a_src,
-		T                               a_scale)
+		T                               a_scale) const
 {
     LazyStencil<T,C,MEMTYPE,D,E> ret;
     if (m_s.size() <= 0){return ret;}

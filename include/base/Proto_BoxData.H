@@ -74,6 +74,9 @@ namespace Proto
     template<typename T> class Stencil;
     template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     class LazyStencil;
+    
+    template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    class LazyInterpStencil;
 
     template<MemType MEM>
     inline void null_deleter_boxdata(void* ptr) { }
@@ -420,6 +423,7 @@ namespace Proto
           \param a_op   The output of a Stencil or InterpStencil apply operation.
           */
         BoxData(LazyStencil<T,C,MEM,D,E>&& a_op);
+        BoxData(LazyInterpStencil<T,C,MEM,D,E>&& a_op);
 
         /// Slice Constructor
         /**
@@ -1424,6 +1428,7 @@ namespace Proto
             const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);
 
+    
 ///@}
 
 #include "implem/Proto_BoxDataImplem.H"

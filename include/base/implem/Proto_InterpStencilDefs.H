@@ -27,7 +27,6 @@ InterpStencil<T> InterpStencil<T>::Linear(Point a_ratio)
             double s = shift;
             double p = s/r;
             double q = (r - s)/r;
-
             auto S = q*Shift::Zeros() + p*Shift::Basis(dir, 1);
 
             Id.set(S, shift);
@@ -40,7 +39,7 @@ InterpStencil<T> InterpStencil<T>::Linear(Point a_ratio)
 inline double qcoef(int a_ni, int a_r, int a_side)
 {
     PROTO_ASSERT(std::abs(a_side) <= 1,
-    "qcoef(ni, r, side) invalide for side = %i. Value must be in [-1,1]", a_side);
+    "qcoef(ni, r, side) invalid for side = %i. Value must be in [-1,1]", a_side);
     double n = a_ni; double r = a_r;
     double coef = 0;
     if (a_side == -1)

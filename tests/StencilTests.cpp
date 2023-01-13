@@ -2,7 +2,6 @@
 #include "Proto.H"
 #include "Lambdas.H"
 #include <numeric>
-
 TEST(Stencil, DefaultConstructor) {
     Stencil<double> S;
     Box B = Box::Cube(8);
@@ -86,15 +85,40 @@ TEST(Stencil, Domain_Range) {
     Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
     for (int ii = 0; ii < DIM; ii++)
     {
-    int d = ii+1;
-    S0 += 1.0*Shift::Basis(ii,d);
-    S0 += 1.0*Shift::Basis(ii,-d);
+        int d = ii+1;
+        S0 += 1.0*Shift::Basis(ii,d);
+        S0 += 1.0*Shift::Basis(ii,-d);
     }
 
     R = S0.range(B);
     D = S0.domain(B);
     EXPECT_EQ(R,B.grow(Point(1,2,3,4,5,6)*-1));
     EXPECT_EQ(D,B.grow(Point(1,2,3,4,5,6)));
+}
+TEST(Stencil, BoxInference)
+{
+    Point srcRefRatio = Point::Ones(2);
+    Point dstRefRatio = Point::Ones(4);
+    Point dstShift = Point::Ones();
+    Stencil S = 1.0*Shift::Ones() + 1.0*Shift::Basis(0);
+    S.srcRatio() = srcRefRatio;
+    S.destRatio() = dstRefRatio;
+    S.destShift() = dstShift;
+    
+    Box I0 = Box::Cube(8).shift(Point::Ones());
+    Box D0(Point::Ones(2), Point::Ones(17));
+    Box R0(Point::Ones(4), Point::Ones(32));
+    R0 = R0.shift(dstShift);
+    
+    Box D = S.domain(R0);
+    Box R = S.range(D0);
+    Box ID = S.indexDomain(R0);
+    Box IR = S.indexRange(D0);
+
+    EXPECT_EQ(D0,D);
+    EXPECT_EQ(R0,R);
+    EXPECT_EQ(I0,ID);
+    EXPECT_EQ(I0,IR);
 }
 
 TEST(Stencil, LinearAvg) {
@@ -382,7 +406,6 @@ TEST(Stencil, DestRefine) {
         if (host(it))
             EXPECT_EQ(coef,host(it));
 }
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
