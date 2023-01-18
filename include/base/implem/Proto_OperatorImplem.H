@@ -917,6 +917,38 @@ _faceMatrixProductAB(
         }
   return prod;
 }
+template<class T, unsigned int CL,unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
+_cellMatrixProductAB(
+                 const BoxData<T,CL,MEM,DL,E>& a_ql4,
+                 const BoxData<T,CR,MEM,DR,E>& a_qr4,
+                 const BoxData<T,CL,MEM,DL,E>& a_ql2,
+                 const BoxData<T,CR,MEM,DR,E>& a_qr2)
+{
+  PR_TIME("Operator::matrixProductAB");
+  PR_assert(uint(DL) == CR);
+  Box bx = a_ql4.box()&a_qr4.box();
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      bx = bx&a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+    }
+  BoxData<T,CL,MEM,DR,E> prod(bx);
+  prod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < DL;k++)
+        {
+          auto prodcomp = slice(prod,i,j,ee);
+          auto qr4comp = slice(a_qr4,k,j,ee);
+          auto qr2comp = slice(a_qr2,k,j,ee);
+          auto ql4comp = slice(a_ql4,i,k,ee);
+          auto ql2comp = slice(a_ql2,i,k,ee);
+          prodcomp+=Operator::_cellProduct(ql4comp,qr4comp,ql2comp,qr2comp);
+        }
+  return prod;
+}
 template<class T, unsigned int CL, unsigned char DL,
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
 BoxData<T,DL,MEM,DR,E>
