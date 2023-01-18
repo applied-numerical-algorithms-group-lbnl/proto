@@ -665,7 +665,15 @@ namespace Operator {
             const BoxData<T,CL,MEM,DL,E>& a_ql2,
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
-
+template<class T, unsigned int CL,unsigned char DL,
+           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    BoxData<T,CL,MEM,DR,E>
+    _cellMatrixProductAB
+           (
+            const BoxData<T,CL,MEM,DL,E>& a_ql4,
+            const BoxData<T,CR,MEM,DR,E>& a_qr4,
+            const BoxData<T,CL,MEM,DL,E>& a_ql2,
+            const BoxData<T,CR,MEM,DR,E>& a_qr2);
     template<class T, unsigned int CL, unsigned char DL,
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
     BoxData<T,DL,MEM,DR,E>
