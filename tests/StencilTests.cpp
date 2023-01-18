@@ -233,7 +233,7 @@ TEST(Stencil, Scalar) {
 
     EXPECT_EQ(D0.box(),B);
     EXPECT_EQ(D1.box(),b);
-
+    
     BoxData<int,1,HOST> D0_host(B), D1_host(b), R_host(B);
     D0.copyTo(D0_host);
     D1.copyTo(D1_host);
@@ -243,7 +243,6 @@ TEST(Stencil, Scalar) {
     for (auto it : b)
         EXPECT_EQ(D1_host(it),17*R_host(it));
 }
-
 
 PROTO_KERNEL_START
 void sineFunc_temp(Point& pt, Var<double>& src, double dx) {

@@ -60,7 +60,7 @@ class LevelMultigrid
         int m_preRelax = 2*DIM;
         int m_postRelax = 2*DIM;
         int m_bottomRelax = 10;
-        InterpStencil<double> m_fineInterp = InterpStencil<double>::PiecewiseConstant(Point::Ones()*2); 
+        InterpStencil<double> m_fineInterp = InterpStencil<double>::Constant(Point::Ones(2)); 
         Reduction<double, Abs> m_rxn;
 };
 #endif

@@ -50,8 +50,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
                 std::make_shared<LevelFluxRegister<T, BOP::numState(), MEM>>(
                     a_grid[lvl], a_grid[lvl+1],
                     refRatio, dx);
-            m_interp[lvl] = 
-                InterpStencil<T>::Build(BOP::order() + 1, refRatio);
+            m_interp[lvl] = InterpStencil<T>::FiniteVolume(refRatio, BOP::order()+1);
             for (int dir = 0; dir < DIM; dir++)
             {
                 dx[dir] /= refRatio[dir];

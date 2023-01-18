@@ -326,6 +326,7 @@ Box
 Stencil<T>::indexDomain(Box a_range) const
 {
     PR_TIME("Stencil::indexDomain");
+    if (a_range.empty()) { return Box(); }
     Box indexDomain = a_range.shift(-m_destShift);
     indexDomain = indexDomain.taperCoarsen(m_destRefratio);
     return indexDomain;
@@ -336,6 +337,7 @@ Box
 Stencil<T>::range(Box a_domain) const
 {
     PR_TIME("Stencil::range");
+    if (a_domain.empty()) { return Box(); }
     Box range;
     range = indexRange(a_domain);
     // this is intentionally not a refine
@@ -349,8 +351,7 @@ Box
 Stencil<T>::domain(Box a_range) const
 {
     PR_TIME("Stencil::domain");
-        
-
+    if (a_range.empty()) { return Box(); }
     Box domain = indexDomain(a_range);
     // this is intentionally not a refine
     domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
@@ -412,6 +413,11 @@ void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
     BoxData<T, C, MEMTYPE, D, E>& castsrc = const_cast<BoxData<T,C,MEMTYPE,D,E> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
+    // Box inference happens here
+    if (a_box.empty())
+    {
+        castbox = indexDomain(a_dest.box()) & indexRange(a_src.box());
+    }
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 }
 
@@ -420,8 +426,8 @@ template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 LazyStencil<T,C,MEMTYPE,D,E>
 Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src, T a_scale) const
 {
-    Box b = this->range(a_src.box());
-    return LazyStencil<T,C,MEMTYPE,D,E>(this, &a_src, b, a_scale);
+    //Box b = this->range(a_src.box());
+    return LazyStencil<T,C,MEMTYPE,D,E>(this, &a_src, Box(), a_scale);
 }
 template <typename T>
 template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -432,6 +438,8 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_sc
     Box b = this->range(a_src.box());
     PROTO_ASSERT(b.contains(a_box),
             "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
+    PROTO_ASSERT(!a_box.empty(),
+            "Stencil::operator() | Error: User explicitly passed an empty Box.");
 #endif
     return LazyStencil<T, C, MEMTYPE, D, E>(this, &a_src, a_box, a_scale);
 }
@@ -497,11 +505,26 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
 {
     for (int ii = 0; ii < m_src.size(); ii++)
     {
-        //Box b = m_box[ii];
-        //b = b & m_stencil[ii]->indexDomain(a_dest.box());
         m_stencil[ii]->apply(*(m_src[ii]),a_dest,
                             m_box[ii], a_overwrite, m_scale[ii]);
     }
+}
+
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Box LazyStencil<T,C,MEMTYPE,D,E>::inferredRange() const
+{
+    if (size() == 0) {return Box(); }
+    Box range;
+    for (int ii = 0; ii < size(); ii++)
+    {
+        Box ri = m_stencil[0]->range(m_src[0]->box());
+        if (ii == 0) {range = ri;}
+        else {
+            range = range & ri.low();
+            range = range & ri.high();
+        }
+    }
+    return range;
 }
 
 template <typename T>

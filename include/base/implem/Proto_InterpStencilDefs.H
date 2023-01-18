@@ -186,6 +186,7 @@ InterpStencil<T> InterpStencil<T>::FiniteVolume(Point a_ratio, int a_order)
     return ret;
 }
 
+// EVERYTHING BELOW THIS LINE IS PART OF THE BUILD API
 #if 0
 // helper function for Build(...)
 /*

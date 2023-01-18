@@ -208,7 +208,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
     m_lambda = 0.5/m_levelOp.spectralRadius();
 
     m_average = Stencil<T>::AvgDown(a_refRatio);
-    m_interpolate = InterpStencil<T>::PiecewiseConstant(a_refRatio);
+    m_interpolate = InterpStencil<T>::Constant(a_refRatio);
     m_increment = (-m_lambda)*Shift::Zeros();
 
     m_residual.define(a_layout, Point::Zeros());
@@ -261,7 +261,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
     m_lambda = 0.5/m_levelOp.spectralRadius();
 
     m_average = Stencil<T>::AvgDown(a_refRatio);
-    m_interpolate = InterpStencil<T>::PiecewiseConstant(a_refRatio);
+    m_interpolate = InterpStencil<T>::Constant(a_refRatio);
     m_increment = (-m_lambda)*Shift::Zeros();
     
     m_residual.define(a_layout, Point::Zeros());

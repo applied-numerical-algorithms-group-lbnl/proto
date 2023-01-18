@@ -2,12 +2,48 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
+TEST(InterpStencil, BoxInference)
+{
+    int domainSize = 8;
+    Point refRatio(2,4,2,4,2,4);
+    auto I0 = InterpStencil<double>::Constant(refRatio);
+    auto I1 = InterpStencil<double>::Linear(refRatio);
+    auto I2 = InterpStencil<double>::Quadratic(refRatio);
+
+    Box B = Box::Cube(domainSize);
+    Box B0 = B.refine(refRatio);
+    Box B1 = B.extrude(Point::Ones(), -1).refine(refRatio);
+    Box B2 = B.grow(-1).refine(refRatio);
+    
+    Box b0 = B0.grow(-1);
+    Box b1 = B1.grow(-1);
+    Box b2 = B2.grow(-1);
+
+    BoxData<double> hostSrcData(B);
+    
+    BoxData<double> hostDstData_0 = I0(hostSrcData);
+    BoxData<double> hostDstData_1 = I1(hostSrcData);
+    BoxData<double> hostDstData_2 = I2(hostSrcData);
+    
+    BoxData<double> hostDstData_3 = I0(hostSrcData, b0);
+    BoxData<double> hostDstData_4 = I1(hostSrcData, b1);
+    BoxData<double> hostDstData_5 = I2(hostSrcData, b2);
+
+    EXPECT_EQ(hostDstData_0.box(), B0);
+    EXPECT_EQ(hostDstData_1.box(), B1);
+    EXPECT_EQ(hostDstData_2.box(), B2);
+
+    EXPECT_EQ(hostDstData_3.box(), b0);
+    EXPECT_EQ(hostDstData_4.box(), b1);
+    EXPECT_EQ(hostDstData_5.box(), b2);
+
+}
 TEST(InterpStencil, Constant) {
     
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
 
-    int domainSize = 8;
+    int domainSize = 2;
     Point refRatio(2,4,2,4,2,4);
 
     Box srcBox = Box::Cube(domainSize);
@@ -32,7 +68,7 @@ TEST(InterpStencil, Constant) {
             }
         }
     }
-
+    
     auto I = InterpStencil<double>::Constant(refRatio);
     EXPECT_EQ(I.span(), Box(Point::Ones()));
     EXPECT_EQ(I.ghost(), Point::Zeros());
@@ -48,12 +84,31 @@ TEST(InterpStencil, Constant) {
     hostErrData -= hostSlnData;
     EXPECT_LT(hostErrData.absMax(), 1e-12);
     
+    Box limitBox = dstBox.grow(-Point::Basis(0));
+    hostDstData.setVal(7);
+    hostDstData.printData();
+    hostDstData |= I(hostSrcData, limitBox);
+    for (auto pi : hostDstData.box())
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        {
+            if (limitBox.contains(pi))
+            {
+                EXPECT_EQ(hostDstData(pi,cc,dd), hostSlnData(pi, cc, dd));
+            } else {
+                EXPECT_EQ(hostDstData(pi,cc,dd), 7);
+            }
+        }
+    }
+    
     hostDstData.setVal(7);
     hostDstData += I(hostSrcData);
     hostSlnData += 7;
     hostDstData.copyTo(hostErrData);
     hostErrData -= hostSlnData;
     EXPECT_LT(hostErrData.absMax(), 1e-12);
+    
 }
 TEST(InterpStencil, Linear) {
     HDF5Handler h5;
@@ -229,162 +284,6 @@ TEST(InterpStencil, FiniteVolume) {
         EXPECT_GT(rate5, 5 - 0.01);
     }
 }
-#if 0
-PROTO_KERNEL_START
-void srcLambdaF(Point p, Var<double>& v, const double dx) {
-    //v(0) = p[0]*dx;
-    v(0) = sin(dx*p[0]);
-    #if DIM > 1
-    v(0) *= cos(dx*p[1]);
-    #endif
-}
-PROTO_KERNEL_END(srcLambdaF, srcLambda)
-
-PROTO_KERNEL_START
-void solnLambdaF(Point p, Var<double>& v, const double dx) {
-    //v(0) = p[0]*dx/3.0;
-    v(0) = sin(dx/3.0*p[0]);
-    #if DIM > 1
-    v(0) *= cos(dx/3.0*p[1]);
-    #endif
-}
-PROTO_KERNEL_END(solnLambdaF, solnLambda)
-
-TEST(Interp, PiecewiseLinear) {
-    Point r = Point::Ones(3);
-    auto PWC = InterpStencil<double>::PiecewiseConstant(r);
-    auto PWL = InterpStencil<double>::PiecewiseLinear(r);
-
-    int domainSize = 16, numIter = 4;
-    double error_C[numIter];
-    double error_L[numIter];
-    for (int ii = 0; ii < numIter; ii++) {
-        Box B0 = Box::Cube(domainSize);
-        Box B1 = Box(B0.low()*r, B0.high()*r);
-        Box B2 = B0.refine(r);
-        BoxData<double> Src(B0);
-        BoxData<double> DC0(B2,1337.);
-        BoxData<double> DL0(B1,1337.);
-        BoxData<double> DC1(B2,17.);
-        BoxData<double> DL1(B1,17.);
-        BoxData<double> Soln(B2);
-
-        //double dx = (M_PI/4.0)/domainSize;
-        double dx = 1.0/domainSize;
-
-
-        forallInPlace_p(srcLambda,Src,dx);
-        forallInPlace_p(solnLambda,Soln,dx);
-
-        DC0 |= PWC(Src);
-        DL0 |= PWL(Src);
-        DC1 += PWC(Src);
-        DL1 += PWL(Src);
-        BoxData<double> DC2 = PWC(Src);
-        BoxData<double> DL2 = PWL(Src);
-
-        EXPECT_EQ(DC2.box(),B2);
-        EXPECT_EQ(DL2.box(),B1);
-        DC0 -= DC2;
-        DL0 -= DL2;
-        DC1 -= 17;
-        DL1 -= 17;
-        DC1 -= DC2;
-        DL1 -= DL2;
-
-        EXPECT_DOUBLE_EQ(DC0.absMax(),0.);
-        EXPECT_DOUBLE_EQ(DL0.absMax(),0.);
-        EXPECT_LT(DC1.absMax(),1e-6);
-        EXPECT_LT(DL1.absMax(),1e-6);
-        DC2 -= Soln;
-        DL2 -= Soln;
-        error_C[ii] = DC2.absMax();
-        error_L[ii] = DL2.absMax();
-        domainSize *= 2;
-    }
-
-    for (int ii = 1; ii < numIter; ii++) {
-        double rate = log2(error_C[ii-1]/error_C[ii]);
-        EXPECT_LT(abs(rate - 1.),0.1);
-        rate = log2(error_L[ii-1]/error_L[ii]);
-        EXPECT_LT(abs(rate - 2.),0.1);
-    }
-} 
-
-TEST(InterpStencil, BoxInference) {
-    Box B0 = Box::Cube(4).grow(1);
-    Box B1 = Box::Cube(8).grow(1);
-    Box K = Box(Point::Ones(-2),Point::Ones(8));
-    auto Src = forall_p<double>(pointSum, B0);
-    auto Soln = forall_p<double>(halfPointSum, K);
-
-    BoxData<double> Dest0(B1,1337.);
-    BoxData<double> Dest1(B1,1337.);
-    BoxData<double> Dest2(B1,1337.);
-    auto I = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
-
-    Dest0 |= I(Src, B0.grow(-1));
-    Dest1 |= I(Src, B0.grow(1));
-    Dest2 |= I(Src);
-    BoxData<double> Dest3 = I(Src);
-
-    EXPECT_EQ(Dest3.box(),K);
-
-    BoxData<double,1,HOST> D0h(B1), D1h(B1), D2h(B1), D3h(K), Solnh(K);
-    Dest0.copyTo(D0h); Dest1.copyTo(D1h); Dest2.copyTo(D2h); Dest3.copyTo(D3h);
-    Soln.copyTo(Solnh);
-
-    for (auto iter : K) {
-        EXPECT_EQ(D3h(iter),Solnh(iter));
-        if (B1.grow(-1).contains(iter))
-            EXPECT_EQ(D0h(iter),Solnh(iter));
-        if (B1.contains(iter)) {
-            EXPECT_EQ(D1h(iter),Solnh(iter));
-            EXPECT_EQ(D2h(iter),Solnh(iter));
-        }
-    }
-}
-
-TEST(InterpStencil, CosApply) {
-    int domainSize = 8, numIter = 5;
-    for (int ii = 0; ii < numIter; ii++) {
-        Box B0 = Box::Cube(domainSize).grow(1);
-        Box B1 = Box::Cube(2*domainSize).grow(1);
-        double dx = M_PI/domainSize;
-        BoxData<double> Src  = forall_p<double>(cosxCosyFunc,     B0, dx);
-        BoxData<double> Soln = forall_p<double>(cosxCosyPCosFunc, B1, dx);
-        BoxData<double> Dest = forall_p<double>(cosxFunc,         B1, dx);
-
-        auto interp = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
-        Dest += interp(Src);
-        BoxData<double,1,HOST> dest_host(B1), src_host(B0);
-        Dest.copyTo(dest_host); Src.copyTo(src_host); 
-        for (auto iter : B1) {
-            double x =iter[0]*dx/2.0;
-            double y =iter[1]*dx/2.0;
-            Point p = iter % Point::Ones(2);
-            Point q = iter / Point::Ones(2);
-            double value = cos(x);
-            if ( p == Point::Zeros()) {
-                value += src_host(q);
-                EXPECT_FLOAT_EQ(dest_host(iter),value);
-            } else if ((p == Point::Basis(0)) ||
-                       (p == Point::Basis(1)) ||
-                       (p == Point::Basis(0,-1)) ||
-                       (p == Point::Basis(1,-1))) {
-                value += (src_host(q) + src_host(q+p))/2.0;
-                EXPECT_FLOAT_EQ(dest_host(iter),value);
-            } else if (p ==  Point::Ones()) {
-                value += (src_host(q) + src_host(q+p) + src_host(q + Point::Basis(0)) + src_host(q + Point::Basis(1)))/4.0;
-                EXPECT_FLOAT_EQ(dest_host(iter),value);
-            }
-        }
-        Dest -= Soln;
-        domainSize *= 2;
-    }
-}
-#endif
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

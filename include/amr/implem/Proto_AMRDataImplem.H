@@ -15,48 +15,50 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
 {
-  if (m_defined)
+    if (m_defined)
     {
-      int ghostInterp = 2;
+        int ghostInterp = 2;
         for (int ii = a_level;ii + 1 < a_newgrid.numLevels();ii++)          
         {
-          Point refratio = a_newgrid.refRatio(ii);
-          InterpStencil<double > stencil(a_order,refratio[0]);
-          PR_assert(refratio == Point::Ones()*refratio[0]);
-          
-        //PC: Need to extend InterpStencil to non-isotropic case !!
-          
-          auto newleveldata =std::make_shared<LevelBoxData<T, C, MEM, CTR> >
-            (a_newgrid[ii+1], m_ghost);
-          auto dblCoarse =
-            a_newgrid[ii+1].coarsen(a_newgrid.refRatio(ii));
-          LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
-                                                   Point::Ones(ghostInterp));
-          (*this)[ii].copyTo(dataCoarse);
-          for (auto dit=dataCoarse.begin();dit != dit.end();++dit)
+            Point refratio = a_newgrid.refRatio(ii);
+            auto stencil = InterpStencil<T>::FiniteVolume(refratio, a_order);
+            PR_assert(refratio == Point::Ones()*refratio[0]);
+
+            //PC: Need to extend InterpStencil to non-isotropic case !!
+
+            auto newleveldata =std::make_shared<LevelBoxData<T, C, MEM, CTR> >
+                (a_newgrid[ii+1], m_ghost);
+            auto dblCoarse =
+                a_newgrid[ii+1].coarsen(a_newgrid.refRatio(ii));
+            LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
+                    Point::Ones(ghostInterp));
+            (*this)[ii].copyTo(dataCoarse);
+            for (auto dit : dataCoarse)
             {
-              stencil.apply((*newleveldata)[*dit],dataCoarse[*dit]);
+                auto& newData = (*newleveldata)[dit];
+                auto& oldData = dataCoarse[dit];
+                newData |= stencil(oldData);
             }
-          // copy old data to new data on intersection.
-          (*this)[ii+1].copyTo(*newleveldata);
-          // replace the data pointer with the new data pointer.
-          m_data[ii+1] = newleveldata;
+            // copy old data to new data on intersection.
+            (*this)[ii+1].copyTo(*newleveldata);
+            // replace the data pointer with the new data pointer.
+            m_data[ii+1] = newleveldata;
         }
         m_grid = a_newgrid;
     }
-  else
+    else
     {
-       MayDay<void>::Error("AMRData::regrid | Error: attempting to regrid undefined AMRData.");
+        MayDay<void>::Error("AMRData::regrid | Error: attempting to regrid undefined AMRData.");
     }
-  // Check to see if grids are consistent.
-  PR_assert(m_grid.numLevels() == (*this).numLevels()); 
-  for (int ii = 0; ii < m_grid.numLevels();ii++)
+    // Check to see if grids are consistent.
+    PR_assert(m_grid.numLevels() == (*this).numLevels()); 
+    for (int ii = 0; ii < m_grid.numLevels();ii++)
     {
-      if (!(m_data[ii]->layout() == m_grid[ii]))
+        if (!(m_data[ii]->layout() == m_grid[ii]))
         {
-          (*m_data[ii]).layout().print();
-          m_grid[ii].print();
-          PR_assert(m_data[ii]->layout() == m_grid[ii]); 
+            (*m_data[ii]).layout().print();
+            m_grid[ii].print();
+            PR_assert(m_data[ii]->layout() == m_grid[ii]); 
         }
     }
 }

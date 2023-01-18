@@ -142,7 +142,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
-                m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio[0]);//FIXME: Isotropic
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order()+1);
                 m_UTaylor[lvl] =
                     std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros());
                 m_fluxRegisters[lvl] =
@@ -194,7 +194,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
-                m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio[0]);//FIXME: Isotropic
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order()+1);
                 m_UTaylor.push_back(
                         std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
                 m_fluxRegisters.push_back(
@@ -324,7 +324,8 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
             auto UTimeInterp = forall<T, C>(f_RKTimeInterp, UTaylorC_i, chi);
         
             // interpolate boundary conditions
-            cfInterp.apply(UStage_i, UTimeInterp);
+            UStage_i |= cfInterp(UTimeInterp);
+            //cfInterp.apply(UStage_i, UTimeInterp);
         
             // copy back the interior
             UStage_i |= I(UStageTemp);

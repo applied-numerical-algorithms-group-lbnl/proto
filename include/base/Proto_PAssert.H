@@ -63,7 +63,8 @@ namespace ProtoUtils
         (fprintf(stdout, "DEBUG | %s:%d: ", filename.c_str(), __LINE__) && \
         fprintf(stdout, args) && \
         fprintf(stdout, "\n")); \
-    }    \
+    }    
+
 #define PR_assert(stmt) assert( (stmt) );
 
 

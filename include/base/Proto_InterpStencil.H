@@ -28,6 +28,7 @@ namespace Proto
         inline Box range(Box a_domain) const;
         inline Point ghost() const;
         inline Box span() const;
+        inline Point ratio() const {return m_ratio; } 
 
         template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT, unsigned char D, unsigned char E>
         inline void apply(
@@ -49,7 +50,8 @@ namespace Proto
                 T a_scale = 1.0) const;
 
         private:
-
+        
+        Point m_ratio;
         Array<InterpStencil1D<T>, DIM> m_interp;
 
     }; //end class InterpStencil
@@ -65,9 +67,8 @@ namespace Proto
                 Box a_range, T a_scale);
         
         inline void apply(BoxData<T,C,MEM,D,E>& a_dst, bool a_overwrite) const;
-
+        inline Box inferredRange() const;
         Box range;
-        Box domain;
         const InterpStencil<T>* op;
         const BoxData<T, C, MEM, D, E>* srcData;
         T scale;

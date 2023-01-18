@@ -177,8 +177,8 @@ namespace Proto {
 
         inline void apply(BoxData<T,C,MEMTYPE,D,E>& a_dest, bool a_overwrite);
 
-        inline unsigned long long int size(){return m_stencil.size();}
-
+        inline unsigned long long int size() const {return m_stencil.size();}
+        inline Box inferredRange() const;
         Box m_range;
 
         std::vector<const Stencil<T>*> m_stencil;
