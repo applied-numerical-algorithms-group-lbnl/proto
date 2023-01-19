@@ -1149,72 +1149,73 @@ _cofactorMatrix(
 #endif
     return retval;
 }
+
 template<class T,unsigned int C, MemType MEM>
 BoxData<T,C,MEM,DIM>
 _faceGradient(
-              const BoxData<T,C,MEM>& a_phi,
-              int a_dirNorm,
-              int a_order)
+        const BoxData<T,C,MEM>& a_phi,
+        int a_dirNorm,
+        int a_order)
 {
     PR_TIME("Operator::faceGradient");
-  // This is an operator, not a stencil, since there are different stencils used to
-  // Compute different components of the gradient.
-  PROTO_ASSERT((a_order == 2) || (a_order == 4),
-               "_faceGradient defined only for orders = 2 and 4");
-  Array<Stencil<T>,DIM> faceDerivs; 
-  for (int dir = 0;dir < DIM;dir++)
+    // This is an operator, not a stencil, since there are different stencils used to
+    // Compute different components of the gradient.
+    PROTO_ASSERT((a_order == 2) || (a_order == 4),
+            "_faceGradient defined only for orders = 2 and 4");
+    Array<Stencil<T>,DIM> faceDerivs; 
+    for (int dir = 0;dir < DIM;dir++)
     {
-      if (dir == a_dirNorm)
+        if (dir == a_dirNorm)
         {
-          faceDerivs[dir] = Stencil<T>::DiffCellToFace(a_dirNorm,Side::Lo,a_order);
+            faceDerivs[dir] = Stencil<T>::DiffCellToFace(a_dirNorm,Side::Lo,a_order);
         }
-      else
+        else
         {
-          faceDerivs[dir] =           
-            Stencil<T>::CellToFace(dir,Side::Lo,a_order)*
-            Stencil<T>::FluxDivergence(dir)*
-            Stencil<T>::CellToFace(a_dirNorm,Side::Lo,a_order);
+            faceDerivs[dir] =           
+                Stencil<T>::CellToFace(dir,Side::Lo,a_order)*
+                Stencil<T>::FluxDivergence(dir)*
+                Stencil<T>::CellToFace(a_dirNorm,Side::Lo,a_order);
         }
     }
-  Array<BoxData<T,C,MEM>,DIM> gradComps;
-  for (int dir = 0; dir < DIM; dir++)
+    Array<BoxData<T,C,MEM>,DIM> gradComps;
+    for (int dir = 0; dir < DIM; dir++)
     {
-          gradComps[dir] = faceDerivs[dir](a_phi);
+        gradComps[dir] = faceDerivs[dir](a_phi);
     }
 #if DIM==2
-  auto retval =
-    forall<T,C,MEM,DIM,1>
-    ([ ] PROTO_LAMBDA(
-                      Var<T,C,MEM,DIM>& a_retval,
-                      const Var<T,C,MEM>& a_dphidx0,
-                      const Var<T,C,MEM>& a_dphidx1)
-     {
-       for (int cc = 0;cc < C;cc++)
+    auto retval =
+        forall<T,C,MEM,DIM,1>
+        ([ ] PROTO_LAMBDA(
+                          Var<T,C,MEM,DIM>& a_retval,
+                          const Var<T,C,MEM>& a_dphidx0,
+                          const Var<T,C,MEM>& a_dphidx1)
          {
-           a_retval(cc,0) = a_dphidx0(cc);
-           a_retval(cc,1) = a_dphidx1(cc);
+         for (int cc = 0;cc < C;cc++)
+         {
+         a_retval(cc,0) = a_dphidx0(cc);
+         a_retval(cc,1) = a_dphidx1(cc);
          }
-     },
-     gradComps[0],gradComps[1]); 
+         },
+         gradComps[0],gradComps[1]); 
 #elif DIM==3
-  auto retval =
-    forall<T,C,MEM,DIM,1>
-    ([ ] PROTO_LAMBDA(
-                      Var<T,C,MEM,DIM>& a_retval,
-                      const Var<T,C,MEM>& a_dphidx0,
-                      const Var<T,C,MEM>& a_dphidx1,
-                      const Var<T,C,MEM>& a_dphidx2)
-     {
-       for (int cc = 0; cc < C;cc++)
+    auto retval =
+        forall<T,C,MEM,DIM,1>
+        ([ ] PROTO_LAMBDA(
+                          Var<T,C,MEM,DIM>& a_retval,
+                          const Var<T,C,MEM>& a_dphidx0,
+                          const Var<T,C,MEM>& a_dphidx1,
+                          const Var<T,C,MEM>& a_dphidx2)
          {
-           a_retval(cc,0) = a_dphidx0(cc);
-           a_retval(cc,1) = a_dphidx1(cc);
-           a_retval(cc,2) = a_dphidx2(cc);
+         for (int cc = 0; cc < C;cc++)
+         {
+         a_retval(cc,0) = a_dphidx0(cc);
+         a_retval(cc,1) = a_dphidx1(cc);
+         a_retval(cc,2) = a_dphidx2(cc);
          }
-     },
-     gradComps[0],gradComps[1],gradComps[2]);
+         },
+         gradComps[0],gradComps[1],gradComps[2]);
 #endif
-  return retval;
+    return retval;
 }
 
 template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
