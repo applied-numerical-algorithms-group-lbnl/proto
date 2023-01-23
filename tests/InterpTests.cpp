@@ -209,14 +209,14 @@ TEST(InterpStencil, Quadratic) {
         
         hostSlnData -= hostDstData;
         err[nn] = hostSlnData.absMax();
-        PR_DEBUG_MSG(1, "error: %3.2e", err[nn]);
+        PR_DEBUG_MSG(1, "Error: %3.2e", err[nn]);
         domainSize *= 2;
     }
     
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii]) / log(2.0);
-        PR_DEBUG_MSG(1,"rate: %3.2f", rate);
+        PR_DEBUG_MSG(1,"Rate: %3.2f", rate);
         EXPECT_GT(rate, 3 - 0.01);
     }
 }

@@ -14,8 +14,9 @@ TEST(MBLevelOp, Laplace) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Zeros());
-    ghost[0] = Point::Ones(3);
+    int nghost = 4;
+    ghost.fill(Point::Ones(nghost+2));
+    ghost[0] = Point::Ones(nghost);
     Point boundGhost = Point::Ones();
    
     // Map
@@ -24,7 +25,7 @@ TEST(MBLevelOp, Laplace) {
     // Laplace Operator
     MBLevelOp<BoxOp_TestMBLaplace, double, XPointMapRigid_t> op(map);
    
-#if 0
+#if 1
     // Interpolation Operator
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(1))
@@ -41,19 +42,38 @@ TEST(MBLevelOp, Laplace) {
     // Initialize Data
     MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
     MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
+    MBLevelBoxData<double, 1, HOST> hostDstNorm(layout, ghost);
 
-    Point k{1,2,3,4,5,6};
+    Point k{1,1,1,1,1,1};
     Array<double, DIM> offset{1,1,1,1,1,1};
     hostSrc.initialize(f_phiM, map, k, offset);
-#if 0
+#if 1
     hostSrc.fillBoundaries();
     interp.apply(hostSrc, hostSrc);
 #endif
 
     // Apply Operator
     op(hostDst, hostSrc);
-    h5.writeMBLevel({"phi"}, map, hostSrc, "PHI");
-    h5.writeMBLevel({"Lphi"}, map, hostDst, "LPHI");
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "MBLevelOpTests_Phi_0");
+    h5.writeMBLevel({"Lphi"}, map, hostDst, "MBLevelOpTests_LPhi_0");
+#endif
+    hostDst.fillBoundaries();
+    interp.apply(hostDst, hostDst);
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "MBLevelOpTests_Phi_1");
+    h5.writeMBLevel({"Lphi"}, map, hostDst, "MBLevelOpTests_LPhi_1");
+#endif
+    for (auto iter : layout)
+    {
+        auto& hostDstNorm_i = hostDstNorm[iter];
+        auto& hostDst_i = hostDst[iter];
+        const auto& J_i = map.jacobian()[iter];
+        Operator::cellQuotient(hostDstNorm_i, hostDst_i, J_i);
+    }
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"LphiNorm"}, map, hostDstNorm, "MBLevelOpTests_LPhiNorm");
+#endif
 }
 
 int main(int argc, char *argv[]) {

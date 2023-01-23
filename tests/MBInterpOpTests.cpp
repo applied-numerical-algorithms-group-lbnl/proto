@@ -84,8 +84,13 @@ TEST(MBPointInterpOp, XPointApply) {
                 err[nn] = e > err[nn] ? e : err[nn];
             }
         }
-        h5.writeMBLevel({"err"}, map, hostErr, "Err_%i", nn);
-        pout() << "Error: " << err[nn] << std::endl;
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"J"}, map, map.jacobian(), "MBInterpOpTests_J_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_Src_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_Dst_%i", nn);
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Err_%i", nn);
+#endif
+        PR_DEBUG_MSG(1, "Error: %3.2e", err[nn]);
         domainSize *= 2;
         boxSize *= 2;
     }
@@ -94,9 +99,9 @@ TEST(MBPointInterpOp, XPointApply) {
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
+        PR_DEBUG_MSG(1,"Rate: %3.2f", rate);
         double rateErr = abs(rate - 4);
         EXPECT_LT(rateErr, rateTol);
-        pout() << "Convergence Rate: " << log(err[ii-1]/err[ii])/log(2.0) << std::endl;
     }
 }
 
