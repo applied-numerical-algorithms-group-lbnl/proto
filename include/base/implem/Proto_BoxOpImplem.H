@@ -406,9 +406,9 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::define(
     const BoxData<double, DIM, MEM>& a_x,
     const BoxData<double, 1,   MEM>& a_J)
 {
-    define(1);
     m_x = &a_x;
     m_J = &a_J;
+    define(1);
 }
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>

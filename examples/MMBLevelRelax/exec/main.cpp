@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
                 BoxData<double> JFace = Stencil<double>::CellToFace(dir)(J);
                 
                 // Face-centered cofactor matrix N.
-                auto NTMatrix = Operator::_cofactorMatrix(NT,dir);
+                auto NTMatrix = Operator::cofactorMatrix(NT,dir);
                 
                 // FAVDir is the gradient of phi with respect to x variables.
                 {

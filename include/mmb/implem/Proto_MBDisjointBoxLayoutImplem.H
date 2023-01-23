@@ -186,6 +186,16 @@ bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
     return m_partition->compatible(*a_rhs.m_partition);
 }
 
+unsigned int MBDisjointBoxLayout::size() const
+{
+    return m_partition->numBoxes();
+}
+
+unsigned int MBDisjointBoxLayout::localSize() const
+{
+    return m_partition->numBoxes(Proto::procID());
+}
+
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)
 {
     auto& partition = a_di.partition().partition();;

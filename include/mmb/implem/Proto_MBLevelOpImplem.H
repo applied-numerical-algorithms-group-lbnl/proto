@@ -19,11 +19,14 @@ void MBLevelOp<OPType, T, MAP, MEM>::define(MBMap<MAP, MEM>& a_map)
     auto& layout = a_map.map().layout();
     m_map = &a_map;
     m_ops.clear();
+    m_ops.resize(layout.localSize());
     for (auto index : layout)
     {
         auto& x = a_map.map()[index];
         auto& J = a_map.jacobian()[index];
-        m_ops.push_back(BOP(x,J));
+        m_ops[index].define(x,J);
+        //BOP bop(x,J);
+        //m_ops.push_back(bop);
     }
     m_defined = true;
 }

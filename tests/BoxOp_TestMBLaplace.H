@@ -10,6 +10,7 @@ class BoxOp_TestMBLaplace : public BoxOp<T, 1, 0, MEM>
 
     // inherit constructors
     using BoxOp<T, 1, 0, MEM>::BoxOp;
+    
     // How many ghost cells does the operator need from the state variables
     inline static Point ghost() { return Point::Ones(1);}
     
@@ -28,26 +29,35 @@ class BoxOp_TestMBLaplace : public BoxOp<T, 1, 0, MEM>
             const BoxData<T, 1>& a_state,
             int a_dir) const
     {
-        return Operator::_faceGradxPhi(
-                a_state, a_state, m_NTMatrix, m_NTMatrix, m_Jf, m_Jf, a_dir);
+        auto flux =  Operator::_faceGradxPhi(
+                a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
+                m_Jf[a_dir], m_Jf[a_dir], a_dir);
+        a_flux = Operator::_faceMatrixProductAB(
+                flux,m_NT[a_dir],flux,m_NT[a_dir],a_dir);
     }
 
     inline void init()
     {
+        m_NT.clear();
+        m_NTMatrix.clear();
+        m_Jf.clear();
+        Array<BoxData<T,DIM>, DIM> NT;
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NT[dir] = Operator::cofactor(this->x(),dir);
-            m_Jf[dir] = Stencil<double>::CellToFace(dir)(this->jacobian());
+            m_NT.push_back(Operator::cofactor(this->x(),dir));
+            m_Jf.push_back(Stencil<double>::CellToFace(dir)(this->jacobian()));
+            NT[dir].define(m_NT[dir].box());
+            m_NT[dir].copyTo(NT[dir]);
         }
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NTMatrix = Operator::_cofactorMatrix(m_NT, dir); 
+            m_NTMatrix.push_back(Operator::cofactorMatrix(NT, dir));
         }
     }
 
     private:
 
-    Array<BoxData<T, DIM>, DIM> m_NT;
-    Array<BoxData<T,DIM,MEM,DIM>, DIM> m_NTMatrix;
-    Array<BoxData<T,1,MEM>, DIM> m_Jf;
+    std::vector<BoxData<T, DIM>> m_NT;
+    std::vector<BoxData<T,DIM,MEM,DIM>> m_NTMatrix;
+    std::vector<BoxData<T,1,MEM>> m_Jf;
 };

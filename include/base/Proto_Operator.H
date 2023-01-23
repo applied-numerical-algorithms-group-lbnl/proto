@@ -615,53 +615,6 @@ namespace Operator {
             int a_dir);
     
     //==========================================================================================
-    /// 4th Order Face Averaged Tensor Quotient 
-    /**
-         Returns the 4th order accurate face averaged quotient rule <(1/QR)*QL>
-         where QL is a tensor,and QR is a scalar. 
-         Distinguishes between 2nd and 4th order inputs.
-        
-        \param a_ql4    4th  order face averaged tensor quantity QL
-        \param a_qr4    4th  order face averaged scalar quantity QR
-        \param a_ql2    2nd+ order face centered quantity QL
-        \param a_qr2    2nd+ order face centered quantity QR
-        \param a_dir    face normal
-    */
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-    inline BoxData<T,C,MEM,D,E>
-    _faceTensorQuotient(
-            const BoxData<T,C,MEM,D,E>& a_ql4,
-            const BoxData<T,1,MEM,1,1>& a_qr4,
-            const BoxData<T,C,MEM,D,E>& a_ql2,
-            const BoxData<T,1,MEM,1,1>& a_qr2,
-            int a_dir);
-    
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-    inline void
-    _faceTensorQuotient(
-            BoxData<T,C,MEM,D,E>&       a_quotient,
-            const BoxData<T,C,MEM,D,E>& a_ql4,
-            const BoxData<T,1,MEM,1,1>& a_qr4,
-            const BoxData<T,C,MEM,D,E>& a_ql2,
-            const BoxData<T,1,MEM,1,1>& a_qr2,
-            int a_dir);
-    
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-    inline BoxData<T,C,MEM,D,E>
-    faceTensorQuotient(
-            const BoxData<T,C,MEM,D,E>& a_ql,
-            const BoxData<T,1,MEM,1,1>& a_qr,
-            int a_dir);
-    
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-    inline void
-    faceTensorQuotient(
-            BoxData<T,C,MEM,D,E>&       a_quotient,
-            const BoxData<T,C,MEM,D,E>& a_ql,
-            const BoxData<T,1,MEM,1,1>& a_qr,
-            int a_dir);
- 
-    //==========================================================================================
     /// 4th Order Face Averaged Tensor Product 
     /**
          Returns the 4th order accurate face averaged quotient rule <QR*QL>
@@ -708,6 +661,53 @@ namespace Operator {
             const BoxData<T,1,MEM,1,1>& a_qr,
             int a_dir);
     
+    //==========================================================================================
+    /// 4th Order Face Averaged Tensor Quotient 
+    /**
+         Returns the 4th order accurate face averaged quotient rule <(1/QR)*QL>
+         where QL is a tensor,and QR is a scalar. 
+         Distinguishes between 2nd and 4th order inputs.
+        
+        \param a_ql4    4th  order face averaged tensor quantity QL
+        \param a_qr4    4th  order face averaged scalar quantity QR
+        \param a_ql2    2nd+ order face centered quantity QL
+        \param a_qr2    2nd+ order face centered quantity QR
+        \param a_dir    face normal
+    */
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    inline BoxData<T,C,MEM,D,E>
+    _faceTensorQuotient(
+            const BoxData<T,C,MEM,D,E>& a_ql4,
+            const BoxData<T,1,MEM,1,1>& a_qr4,
+            const BoxData<T,C,MEM,D,E>& a_ql2,
+            const BoxData<T,1,MEM,1,1>& a_qr2,
+            int a_dir);
+    
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    inline void
+    _faceTensorQuotient(
+            BoxData<T,C,MEM,D,E>&       a_quotient,
+            const BoxData<T,C,MEM,D,E>& a_ql4,
+            const BoxData<T,1,MEM,1,1>& a_qr4,
+            const BoxData<T,C,MEM,D,E>& a_ql2,
+            const BoxData<T,1,MEM,1,1>& a_qr2,
+            int a_dir);
+    
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    inline BoxData<T,C,MEM,D,E>
+    faceTensorQuotient(
+            const BoxData<T,C,MEM,D,E>& a_ql,
+            const BoxData<T,1,MEM,1,1>& a_qr,
+            int a_dir);
+    
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    inline void
+    faceTensorQuotient(
+            BoxData<T,C,MEM,D,E>&       a_quotient,
+            const BoxData<T,C,MEM,D,E>& a_ql,
+            const BoxData<T,1,MEM,1,1>& a_qr,
+            int a_dir);
+ 
     //==========================================================================================
     /// 4th Order Cell Averaged Tensor Quotient 
     /**
@@ -967,7 +967,7 @@ namespace Operator {
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
     inline void
     _matrixProductABT(
-            BoxData<T,CL,MEM,CR,E>&       a_product
+            BoxData<T,CL,MEM,CR,E>&       a_product,
             const BoxData<T,CL,MEM,DL,E>& a_ql,
             const BoxData<T,CR,MEM,DR,E>& a_qr);
   

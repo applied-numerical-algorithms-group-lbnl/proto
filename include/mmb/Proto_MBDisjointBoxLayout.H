@@ -58,6 +58,8 @@ namespace Proto
         inline const MBBoxPartition& partition() const { return *m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
+        inline unsigned int size() const;
+        inline unsigned int localSize() const;
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

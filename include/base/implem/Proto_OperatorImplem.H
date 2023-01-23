@@ -1,3 +1,5 @@
+//==========================================================================================
+// CONVOLVE
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _convolve(
@@ -6,20 +8,15 @@ _convolve(
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
     PR_TIME("Operator::convolve");
-    PROTO_ASSERT(a_ctr.box().contains(a_2nd.box().grow(-1)),
-            "error Operator::convolve | centered data defined on too small a box.");
 
-    a_avg |= Stencil<T>::Laplacian()(a_2nd, 1.0/24.0);
-    a_avg += a_ctr;
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-void
-convolve(
-        BoxData<T,C,MEM,D,E>& a_avg,
-        const BoxData<T,C,MEM,D,E>& a_ctr)
-{
-    _convolve(a_avg, a_ctr, a_ctr);
+    auto L = Stencil<T>::Laplacian();
+    Stencil<T> I = 1.0*Shift::Zeros();
+    Box range = L.range(a_2nd.box());
+    
+    a_avg |= L(a_2nd, range, 1.0/24.0);
+    a_avg += I(a_ctr, range);
+    //a_avg |= Stencil<T>::Laplacian()(a_2nd, 1.0/24.0);
+    //a_avg += a_ctr;
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -37,6 +34,15 @@ _convolve(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void
+convolve(
+        BoxData<T,C,MEM,D,E>& a_avg,
+        const BoxData<T,C,MEM,D,E>& a_ctr)
+{
+    _convolve(a_avg, a_ctr, a_ctr);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
@@ -51,6 +57,8 @@ _convolve(
         const LevelBoxData<T,C,MEM,CTR>& a_2nd)
 {
     //TODO: switch functionality based on value of CTR
+    PROTO_ASSERT(CTR == PR_CELL,
+            "Operator::_convolve | Error: Operator not implemented for this centering.");
     for (auto iter = a_avg.begin(); iter.ok(); ++iter)
     {
         auto& avg =  a_avg[*iter];
@@ -109,6 +117,8 @@ initConvolve(
 }
 #endif
 
+//==========================================================================================
+// DECONVOLVE
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _deconvolve(
@@ -125,15 +135,6 @@ _deconvolve(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-void
-deconvolve(
-        BoxData<T,C,MEM,D,E>& a_ctr,
-        const BoxData<T,C,MEM,D,E>& a_avg)
-{
-    _deconvolve(a_ctr, a_avg, a_avg);
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
@@ -145,6 +146,15 @@ _deconvolve(
     BoxData<T,C,MEM,D,E> a_ctr(a_avg.box() & a_2nd.box().grow(-1));
     _deconvolve(a_ctr, a_avg, a_2nd);
     return a_ctr;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void
+deconvolve(
+        BoxData<T,C,MEM,D,E>& a_ctr,
+        const BoxData<T,C,MEM,D,E>& a_avg)
+{
+    _deconvolve(a_ctr, a_avg, a_avg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -180,6 +190,8 @@ deconvolve(
     _deconvolve(a_ctr, a_avg, a_avg);
 }
 
+//==========================================================================================
+// CONVOLVE FACE
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _convolveFace(
@@ -193,16 +205,6 @@ _convolveFace(
     "Error in Operator::convolveFace | Insufficient source data.");
     a_avg |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, 1.0/24.0);
     a_avg += a_ctr;
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-void
-convolveFace(
-        BoxData<T,C,MEM,D,E>& a_avg,
-        const BoxData<T,C,MEM,D,E>& a_ctr,
-        int a_dir)
-{
-    _convolveFace(a_avg, a_ctr, a_ctr, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -220,6 +222,16 @@ _convolveFace(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void
+convolveFace(
+        BoxData<T,C,MEM,D,E>& a_avg,
+        const BoxData<T,C,MEM,D,E>& a_ctr,
+        int a_dir)
+{
+    _convolveFace(a_avg, a_ctr, a_ctr, a_dir);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -228,6 +240,8 @@ convolveFace(
     return _convolveFace(a_ctr, a_ctr, a_dir);
 }
 
+//==========================================================================================
+// DECONVOLVE FACE
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _deconvolveFace(
@@ -241,16 +255,6 @@ _deconvolveFace(
     "Error in Operator::convolveFace | Insufficient source data.");
     a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
     a_ctr += a_avg;
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-void
-deconvolveFace(
-        BoxData<T,C,MEM,D,E>& a_ctr,
-        const BoxData<T,C,MEM,D,E>& a_avg,
-        int a_dir)
-{
-    _deconvolveFace(a_ctr, a_avg, a_avg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -268,6 +272,16 @@ _deconvolveFace(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void
+deconvolveFace(
+        BoxData<T,C,MEM,D,E>& a_ctr,
+        const BoxData<T,C,MEM,D,E>& a_avg,
+        int a_dir)
+{
+    _deconvolveFace(a_ctr, a_avg, a_avg, a_dir);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
@@ -276,6 +290,8 @@ deconvolveFace(
     return _deconvolveFace(a_avg, a_avg, a_dir);
 }
 
+//==========================================================================================
+// CELL PRODUCT
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _cellProduct(
@@ -291,14 +307,6 @@ _cellProduct(
     return pq;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-BoxData<T,C,MEM,D,E>
-cellProduct(
-        const BoxData<T,C,MEM,D,E>& a_pavg,
-        const BoxData<T,C,MEM,D,E>& a_qavg)
-{
-    return _cellProduct(a_pavg, a_qavg, a_pavg, a_qavg);
-}
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _cellProduct(BoxData<T,C,MEM,D,E>& a_product,
@@ -344,6 +352,15 @@ _cellProduct(BoxData<T,C,MEM,D,E>& a_product,
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+cellProduct(
+        const BoxData<T,C,MEM,D,E>& a_pavg,
+        const BoxData<T,C,MEM,D,E>& a_qavg)
+{
+    return _cellProduct(a_pavg, a_qavg, a_pavg, a_qavg);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -352,6 +369,8 @@ cellProduct(BoxData<T,C,MEM,D,E>& a_product,
     _cellProduct(a_product, a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
+//==========================================================================================
+// FACE PRODUCT
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _faceProduct(
@@ -366,16 +385,6 @@ _faceProduct(
     BoxData<T,C,MEM,D,E> out(b);
     _faceProduct(out, a_pavg, a_qavg, a_p2nd, a_q2nd, a_dir);
     return out;
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-BoxData<T,C,MEM,D,E>
-faceProduct(
-        const BoxData<T,C,MEM,D,E>& a_pavg,
-        const BoxData<T,C,MEM,D,E>& a_qavg,
-        int a_dir)
-{
-    return _faceProduct(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -429,6 +438,16 @@ _faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+faceProduct(
+        const BoxData<T,C,MEM,D,E>& a_pavg,
+        const BoxData<T,C,MEM,D,E>& a_qavg,
+        int a_dir)
+{
+    return _faceProduct(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -438,7 +457,8 @@ faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
     _faceProduct(a_dest, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
-
+//==========================================================================================
+// CELL QUOTIENT
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _cellQuotient(
@@ -456,15 +476,6 @@ _cellQuotient(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-BoxData<T,C,MEM,D,E>
-cellQuotient(
-        const BoxData<T,C,MEM,D,E>& a_pavg,
-        const BoxData<T,C,MEM,D,E>& a_qavg)
-{
-    return _cellQuotient(a_pavg, a_qavg, a_pavg, a_qavg);
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -472,12 +483,11 @@ _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
         const BoxData<T,C,MEM,D,E>& a_q2nd)
 {
-  PR_TIME("Operator::cellQuotient");
-  //PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellQuotient | p2nd and q2nd should have the same box.");
-    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
-    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
-    //BoxData<T,C,MEM,D,E> out(a_p2nd.box().grow(-1));
-    //out.setVal(0);
+    PR_TIME("Operator::cellQuotient");
+    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)),
+            "Operator::cellQuotient | incompatible patch sizes.");
+    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)),
+            "Operator::cellQuotient | incompatible patch sizes.");
     forallInPlace(
         [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
         {
@@ -523,6 +533,15 @@ _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+cellQuotient(
+        const BoxData<T,C,MEM,D,E>& a_pavg,
+        const BoxData<T,C,MEM,D,E>& a_qavg)
+{
+    return _cellQuotient(a_pavg, a_qavg, a_pavg, a_qavg);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -531,6 +550,8 @@ cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
     _cellQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
+//==========================================================================================
+// FACE QUOTIENT
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _faceQuotient(
@@ -548,16 +569,6 @@ _faceQuotient(
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-BoxData<T,C,MEM,D,E>
-faceQuotient(
-        const BoxData<T,C,MEM,D,E>& a_pavg,
-        const BoxData<T,C,MEM,D,E>& a_qavg,
-        int a_dir)
-{
-    return _faceQuotient(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
-}
-
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -566,12 +577,11 @@ _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_q2nd,
         int a_dir)
 {
-  PR_TIME("Operator::faceQuotient");
-  //PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellQuotient | p2nd and q2nd should have the same box.");
-    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
-    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
-    //BoxData<T,C,MEM,D,E> out(a_p2nd.box().grow(-1));
-    //out.setVal(0);
+    PR_TIME("Operator::faceQuotient");
+    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)),
+            "Operator::cellQuotient | incompatible patch sizes.");
+    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)),
+            "Operator::cellQuotient | incompatible patch sizes.");
     forallInPlace(
         [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
         {
@@ -620,6 +630,16 @@ _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+faceQuotient(
+        const BoxData<T,C,MEM,D,E>& a_pavg,
+        const BoxData<T,C,MEM,D,E>& a_qavg,
+        int a_dir)
+{
+    return _faceQuotient(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -627,6 +647,154 @@ faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         int a_dir)
 {
     _faceQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+}
+
+//==========================================================================================
+// FACE TENSOR PRODUCT
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+BoxData<T,C,MEM,D,E>
+_faceTensorProduct(
+        const BoxData<T,C,MEM,D,E>& a_ql4,
+        const BoxData<T,1,MEM,1,1>& a_qr4,
+        const BoxData<T,C,MEM,D,E>& a_ql2,
+        const BoxData<T,1,MEM,1,1>& a_qr2,        
+        int a_dir)
+{
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir)
+        {
+            bx = bx & a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+        }
+    }
+    BoxData<T,C,MEM,D,E> quot(bx);
+    for (int ee = 0; ee < E;ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        auto quotcomp = slice(quot,cc,dd,ee);
+        auto ql4comp = slice(a_ql4,cc,dd,ee);
+        auto ql2comp = slice(a_ql2,cc,dd,ee);
+        Operator::_faceProduct(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
+    }
+    return quot;
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+void
+_faceTensorProduct(
+        BoxData<T,C,MEM,D,E>&       a_product,
+        const BoxData<T,C,MEM,D,E>& a_ql4,
+        const BoxData<T,1,MEM,1,1>& a_qr4,
+        const BoxData<T,C,MEM,D,E>& a_ql2,
+        const BoxData<T,1,MEM,1,1>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::_faceTensorProduct | Error: Not Implemented.");
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+BoxData<T,C,MEM,D,E>
+faceTensorProduct(
+        const BoxData<T,C,MEM,D,E>& a_ql,
+        const BoxData<T,1,MEM,1,1>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceTensorProduct | Error: Not Implemented.");
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+void
+faceTensorProduct(
+        BoxData<T,C,MEM,D,E>&       a_product,
+        const BoxData<T,C,MEM,D,E>& a_ql,
+        const BoxData<T,1,MEM,1,1>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceTensorProduct | Error: Not Implemented.");
+}
+
+//==========================================================================================
+// FACE TENSOR QUOTIENT
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+BoxData<T,C,MEM,D,E>
+_faceTensorQuotient(
+        const BoxData<T,C,MEM,D,E>& a_ql4,
+        const BoxData<T,1,MEM,1,1>& a_qr4,
+        const BoxData<T,C,MEM,D,E>& a_ql2,
+        const BoxData<T,1,MEM,1,1>& a_qr2,        
+        int a_dir)
+{
+    PR_TIME("Operator::faceTensorQuotient");
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir)
+        {
+            bx = bx & a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+        }
+    }
+    BoxData<T,C,MEM,D,E> quot(bx);
+    for (int ee = 0; ee < E;ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        auto quotcomp = slice(quot,cc,dd,ee);
+        auto ql4comp = slice(a_ql4,cc,dd,ee);
+        auto ql2comp = slice(a_ql2,cc,dd,ee);
+        Operator::_faceQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
+    }
+    return quot;
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+void
+_faceTensorQuotient(
+        BoxData<T,C,MEM,D,E>&       a_quotient,
+        const BoxData<T,C,MEM,D,E>& a_ql4,
+        const BoxData<T,1,MEM,1,1>& a_qr4,
+        const BoxData<T,C,MEM,D,E>& a_ql2,
+        const BoxData<T,1,MEM,1,1>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::_faceTensorQuotient | Error: Not Implemented.");
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+BoxData<T,C,MEM,D,E>
+faceTensorQuotient(
+        const BoxData<T,C,MEM,D,E>& a_ql,
+        const BoxData<T,1,MEM,1,1>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceTensorQuotient | Error: Not Implemented.");
+}
+
+template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+void
+faceTensorQuotient(
+        BoxData<T,C,MEM,D,E>&       a_quotient,
+        const BoxData<T,C,MEM,D,E>& a_ql,
+        const BoxData<T,1,MEM,1,1>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceTensorQuotient | Error: Not Implemented.");
+}
+
+//==========================================================================================
+// COFACTOR
+
+template <class T, MemType MEM>
+void
+cofactor(
+        BoxData<T,DIM,MEM>&       a_N,
+        const BoxData<T,DIM,MEM>& a_X,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::cofactor | Error: Not implemented.");
 }
 
 template <class T, MemType MEM>
@@ -673,19 +841,106 @@ cofactor(
     // d/dx1(X ^ dX/dx2)
     BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);   
     // return  0.5*d/dx2(dX/dx1 ^ X) + 0.5*d/dx1(dX/dx2 ^ X)
-    auto ret = forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_ret, Var<T,DIM,MEM>& a_d21,Var<T,DIM,MEM>& a_d12)
-            {
+    auto ret = forall<T,DIM,MEM>(
+        []PROTO_LAMBDA(Var<T,DIM,MEM>& a_ret, Var<T,DIM,MEM>& a_d21,Var<T,DIM,MEM>& a_d12)
+        {
             for (int comp = 0; comp < DIM; comp++)
             {
-            a_ret(comp) = a_d12(comp) + a_d21(comp);
+                a_ret(comp) = a_d12(comp) + a_d21(comp);
             }
-            },d21,d12);
+        },d21,d12);
     
     return ret;
 #else
     std::cout << "cofactor only implemented for DIM = 2,3" << endl;
     abort();
 #endif
+}
+
+//==========================================================================================
+// COFACTOR MATRIX
+
+template<class T, MemType MEM>
+void
+cofactorMatrix(
+        BoxData<T,DIM,MEM,DIM>& a_NTMatrix,
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        int a_dirNorm)                         
+{
+    MayDay<void>::Abort("Operator::cofactorMatrix | Error: Function not implemented.");
+}
+
+template<class T, MemType MEM>
+BoxData<T,DIM,MEM,DIM>
+cofactorMatrix(
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        int a_dirNorm)                         
+{
+    PR_TIME("Operator::cofactorMatrix");
+    Array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir != a_dirNorm)
+        {
+            NTAveToFace[dir] =
+                (Stencil<T>::faceToCell(dir,4)*
+                 Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
+        }
+    }
+
+#if DIM==2
+    auto retval = forall<T,DIM,MEM,DIM>
+        ([ ] PROTO_LAMBDA(
+              Var<T,DIM,MEM,DIM>& a_retval,
+              const Var<T,DIM,MEM>& a_ntNorm,
+              const Var<T,DIM,MEM>& a_ntTan,
+              int a_dirNorm)
+         {
+             for (int dir2 = 0; dir2 < DIM;dir2++)
+             {
+                 a_retval(dir2,a_dirNorm) = a_ntNorm(dir2);
+                 a_retval(dir2,(a_dirNorm+1)%DIM) = a_ntTan(dir2);
+             }
+         },
+         a_NTFaces[a_dirNorm],
+         NTAveToFace[(a_dirNorm+1)%DIM],
+         a_dirNorm);
+#elif DIM==3
+    auto retval =
+        forall<T,DIM,MEM,DIM,1>
+        ([ ] PROTO_LAMBDA(
+              Var<T,DIM,MEM,DIM>& a_retval,
+              const Var<T,DIM,MEM>& a_ntNorm,
+              const Var<T,DIM,MEM>& a_ntTan1,
+              const Var<T,DIM,MEM>& a_ntTan2,
+              int a_dirNorm)
+         {
+             for (int dir1 = 0; dir1 < DIM;dir1++)
+             {
+                 a_retval(dir1,a_dirNorm) = a_ntNorm(dir1);
+                 a_retval(dir1,(a_dirNorm+1)%DIM) = a_ntTan1(dir1);
+                 a_retval(dir1,(a_dirNorm+2)%DIM) = a_ntTan2(dir1);
+             }
+         },
+         a_NTFaces[a_dirNorm],
+         NTAveToFace[(a_dirNorm+1)%DIM],
+         NTAveToFace[(a_dirNorm+2)%DIM],
+         a_dirNorm);
+#endif
+    return retval;
+}
+
+//==========================================================================================
+// JACOBIAN
+
+template <class T, MemType MEM>
+void
+jacobian(
+        BoxData<T,1,MEM>&         a_J,
+        const BoxData<T,DIM,MEM>& a_X,
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
+{
+    MayDay<void>::Abort("Operator::jacobian | Error: Not implemented.");
 }
 
 template <class T, MemType MEM>
@@ -730,6 +985,9 @@ jacobian(
 #endif
 }
 
+//==========================================================================================
+// EDGE CROSS PRODUCT
+
 template<class T, MemType MEM>
 BoxData<T,3,MEM>
 _edgeCrossProduct3D(
@@ -740,73 +998,323 @@ _edgeCrossProduct3D(
                              int a_edgedir)
 {
     PR_TIME("Operator::edgeCrossProduct");
-  Array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
-  for (int comp = 0; comp < DIM; comp++)
+    Array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
+    for (int comp = 0; comp < DIM; comp++)
     {
-      qlcomp2[comp] = slice(a_ql2,comp);
-      qrcomp2[comp] = slice(a_qr2,comp);
-      qlcomp4[comp] = slice(a_ql4,comp);
-      qrcomp4[comp] = slice(a_qr4,comp);
+        qlcomp2[comp] = slice(a_ql2,comp);
+        qrcomp2[comp] = slice(a_qr2,comp);
+        qlcomp4[comp] = slice(a_ql4,comp);
+        qrcomp4[comp] = slice(a_qr4,comp);
     }
-  auto prod_01 = _product1D(qlcomp4[0],qrcomp4[1],qlcomp2[0],qrcomp2[1],a_edgedir);
-  auto prod_10 = _product1D(qlcomp4[1],qrcomp4[0],qlcomp2[1],qrcomp2[0],a_edgedir);
-  auto prod_12 = _product1D(qlcomp4[1],qrcomp4[2],qlcomp2[1],qrcomp2[2],a_edgedir);
-  auto prod_21 = _product1D(qlcomp4[2],qrcomp4[1],qlcomp2[2],qrcomp2[1],a_edgedir);
-  auto prod_20 = _product1D(qlcomp4[2],qrcomp4[0],qlcomp2[2],qrcomp2[0],a_edgedir);
-  auto prod_02 = _product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
+    auto prod_01 = _product1D(qlcomp4[0],qrcomp4[1],qlcomp2[0],qrcomp2[1],a_edgedir);
+    auto prod_10 = _product1D(qlcomp4[1],qrcomp4[0],qlcomp2[1],qrcomp2[0],a_edgedir);
+    auto prod_12 = _product1D(qlcomp4[1],qrcomp4[2],qlcomp2[1],qrcomp2[2],a_edgedir);
+    auto prod_21 = _product1D(qlcomp4[2],qrcomp4[1],qlcomp2[2],qrcomp2[1],a_edgedir);
+    auto prod_20 = _product1D(qlcomp4[2],qrcomp4[0],qlcomp2[2],qrcomp2[0],a_edgedir);
+    auto prod_02 = _product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
 
-  auto retBD =
-    forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_retval,
-                          Var<T,1,MEM>& a_pr_01,Var<T,1,MEM>& a_pr_10,
-                          Var<T,1,MEM>& a_pr_12,Var<T,1,MEM>& a_pr_21,
-                          Var<T,1,MEM>& a_pr_20,Var<T,1,MEM>& a_pr_02)
-           {
-             a_retval(0) = a_pr_12(0) - a_pr_21(0);
-             a_retval(1) = a_pr_20(0) - a_pr_02(0);
-             a_retval(2) = a_pr_01(0) - a_pr_10(0);
-           },prod_01,prod_10,prod_12,prod_21,prod_20,prod_02);
-  return retBD;
-}      
+    auto retBD =
+        forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_retval,
+                    Var<T,1,MEM>& a_pr_01,Var<T,1,MEM>& a_pr_10,
+                    Var<T,1,MEM>& a_pr_12,Var<T,1,MEM>& a_pr_21,
+                    Var<T,1,MEM>& a_pr_20,Var<T,1,MEM>& a_pr_02)
+            {
+                a_retval(0) = a_pr_12(0) - a_pr_21(0);
+                a_retval(1) = a_pr_20(0) - a_pr_02(0);
+                a_retval(2) = a_pr_01(0) - a_pr_10(0);
+            },prod_01,prod_10,prod_12,prod_21,prod_20,prod_02);
+    return retBD;
+}     
+
+template<class T, MemType MEM>
+void
+_edgeCrossProduct3D(
+        BoxData<T,3,MEM>&       a_product,
+        const BoxData<T,3,MEM>& a_ql4,
+        const BoxData<T,3,MEM>& a_qr4,
+        const BoxData<T,3,MEM>& a_ql2,
+        const BoxData<T,3,MEM>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::_edgeCrossProduct3D | Error: Not implemented.");
+}
+
+template<class T, MemType MEM>
+BoxData<T,3,MEM>
+edgeCrossProduct3D(
+        const BoxData<T,3,MEM>& a_ql,
+        const BoxData<T,3,MEM>& a_qr,
+        int a_edgedir)
+{
+    MayDay<void>::Abort("Operator::edgeCrossProduct3D | Error: Not implemented.");
+}
+
+template<class T, MemType MEM>
+void
+edgeCrossProduct3D(
+        BoxData<T,3,MEM>&       a_product,
+        const BoxData<T,3,MEM>& a_ql,
+        const BoxData<T,3,MEM>& a_qr,
+        int a_edgedir)
+{
+    MayDay<void>::Abort("Operator::edgeCrossProduct3D | Error: Not implemented.");
+}
+
+//==========================================================================================
+// CELL MATRIX PRODUCT
+template<class T, unsigned int CL,unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    BoxData<T,CL,MEM,DR,E>
+_cellMatrixProductAB(
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2)
+{
+    PR_TIME("Operator::matrixProductAB");
+    PR_assert(uint(DL) == CR);
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        bx = bx&a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+    }
+    BoxData<T,CL,MEM,DR,E> prod(bx);
+    prod.setToZero();
+    for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+    for (int j = 0; j < DR; j++)
+    for (int k = 0; k < DL;k++)
+    {
+        auto prodcomp = slice(prod,i,j,ee);
+        auto qr4comp = slice(a_qr4,k,j,ee);
+        auto qr2comp = slice(a_qr2,k,j,ee);
+        auto ql4comp = slice(a_ql4,i,k,ee);
+        auto ql2comp = slice(a_ql2,i,k,ee);
+        prodcomp+=Operator::_cellProduct(ql4comp,qr4comp,ql2comp,qr2comp);
+    }
+    return prod;
+}
+
+//==========================================================================================
+// FACE MATRIX PRODUCT
+template<class T, unsigned int CL,unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
+_faceMatrixProductAB(
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    PR_TIME("Operator::faceMatrixProductAB");
+    PR_assert(uint(DL) == CR);
+    Box bx = a_ql4.box() & a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir)
+        {
+            bx &= a_ql2.box().grow(dir,-1);
+            bx &= a_qr2.box().grow(dir,-1);
+        }
+    }
+    BoxData<T,CL,MEM,DR,E> prod(bx);
+    prod.setToZero();
+    for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+    for (int j = 0; j < DR; j++)
+    for (int k = 0; k < DL;k++)
+    {
+        auto prodcomp = slice(prod,i,j,ee);
+        auto qr4comp = slice(a_qr4,k,j,ee);
+        auto qr2comp = slice(a_qr2,k,j,ee);
+        auto ql4comp = slice(a_ql4,i,k,ee);
+        auto ql2comp = slice(a_ql2,i,k,ee);
+        prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
+    }
+    return prod;
+}
+
+template<class T, unsigned int CL,unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+void
+_faceMatrixProductAB(
+        BoxData<T,CL,MEM,DR,E>&       a_product,
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::_faceMatrixProduct | Error: Not implemented.");
+}
+
+template<class T, unsigned int CL,unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
+faceMatrixProductAB(
+        const BoxData<T,CL,MEM,DL,E>& a_ql,
+        const BoxData<T,CR,MEM,DR,E>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceMatrixProduct | Error: Not implemented.");
+}
+
+template<class T, unsigned int CL,unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+void
+faceMatrixProductAB(
+        BoxData<T,CL,MEM,DR,E>&       a_product,
+        const BoxData<T,CL,MEM,DL,E>& a_ql,
+        const BoxData<T,CR,MEM,DR,E>& a_qr,
+        int a_dir)
+{
+    MayDay<void>::Abort("Operator::faceMatrixProduct | Error: Not implemented.");
+}
+
+template<class T, unsigned int CL, unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,DL,MEM,DR,E>
+_faceMatrixProductATB(
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    PR_TIME("Operator::faceMatrixProductATB");
+    PR_assert(CR == CL);
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir) bx = bx
+            &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+    }
+    BoxData<T,DL,MEM,DR,E> prod(bx);
+    prod.setToZero();
+    for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < DL; i++)
+    for (int j = 0; j < DR; j++)
+    for (int k = 0; k < CL;k++)
+    {
+        auto prodcomp = slice(prod,i,j,ee);
+        auto qr4comp = slice(a_qr4,k,j,ee);
+        auto qr2comp = slice(a_qr2,k,j,ee);
+        auto ql4comp = slice(a_ql4,k,i,ee);
+        auto ql2comp = slice(a_ql2,k,i,ee);
+        prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
+    }
+    return prod;
+}
+
+template<class T, unsigned int CL, unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+void
+_faceMatrixProductATB(
+        BoxData<T,DL,MEM,DR,E>&       a_product,
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("_faceMatrixProductATB | Error: Not Implemented.");
+}
+
+template<class T, unsigned int CL, unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,CR,E>
+_faceMatrixProductABT(
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    PR_TIME("Operator::faceMatrixProductABT");
+    PR_assert(DL == DR);
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir) bx = bx
+            &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+    }
+    BoxData<T,CL,MEM,CR,E> prod(bx);
+    prod.setToZero();
+    for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+    for (int j = 0; j < CR; j++)
+    for (int k = 0; k < DL;k++)
+    {
+        auto prodcomp = slice(prod,i,j,ee);
+        auto qr4comp = slice(a_qr4,j,k,ee);
+        auto qr2comp = slice(a_qr2,j,k,ee);
+        auto ql4comp = slice(a_ql4,i,k,ee);
+        auto ql2comp = slice(a_ql2,i,k,ee);
+        prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
+    }
+    return prod;
+}
+
+template<class T, unsigned int CL, unsigned char DL,
+    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+void
+_faceMatrixProductABT(
+        BoxData<T,CL,MEM,CR,E>&       a_product,
+        const BoxData<T,CL,MEM,DL,E>& a_ql4,
+        const BoxData<T,CR,MEM,DR,E>& a_qr4,
+        const BoxData<T,CL,MEM,DL,E>& a_ql2,
+        const BoxData<T,CR,MEM,DR,E>& a_qr2,
+        int a_dir)
+{
+    MayDay<void>::Abort("_faceMatrixProductABT | Error: Not Implemented.");
+}
+
+//==========================================================================================
+// PRODUCT 1D
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 _product1D(
-                    const BoxData<T,C,MEM,D,E>& a_ql4,
-                    const BoxData<T,C,MEM,D,E>& a_qr4,
-                    const BoxData<T,C,MEM,D,E>& a_ql2,
-                    const BoxData<T,C,MEM,D,E>& a_qr2,
-                    int a_dir)
+        const BoxData<T,C,MEM,D,E>& a_ql4,
+        const BoxData<T,C,MEM,D,E>& a_qr4,
+        const BoxData<T,C,MEM,D,E>& a_ql2,
+        const BoxData<T,C,MEM,D,E>& a_qr2,
+        int a_dir)
 {
-  PR_TIME("Operator::product1D");
-  auto b = (a_ql2.box().grow(a_dir,-1) & a_qr2.box().grow(a_dir,-1));
-  b &= (a_ql4.box() & a_qr4.box());
-  BoxData<T,C,MEM,D,E> prod(b);
-  prod.setToZero();
-  auto Diff = 0.5*Shift::Basis(a_dir,1) - 0.5*Shift::Basis(a_dir,-1);
-  BoxData<T,C,MEM,D,E> Dql = Diff(a_ql2);
-  BoxData<T,C,MEM,D,E> Dqr = Diff(a_qr2);
-  
-  forallInPlace(
-                [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq)
-                {
-                  for (int cc = 0; cc < C; cc++)
-                    for (int dd = 0; dd < D; dd++)
-                      for (int ee = 0; ee < E; ee++)
-                        {
-                          prod_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
-                        }
-                }, prod, Dql, Dqr);
-  forallInPlace(
-                [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_l, Var<T,C,MEM,D,E>& v_r)
-                {
-                  for (int cc = 0; cc < C; cc++)
-                    for (int dd = 0; dd < D; dd++)
-                      for (int ee = 0; ee < E; ee++)
-                        {
-                          prod_out(cc,dd,ee) += v_l(cc,dd,ee)*v_r(cc,dd,ee);
-                        }
-                }, prod, a_ql4, a_qr4);
-  return prod;
+    PR_TIME("Operator::product1D");
+    auto b = (a_ql2.box().grow(a_dir,-1) & a_qr2.box().grow(a_dir,-1));
+    b &= (a_ql4.box() & a_qr4.box());
+    BoxData<T,C,MEM,D,E> prod(b);
+    prod.setToZero();
+    auto Diff = 0.5*Shift::Basis(a_dir,1) - 0.5*Shift::Basis(a_dir,-1);
+    BoxData<T,C,MEM,D,E> Dql = Diff(a_ql2);
+    BoxData<T,C,MEM,D,E> Dqr = Diff(a_qr2);
+
+    forallInPlace(
+        [ ] PROTO_LAMBDA (
+            Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq)
+        {
+            for (int cc = 0; cc < C; cc++)
+            for (int dd = 0; dd < D; dd++)
+            for (int ee = 0; ee < E; ee++)
+            {
+                prod_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
+            }
+        }, prod, Dql, Dqr);
+    forallInPlace(
+        [ ] PROTO_LAMBDA (
+            Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_l, Var<T,C,MEM,D,E>& v_r)
+        {
+            for (int cc = 0; cc < C; cc++)
+            for (int dd = 0; dd < D; dd++)
+            for (int ee = 0; ee < E; ee++)
+            {
+                prod_out(cc,dd,ee) += v_l(cc,dd,ee)*v_r(cc,dd,ee);
+            }
+        }, prod, a_ql4, a_qr4);
+    return prod;
 }
+
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 _cellTensorQuotient(
@@ -827,195 +1335,6 @@ _cellTensorQuotient(
           Operator::_cellQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2);
         }
   return quot;
-}
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-BoxData<T,C,MEM,D,E>
-_faceTensorQuotient(
-                              const BoxData<T,C,MEM,D,E>& a_ql4,
-                              const BoxData<T,1,MEM,1,1>& a_qr4,
-                              const BoxData<T,C,MEM,D,E>& a_ql2,
-                              const BoxData<T,1,MEM,1,1>& a_qr2,        
-                              int a_dir)
-{
-  PR_TIME("Operator::faceTensorQuotient");
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir!=a_dir) bx = bx
-                        &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,C,MEM,D,E> quot(bx);
-  for (int ee = 0; ee < E;ee++)
-    for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-        {
-          auto quotcomp = slice(quot,cc,dd,ee);
-          auto ql4comp = slice(a_ql4,cc,dd,ee);
-          auto ql2comp = slice(a_ql2,cc,dd,ee);
-          Operator::_faceQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
-        }
-  return quot;
-}
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
-BoxData<T,C,MEM,D,E>
-_faceTensorProduct(
-                             const BoxData<T,C,MEM,D,E>& a_ql4,
-                             const BoxData<T,1,MEM,1,1>& a_qr4,
-                             const BoxData<T,C,MEM,D,E>& a_ql2,
-                             const BoxData<T,1,MEM,1,1>& a_qr2,        
-                             int a_dir)
-{
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir!=a_dir) bx = bx
-                        &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,C,MEM,D,E> quot(bx);
-  for (int ee = 0; ee < E;ee++)
-    for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-        {
-          auto quotcomp = slice(quot,cc,dd,ee);
-          auto ql4comp = slice(a_ql4,cc,dd,ee);
-          auto ql2comp = slice(a_ql2,cc,dd,ee);
-          Operator::_faceProduct(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
-        }
-  return quot;
-}
-template<class T, unsigned int CL,unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
-BoxData<T,CL,MEM,DR,E>
-_faceMatrixProductAB(
-                      const BoxData<T,CL,MEM,DL,E>& a_ql4,
-                      const BoxData<T,CR,MEM,DR,E>& a_qr4,
-                      const BoxData<T,CL,MEM,DL,E>& a_ql2,
-                      const BoxData<T,CR,MEM,DR,E>& a_qr2,
-                      int a_dir)
-{
-  PR_TIME("Operator::faceMatrixProductAB");
-  PR_assert(uint(DL) == CR);
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir!=a_dir) bx = bx
-                        &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,CL,MEM,DR,E> prod(bx);
-  prod.setToZero();
-  for (int ee = 0; ee < E;ee++)
-    for (int i = 0; i < CL; i++)
-      for (int j = 0; j < DR; j++)
-        for (int k = 0; k < DL;k++)
-        {
-          auto prodcomp = slice(prod,i,j,ee);
-          auto qr4comp = slice(a_qr4,k,j,ee);
-          auto qr2comp = slice(a_qr2,k,j,ee);
-          auto ql4comp = slice(a_ql4,i,k,ee);
-          auto ql2comp = slice(a_ql2,i,k,ee);
-          prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
-        }
-  return prod;
-}
-template<class T, unsigned int CL,unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
-BoxData<T,CL,MEM,DR,E>
-_cellMatrixProductAB(
-                 const BoxData<T,CL,MEM,DL,E>& a_ql4,
-                 const BoxData<T,CR,MEM,DR,E>& a_qr4,
-                 const BoxData<T,CL,MEM,DL,E>& a_ql2,
-                 const BoxData<T,CR,MEM,DR,E>& a_qr2)
-{
-  PR_TIME("Operator::matrixProductAB");
-  PR_assert(uint(DL) == CR);
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      bx = bx&a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,CL,MEM,DR,E> prod(bx);
-  prod.setToZero();
-  for (int ee = 0; ee < E;ee++)
-    for (int i = 0; i < CL; i++)
-      for (int j = 0; j < DR; j++)
-        for (int k = 0; k < DL;k++)
-        {
-          auto prodcomp = slice(prod,i,j,ee);
-          auto qr4comp = slice(a_qr4,k,j,ee);
-          auto qr2comp = slice(a_qr2,k,j,ee);
-          auto ql4comp = slice(a_ql4,i,k,ee);
-          auto ql2comp = slice(a_ql2,i,k,ee);
-          prodcomp+=Operator::_cellProduct(ql4comp,qr4comp,ql2comp,qr2comp);
-        }
-  return prod;
-}
-template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
-BoxData<T,DL,MEM,DR,E>
-_faceMatrixProductATB(
-                               const BoxData<T,CL,MEM,DL,E>& a_ql4,
-                               const BoxData<T,CR,MEM,DR,E>& a_qr4,
-                               const BoxData<T,CL,MEM,DL,E>& a_ql2,
-                               const BoxData<T,CR,MEM,DR,E>& a_qr2,
-                               int a_dir)
-{
-  PR_TIME("Operator::faceMatrixProductATB");
-  PR_assert(CR == CL);
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir!=a_dir) bx = bx
-                        &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,DL,MEM,DR,E> prod(bx);
-  prod.setToZero();
-  for (int ee = 0; ee < E;ee++)
-    for (int i = 0; i < DL; i++)
-      for (int j = 0; j < DR; j++)
-        for (int k = 0; k < CL;k++)
-          {
-            auto prodcomp = slice(prod,i,j,ee);
-            auto qr4comp = slice(a_qr4,k,j,ee);
-            auto qr2comp = slice(a_qr2,k,j,ee);
-            auto ql4comp = slice(a_ql4,k,i,ee);
-            auto ql2comp = slice(a_ql2,k,i,ee);
-            prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
-          }
-  return prod;
-}
-template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
-BoxData<T,CL,MEM,CR,E>
-_faceMatrixProductABT(
-                               const BoxData<T,CL,MEM,DL,E>& a_ql4,
-                               const BoxData<T,CR,MEM,DR,E>& a_qr4,
-                               const BoxData<T,CL,MEM,DL,E>& a_ql2,
-                               const BoxData<T,CR,MEM,DR,E>& a_qr2,
-                               int a_dir)
-{
-  PR_TIME("Operator::faceMatrixProductABT");
-  PR_assert(DL == DR);
-  Box bx = a_ql4.box()&a_qr4.box();
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir!=a_dir) bx = bx
-                        &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-    }
-  BoxData<T,CL,MEM,CR,E> prod(bx);
-  prod.setToZero();
-  for (int ee = 0; ee < E;ee++)
-    for (int i = 0; i < CL; i++)
-      for (int j = 0; j < CR; j++)
-        for (int k = 0; k < DL;k++)
-          {
-            auto prodcomp = slice(prod,i,j,ee);
-            auto qr4comp = slice(a_qr4,j,k,ee);
-            auto qr2comp = slice(a_qr2,j,k,ee);
-            auto ql4comp = slice(a_ql4,i,k,ee);
-            auto ql2comp = slice(a_ql2,i,k,ee);
-            prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
-          }
-  return prod;
 }
 template<class T, unsigned int CL,unsigned char DL,
            unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
@@ -1088,66 +1407,6 @@ _matrixProductABT2(
             prodcomp+=qrcomp*qlcomp;
           }
   return prod;  
-}
-template<class T, MemType MEM>
-BoxData<T,DIM,MEM,DIM>
-_cofactorMatrix(
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-        int a_dirNorm)                         
-{
-  PR_TIME("Operator::cofactorMatrix");
-  Array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      if (dir != a_dirNorm)
-        {
-          NTAveToFace[dir] =
-            (Stencil<T>::faceToCell(dir,4)*
-             Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
-        }
-    }
-  
-  
-#if DIM==2
-  auto retval = forall<T,DIM,MEM,DIM>
-    ([ ] PROTO_LAMBDA(
-                      Var<T,DIM,MEM,DIM>& a_retval,
-                      const Var<T,DIM,MEM>& a_ntNorm,
-                      const Var<T,DIM,MEM>& a_ntTan,
-                      int a_dirNorm)
-     {
-           for (int dir2 = 0; dir2 < DIM;dir2++)
-             {
-               a_retval(dir2,a_dirNorm) = a_ntNorm(dir2);
-               a_retval(dir2,(a_dirNorm+1)%DIM) = a_ntTan(dir2);
-             }
-         },
-         a_NTFaces[a_dirNorm],
-         NTAveToFace[(a_dirNorm+1)%DIM],
-         a_dirNorm);
-#elif DIM==3
-    auto retval =
-      forall<T,DIM,MEM,DIM,1>
-      ([ ] PROTO_LAMBDA(
-                        Var<T,DIM,MEM,DIM>& a_retval,
-                        const Var<T,DIM,MEM>& a_ntNorm,
-                        const Var<T,DIM,MEM>& a_ntTan1,
-                        const Var<T,DIM,MEM>& a_ntTan2,
-                        int a_dirNorm)
-       {
-         for (int dir1 = 0; dir1 < DIM;dir1++)
-           {
-             a_retval(dir1,a_dirNorm) = a_ntNorm(dir1);
-             a_retval(dir1,(a_dirNorm+1)%DIM) = a_ntTan1(dir1);
-             a_retval(dir1,(a_dirNorm+2)%DIM) = a_ntTan2(dir1);
-           }
-       },
-       a_NTFaces[a_dirNorm],
-       NTAveToFace[(a_dirNorm+1)%DIM],
-       NTAveToFace[(a_dirNorm+2)%DIM],
-       a_dirNorm);
-#endif
-    return retval;
 }
 
 template<class T,unsigned int C, MemType MEM>
