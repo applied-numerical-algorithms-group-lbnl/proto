@@ -261,10 +261,10 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
     } // end stage loop
 
     // Update U0
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
+    for (auto iter : layout)
     {
-        RHSTotal[*iter] *= a_dt;
-        U0[*iter] += RHSTotal[*iter];
+        RHSTotal[iter] *= a_dt;
+        U0[iter] += RHSTotal[iter];
     }
 
     // Recursive Advance
@@ -279,13 +279,14 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
         }
         Proto::averageDown((*m_data)[a_level], (*m_data)[a_level+1], m_spaceRefRatios[a_level]);
         // 1/dx factor is done at the increment stage to account for anisotropy
-        m_fluxRegisters[a_level]->reflux(U0, 1.0); 
+        m_fluxRegisters[a_level]->reflux(U0, 1.0);
+        m_fluxRegisters[a_level]->reset();
     }
     
     // Do Regridding
     if (a_level == m_regridBaseLevel)
     {
-        regrid(a_level);
+      regrid(a_level);
     }
 }
 
@@ -308,14 +309,14 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
     T chi = a_chi + m_stageTimes[a_stage]/m_timeRefRatios[a_level-1];
     Stencil<T> I = 1.0*Shift::Zeros();
 
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
+    for (auto iter : layout)
     {
-        if (layout.onLevelBoundary(layout.point(*iter)))
+        if (layout.onLevelBoundary(layout.point(iter)))
         {
             // get data
-            auto& UStage_i   = UStage[*iter];
-            auto& UTaylorC_i = UTaylorC[*iter];
-            BoxData<T, C, MEM> UStageTemp(layout[*iter]);
+            auto& UStage_i   = UStage[iter];
+            auto& UTaylorC_i = UTaylorC[iter];
+            BoxData<T, C, MEM> UStageTemp(layout[iter]);
             
             // save copy of interior
             UStageTemp |= I(UStage_i);
@@ -354,27 +355,28 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 
     LevelBoxData<T, DIM> Fluxes(layout, Point::Ones());
     Fluxes.setToZero();
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
+    UStage.exchange();
+    for (auto iter : layout)
     {
         // get data
-        auto& UStage_i   = UStage[*iter];
-        auto& U0_i       = U0[*iter];
-        auto& RHSTotal_i = RHSTotal[*iter];
+        auto& UStage_i   = UStage[iter];
+        auto& U0_i       = U0[iter];
+        auto& RHSTotal_i = RHSTotal[iter];
 
         Array<BoxData<T, C, MEM>, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
-            fluxes[dir].define(layout[*iter].grow(dir, Side::Hi, 1));
+            fluxes[dir].define(layout[iter].grow(dir, Side::Hi, 1));
             fluxes[dir].setToZero();
         }
-        BoxData<T,C,MEM> kStage(layout[*iter], 0.0);
+        BoxData<T,C,MEM> kStage(layout[iter], 0.0);
         
         // apply spatial operator to compute k
         op(kStage, fluxes, UStage_i);
        
         for (int dir = 0; dir < DIM ;dir++)
         {
-            BoxData<double> flux_d = slice(Fluxes[*iter], dir);
+            BoxData<double> flux_d = slice(Fluxes[iter], dir);
             fluxes[dir].copyTo(flux_d);
         }
 
@@ -383,7 +385,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     
         if (a_level < m_data->numLevels() - 1)
         {
-            auto& UTaylor_i  = (*m_UTaylor[a_level])[*iter];
+            auto& UTaylor_i  = (*m_UTaylor[a_level])[iter];
             // store stage information
             kStage *= a_dt;
             forallInPlace(f_RKTaylorCoefs, UTaylor_i, kStage, U0_i, a_stage);
@@ -392,7 +394,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
             for (int dir = 0; dir < DIM; dir++)
             {
                 T cdx = op.dx()[dir];
-                m_fluxRegisters[a_level]->incrementCoarse(fluxes[dir], *iter, dtWeight, dir);
+                m_fluxRegisters[a_level]->incrementCoarse(fluxes[dir], iter, dtWeight, dir);
             }
         }
         if (a_level > 0)
@@ -400,7 +402,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
             for (int dir = 0; dir < DIM; dir++)
             {
                 T cdx = m_ops[a_level-1].dx()[dir];
-                m_fluxRegisters[a_level-1]->incrementFine(fluxes[dir], *iter, dtWeight, dir);
+                m_fluxRegisters[a_level-1]->incrementFine(fluxes[dir], iter, dtWeight, dir);
             }
         }
     } // end patch loop
@@ -422,10 +424,10 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
         // Compute tags on this level
         LevelTagData tags(layout, Point::Ones(m_bufferSize));
         tags.setToZero();
-        for (auto iter = layout.begin(); iter.ok(); ++iter)
+        for (auto iter : layout)
         {
-            auto& tags_i = tags[*iter];
-            auto& U0_i   = (*m_data)[level][*iter];
+            auto& tags_i = tags[iter];
+            auto& U0_i   = (*m_data)[level][iter];
             m_ops[level].generateTags(tags_i, U0_i);
         }
         tags.setBoundary(0);
