@@ -135,7 +135,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
             a_grid[m_level], Point::Ones(2), numMGLevels, m_op->dx(a_level));
    
         // fine correction stencil 
-        m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
+        m_interpolate = InterpStencil<T>::Constant(refRatio);
 
         // define temporaries
         Point interpGhost = m_op->interpStencil(a_level-1).ghost();

@@ -53,17 +53,17 @@ namespace ProtoUtils
      fprintf(stderr,"\n"))); \
   if (!(stmt)){std::abort();}
 
-#define PR_DEBUG_MSG(N, stmt, args...) \
+#define PR_DEBUG_MSG(N, args...) \
     if (N <= PR_VERBOSE) \
     { \
         auto words = ProtoUtils::split_string(__FILE__, '/'); \
         string filename = words[words.size()-1]; \
         char prefix[100]; \
         char message[500]; \
-        sprintf(prefix, "DEBUG | %s:%d: ", filename.c_str(), __LINE__); \
-        sprintf(message, stmt, args); \
-        fprintf(stdout,"%s %s\n", prefix, message); \
-    } \
+        (fprintf(stdout, "DEBUG | %s:%d: ", filename.c_str(), __LINE__) && \
+        fprintf(stdout, args) && \
+        fprintf(stdout, "\n")); \
+    }    
 
 #define PR_assert(stmt) assert( (stmt) );
 

@@ -38,9 +38,7 @@ template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
-      m_rawPtr(a_src.m_rawPtr)
-{
-}
+      m_rawPtr(a_src.m_rawPtr) {}
 
 // Define
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
@@ -101,9 +99,21 @@ void BoxData<T,C,MEM,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>::BoxData(LazyStencil<T, C, MEM, D, E>&& a_op)
 {
-    define(a_op.m_range);
+    Box range = a_op.m_range;
+    if (range.empty()) { range = a_op.inferredRange(); }
+    define(range);
     a_op.apply(*this, true);
 }
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>::BoxData(LazyInterpStencil<T, C, MEM, D, E>&& a_op)
+{
+    Box range = a_op.range;
+    if (range.empty()) { range = a_op.inferredRange(); }
+    define(range);
+    a_op.apply(*this, true);
+}
+
 
 // Slice Constructor (Private)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>

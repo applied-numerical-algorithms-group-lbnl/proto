@@ -36,7 +36,7 @@ class AMRRK4
     std::vector<int>    m_timeRefRatios;
     std::vector<Point>  m_spaceRefRatios;
     std::vector<OpType> m_ops;
-    std::vector<InterpStencilTP<T>> m_cfInterp;
+    std::vector<InterpStencil<T>> m_cfInterp;
     std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>> m_UStage;
     std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>> m_RHSTotal;
     std::vector<std::shared_ptr<LevelBoxData<T, C*RKORDER, MEM>>> m_UTaylor;

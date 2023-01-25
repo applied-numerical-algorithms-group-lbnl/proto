@@ -313,13 +313,10 @@ Box
 Stencil<T>::indexRange(Box a_domain) const
 {
     PR_TIME("Stencil::indexRange");
-    Point newlo, newhi;
-    for(int idir = 0; idir < DIM; idir++)
-    {
-        newlo[idir] = a_domain.low() [idir] + std::abs(m_span.low() [idir]);
-        newhi[idir] = a_domain.high()[idir] - std::abs(m_span.high()[idir]);
-    }
-    Box indexRange(newlo, newhi);
+    if (a_domain.empty()) { return Box(); }
+    Point L = a_domain.low() - m_span.low();
+    Point H = a_domain.high() - m_span.high();
+    Box indexRange(L, H);
     indexRange = indexRange.taperCoarsen(m_srcRefratio);
     return indexRange;
 }
@@ -329,6 +326,7 @@ Box
 Stencil<T>::indexDomain(Box a_range) const
 {
     PR_TIME("Stencil::indexDomain");
+    if (a_range.empty()) { return Box(); }
     Box indexDomain = a_range.shift(-m_destShift);
     indexDomain = indexDomain.taperCoarsen(m_destRefratio);
     return indexDomain;
@@ -339,8 +337,10 @@ Box
 Stencil<T>::range(Box a_domain) const
 {
     PR_TIME("Stencil::range");
+    if (a_domain.empty()) { return Box(); }
     Box range;
     range = indexRange(a_domain);
+    // this is intentionally not a refine
     range = Box(range.low()*m_destRefratio, range.high()*m_destRefratio);
     range = range.shift(m_destShift);
     return range;
@@ -351,7 +351,9 @@ Box
 Stencil<T>::domain(Box a_range) const
 {
     PR_TIME("Stencil::domain");
+    if (a_range.empty()) { return Box(); }
     Box domain = indexDomain(a_range);
+    // this is intentionally not a refine
     domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
     domain = Box(domain.low() + m_span.low(), domain.high()+m_span.high());
     return domain;
@@ -411,6 +413,11 @@ void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
     BoxData<T, C, MEMTYPE, D, E>& castsrc = const_cast<BoxData<T,C,MEMTYPE,D,E> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
+    // Box inference happens here
+    if (a_box.empty())
+    {
+        castbox = indexDomain(a_dest.box()) & indexRange(a_src.box());
+    }
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 }
 
@@ -419,8 +426,8 @@ template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 LazyStencil<T,C,MEMTYPE,D,E>
 Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src, T a_scale) const
 {
-    Box b = this->indexRange(a_src.box());
-    return LazyStencil<T,C,MEMTYPE,D,E>(this, &a_src, b, a_scale);
+    //Box b = this->range(a_src.box());
+    return LazyStencil<T,C,MEMTYPE,D,E>(this, &a_src, Box(), a_scale);
 }
 template <typename T>
 template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -428,9 +435,11 @@ LazyStencil <T,C,MEMTYPE,D,E>
 Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_scale) const
 {
 #ifndef NDEBUG
-    Box b = this->indexRange(a_src.box());
+    Box b = this->range(a_src.box());
     PROTO_ASSERT(b.contains(a_box),
-            "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
+            "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
+    PROTO_ASSERT(!a_box.empty(),
+            "Stencil::operator() | Error: User explicitly passed an empty Box.");
 #endif
     return LazyStencil<T, C, MEMTYPE, D, E>(this, &a_src, a_box, a_scale);
 }
@@ -477,10 +486,10 @@ LazyStencil<T,C,MEMTYPE,D,E>::LazyStencil(const Stencil<T>* a_stencil,
                                   Box a_box,
                                   T a_scale)
 {
-    m_range = a_stencil->range(a_src->box()) & a_box.refine(a_stencil->destRatio());
+    m_range = a_box; // user supplies the range box
     m_stencil.push_back(a_stencil);
     m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(a_src));
-    m_box.push_back(a_box);
+    m_box.push_back(a_stencil->indexDomain(a_box)); // apply box is in index space
     m_scale.push_back(a_scale);
     PROTO_ASSERT(m_stencil.size() == m_src.size(),
     "LazyStencil data corrupted; m_stencil and m_src have different sizes.");
@@ -496,11 +505,26 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
 {
     for (int ii = 0; ii < m_src.size(); ii++)
     {
-        Box b = m_box[ii];
-        b = b & m_stencil[ii]->indexDomain(a_dest.box());
         m_stencil[ii]->apply(*(m_src[ii]),a_dest,
-                            b, a_overwrite, m_scale[ii]);
+                            m_box[ii], a_overwrite, m_scale[ii]);
     }
+}
+
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Box LazyStencil<T,C,MEMTYPE,D,E>::inferredRange() const
+{
+    if (size() == 0) {return Box(); }
+    Box range;
+    for (int ii = 0; ii < size(); ii++)
+    {
+        Box ri = m_stencil[0]->range(m_src[0]->box());
+        if (ii == 0) {range = ri;}
+        else {
+            range = range & ri.low();
+            range = range & ri.high();
+        }
+    }
+    return range;
 }
 
 template <typename T>
@@ -519,13 +543,6 @@ inline void Stencil<T>::closeForDevice()
         proto_memcpy<HOST, DEVICE>(h_offset, d_offset, offsetsize);
 #endif
         m_isClosed = true;
-        /* Appears to be unused. -CLG 4/19/2022
-        PROTO_ASSERT(m_coefs.size() < 64, "m_coefs.size()>= 64");
-        for(int i=0; i<m_coefs.size(); i++)
-        {
-            c_coeff.elements[i]=m_coefs[i];
-        }
-        */
     }
 }
 
@@ -708,24 +725,22 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
   PR_TIME("Stencil::hostApply");
   if (m_coefs.size() == 0){return;}
    
-  //CH_TIMERS("Stencil::apply");
-  // Initialize a_dest to zero within a_box if flag is set
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
   if (a_initToZero)
   {
-    for (int ee = 0; ee < E; ee++)
+      for (int ee = 0; ee < E; ee++)
       for (int dd = 0; dd < D; dd++)
-        for (int cc = 0; cc < C; cc++)
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+      for (int cc = 0; cc < C; cc++)
+      for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+      {
+          Point pt = (*iter)*m_destRefratio + m_destShift;
+          T* val = a_dest.data(pt,cc,dd,ee);
+          for (int ii = 0; ii < npencil; ii++)
           {
-            Point pt = (*iter)*m_destRefratio + m_destShift;
-            T* val = a_dest.data(pt,cc,dd,ee);
-            for (int ii = 0; ii < npencil; ii++)
-            {
               val[ii*m_destRefratio[0]] = 0;
-            }
           }
+      }
   }
     
   // if a_scale is 0, nothing left to do...
@@ -735,10 +750,10 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
   std::vector<T> coefs = m_coefs;
   if (a_scale != 1)
   {
-    for (int ii = 0; ii < this->size(); ii++)
-    {
-      coefs[ii] *= a_scale;
-    }
+      for (int ii = 0; ii < this->size(); ii++)
+      {
+          coefs[ii] *= a_scale;
+      }
   }
 
   // convert Points in m_offsets to linear offsets in a_src's data
@@ -746,42 +761,42 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
   offsetFactor[0] = 1;
   for (int ii = 1; ii < DIM; ii++)
   {
-    offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
+      offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
   }
   std::vector<int> offsets;
   offsets.resize(this->size());
   for (int ii = 0; ii < this->size(); ii++)
   {
-    offsets[ii] = 0;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-      offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
-    }
+      offsets[ii] = 0;
+      for (int dir = 0; dir < DIM; dir++)
+      {
+          offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
+      }
   }
 
   // apply the stencil
   
     //PR_TIMERS("hostApply::applyStencil");
   for (int ee = 0; ee < E; ee++)
-    for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-      {    
-        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-        {
+  for (int dd = 0; dd < D; dd++)
+  for (int cc = 0; cc < C; cc++)
+  {    
+      for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+      {
           for (int jj = 0; jj < this->size(); jj++)
           {
-            Point dpt = (*iter)*m_destRefratio + m_destShift;
-            if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
-            Point spt = (*iter)*m_srcRefratio;
-            T* destVal = a_dest.data(dpt,cc,dd,ee);
-            const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
-            for (int ii = 0; ii < npencil; ii++)
-            {
-              destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
-            }
+              Point dpt = (*iter)*m_destRefratio + m_destShift;
+              if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+              Point spt = (*iter)*m_srcRefratio;
+              T* destVal = a_dest.data(dpt,cc,dd,ee);
+              const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
+              for (int ii = 0; ii < npencil; ii++)
+              {
+                  destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
+              }
           }
-        }
       }
+  }
 }
 
 template <typename T>
