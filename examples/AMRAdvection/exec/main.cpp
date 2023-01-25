@@ -82,6 +82,7 @@ int main(int argc, char** argv)
     double maxTime = 1.0;
     int outputInterval = 1;
     double t0 = 0.0;
+    //std::array<bool, DIM> periodicity;
     Array<bool, DIM> periodicity;
     periodicity.fill(true);
 
@@ -115,6 +116,7 @@ int main(int argc, char** argv)
     DisjointBoxLayout layout(domain, boxSizeVect);
 
     double physDomainSize = 1.0;
+    //std::array<double, DIM> dx;
     Array<double, DIM> dx;
     dx.fill(physDomainSize / domainSize);
     double dt = 0.5 / domainSize;
@@ -156,8 +158,7 @@ int main(int argc, char** argv)
     Operator::initConvolve(U, dx[0], f_advectionExact, t0);
     U.averageDown();
     AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx);
-
-    double sum0 = U[0].sum();
+    double sum0 = U[0].integrate(dx[0]);
     pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
     double time = t0;
@@ -187,8 +188,10 @@ int main(int argc, char** argv)
         }
     }
 
-    sum0 = U[0].sum();
-    pout() << "Final level 0 conservation sum: " << sum0 << std::endl;
+    U.averageDown();
+    double sumFinal = U[0].integrate(dx[0]);
+    pout() << "Final level 0 conservation sum: " << sumFinal << std::endl;   
+    pout() << "Conservation error: " << sumFinal-sum0 << std::endl;
 
     AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
     //USoln.initConvolve(dx[0], f_advectionExact, time);
