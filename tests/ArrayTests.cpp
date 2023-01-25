@@ -69,11 +69,10 @@ TEST(ArrayTests, Modification)
     }
 }
 
-/* Iterator has been removed due to incorrect implementation
 TEST(ArrayTests, Iterator)
 {
     Array<int,6> A{1,2,3,4,5,6};
-    for (auto elt : A)
+    for (auto& elt : A)
     {
         elt = 7;
     }
@@ -82,7 +81,7 @@ TEST(ArrayTests, Iterator)
         EXPECT_EQ(elt, 7);
     }
 }
-*/
+
 TEST(ArrayTests, Reductions) {
     Array<double,6> pi{3,-1,4,-1,5,-9}, e{-2,7,-1,8,-2,8};
     EXPECT_EQ(pi.sum(),1);

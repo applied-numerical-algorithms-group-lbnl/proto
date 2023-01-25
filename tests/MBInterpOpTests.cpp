@@ -7,8 +7,8 @@
 using namespace Proto;
 
 TEST(MBPointInterpOp, XPointApply) {
-    int domainSize = 64;
-    int boxSize = 32;
+    int domainSize = 16;
+    int boxSize = 16;
     HDF5Handler h5;
     if (DIM > 2) 
     {
@@ -37,7 +37,7 @@ TEST(MBPointInterpOp, XPointApply) {
         MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost, boundGhost);
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost, boundGhost);
 
-        Point k{1,2,3,4,5,6};
+        Point k{1,1,1,1,1,1};
         Array<double, DIM> offset{1,1,1,1,1,1};
         hostSrc.initialize(f_phiM, map, k, offset);
         hostSrc.fillBoundaries();
@@ -89,6 +89,18 @@ TEST(MBPointInterpOp, XPointApply) {
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_Dst_%i", nn);
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Err_%i", nn);
+        for (auto iter : layout)
+        {
+            for (auto pi : Box::Kernel(1))
+            {
+                auto bounds = map.jacobian().bounds(iter, pi);
+                pout() << "patch: " << iter.global() << " | dir: " << pi << std::endl;
+                for (auto bi : bounds)
+                {
+                    bi.localData->printData();
+                }
+            }
+        }
 #endif
         PR_DEBUG_MSG(1, "Error: %3.2e", err[nn]);
         domainSize *= 2;

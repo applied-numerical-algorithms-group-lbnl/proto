@@ -75,15 +75,18 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int srcBlock = layout.block(src.index);
         // 3 ghost cells are needed in all directions to compute J
         // 4 ghost cells are needed to compute the quadrature with J
+        // 1 ghost cell is needed to compute product with J
         Box srcBox = Box::Kernel(4).shift(src.point);
+        // compute X at corners analytically on srcBox
         auto xi = a_map(srcBox, srcBlock);
+
         auto& Ji = src.patch(a_map.jacobian());
         // subtract xg
         xi -= xg;
         // divide by Rg
         xi /= Rg;
         
-        Point shift = src.point - Point::Ones() - J.box().low();
+        Point shift = src.point - (J.box().low() + Point::Ones());
         J.shift(shift);
         Ji.copyTo(J);
         for (int jj = 0; jj < N; jj++)
@@ -104,14 +107,6 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int dstBlock = layout.block(a_dst.index);
         Box dstBox = Box::Kernel(4).shift(a_dst.point);
         auto xi = a_map(dstBox, dstBlock);
-        // compute metric terms
-        /*
-        for (int d = 0; d < DIM; d++)
-        {
-            NT[d] = Operator::cofactor(xi, d);
-        }
-        J = Operator::jacobian(xi, NT);
-        */
         auto& Jdst = a_dst.patch(a_map.jacobian());
         xi -= xg;
         xi /= Rg;

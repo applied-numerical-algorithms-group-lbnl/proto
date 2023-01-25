@@ -288,6 +288,42 @@ TEST(MBMap, InitializeWithMap)
     h5.writeMBLevel({"phi"}, hostData, "MAP_INIT");
 }
 
+TEST(MBMap, AnalyticOps) {
+    HDF5Handler h5;
+    int domainSize = 8;
+    int boxSize = 4;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
+    
+    for (auto iter : layout)
+    {
+        const auto& x_patch = map.map()[iter];
+        unsigned int block = layout.block(iter);
+        for (auto pi : x_patch.box().grow(-1))
+        {
+            auto x_low  = map(pi, Point::Ones(-1), block);
+            auto x_mid = map(pi, Point::Zeros(), block);
+            Array<double, DIM> mid = pi;
+            mid += 0.5;
+            mid /= domainSize;
+            auto x_high = map(pi, Point::Ones(), block);
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                EXPECT_LT(x_patch(pi, dir) - x_low[dir], 1e-12);   
+                EXPECT_LT(abs(map(mid, block)[dir] - x_mid[dir]), 1e-12);
+                EXPECT_LT((x_patch(pi+Point::Ones(), dir) - x_high[dir]), 1e-12);
+                
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
