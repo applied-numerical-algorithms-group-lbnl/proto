@@ -86,6 +86,7 @@ namespace Proto
             const LazyInterpStencil<T,C,MEM,D,E>&& a_op)
     {
         a_op.apply(a_dst, false);
+        return a_dst;
     }
     // Replace operator 
     template<typename T, unsigned int C, MemType MEM,
@@ -95,6 +96,7 @@ namespace Proto
             const LazyInterpStencil<T,C,MEM,D,E>&& a_op)
     {
         a_op.apply(a_dst, true);
+        return a_dst;
     }
 } // end Proto namespace
 #endif //end include guard
