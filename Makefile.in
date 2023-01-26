@@ -1,5 +1,5 @@
 
-SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
+SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../_common/*.cpp) 
 NODIRSRC = $(notdir $(SRC))
 NODIROBJ = $(subst .cpp,.o,$(NODIRSRC))
 OBJ=$(patsubst %.o,o/%.o, $(NODIROBJ))
@@ -7,10 +7,10 @@ OBJ=$(patsubst %.o,o/%.o, $(NODIROBJ))
 NODIRDEP = $(subst .cpp,.d,$(NODIRSRC))
 DEPENDS=$(patsubst %.d,d/%.d, $(NODIRDEP))
 
-VPATH=o. ../src  ../../common
+VPATH=o. ../src  ../../_common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/EBProto/include -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/EBProto/include -I. -I../src -I../../_common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
 
 LIBS += $(LAPACK_LIB)
@@ -75,7 +75,7 @@ vars:
 	$(foreach v,$(filter-out $(VARS_OLD) VARS_OLD,$(.VARIABLES)), $(info $(v) = $($(v))))
 
 clean:
-	rm -rf d o *.o *.exe *.d ../../common/*.o ../src/*.o ../../common/*.d ../src/*.d
+	rm -rf d o *.o *.exe *.d ../../_common/*.o ../src/*.o ../../common/*.d ../src/*.d
 
 dataclean:
 	rm -rf *.hdf5 *.vtk *.table pout*
