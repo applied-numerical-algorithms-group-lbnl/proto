@@ -238,6 +238,7 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
+    PR_TIMERS("AMRRK4::advance");
     auto dx = m_ops[a_level].dx();
     auto dx0 = m_ops[0].dx();
 
@@ -255,9 +256,10 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
     {
         if (a_level > 0)
         {
-            interpBoundaries(a_level, stage, a_chi);
+          interpBoundaries(a_level, stage, a_chi);
         }
         stageUpdate(a_level, stage, a_dt);
+        
     } // end stage loop
 
     // Update U0
@@ -279,8 +281,11 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
         }
         Proto::averageDown((*m_data)[a_level], (*m_data)[a_level+1], m_spaceRefRatios[a_level]);
         // 1/dx factor is done at the increment stage to account for anisotropy
-        m_fluxRegisters[a_level]->reflux(U0, 1.0);
-        m_fluxRegisters[a_level]->reset();
+        {
+          PR_TIMERS("AMRRK4::advance reflux");
+          m_fluxRegisters[a_level]->reflux(U0, 1.0);
+          m_fluxRegisters[a_level]->reset();
+        }
     }
     
     // Do Regridding
@@ -299,6 +304,7 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
+     PR_TIMERS("AMRRK4::interpBoundaries");
     auto dx = m_ops[a_level].dx();
 
     auto& layout    = m_data->grid()[a_level];
@@ -342,6 +348,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
+     PR_TIMERS("AMRRK4::stageUpdate");
     auto dx = m_ops[a_level].dx();
 
     auto& layout    = m_data->grid()[a_level];
@@ -373,8 +380,10 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
         BoxData<T,C,MEM> kStage(layout[iter], 0.0);
         
         // apply spatial operator to compute k
-        op(kStage, fluxes, UStage_i);
-       
+        {
+          PR_TIMERS("AMRRK4::stageUpdate apply operator");
+          op(kStage, fluxes, UStage_i);
+        }
         for (int dir = 0; dir < DIM ;dir++)
         {
             BoxData<double> flux_d = slice(Fluxes[iter], dir);
@@ -382,8 +391,10 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
         }
 
         // do stage update
-        forallInPlace(f_stageUpdate, UStage_i, RHSTotal_i, U0_i, kStage, dtStageNext, stageWeight);
-    
+        {
+           PR_TIMERS("AMRRK4::stageUpdate do stage update");
+           forallInPlace(f_stageUpdate, UStage_i, RHSTotal_i, U0_i, kStage, dtStageNext, stageWeight);
+        }
         if (a_level < m_data->numLevels() - 1)
         {
             auto& UTaylor_i  = (*m_UTaylor[a_level])[iter];
