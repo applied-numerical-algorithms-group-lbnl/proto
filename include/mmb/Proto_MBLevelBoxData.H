@@ -41,6 +41,7 @@ namespace Proto
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
    {
        a_os << "point: " << a_point.point << "| block: " << a_point.block << " | bdry: " << a_point.boundaryDir;
+       return a_os;
    }
  
     /// Level Copier Operator
