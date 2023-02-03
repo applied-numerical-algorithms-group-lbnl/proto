@@ -1016,7 +1016,7 @@ BoxData<T,C,MEM,D,E>::operator*=(const BoxData<T,C,MEM,D,E>& a_rhs)
     PR_TIME("BoxData::operator*=");
     // PC: Replacing with forallInPlace
     //this->operatorT<BoxDataOp::Multiply>(a_rhs);
-    forallInPlace(PROTO_LAMBDA[](Var<T,C,MEM,D,E>& a_out,Var<T,C,MEM,D,E>& a_in)
+    forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,Var<T,C,MEM,D,E>& a_in)
                   {
                     for (int ee = 0; ee < E; ee++)
                       for (int dd = 0; dd < D; dd++)
@@ -1085,7 +1085,7 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator*=(T a_scale)
     PR_TIME("BoxData::operator*=(scale)");
     // PC: Replacing with forallInPlace
     //this->operatorT<BoxDataOp::Multiply>(a_scale);
-    forallInPlace(PROTO_LAMBDA[](Var<T,C,MEM,D,E>& a_out,T& a_in)
+    forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
                   {
                     for (int ee = 0; ee < E; ee++)
                       for (int dd = 0; dd < D; dd++)
@@ -1176,7 +1176,7 @@ void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
     PR_TIME("BoxData::setVal");
     // PC: replacing with forallInPlace
     //this->operatorT<BoxDataOp::Assign>(a_val);
-    forallInPlace(PROTO_LAMBDA[](Var<T,C,MEM,D,E>& a_out,T& a_in)
+    forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
                   {
                     for (int ee = 0; ee < E; ee++)
                       for (int dd = 0; dd < D; dd++)
