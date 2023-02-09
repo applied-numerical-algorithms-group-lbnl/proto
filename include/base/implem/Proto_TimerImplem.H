@@ -9,7 +9,7 @@
 #include <nvToolsExt.h>
 #include <nvToolsExtCuda.h>
 #else
-#include <roctracer/roctx.h>
+#include <roctx.h>
 #endif
 #endif
 
