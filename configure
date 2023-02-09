@@ -112,12 +112,12 @@ for t in targets:
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda --expt-relaxed-constexpr')
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
+        f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_CUDA -arch=compute_70')
     if args.cxx == 'hipcc':
-       f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP -I${MPICH_DIR}/include') 
+       f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_HIP -I${MPICH_DIR}/include') 
        f.write('\nLIBS+=-L${MPICH_DIR}/lib -lmpi')
     if os.path.isdir(os.path.expandvars('$ROCM_COMPILER_PATH')):
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP  -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
+        f.write('\nCXXOPTFLAGS+= -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
     if args.cxx=='mpicxx':
       use_mpi = True
     if args.hdf5=='TRUE':
