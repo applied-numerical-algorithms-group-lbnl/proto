@@ -77,6 +77,7 @@ namespace ProtoUtils
 
 #else // PROTO_HIP
 #define PROTO_ASSERT(stmt,args...)
+#define PR_DEBUG_MSG(N, stmt, args...)
 #define PR_assert(stmt) 
 #define PR_error(stmt) 
 #define PR_warning(stmt) 
