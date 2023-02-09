@@ -97,6 +97,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")  # disables compiler warings
     add_compile_options(-w)
 endif()
 
+if (ENABLE_HIP)
+  set(ENV{CXX} "hipcc")  # should set CMAKE_CXX_COMPILER
+endif()
 project(Proto VERSION 4.0 DESCRIPTION "Proto examples") # LANGUAGES CXX) # HDF5 fails with LANGUAGES argument
 enable_language(CXX)
 
