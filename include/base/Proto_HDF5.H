@@ -2,7 +2,9 @@
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
 #include "Proto_BoxData.H"
+#ifdef PR_HDF5
 #include "hdf5.h"
+#endif
 
 namespace Proto
 {
@@ -22,6 +24,7 @@ namespace Proto
     class MBLevelBoxData;
 #endif
 
+#ifdef PR_HDF5
     class HDF5Handler
     {
         public:
@@ -325,5 +328,6 @@ namespace Proto
         
     }; // end class HDF5Handler
 #include "implem/Proto_HDF5Implem.H"
+#endif
 } // end namespace Proto
 #endif //end of include guard
