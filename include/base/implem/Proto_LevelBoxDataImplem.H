@@ -766,6 +766,8 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
             }
             linearIn (dstBuffer, a_info);
         }
+        proto_free<DST_MEM>(dstBuffer);
+        proto_free<SRC_MEM>(srcBuffer);
     }
 }
 

@@ -647,6 +647,7 @@ void BoxData<T, C, MEM, D, E>::rotate(
         proto_memcpy<HOST, MEM>(newData, m_rawPtr, L);
         proto_free(newData);
     }
+    proto_free<HOST>(oldData);
     m_box = a_box;
 }
 

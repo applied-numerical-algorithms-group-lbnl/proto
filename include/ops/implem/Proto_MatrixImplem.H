@@ -827,6 +827,7 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
             a_U.data(), &LDU, a_VT.data(), &LDVT, WORK, &LWORK, &INFO);
 
     PROTO_ASSERT(INFO <= 0, "Matrix::svd | Error: SVD algorithm failed to converge.");
+    proto_free<HOST>(WORK); 
 }
 
 template<typename T>

@@ -740,6 +740,8 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
             proto_memcpy<MEM, MEM>(srcBuffer, dstBuffer, sizeSrc);
             linearIn(dstBuffer, a_info);
         }
+        proto_free<MEM>(dstBuffer);
+        proto_free<MEM>(srcBuffer);
     }
 }
 
@@ -888,6 +890,8 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
             }
             linearIn(dstBuffer, a_info);
         }
+        proto_free<SRC_MEM>(dstBuffer);
+        proto_free<SRC_MEM>(srcBuffer);
     }
 }
 

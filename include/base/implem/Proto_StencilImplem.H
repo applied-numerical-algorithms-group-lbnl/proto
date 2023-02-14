@@ -38,8 +38,10 @@ Stencil<T>::~Stencil()
     if(m_isClosed)
     {
 #ifdef PROTO_ACCEL
-        protoFreeGPU(d_coeff);
-        protoFreeGPU(d_offset);
+        proto_free<DEVICE>(d_coeff);
+        proto_free<DEVICE>(d_offset);
+        //protoFreeGPU(d_coeff);
+        //protoFreeGPU(d_offset);
 #endif
         m_isClosed = false;
     }

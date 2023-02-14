@@ -36,7 +36,7 @@ Reduction<T,OP,MEM>::~Reduction() {
     if (MEM == DEVICE)
     {
 #ifdef PROTO_ACCEL
-        proto_free<MEM>(m_deviTotal);
+        proto_free<DEVICE>(m_deviTotal);
         proto_free<DEVICE>(m_deviTemp);
 #endif
     }
