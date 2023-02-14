@@ -21,8 +21,9 @@ blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops/implem
                 DEPENDS_ON Headers_Base LAPACK::LAPACK)
-if(BLAS_FOUND)  # defined by find_package(BLAS)
-	blt_patch_target(NAME Headers_OPS DEPENDS_ON BLAS::BLAS)
+if(DEFINED ENV{OLCF_OPENBLAS_ROOT})
+  target_link_directories(Headers_OPS INTERFACE $ENV{OLCF_OPENBLAS_ROOT}/lib/)
+  target_link_libraries(Headers_OPS INTERFACE openblas)
 endif()
 if(OPS)
     blt_patch_target(NAME Headers_Base DEPENDS_ON Headers_OPS)

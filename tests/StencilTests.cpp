@@ -100,7 +100,7 @@ TEST(Stencil, BoxInference)
     Point srcRefRatio = Point::Ones(2);
     Point dstRefRatio = Point::Ones(4);
     Point dstShift = Point::Ones();
-    Stencil S = 1.0*Shift::Ones() + 1.0*Shift::Basis(0);
+    Stencil<double> S = 1.0*Shift::Ones() + 1.0*Shift::Basis(0);
     S.srcRatio() = srcRefRatio;
     S.destRatio() = dstRefRatio;
     S.destShift() = dstShift;

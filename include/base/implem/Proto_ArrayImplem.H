@@ -42,17 +42,20 @@ Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
 }
 
 template<typename T, size_t N>
+ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
     for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
     return *this;
 }
 
 template<typename T, size_t N>
+ACCEL_DECORATION
 Array<T,N>::Array(const std::array<T,N> &arr) {
     for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
 }
 
 template<typename T, size_t N>
+ACCEL_DECORATION
 Array<T,N>::Array(const Point &a_pt) {
     for (int i=0; i<std::min(DIM,(int)N); i++) { m_data[i] = (T)a_pt[i]; }
 }

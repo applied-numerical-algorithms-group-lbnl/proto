@@ -227,7 +227,7 @@ TEST(LevelBoxData, InitializeVariadic) {
     LevelBoxData<double, 1, DEVICE>     deviData(layout, Point::Ones());
     LevelBoxData<double, DIM, DEVICE>   deviX(layout, Point::Ones());
     deviX.initialize(f_iotaCenter, dx2);
-    deviData.initialize(f_phiM, deviX, k, offset);
+    deviData.initialize(f_phiM, dummyBlock, deviX, k, offset);
 #endif
     for (auto iter : layout)
     {

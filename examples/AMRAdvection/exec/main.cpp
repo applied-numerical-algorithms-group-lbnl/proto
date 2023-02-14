@@ -170,7 +170,7 @@ int main(int argc, char** argv)
     for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
     {
         TIME_STEP = k;
-        PLOT_NUM = 0;
+        PLOT_NUM = 0;      
         advectionOp.advance(dt);
         time += dt;
 #ifdef PR_HDF5
@@ -190,9 +190,10 @@ int main(int argc, char** argv)
 
     U.averageDown();
     double sumFinal = U[0].integrate(dx[0]);
-    pout() << "Final level 0 conservation sum: " << sumFinal << std::endl;   
-    pout() << "Conservation error: " << sumFinal-sum0 << std::endl;
-
+    {
+      //cout << "Final level 0 conservation sum: " << sumFinal << std::endl;   
+      cout << "Conservation error: " << sumFinal-sum0 << std::endl;
+    }
     AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
     //USoln.initConvolve(dx[0], f_advectionExact, time);
     Operator::initConvolve(USoln, dx[0], f_advectionExact, time);

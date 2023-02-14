@@ -49,8 +49,10 @@ public:
     ACCEL_DECORATION
     inline Array<T,N>& operator=(Array<T,N> &&arr) = default;
 
+    ACCEL_DECORATION
     inline Array<T,N>& operator=(const std::array<T,N> &arr);
 
+    ACCEL_DECORATION
     operator std::array<T,N>() const
     {
         std::array<T,N> arr;
@@ -63,6 +65,7 @@ public:
     ACCEL_DECORATION
     inline Array(const Point &a_pt);
 
+    ACCEL_DECORATION
     inline Array(const std::array<T,N> &arr);
 
     ACCEL_DECORATION

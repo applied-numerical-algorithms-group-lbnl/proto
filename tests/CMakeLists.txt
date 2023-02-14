@@ -30,6 +30,7 @@ blt_add_executable(NAME ArrayTests SOURCES ArrayTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME ArrayTests COMMAND ArrayTests)
+if (ENABLE_HDF5)
 blt_add_executable(NAME BoxOpTests SOURCES BoxOpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -38,6 +39,7 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
+endif()
 if(OPS)
   blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
       DEPENDS_ON Headers_OPS ${LIB_DEP} gtest

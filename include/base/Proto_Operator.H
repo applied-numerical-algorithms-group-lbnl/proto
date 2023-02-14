@@ -1,9 +1,7 @@
 #pragma once
 #ifndef _PROTO_OPERATOR_H_
 #define _PROTO_OPERATOR_H_
-#include "Proto_HDF5.H"
 #include "Proto.H"
-
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
 #include "Proto_LevelBoxData.H"

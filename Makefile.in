@@ -20,6 +20,11 @@ LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
 CPPFLAGS+= -I$(HDF5_INC)
 endif
 
+ifdef OLCF_HDF5_ROOT
+LIBS+= -L$(OLCF_HDF5_ROOT)/lib -lhdf5 -lz
+CPPFLAGS+= -I$(OLCF_HDF5_ROOT)/include
+endif
+
 ifdef FFTW3_DIR
 LIBS+= -L$(FFTW3_DIR)/lib -lfftw3
 CPPFLAGS+= -I$(FFTW3_DIR)/include
@@ -32,9 +37,9 @@ LIBS+= -lnvToolsExt
 endif
 
 ifeq ($(DEPXX),hipcc)
-CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer
+CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer -I${MPICH_DIR}/include
 CXXFLAGS+=--amdgpu-target=gfx906 -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
-LIBS+= -L/$(ROCM_PATH)/lib/
+LIBS+= -L/$(ROCM_PATH)/lib/ -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 LIBS+= -lroctx64
 endif
 
