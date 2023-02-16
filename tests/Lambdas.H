@@ -3,11 +3,11 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 5
+#define XPOINT_SIZE 4
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 2.0
-
+#define SHEAR_SLOPE 1.0
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -139,7 +139,6 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
-    domain.graph().fixRotations();
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
@@ -147,6 +146,24 @@ MBProblemDomain buildXPoint(int a_domainSize)
     return domain;
 }
 
+MBProblemDomain buildShear(int a_domainSize)
+{
+    MBProblemDomain domain(4);
+    auto I = CoordPermutation::identity();
+    domain.defineBoundary(0,1,0,Side::Hi,I);
+    domain.defineBoundary(1,2,1,Side::Hi,I);
+    domain.defineBoundary(2,3,0,Side::Lo,I);
+    domain.defineBoundary(3,0,1,Side::Lo,I);
+
+    for (int ii = 0; ii < 4; ii++)
+    {
+        //int jj = (ii+1) % 4;
+        //domain.defineBoundary(ii,jj,dir, I);
+        domain.defineDomain(ii, Point::Ones(a_domainSize));
+        //dir = CCW(dir);
+    }
+    return domain;
+}
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -168,6 +185,21 @@ PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 PROTO_MAP_START(IdentityMap)
     x = X; y = Y; z = Z;
 PROTO_MAP_END(IdentityMap)
+
+PROTO_MAP_START(ShearMap)
+    z = Z;
+    switch (block)
+    {
+        case 0:
+            x = X; y = Y; break;
+        case 3:
+            x = X; y = 1+Y; break;
+        case 1:
+            x = 1+X; y = Y+SHEAR_SLOPE*X; break;
+        case 2:
+            x = 1+X; y = 1+Y+SHEAR_SLOPE*X; break;
+    }
+PROTO_MAP_END(ShearMap)
 
 PROTO_MAP_START(XPointMap)
     double numBlocks = XPOINT_SIZE;
@@ -406,6 +438,23 @@ void cosxFuncF(Point p, Var<double> v, double dx)
   v(0) = cos(x);
 }
 PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_polyMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
+        Var<double, DIM, MEM>& a_X, Array<double, DIM> a_exp, Array<double, DIM> a_offset)
+{
+    double phi = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        phi += pow(a_X(dir) - a_offset[dir], a_exp[dir]);
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_polyMF, f_polyM);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START

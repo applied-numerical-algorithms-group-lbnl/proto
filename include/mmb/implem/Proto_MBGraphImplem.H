@@ -129,32 +129,6 @@ void MBGraph::fixRotations()
     }
 }
 
-void MBGraph::fixRotationsOld()
-{
-    pout() << "MBGraph::fixRotations" << std::endl;
-    for (int c = 1; c < DIM; c++)
-    for (unsigned int b0 = 0; b0 < size(); b0++)
-    for (auto d01 : codimDirs(c))
-    for (auto bound_01 : boundaries(b0, d01))
-    {
-        unsigned int b1 = bound_01.dstBlock;
-        for (auto d02 : codimDirs(c+1))
-        {
-            if (d01.dot(d02) <= 0) { continue; } //d02 is not in d01
-            auto bounds_02 = boundaries(b0, d02);
-            if (bounds_02.size() == 0) { continue; } //there are no blocks in d02
-            auto R01 = rotation(b0, d01, b1);
-            auto d12 = R01(d02 - d01);
-            PROTO_ASSERT(d12.codim() == 1, "MBGraph::fixRotations | Error: Data corruption.");
-            unsigned int b2 = adjacent(b1,d12);
-            if (b2 >= size()) { continue; } // b1 is not part of a valid circuit
-            auto R12 = rotation(b1,d12,b2);
-            auto R02 = R01*R12;
-            m_blocks[b0]->rotation(d02,b2) = R02;
-        }
-    }
-}
-
 void MBGraph::defineBoundary(
         unsigned int        a_srcBlock,
         unsigned int        a_dstBlock,
@@ -399,6 +373,19 @@ bool MBGraph::operator==(const MBGraph& a_rhs) const
     // TODO: Most applications won't need more than one graph
     //  We can change this in the future if need be. -CLG
     return (this == &a_rhs);
+}
+
+bool MBGraph::isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const
+{
+    auto& arcMap = m_blocks[a_srcBlock]->arcs;
+    if (arcMap.find(a_dir) == arcMap.end()) {return false; }
+    for (auto& arc : arcMap[a_dir])
+    {
+        auto dstBlock = arc.dstBlock;
+        Point conn = connectivity(a_srcBlock, dstBlock);
+        if (conn == a_dir) { return true; }
+    }
+    return false;
 }
 
 void MBGraph::print() const

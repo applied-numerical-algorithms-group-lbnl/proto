@@ -29,12 +29,22 @@ namespace Proto
                 MBLevelBoxData<T, C, MEM>& a_src);
         
         inline unsigned int size() const;
-
+        
+        template<typename T, unsigned int C, MemType MEM>
+        inline Matrix<double> coefs(
+                MBLevelBoxData<T, C, MEM>& a_src,
+                int a_srcComponent = 0);
+        
         inline const MBDataPoint& target() const {return m_dst;}
+        inline std::vector<Point> exponents() const {return m_exponents; }
 
         private:
-
+       
+        std::vector<Point> m_exponents;
         MBDataPoint m_dst;
+        Matrix<double> m_C;
+        Matrix<double> m_D;
+        Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
     };
@@ -55,8 +65,16 @@ namespace Proto
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
         
+        template<typename T, unsigned int C, unsigned int P, MemType MEM>
+        inline void coefs(
+                MBLevelBoxData<T, P, MEM>& a_coefs,
+                MBLevelBoxData<T, C, MEM>& a_src,
+                int a_srcComponent = 0);
+
+        inline std::vector<Point> exponents() const {return m_exponents; }
         private:
-        
+       
+        std::vector<Point> m_exponents;
         Point m_ghost;
         int m_order;
         std::vector<Point> m_footprint;

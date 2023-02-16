@@ -20,27 +20,33 @@ namespace Proto
     {
         public:
             MBIndex index;
-            int     block;
             Point   boundaryDir;
             Point   point;
-
-            inline MBDataPoint(){};
-            inline MBDataPoint(MBIndex a_index, Point a_point);
-            inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block);
+            
+            inline MBDataPoint(){}
+            inline MBDataPoint(MBIndex a_index, Point a_point,
+                    const MBDisjointBoxLayout& a_layout);
+            inline MBDataPoint(MBIndex a_index, Point a_point,
+                    const MBDisjointBoxLayout& a_layout, 
+                    Point a_boundaryDir, int a_block);
             inline bool operator==(const MBDataPoint& a_rhs) const;
 
             inline bool operator<(const MBDataPoint& a_rhs) const;
             inline bool inBoundary() const {return m_inBoundary; }
+            inline unsigned int srcBlock() const;
+            inline unsigned int dstBlock() const;
 
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
         private:
+            int  block;
             bool m_inBoundary;
+            const MBDisjointBoxLayout* layout;
     };
 
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
    {
-       a_os << "point: " << a_point.point << "| block: " << a_point.block << " | bdry: " << a_point.boundaryDir;
+       a_os << "point: " << a_point.point << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir;
    }
  
     /// Level Copier Operator
@@ -194,13 +200,15 @@ namespace Proto
         inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
         inline MBIterator begin();
         inline MBIterator end();
+        inline const MBIterator begin() const;
+        inline const MBIterator end() const;
         private:
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
         const MBDisjointBoxLayout*     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
-        std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
+        mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };
 #include "implem/Proto_MBLevelBoxDataImplem.H"
 } // end namespace Proto

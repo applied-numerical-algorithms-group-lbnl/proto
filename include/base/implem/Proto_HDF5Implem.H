@@ -1185,6 +1185,42 @@ void HDF5Handler::writeMBLevel(
     assert(H5Fclose(file) >= 0);
 
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevelBounds(
+        std::vector<std::string> a_varNames,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeMBLevelBounds");
+    char fname[100];
+    a_filename = a_filename.substr(0,a_filename.find_last_of("."));
+    a_filename += "_SRCPATCH-%i_DIR-%s_ADJBLOCK-%i";
+    for (auto iter : a_data)
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            for (auto bound : a_data.bounds(iter, dir))
+            {
+                std::string dirString = "";
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    switch (dir[ii])
+                    {
+                        case 0: dirString += "0"; break;
+                        case 1: dirString += "H"; break;
+                        case 2: dirString += "L"; break;
+                    }
+                    //dirString += std::to_string(dir[ii]);
+                }
+                auto adjBlock = a_data.layout().block(bound.adjIndex);
+                writePatch(a_varNames, *bound.localData,
+                        a_filename, a_params..., iter.global(), dirString.c_str(), adjBlock);
+            }
+        }
+    }
+}
 #endif
 
 template<>
