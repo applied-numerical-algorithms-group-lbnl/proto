@@ -1,33 +1,6 @@
 HDF5Handler::HDF5Handler()
 {
-    // define custom types for Proto::Point and Proto::Box
-    char indices[] = "ijklmnopqrstuvwxyz";
-    
-    H5T_PROTO_POINT = H5Tcreate(H5T_COMPOUND, sizeof(Point));
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        std::string pvar = "intvect";
-        pvar += indices[ii];
-        H5Tinsert(H5T_PROTO_POINT, pvar.c_str(), HOFFSET(Point, m_tuple)+sizeof(int)*ii, H5T_NATIVE_INT); 
-    }
-
-    H5T_PROTO_BOX = H5Tcreate(H5T_COMPOUND, sizeof(Box));
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        std::string lowName = "lo_";
-        lowName += indices[ii];
-        H5Tinsert(H5T_PROTO_BOX, lowName.c_str(), HOFFSET(Box, m_low)+ii*sizeof(int), H5T_NATIVE_INT);
-    }
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        std::string highName = "hi_";
-        highName += indices[ii];
-        H5Tinsert(H5T_PROTO_BOX, highName.c_str(), HOFFSET(Box, m_high)+ii*sizeof(int), H5T_NATIVE_INT);
-    }
-
-    H5T_PROTO_STRING = H5Tcopy(H5T_C_S1);
-    H5Tset_size(H5T_PROTO_STRING, 100);
-    //H5T_PROTO_STRING = H5Tcreate(H5T_STRING, H5T_VARIABLE);
+ 
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
@@ -92,7 +65,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     auto s_boxes = H5Screate_simple(1, boxCount,  NULL);
     auto s_data =  H5Screate_simple(1, dataCount, NULL);
     
-    assert(H5Dread(ds_boxes, H5T_PROTO_BOX, s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_data,  H5T_T,         s_data,  slab_data,  H5P_DEFAULT, rawData) >= 0);
 
     assert(H5Sclose(slab_boxes) >= 0);
@@ -100,7 +73,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     assert(H5Sclose(s_boxes) >= 0);
     assert(H5Sclose(s_data) >= 0);
 #else
-    assert(H5Dread(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
 #endif
     assert(H5Dclose(ds_boxes) >= 0);
@@ -110,7 +83,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     Point ghost;
     auto g_level_meta = H5Gopen(file, "/level_0/data_attributes", H5P_DEFAULT);
     auto att_ghost = H5Aopen(g_level_meta, "ghost", H5P_DEFAULT);
-    assert(H5Aread(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
+    assert(H5Aread(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
     assert(H5Aclose(att_ghost) >= 0);
     assert(H5Gclose(g_level_meta) >= 0);
 
@@ -118,7 +91,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     Box domainBox;
     auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
     auto att_prob_domain = H5Aopen(g_level, "prob_domain", H5P_DEFAULT);
-    assert(H5Aread(att_prob_domain, H5T_PROTO_BOX, &domainBox) >= 0);
+    assert(H5Aread(att_prob_domain, H5T_PROTO_BOX(), &domainBox) >= 0);
     assert(H5Aclose(att_prob_domain) >= 0);
 
     // READ TIME VARIABLES
@@ -235,14 +208,14 @@ void HDF5Handler::writeHeader(
     auto g_root = H5Gopen(*a_file, "/", H5P_DEFAULT);
     
     // ATTRIBUTES
-    auto att_filetype =       H5Acreate2(g_root, "filetype", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_filetype =       H5Acreate2(g_root, "filetype", H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_num_components = H5Acreate2(g_root, "num_components", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_num_levels =     H5Acreate2(g_root, "num_levels", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
 
     std::string filetype = "VanillaAMRFileType";
     int numComponents = C;
 
-    assert(H5Awrite(att_filetype, H5T_PROTO_STRING, filetype.c_str()) >= 0);
+    assert(H5Awrite(att_filetype, H5T_PROTO_STRING(), filetype.c_str()) >= 0);
     assert(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
     assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
 
@@ -269,9 +242,9 @@ void HDF5Handler::writeHeader(
         char compName[100];
         sprintf(compName, "component_%i", ii);
 
-        auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+        auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
         std::string c = a_varNames[ii];
-        assert(H5Awrite(att_component, H5T_PROTO_STRING, c.c_str()) >= 0);
+        assert(H5Awrite(att_component, H5T_PROTO_STRING(), c.c_str()) >= 0);
         assert(H5Aclose(att_component) >= 0);
     }
 
@@ -506,7 +479,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
     double dx[DIM];
     int refRatio[DIM];
@@ -520,7 +493,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &domainBox) >= 0);
+    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &domainBox) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
     assert(H5Aclose(att_time) >= 0);
@@ -550,7 +523,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX(), s_boxes,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -593,14 +566,14 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
     PR_START(timer);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
     PR_STOP(timer);
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);
     #else
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     #endif
     
@@ -622,18 +595,18 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto g_level_meta = H5Gcreate(*a_file, g_level_meta_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     auto att_comps = H5Acreate2(g_level_meta, "comps", H5T_NATIVE_INT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     
     int comps = C;
     Point ghost = a_data.ghost()[0];
     Point outputGhost = a_data.ghost()[0]; //FIXME No idea what this attribute is meant to be
 
     assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING, "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT, &outputGhost) >= 0);
+    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     assert(H5Aclose(att_comps) >= 0);
     assert(H5Aclose(att_ghost) >= 0);
@@ -683,7 +656,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
     double dx[DIM];
     int refRatio[DIM];
@@ -699,7 +672,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);
+    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
     assert(H5Aclose(att_time) >= 0);
@@ -730,7 +703,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX(), s_boxes,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -770,14 +743,14 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
     PR_START(timer);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
     PR_STOP(timer);
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);
     #else
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     #endif
     
@@ -799,18 +772,18 @@ void HDF5Handler::addLevel(hid_t* a_file,
     auto g_level_meta = H5Gcreate(*a_file, g_level_meta_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     auto att_comps = H5Acreate2(g_level_meta, "comps", H5T_NATIVE_INT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     
     int comps = C;
     Point ghost = a_data.ghost();
     Point outputGhost = a_data.ghost(); //FIXME No idea what this attribute is meant to be
 
     assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING, "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT, &outputGhost) >= 0);
+    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     assert(H5Aclose(att_comps) >= 0);
     assert(H5Aclose(att_ghost) >= 0);
@@ -856,7 +829,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
     double dx[DIM];
     int refRatio[DIM];
@@ -872,7 +845,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);
+    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
     assert(H5Aclose(att_time) >= 0);
@@ -903,7 +876,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX(), s_boxes,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -926,7 +899,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
 
     // WRITE DATA
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     
     // CLEANUP
@@ -947,18 +920,18 @@ void HDF5Handler::addPatch(hid_t* a_file,
     auto g_level_meta = H5Gcreate(*a_file, g_level_meta_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     auto att_comps = H5Acreate2(g_level_meta, "comps", H5T_NATIVE_INT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     
     int comps = C;
     Point ghost = a_ghost;
     Point outputGhost = a_ghost; //FIXME No idea what this attribute is meant to be
 
     assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING, "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT, &outputGhost) >= 0);
+    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     assert(H5Aclose(att_comps) >= 0);
     assert(H5Aclose(att_ghost) >= 0);
@@ -1202,3 +1175,74 @@ HDF5Handler::getH5DataType<short>(hid_t* a_type){(*a_type) = H5T_NATIVE_SHORT;}
 template<>
 inline void
 HDF5Handler::getH5DataType<char>(hid_t* a_type){(*a_type) = H5T_NATIVE_CHAR;}
+
+
+template<>
+inline void
+HDF5Handler::getH5DataType<Point>(hid_t* a_type){
+  static hid_t H5T_PROTO_POINT;
+  static bool init = false;
+  if(!init)
+    {
+      // define custom types for Proto::Point and Proto::Box
+      char indices[] = "ijklmnopqrstuvwxyz";
+      
+      H5T_PROTO_POINT = H5Tcreate(H5T_COMPOUND, sizeof(Point));
+      for (int ii = 0; ii < DIM; ii++)
+        {
+          std::string pvar = "intvect";
+          pvar += indices[ii];
+          H5Tinsert(H5T_PROTO_POINT, pvar.c_str(), HOFFSET(Point, m_tuple)+sizeof(int)*ii, H5T_NATIVE_INT); 
+        }
+      init = true;
+    }
+  (*a_type) = H5T_PROTO_POINT;
+}
+      
+
+
+
+template<>
+inline void
+HDF5Handler::getH5DataType<Box>(hid_t* a_type){
+  static hid_t H5T_PROTO_BOX;
+  static bool init = false;
+  if(!init)
+    {
+      // define custom types for Proto::Point and Proto::Box
+      char indices[] = "ijklmnopqrstuvwxyz";
+      H5T_PROTO_BOX = H5Tcreate(H5T_COMPOUND, sizeof(Box));
+      for (int ii = 0; ii < DIM; ii++)
+        {
+          std::string lowName = "lo_";
+          lowName += indices[ii];
+          H5Tinsert(H5T_PROTO_BOX, lowName.c_str(), HOFFSET(Box, m_low)+ii*sizeof(int), H5T_NATIVE_INT);
+        }
+      for (int ii = 0; ii < DIM; ii++)
+        {
+          std::string highName = "hi_";
+          highName += indices[ii];
+          H5Tinsert(H5T_PROTO_BOX, highName.c_str(), HOFFSET(Box, m_high)+ii*sizeof(int), H5T_NATIVE_INT);
+        }
+      init = true;
+    }
+  (*a_type) = H5T_PROTO_BOX;
+}
+
+template<>
+inline void
+HDF5Handler::getH5DataType<std::string>(hid_t* a_type){
+  static hid_t H5T_PROTO_STRING;
+  static bool init = false;
+  if(!init)
+    {
+      H5T_PROTO_STRING = H5Tcopy(H5T_C_S1);
+      H5Tset_size(H5T_PROTO_STRING, 100);
+      init = true;
+    }
+  (*a_type) = H5T_PROTO_STRING;
+}
+
+hid_t HDF5Handler::H5T_PROTO_POINT(){  hid_t rtn; getH5DataType<Point>(&rtn); return rtn;}
+hid_t HDF5Handler::H5T_PROTO_BOX(){    hid_t rtn; getH5DataType<Box>(&rtn); return rtn;}
+hid_t HDF5Handler::H5T_PROTO_STRING(){ hid_t rtn; getH5DataType<std::string>(&rtn); return rtn;}
