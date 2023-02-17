@@ -191,7 +191,7 @@ if(ENABLE_CUDA OR ENABLE_HIP)
       endif()
     endif()
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr --expt-extended-lambda")
-    list(APPEND LIB_DEP blt::cuda)
+    list(APPEND LIB_DEP cuda)
   endif()
 endif()
 
