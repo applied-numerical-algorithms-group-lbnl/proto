@@ -133,7 +133,9 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
             m_ops[lvl].define(dx);
             m_UStage[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost());
+            m_UStage[lvl]->setToZero();
             m_RHSTotal[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros());
+            m_RHSTotal[lvl]->setToZero();
             if (lvl < numLevels-1)
             {
                 auto& fineLayout = a_data.grid()[lvl+1];
@@ -142,18 +144,21 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
-                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order()+1);
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
                 m_UTaylor[lvl] =
                     std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros());
+                m_UTaylor[lvl]->setToZero();
                 m_fluxRegisters[lvl] =
                     std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio, dx);
 
+                m_fluxRegisters[lvl]->reset();
                 // Point::Ones() are here to make the division a ceil instead of a floor
                 Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
                 interpGhost += m_cfInterp[lvl].ghost();
 
                 m_UTaylorC[lvl] =
                     std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost);
+                m_UTaylorC[lvl]->setToZero();
                 for (int dir = 0; dir < DIM; dir++)
                 {
                     dx[dir] /= spaceRefRatio[dir];
@@ -194,7 +199,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
-                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order()+1);
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
                 m_UTaylor.push_back(
                         std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
                 m_fluxRegisters.push_back(
@@ -236,7 +241,7 @@ template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
 {
 #ifdef PR_HDF5
-    HDF5Handler h5;
+  //HDF5Handler h5;
 #endif
     PR_TIMERS("AMRRK4::advance");
     auto dx = m_ops[a_level].dx();
@@ -247,21 +252,22 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
     auto& UStage = *m_UStage[a_level];
     auto& RHSTotal = *m_RHSTotal[a_level];
     
-    T timeRefRatio = m_timeRefRatios[a_level];
+    
 
     U0.copyTo(UStage);
     RHSTotal.setToZero();
-
+    
     for (int stage = 0; stage < RKSTAGES; stage++)
     {
         if (a_level > 0)
-        {
+        {       
           interpBoundaries(a_level, stage, a_chi);
         }
-        stageUpdate(a_level, stage, a_dt);
         
+        stageUpdate(a_level, stage, a_dt);
+       
     } // end stage loop
-
+    
     // Update U0
     for (auto iter : layout)
     {
@@ -272,20 +278,22 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
     // Recursive Advance
     if (a_level < m_data->numLevels() - 1)
     {
-        m_UTaylor[a_level]->copyTo(*m_UTaylorC[a_level]);
-        for (int nstep = 0; nstep < timeRefRatio; nstep++)
+      int timeRefRatio = m_timeRefRatios[a_level];
+      // Copy Taylor coeffs in time to coarse grid data holder aligned with finer level.
+      m_UTaylor[a_level]->copyTo(*m_UTaylorC[a_level]);
+      for (int nstep = 0; nstep < timeRefRatio; nstep++)
         {
-            T chi = nstep*1.0/timeRefRatio;
-            T dtFine = a_dt/timeRefRatio;
-            advance(a_level+1, dtFine, chi);
+          T chi = nstep*1.0/timeRefRatio;
+          T dtFine = a_dt/timeRefRatio;
+          advance(a_level+1, dtFine, chi);
         }
-        Proto::averageDown((*m_data)[a_level], (*m_data)[a_level+1], m_spaceRefRatios[a_level]);
-        // 1/dx factor is done at the increment stage to account for anisotropy
-        {
-          PR_TIMERS("AMRRK4::advance reflux");
-          m_fluxRegisters[a_level]->reflux(U0, 1.0);
-          m_fluxRegisters[a_level]->reset();
-        }
+      Proto::averageDown((*m_data)[a_level], (*m_data)[a_level+1], m_spaceRefRatios[a_level]);
+      // 1/dx factor is done at the increment stage to account for anisotropy
+      {
+        PR_TIMERS("AMRRK4::advance reflux");
+        m_fluxRegisters[a_level]->reflux(U0, 1.0);
+        m_fluxRegisters[a_level]->reset();
+      }
     }
     
     // Do Regridding
@@ -302,7 +310,7 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
         "AMRRK4::interpBoundaries | Error: Interpolation is only done for level > 0.");
    
 #ifdef PR_HDF5
-    HDF5Handler h5;
+    //HDF5Handler h5;
 #endif
      PR_TIMERS("AMRRK4::interpBoundaries");
     auto dx = m_ops[a_level].dx();
@@ -346,9 +354,10 @@ template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 {
 #ifdef PR_HDF5
-    HDF5Handler h5;
+  //HDF5Handler h5;
 #endif
      PR_TIMERS("AMRRK4::stageUpdate");
+    
     auto dx = m_ops[a_level].dx();
 
     auto& layout    = m_data->grid()[a_level];
@@ -359,11 +368,8 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     
     T dtStageNext = a_dt*m_stageTimes[a_stage+1];
     T stageWeight = m_stageWeights[a_stage];
-    T dtWeight    = a_dt*m_stageWeights[a_stage];
-
-    LevelBoxData<T, DIM> Fluxes(layout, Point::Ones());
-    Fluxes.setToZero();
-    UStage.exchange();
+    T dtWeight    = a_dt*m_stageWeights[a_stage];   
+    UStage.exchange();   
     for (auto iter : layout)
     {
         // get data
@@ -386,8 +392,8 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
         }
         for (int dir = 0; dir < DIM ;dir++)
         {
-            BoxData<double> flux_d = slice(Fluxes[iter], dir);
-            fluxes[dir].copyTo(flux_d);
+          //BoxData<T> flux_d = slice(Fluxes[iter], dir);
+          //fluxes[dir].copyTo(flux_d);
         }
 
         // do stage update
@@ -424,7 +430,7 @@ template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
 {
 #ifdef PR_HDF5
-    HDF5Handler h5;
+  //HDF5Handler h5;
 #endif
     AMRGrid newGrids = m_data->grid();
 
@@ -451,7 +457,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
     {
         newGrids.enforceNesting2(level);
     }
-    m_data->regrid(newGrids, a_baseLevel, OpType::order()+1);
+    m_data->regrid(newGrids, a_baseLevel, OpType::order());
     
     define(*m_data, m_ops[a_baseLevel].dx(), a_baseLevel);
 }

@@ -13,9 +13,9 @@ f_thresholdF(
            Var<short>& a_tags,
            Var<double, NUMCOMPS>& a_U)
 {
-    double thresh = 1.0001;
-    if (a_U(0) > thresh) {a_tags(0) = 1;}
-    else {a_tags(0) = 0;};
+  double thresh = .0001;
+  if (a_U(0) > thresh) {a_tags(0) = 1;}
+  else {a_tags(0) = 0;};
 };
 
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
