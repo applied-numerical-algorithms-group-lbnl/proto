@@ -77,13 +77,13 @@ Point MBProblemDomain::convert(
     PROTO_ASSERT(a_dstBlock < size(),
             "MBProblemDomain::convert | Error: dstBlock is out of bounds.");
     Point n01 = m_graph->connectivity(a_srcBlock, a_dstBlock);
-    PROTO_ASSERT(n01.codim() == 1,
+    PROTO_ASSERT(n01.codim() <= 2,
             "MBProblemDomain::convert | Error: src and dst blocks are do not \
 share a codimension 1 boundary.");
     
     Box srcBox = m_domains[a_srcBlock].box();
     Box dstBox = m_domains[a_dstBlock].box();
-    auto R01 = m_graph->rotation(a_srcBlock, n01);
+    auto R01 = m_graph->rotation(a_srcBlock, n01, a_dstBlock);
     
     Point d01, d10, v01, v10, s10;
     

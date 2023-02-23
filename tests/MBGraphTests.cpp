@@ -179,6 +179,24 @@ TEST(MBGraph, XPointBoundaries) {
     }
 }
 
+TEST(MBGraph, XPointBlockBoundary) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    Point x = Point::X();
+    Point y = Point::Y();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == x || dir == y || dir == x + y)
+            {
+                EXPECT_TRUE(graph.isBlockBoundary(bi, dir));
+            } else {
+                EXPECT_FALSE(graph.isBlockBoundary(bi, dir));
+            }
+        }
+    }
+}
 TEST(MBGraph, CubedSphere) {
     int numBlocks = 2*DIM+1;
     MBGraph graph(numBlocks);

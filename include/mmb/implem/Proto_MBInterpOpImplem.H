@@ -1,10 +1,3 @@
-/*
-int choose(int n, int k)
-{
-    if (k == 0){return 1;}
-    return (n * choose(n-1,k-1)/k);
-}
-*/
 
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
@@ -32,18 +25,29 @@ MBPointInterpOp::MBPointInterpOp(
 
     // References
     auto& layout = a_map.map().layout();
-    unsigned int dstBlock = layout.block(a_dst.index);
+    unsigned int dstBlock = a_dst.dstBlock();
+    #if PR_VERBOSE > 2    
+    pout() << "\n==================================================================================\n" << std::endl;
+    pout() << "OP_START" << std::endl;
+    pout() << "\tDEST_POINT: " << a_dst.point << " | block: " << a_dst.dstBlock() << std::endl;
+    pout() << "\tDestination Coords: " << a_map(a_dst) << std::endl;
+    pout() << "\tSources: " << std::endl;
+    for (auto src : m_srcs) 
+    {
+        pout() << "\t\t" << src.point << " | block: " << src.srcBlock() << std::endl;
+    }
+#endif
 
     // Compute exponents
-    std::vector<Point> exponents;
+    m_exponents.clear();
     for (auto bi : Box::Cube(a_order))
     {
         if (bi.sum() < a_order - 1)
         {
-            exponents.push_back(bi);
+            m_exponents.push_back(bi);
         }
     }
-    int N = exponents.size();
+    int N = m_exponents.size();
     int M = m_srcs.size();
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
@@ -61,72 +65,155 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    
+    Rg = 1.0; // temporary for debugging 
+    #if PR_VERBOSE > 2    
+    pout() << "\tRg = " << Rg << std::endl;
+    pout() << "\txg = " << xg << std::endl;
+#endif
     // Compute Matrices
-    Matrix<double> C(M,N);
-    Array<BoxData<double, DIM>, DIM> NT;
-    BoxData<double> J(Box::Kernel(1));
-    auto C2C = Stencil<double>::cornersToCells(4);
+    //Matrix<double> C(M,N);
+    m_C.define(M,N);
+    auto C2C = Stencil<double>::CornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
         PR_TIME("MBPointInterpOp::constructor::compute_C");
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
-        unsigned int srcBlock = layout.block(src.index);
-        // 3 ghost cells are needed in all directions to compute J
-        // 4 ghost cells are needed to compute the quadrature with J
+        auto srcBlock = src.srcBlock();
         // 1 ghost cell is needed to compute product with J
-        Box srcBox = Box::Kernel(4).shift(src.point);
+        Box srcBox = Box::Kernel(1).shift(src.point);
+        Box xSrcBox = C2C.domain(srcBox);
+        Box xSrcBox0 = xSrcBox;
+        CoordPermutation srcToDst; //defaults to identity
+        if (src.inBoundary())
+        {
+            PROTO_ASSERT(dstBlock != srcBlock,
+                    "MBPointInterpOp::constructor | Error: Data corruption.");
+            Box xSrcBox0 = layout.domain().convert(xSrcBox, dstBlock, srcBlock);
+            Point srcToDstConn = layout.domain().graph().connectivity(srcBlock, dstBlock);
+            srcToDst = layout.domain().graph().rotation(srcBlock, srcToDstConn, dstBlock);
+        
+#if PR_VERBOSE > 1
+            pout() << "\nsrc: " << src.point << " | dst: " << a_dst.point << " | src.srcBlock(): " << src.srcBlock() << std::endl;
+            pout() << "srcBox: " << srcBox << " | xSrcBox: " << xSrcBox << std::endl;
+            pout() << "xSrcBox0: " << xSrcBox0 << std::endl;
+#endif
+        }
         // compute X at corners analytically on srcBox
-        auto xi = a_map(srcBox, srcBlock);
-
+        //auto xi = a_map(xSrcBox0, src.srcBlock());
+        auto xi = a_map(xSrcBox, srcBlock, dstBlock);
+#if PR_VERBOSE > 1
+        if (src.inBoundary())
+        {
+            pout() << "xi.box(): " << xi.box() << std::endl;
+            xi.printData(3);
+        }
+#endif
+        xi.rotate(xSrcBox.grow(PR_NODE), srcToDst);
+        
+#if PR_VERBOSE > 1
+        if (src.inBoundary())
+        {
+            pout() << "xi_rotated.box(): " << xi.box() << std::endl;
+            xi.printData(3);
+        }
+#endif
+        // get cached J data from relevant patch
         auto& Ji = src.patch(a_map.jacobian());
+     
+#if PR_VERBOSE > 2
+        pout() << "\tSRC_POINT: " << src.point << " | block: " << src.srcBlock() << std::endl;
+        pout() << "\t-----------------------------------------------------------------------------" << std::endl;
+        pout() << "\tsrcBox for X: " << srcBox << " | with ghost cells for C2C: " << C2C.domain(srcBox) << std::endl;
+        pout() << "\tC2C span: " << C2C.span() << std::endl;
+        pout() << "\tX at corners: " << std::endl;
+        xi.printData();
+        //pout() << "\tJ at centers (full source data patch) " << std::endl;
+        //Ji.printData();
+#endif
         // subtract xg
         xi -= xg;
+#if PR_VERBOSE > 2
+        pout() << "\tX - Xg at corners: " << std::endl;
+        xi.printData();
+#endif
         // divide by Rg
         xi /= Rg;
-        
-        Point shift = src.point - (J.box().low() + Point::Ones());
-        J.shift(shift);
-        Ji.copyTo(J);
+#if PR_VERBOSE > 2
+        pout() << "\t(X - Xg)/Rg at corners: " << std::endl;
+        xi.printData();
+#endif
+
+        PROTO_ASSERT(Ji.box().contains(srcBox),
+                "MBPointInterpOp::constructor | Error: Not enough cached Jacobian data.");
         for (int jj = 0; jj < N; jj++)
         {
-            // compute exponent
-            BoxData<double> xi_p(xi.box());
-            forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
+            // compute exponent at corners
+            auto xi_p = forall<double, 1>(f_binomialPower, xi, m_exponents[jj]);
+            // corners to cells
             BoxData<double> xi_p_avg = C2C(xi_p);
-            auto Jx = Operator::cellProduct(J, xi_p_avg);
-            C(ii,jj) = Jx(src.point);
+            auto Jx = Operator::cellProduct(Ji, xi_p_avg);
+#if PR_VERBOSE > 2 
+            pout() << "\t\tComputing data for exponent: " << m_exponents[jj] << std::endl;
+            pout() << "\t\t````````````````````````````````````````````````````````````````````" << std::endl;
+            pout() << "\t\t(X - Xg)/Rg^p at corners: " << std::endl;
+            xi_p.printData(6);
+            pout() << "\t\t(X - Xg)/Rg^p at cells: " << std::endl;
+            xi_p_avg.printData(6);
+            //pout() << "\t\tJ*(X - Xg)/Rg^p at cells: " << std::endl;
+            //Jx.printData(6);
+#endif 
+            PROTO_ASSERT(xi_p_avg.box().contains(srcBox),
+                "MBPointInterpOp::constructor | Error: Box inference error.");
+            PROTO_ASSERT(Jx.box().contains(src.point),
+                "MBPointInterpOp::constructor | Error: Box inference error.");
+            //C(ii,jj) = Jx(src.point);
+            //m_C(ii,jj) = Jx(src.point);
+            m_C(ii,jj) = xi_p_avg(src.point);
         }
     }
-    Matrix<double> D(1,N);
+#if PR_VERBOSE > 2
+    pout() << "\tC_MATRIX: " << std::endl;
+    m_C.print();
+#endif
+    //Matrix<double> D(1,N);
+    m_D.define(1,N);
 
     for (int jj = 0; jj < N; jj++)
     {
         PR_TIME("MBPointInterpOp::constructor::compute_D");
-        unsigned int dstBlock = layout.block(a_dst.index);
-        Box dstBox = Box::Kernel(4).shift(a_dst.point);
-        auto xi = a_map(dstBox, dstBlock);
+        Box dstBox = Box::Kernel(1).shift(a_dst.point);
+        auto xi = a_map(C2C.domain(dstBox), dstBlock);
         auto& Jdst = a_dst.patch(a_map.jacobian());
         xi -= xg;
         xi /= Rg;
-        BoxData<double> xi_p(xi.box());
-        forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
-        BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+        auto xi_p = forall<double, 1>(f_binomialPower, xi, m_exponents[jj]);
+        BoxData<double> xi_p_avg = C2C(xi_p);
+        PROTO_ASSERT(xi_p_avg.box().contains(dstBox),
+            "MBPointInterpOp::constructor | Error: Box inference error.");
         auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
-        D(0,jj) = Jx(a_dst.point);
+        PROTO_ASSERT(Jx.box().contains(a_dst.point),
+            "MBPointInterpOp::constructor | Error: Box inference error.");
+        //D(0,jj) = Jx(a_dst.point);
+        //m_D(0,jj) = Jx(a_dst.point);
+        m_D(0,jj) = xi_p_avg(a_dst.point);
     }
+#if PR_VERBOSE > 2
+    pout() << "\tD_MATRIX: " << std::endl;
+    m_D.print();
+#endif
 
     // Compute "Stencil"
     {
         PR_TIME("MBPointInterpOp::constructor::compute_S");
-        auto Cinv = C.inverse();
-        auto S = D*Cinv;
+        //auto Cinv = m_C.inverse();
+        m_Cinv = m_C.inverse();
+        m_S = m_D*m_Cinv;
         m_coefs.clear();
         m_coefs.resize(M);
         for (int ii = 0; ii < M; ii++)
         {
-            m_coefs[ii] = S(0,ii);
+            m_coefs[ii] = m_S(0,ii);
         }
     }
 }
@@ -147,6 +234,23 @@ void MBPointInterpOp::apply(
             dst(cc) += m_coefs[ii]*src(cc);
         }
     }
+}
+
+template<typename T, unsigned int C, MemType MEM>
+Matrix<double> MBPointInterpOp::coefs(
+        MBLevelBoxData<T, C, MEM>& a_src,
+        int a_srcComponent)
+{
+    PROTO_ASSERT(a_srcComponent < C, "Component index %i is out of bounds.", a_srcComponent);
+    int M = m_Cinv.M();
+    int N = m_Cinv.N();
+    PROTO_ASSERT(N == m_srcs.size(),"");
+    Matrix<double> Y0(N,1);
+    for (int ii = 0; ii < N; ii++)
+    {
+        Y0(ii,0) = a_src[m_srcs[ii]](a_srcComponent);
+    }
+    return m_Cinv*Y0;
 }
 
 unsigned int MBPointInterpOp::size() const
@@ -201,6 +305,14 @@ MBInterpOp::MBInterpOp(
 {
     PR_TIME("MBInterpOp::constructor");
     m_footprint = a_footprint;
+    m_exponents.clear();
+    for (auto bi : Box::Cube(a_order))
+    {
+        if (bi.sum() < a_order - 1)
+        {
+            m_exponents.push_back(bi);
+        }
+    }
     m_order = a_order;
     m_ghost = a_ghost;
     m_ops.clear();
@@ -220,9 +332,9 @@ MBInterpOp::MBInterpOp(
                Box ghostBox = patchBox.adjacent(dir*a_ghost);
                for (auto gi : ghostBox)
                {
-                   MBDataPoint p(iter, gi);
-                   MBPointInterpOp op(p, a_ghost, a_map, a_footprint, a_order);
-                   m_ops.push_back(op);
+                   MBDataPoint p(iter, gi, layout);
+                   //MBPointInterpOp op(p, a_ghost, a_map, a_footprint, a_order);
+                   m_ops.push_back(MBPointInterpOp(p, a_ghost, a_map, a_footprint, a_order));
                }
            }
         }
@@ -235,12 +347,30 @@ void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_src)
 {
     PR_TIME("MBInterpOp::apply");
-    for (auto op : m_ops)
+    for (auto& op : m_ops)
     {
         auto block = a_dst.layout().block(op.target().index);
         op.apply(a_dst, a_src);
     }
 }
+
+template<typename T, unsigned int C, unsigned int P, MemType MEM>
+void MBInterpOp::coefs(
+        MBLevelBoxData<T, P, MEM>& a_coefs,
+        MBLevelBoxData<T, C, MEM>& a_src,
+        int a_srcComponent)
+{
+    for (auto& op : m_ops)
+    {
+        auto poly = op.coefs(a_src, a_srcComponent);
+        for (int pi = 0; pi < P; pi++)
+        {
+            a_coefs[op.target()](pi) = poly(pi,0);
+        }
+    }
+}
+
+
 
 
 

@@ -75,7 +75,6 @@ namespace Proto
                 CoordPermutation&   a_rotation);
 
         inline void fixRotations();
-        inline void fixRotationsOld();
 
         inline unsigned int size() const {return m_blocks.size(); }
 
@@ -120,6 +119,8 @@ namespace Proto
                 Point        a_dir) const;
 
         inline bool operator==(const MBGraph& a_rhs) const;
+
+        inline bool isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const;
 
         inline void print() const;
         inline void close();

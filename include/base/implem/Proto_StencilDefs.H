@@ -432,26 +432,26 @@ Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
     }
 };
 template<typename T>
-Stencil<T> Stencil<T>::cornersToCells(int a_order)
+Stencil<T> Stencil<T>::CornersToCells(int a_order)
 {
-    PR_TIME("Stencil::cornersToCells");
-  Stencil<T> av2 = 1.0*Shift::Zeros();
-  for (int dir = 0; dir < DIM; dir++)
+    PR_TIME("Stencil::CornersToCells");
+    Stencil<T> av2 = 1.0*Shift::Zeros();
+    for (int dir = 0; dir < DIM; dir++)
     {
-      av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
+        av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
     }
-  if (a_order == 2)
+    if (a_order == 2)
     {
-      return av2;
+        return av2;
     }
-  else if (a_order == 4)
+    else if (a_order == 4)
     {
-      return (1.0*Shift::Zeros() + (-1./12.)*(Stencil<T>::Laplacian()))*av2;
+        return (1.0*Shift::Zeros() + (-1./12.)*(Stencil<T>::Laplacian()))*av2;
     }
-  else
+    else
     {
-      cout << "cornersToCells defined only for a_order = 2,4 " << endl;
-      abort();
+        cout << "CornersToCells defined only for a_order = 2,4 " << endl;
+        abort();
     }
 }
 

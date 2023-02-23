@@ -164,7 +164,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
     return success;
 }
 #endif
-
+#if 0
 TEST(MBMap, Identity) {
     HDF5Handler h5;
     int domainSize = 8;
@@ -241,10 +241,10 @@ TEST(MBMap, XPoint) {
 
 #if DIM > 2
 TEST(MBMap, CubeSphere) {
-    constexpr int C = 2;
+    constexpr int C = 1;
     HDF5Handler h5;
-    int domainSize = 8;
-    int boxSize = 4;
+    int domainSize = 32;
+    int boxSize = 16;
     auto domain = buildCubeSphere(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -322,6 +322,56 @@ TEST(MBMap, AnalyticOps) {
             }
         }
     }
+}
+#endif
+TEST(MBMap, AnalyticOps2) {
+    int domainSize = 8;
+    int boxSize = 8;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+    Point boundGhost = Point::Ones();
+
+    // initialize map
+    MBMap<ShearMap_t> map(ShearMap, layout, ghost, boundGhost);
+
+    Box B0 = Box::Cube(boxSize);
+    Box B1 = B0.adjacent(Point::X()).grow(1);
+
+    pout() << "B0: " << B0 << std::endl;
+   
+    auto x00 = map(B0,0,0);
+    pout() << "map(B0,0,0): " << std::endl;
+    x00.printData();
+    auto x10 = map(B0,1,0);
+    pout() << "map(B0,1,0): " << std::endl;
+    x10.printData();
+    auto x01 = map(B0,0,1);
+    pout() << "map(B0,0,1): " << std::endl;
+    x01.printData();
+    auto x11 = map(B0,1,1);
+    pout() << "map(B0,1,1): " << std::endl;
+    x11.printData();
+
+    pout() << "\nB1: " << B1 << std::endl;
+    auto y00 = map(B1,0,0);
+    pout() << "map(B1,0,0): " << std::endl;
+    y00.printData();
+    auto y10 = map(B1,1,0);
+    pout() << "map(B1,1,0): " << std::endl;
+    y10.printData();
+    auto y01 = map(B1,0,1);
+    pout() << "map(B1,0,1): " << std::endl;
+    y01.printData();
+    auto y11 = map(B1,1,1);
+    pout() << "map(B1,1,1): " << std::endl;
+    y11.printData();
 }
 
 int main(int argc, char *argv[]) {

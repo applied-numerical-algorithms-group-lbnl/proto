@@ -138,6 +138,10 @@ namespace Proto
             \param a_side   Low or high side. Low amounts to scaling by -1.
         */
         ACCEL_DECORATION inline static Point Basis(int a_dir, const Side::LoHiSide a_side);
+        
+        ACCEL_DECORATION inline static Point X() { return Basis(0); }
+        ACCEL_DECORATION inline static Point Y() { return Basis(1); }
+        ACCEL_DECORATION inline static Point Z() { return Basis(2); }
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////

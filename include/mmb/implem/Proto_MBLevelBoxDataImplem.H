@@ -508,12 +508,11 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
     }
     else
     {
-        PROTO_ASSERT(a_point.block >= 0 && a_point.block < numBlocks(),
-                     "MBLevelBoxData::operator[](MBDataPoint) | Error: \
-                invalid boundary block specified: %i",
-                     a_point.block);
+        PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
+                "MBLevelBoxData::operator[](MBDataPoint) | Error: \
+                input is not in an MBBoundaryData");
         auto &boundData = (*this).bound(
-            a_point.index, a_point.boundaryDir, a_point.block);
+            a_point.index, a_point.boundaryDir, a_point.srcBlock());
         PROTO_ASSERT(boundData.localData->box().contains(a_point.point),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
@@ -551,7 +550,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         Point p = a_center + shift;
         if (blockDomain.contains(p) && patchDomain.contains(p))
         {
-            MBDataPoint data(a_index, p);
+            MBDataPoint data(a_index, p, layout());
             footprint.insert(data);
         }
         else if (!blockDomain.contains(p))
@@ -564,7 +563,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
                 {
                     if (bi.localBox().contains(p))
                     {
-                        MBDataPoint data(a_index, p, dir, layout().block(bi.adjIndex));
+                        MBDataPoint data(a_index, p, layout(), dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }
                 }
@@ -603,6 +602,20 @@ MBLevelBoxData<T, C, MEM, CTR>::begin()
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end()
+{
+    return m_layout->end();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+const MBIterator
+MBLevelBoxData<T, C, MEM, CTR>::begin() const
+{
+    return m_layout->begin();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+const MBIterator
+MBLevelBoxData<T, C, MEM, CTR>::end() const
 {
     return m_layout->end();
 }
@@ -1003,21 +1016,24 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     this->sort();
 }
 
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point)
+MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout)
 {
     index = a_index;
     point = a_point;
-    block = -1;
+    block = -1;  // this means the block is the same as implied by a_index
     boundaryDir = Point::Zeros();
     m_inBoundary = false;
+    layout = &a_layout;
 }
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block)
+MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
+        Point a_boundaryDir, int a_block)
 {
     index = a_index;
     block = a_block;
     boundaryDir = a_boundaryDir;
     point = a_point;
     m_inBoundary = true;
+    layout = &a_layout;
 }
 
 bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
@@ -1068,6 +1084,15 @@ bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
         }
     }
     return true;
+}
+unsigned int MBDataPoint::srcBlock() const
+{
+    return block >= 0 ? block : layout->block(index); 
+}
+
+unsigned int MBDataPoint::dstBlock() const
+{
+    return layout->block(index); 
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

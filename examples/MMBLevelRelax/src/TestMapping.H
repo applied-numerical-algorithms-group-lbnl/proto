@@ -124,7 +124,7 @@ BoxData<double> divFExact(const Box& a_bx,
          }
          a_ret(0)*= -4.0*M_PI*M_PI*ksq;
          },a_X,a_k);
-    ret += Stencil<double>::cornersToCells(4)(lapCorner);
+    ret += Stencil<double>::CornersToCells(4)(lapCorner);
     return ret;
 }
 BoxData<double> phiExact(const BoxData<double,DIM>& a_X,
@@ -143,7 +143,7 @@ BoxData<double> phiExact(const BoxData<double,DIM>& a_X,
            a_phiRet(0) *= cos(2*M_PI*a_X(dir)*a_k[dir]);
          }
      },a_X,a_k);
-  BoxData<double> ret = Stencil<double>::cornersToCells(4)(phiCorner);
+  BoxData<double> ret = Stencil<double>::CornersToCells(4)(phiCorner);
   return ret;
 }
 #endif
