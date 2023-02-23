@@ -185,9 +185,12 @@ TEST(MBPointInterpOp, ShearApply) {
     HDF5Handler h5;
 
     constexpr int N = 3;
-    Array<double, N> err(0);
+    double errInf[N];
+    double errL1[N];
     for (int nn = 0; nn < N; nn++)
     {
+        errInf[nn] = 0.0;
+        errL1[nn] = 0.0;
         auto domain = buildShear(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -206,9 +209,9 @@ TEST(MBPointInterpOp, ShearApply) {
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
         MBLevelBoxData<double, 6, HOST> hostCoefs(layout, ghost);
 
-        Array<double, DIM> exp{3,0,0,0,0,0};
+        Array<double, DIM> exp{4,0,0,0,0,0};
         Array<double, DIM> offset{0,0,0,0,0,0};
-        hostSrc.initialize(f_polyM, map, exp, offset);
+        hostSrc.initConvolve(f_polyM, map, exp, offset);
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
@@ -252,7 +255,8 @@ TEST(MBPointInterpOp, ShearApply) {
                 boundErr -= boundData;
                 boundErr.copyTo(errPatch);
                 double e = boundErr.absMax();
-                err[nn] = e > err[nn] ? e : err[nn];
+                errInf[nn] = e > errInf[nn] ? e : errInf[nn];
+                errL1[nn] += boundErr.sum();
             }
         }
 #if PR_VERBOSE > 0
@@ -278,7 +282,8 @@ TEST(MBPointInterpOp, ShearApply) {
             hostDst[iter].printData(); 
         }
 #endif
-        PR_DEBUG_MSG(1, "Error: %3.2e", err[nn]);
+        PR_DEBUG_MSG(1, "Error (Max Norm): %3.2e", errInf[nn]);
+        PR_DEBUG_MSG(1, "Error (L1 Norm): %3.2e", errL1[nn]);
         domainSize *= 2;
         boxSize *= 2;
     }
@@ -286,9 +291,11 @@ TEST(MBPointInterpOp, ShearApply) {
     double rateTol = 0.1;
     for (int ii = 1; ii < N; ii++)
     {
-        double rate = log(err[ii-1]/err[ii])/log(2.0);
-        PR_DEBUG_MSG(1,"Rate: %3.2f", rate);
-        double rateErr = abs(rate - 4);
+        double rateInf = log(errInf[ii-1]/errInf[ii])/log(2.0);
+        double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
+        PR_DEBUG_MSG(1,"Rate (Max Norm): %3.2f", rateInf);
+        PR_DEBUG_MSG(1,"Rate (L1 Norm): %3.2f", rateL1);
+        double rateErr = abs(rateL1 - 4);
         EXPECT_LT(rateErr, rateTol);
     }
 }

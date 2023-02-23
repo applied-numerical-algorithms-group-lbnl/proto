@@ -208,12 +208,19 @@ void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs&... a_srcs)
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 template <typename Func, typename... Srcs>
-void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func &a_func, Srcs... a_srcs)
+void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func &a_func, Srcs&... a_srcs)
 {
-    for (int bi = 0; bi < numBlocks(); bi++)
+    auto g = ghost();
+    g[0] = g[0] + Point::Ones();
+    MBLevelBoxData<T, C, MEM, CTR> tmp(layout(), g);
+
+    tmp.initialize(a_func, a_srcs...);
+
+    for (auto iter : layout())
     {
-        auto &data = blockData(bi);
-        data.initConvolve(a_func, bi, a_srcs...);
+        auto& tmp_i = tmp[iter];
+        auto& patch = (*this)[iter];
+        Operator::convolve(patch, tmp_i);
     }
 }
 

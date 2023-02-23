@@ -152,7 +152,7 @@ namespace Proto
         
         inline void setVal(T a_value);
         template<typename Func, typename... Srcs>
-        inline void initConvolve(Func& a_func, Srcs... a_srcs);
+        inline void initConvolve(Func& a_func, Srcs&... a_srcs);
         inline void fillBoundaries();
         inline void interpolate();
         inline void exchange();

@@ -44,7 +44,7 @@ TEST(StencilLib, CornersToCells) {
 
     for (int ii = 1; ii < N; ii++)
     {
-        int rate = log(err[ii-1]/err[ii])/log(2.0);
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
 #if PR_VERBOSE > 0
         std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
