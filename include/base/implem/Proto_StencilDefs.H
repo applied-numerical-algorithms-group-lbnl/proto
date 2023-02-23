@@ -434,7 +434,7 @@ Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::CornersToCells(int a_order)
 {
-    PR_TIME("Stencil::cornersToCells");
+    PR_TIME("Stencil::CornersToCells");
     Stencil<T> av2 = 1.0*Shift::Zeros();
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -450,7 +450,7 @@ Stencil<T> Stencil<T>::CornersToCells(int a_order)
     }
     else
     {
-        cout << "cornersToCells defined only for a_order = 2,4 " << endl;
+        cout << "CornersToCells defined only for a_order = 2,4 " << endl;
         abort();
     }
 }

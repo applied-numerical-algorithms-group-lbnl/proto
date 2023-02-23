@@ -119,7 +119,7 @@ std::vector<Matrix<double>> computeM(MBMap<MAP>& a_map, int a_boxSize, Point a_d
 TEST(MBPointInterpOp, CheckMatrix)
 {
 
-    auto C2C = Stencil<double>::cornersToCells(4);
+    auto C2C = Stencil<double>::CornersToCells(4);
 
     int domainSize = 8;
     int boxSize = 8;
