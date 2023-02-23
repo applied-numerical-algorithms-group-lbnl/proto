@@ -234,6 +234,8 @@ TEST(InterpStencil, FiniteVolume) {
     offset *= (0.1);
 
     int N = 2;
+    double err2[N];
+    double err3[N];
     double err4[N];
     double err5[N];
     for (int nn = 0; nn < N; nn++)
@@ -245,30 +247,49 @@ TEST(InterpStencil, FiniteVolume) {
         Box dstBox = srcBox.refine(refRatio);
 
         BoxData<double, C, HOST, D> hostSrcData(srcBox.grow(2));
+        BoxData<double, C, HOST, D> hostDstData2(dstBox);
+        BoxData<double, C, HOST, D> hostDstData3(dstBox);
         BoxData<double, C, HOST, D> hostDstData4(dstBox);
         BoxData<double, C, HOST, D> hostDstData5(dstBox);
         BoxData<double, C, HOST, D> hostSlnData(dstBox);
+        BoxData<double, C, HOST, D> hostErrData2(dstBox);
+        BoxData<double, C, HOST, D> hostErrData3(dstBox);
         BoxData<double, C, HOST, D> hostErrData4(dstBox);
         BoxData<double, C, HOST, D> hostErrData5(dstBox);
         forallInPlace_p(f_phi_avg, hostSrcData, cdx, k, offset);
         forallInPlace_p(f_phi_avg, hostSlnData, fdx, k, offset);
-
+        auto I2 = InterpStencil<double>::FiniteVolume(refRatio, 2);
+        auto I3 = InterpStencil<double>::FiniteVolume(refRatio, 3);
         auto I4 = InterpStencil<double>::FiniteVolume(refRatio, 4);
         auto I5 = InterpStencil<double>::FiniteVolume(refRatio, 5);
+        EXPECT_EQ(I2.span(), Box::Kernel(2));
+        EXPECT_EQ(I3.span(), Box::Kernel(2));
+        EXPECT_EQ(I2.ghost(), Point::Ones(2));
+        EXPECT_EQ(I3.ghost(), Point::Ones(2));
         EXPECT_EQ(I4.span(), Box::Kernel(2));
         EXPECT_EQ(I5.span(), Box::Kernel(2));
         EXPECT_EQ(I4.ghost(), Point::Ones(2));
         EXPECT_EQ(I5.ghost(), Point::Ones(2));
 
+        hostDstData2 |= I2(hostSrcData);
+        hostDstData3 |= I3(hostSrcData);
         hostDstData4 |= I4(hostSrcData);
         hostDstData5 |= I5(hostSrcData);
-        
+
+        hostDstData2.copyTo(hostErrData2);
+        hostDstData3.copyTo(hostErrData3);
         hostDstData4.copyTo(hostErrData4);
         hostDstData5.copyTo(hostErrData5);
+        hostErrData2 -= hostSlnData;
+        hostErrData3 -= hostSlnData;
+        err2[nn] = hostErrData2.absMax();
+        err3[nn] = hostErrData3.absMax();
+        PR_DEBUG_MSG(1, "2nd Order Error: %3.2e", err2[nn]);
+        PR_DEBUG_MSG(1, "3rd Order Error: %3.2e", err3[nn]);
         hostErrData4 -= hostSlnData;
         hostErrData5 -= hostSlnData;
         err4[nn] = hostErrData4.absMax();
-        err5[nn] = hostErrData4.absMax();
+        err5[nn] = hostErrData5.absMax();
         PR_DEBUG_MSG(1, "4th Order Error: %3.2e", err4[nn]);
         PR_DEBUG_MSG(1, "5th Order Error: %3.2e", err5[nn]);
         domainSize *= 2;
@@ -276,6 +297,12 @@ TEST(InterpStencil, FiniteVolume) {
     
     for (int ii = 1; ii < N; ii++)
     {
+        double rate2 = log(err2[ii-1]/err2[ii]) / log(2.0);
+        double rate3 = log(err3[ii-1]/err3[ii]) / log(2.0);
+        PR_DEBUG_MSG(1,"2nd Order Convergence Rate: %3.2f", rate2);
+        PR_DEBUG_MSG(1,"3rd Order Convergence Rate: %3.2f", rate3);
+        EXPECT_GT(rate2, 2 - 0.01);
+        EXPECT_GT(rate3, 3 - 0.01);
         double rate4 = log(err4[ii-1]/err4[ii]) / log(2.0);
         double rate5 = log(err5[ii-1]/err5[ii]) / log(2.0);
         PR_DEBUG_MSG(1,"4th Order Convergence Rate: %3.2f", rate4);

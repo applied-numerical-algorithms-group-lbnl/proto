@@ -306,9 +306,9 @@ namespace Proto
 
         private:
       
-      static hid_t H5T_PROTO_POINT();
-      static hid_t H5T_PROTO_BOX(); 
-      static hid_t H5T_PROTO_STRING();
+      static inline hid_t H5T_PROTO_POINT();
+      static inline hid_t H5T_PROTO_BOX(); 
+      static inline hid_t H5T_PROTO_STRING();
 
         double m_time = 0.0;
         double m_dt = 1.0;

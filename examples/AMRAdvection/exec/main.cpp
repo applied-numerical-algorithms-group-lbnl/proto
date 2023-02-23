@@ -232,14 +232,7 @@ int main(int argc, char** argv)
           // pout() << "memory HWM after evolution: " << usage.ru_maxrss << endl;
         }
         U.averageDown();
-        double sumFinal = U[0].integrate(dx[0]);
-        consError = (sumFinal - sum0)/sum0;
-        if (Proto::procID() == 0)
-          {
-            //cout << "Final level 0 conservation sum: " << sumFinal << std::endl;   
-            cout << "Conservation error: " << sumFinal-sum0 << std::endl;
-            
-          }
+        
         AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
         Operator::initConvolve(USoln, dx[0], f_advectionExact, time);
 
@@ -250,26 +243,37 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
         h5.writeAMRData(dx, UError, "UError");
 #endif
-        double error = UError.integrateAbs(dx)/U.absMax();
+        double l1Soln = USoln.integrateAbs(dx);
+        double error = UError.integrateAbs(dx)/l1Soln;
         errorRefs.push_back(error);
         if (Proto::procID() == 0)
           {
             std::cout << "error: " << error << std::endl;
             std::cout << " time: " << time << std::endl;
           }
+        double sumFinal = U[0].integrate(dx[0]);
+        consError = (sumFinal - sum0)/l1Soln;
+        if (Proto::procID() == 0)
+          {
+            //cout << "Final level 0 conservation sum: " << sumFinal << std::endl;   
+            cout << "Relative conservation error: " << consError << std::endl;
+            
+          }
         domainSize *=2;
         dt *= .5;
         maxTimesteps *= 2;
       }
     if (Proto::procID() == 0)
-      std::cout << "Relative conservation error (must be < 1.e-14 to pass): "
+      std::cout <<
+        "Relative conservation error at finest level (must be < 1.e-14 to pass): "
                 << fabs(consError) << std::endl;
     if (maxRefs > 1)
       {
         double rate = log(errorRefs[maxRefs-2]/errorRefs[maxRefs-1])/log(2.0);
         if (Proto::procID() == 0)
           {
-            std::cout << "L1 error exponent (must be >= 4 to pass): " << rate << std::endl;         
+            std::cout << "L1 Richardson error exponent (must be >= 4 to pass): "
+                      << rate << std::endl;         
           }
       }
     PR_TIMER_REPORT();
