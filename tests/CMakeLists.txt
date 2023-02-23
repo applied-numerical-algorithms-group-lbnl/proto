@@ -26,6 +26,10 @@ blt_add_executable(NAME StencilTests SOURCES StencilTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME StencilTests COMMAND StencilTests)
+blt_add_executable(NAME StencilLibTests SOURCES StencilLibTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME StencilLibTests COMMAND StencilLibTests)
 blt_add_executable(NAME ArrayTests SOURCES ArrayTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

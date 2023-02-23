@@ -477,7 +477,8 @@ Matrix<T>::operator-(const Matrix<T>& a_rhs) const
 {
     PR_TIME("matrix::operator-");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
-            "Matrix::operator+ | Error: Matrices must be the same size)");
+            "Matrix::operator+ | Error: Matrices must be the same size. %i ?= %i && %i ?= %i",
+            M(), a_rhs.M(), N(), a_rhs.N());
     Matrix<T> ret(M(), N());
 #ifdef PR_BLIS
     this->copyTo(ret);

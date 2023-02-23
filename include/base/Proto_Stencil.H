@@ -797,7 +797,7 @@ namespace Proto {
       /// Interpolate from corners to face average.
       static Stencil<T> cornersToFaces(int a_dir,int a_order = 4);
       /// Interpolate from corners to cell average.
-      static Stencil<T> cornersToCells(int a_order = 4);
+      static Stencil<T> CornersToCells(int a_order = 4);
         ///@}
 
         // End of Stencil Operations Doxygen Module

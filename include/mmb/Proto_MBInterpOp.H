@@ -37,6 +37,9 @@ namespace Proto
         
         inline const MBDataPoint& target() const {return m_dst;}
         inline std::vector<Point> exponents() const {return m_exponents; }
+        inline Matrix<double>& MC() {return m_C; }
+        inline Matrix<double>& MD() {return m_D; }
+        inline Matrix<double>& MS() {return m_S; }
 
         private:
        
@@ -44,6 +47,7 @@ namespace Proto
         MBDataPoint m_dst;
         Matrix<double> m_C;
         Matrix<double> m_D;
+        Matrix<double> m_S;
         Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
@@ -72,6 +76,14 @@ namespace Proto
                 int a_srcComponent = 0);
 
         inline std::vector<Point> exponents() const {return m_exponents; }
+        inline MBPointInterpOp& operator()(MBDataPoint& a_target)
+        {
+            for (auto& op : m_ops)
+            {
+                if (a_target == op.target()) {return op;}
+            }
+            MayDay<void>::Abort("Failed to find op at target");
+        }
         private:
        
         std::vector<Point> m_exponents;

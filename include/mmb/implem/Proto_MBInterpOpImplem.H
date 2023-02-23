@@ -73,7 +73,7 @@ MBPointInterpOp::MBPointInterpOp(
     // Compute Matrices
     //Matrix<double> C(M,N);
     m_C.define(M,N);
-    auto C2C = Stencil<double>::cornersToCells(4);
+    auto C2C = Stencil<double>::CornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
         PR_TIME("MBPointInterpOp::constructor::compute_C");
@@ -198,18 +198,22 @@ MBPointInterpOp::MBPointInterpOp(
         //m_D(0,jj) = Jx(a_dst.point);
         m_D(0,jj) = xi_p_avg(a_dst.point);
     }
+#if PR_VERBOSE > 2
+    pout() << "\tD_MATRIX: " << std::endl;
+    m_D.print();
+#endif
 
     // Compute "Stencil"
     {
         PR_TIME("MBPointInterpOp::constructor::compute_S");
         //auto Cinv = m_C.inverse();
         m_Cinv = m_C.inverse();
-        auto S = m_D*m_Cinv;
+        m_S = m_D*m_Cinv;
         m_coefs.clear();
         m_coefs.resize(M);
         for (int ii = 0; ii < M; ii++)
         {
-            m_coefs[ii] = S(0,ii);
+            m_coefs[ii] = m_S(0,ii);
         }
     }
 }
