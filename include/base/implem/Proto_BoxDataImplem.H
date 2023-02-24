@@ -1421,6 +1421,38 @@ T BoxData<T,C,MEM,D,E>::sum(int a_c, int a_d, int a_e) const
     return rxn.fetchLocal();
 }
 
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM,unsigned char D, unsigned char E>
+void BoxData<T,C,MEM,D,E>::sumAbs(Reduction<T, SumAbs, MEM>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+// Sum of Abs Values (Componentwise)
+template <class T, unsigned int C, MemType MEM,unsigned char D, unsigned char E>
+void BoxData<T,C,MEM,D,E>::sumAbs( Reduction<T, SumAbs, MEM>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+T BoxData<T,C,MEM,D,E>::sumAbs() const
+{
+    Reduction<T,SumAbs,MEM> rxn(true);
+    reduce(rxn);
+    return rxn.fetchLocal();
+}
+
+// Sum of Values (Componentwise)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+T BoxData<T,C,MEM,D,E>::sumAbs(int a_c, int a_d, int a_e) const
+{
+    Reduction<T,SumAbs,MEM> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetchLocal();
+}
+
 // Integrate (Isotropic Grid)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 T BoxData<T,C,MEM,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const

@@ -1132,6 +1132,43 @@ namespace Proto
           \param a_e      Third tensor index.
           */
         inline void sum(Reduction<T, Sum, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        
+        /// Sum Abs(Global)
+        /**
+          Return the global sum of the absolute value
+          */
+        inline T sumAbs() const;
+
+        /// Sum Abs(Componentwise)
+        /**
+          Returns the sum of a particular component
+
+          \param a_c      First tensor index.
+          \param a_d      Second tensor index.
+          \param a_e      Third tensor index.
+          */
+        inline T sumAbs(int a_c, int a_d = 0, int a_e = 0) const;
+
+        /// Sum Abs (Global, Reduction)
+        /**
+          Computes the global sum
+          Stores the result in a reduction operator
+
+          \param a_rxn    A reduction operator.
+          */
+        inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn) const;
+
+        /// Sum (Componentwise)
+        /**
+          Computes the sum of a particular component
+          Stores the result in a reduction operator
+
+          \param a_rxn    A reduction operator.
+          \param a_c      First tensor index.
+          \param a_d      Second tensor index.
+          \param a_e      Third tensor index.
+          */
+        inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Integrate (Isotropic Grid)
         /**

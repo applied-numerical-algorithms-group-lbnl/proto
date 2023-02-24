@@ -98,19 +98,14 @@ std::vector<Matrix<double>> computeM(MBMap<MAP>& a_map, int a_boxSize, Point a_d
         for (auto ei = 0; ei < exponents.size(); ei++)
         {
             M[0](si, ei) = Xp_avg[block][ei](s);
-            //std::cout << std::setw(10) << std::setprecision(5) << Xp_avg[block][ei](s) << ", ";
         }
-        //std::cout << std::endl;
     }
  
     M[1].define(1, exponents.size());
-    //std::cout << "\n" << std::endl;
     for (auto ei = 0; ei < exponents.size(); ei++)
     {
         M[1](0, ei) = Xp_avg[0][ei](a_dst);
-        //std::cout << std::setw(10) << std::setprecision(5) << Xp_avg[0][ei](a_dst) << ", ";
     }
-    //std::cout << std::endl;
 
     return M;
 }
@@ -209,7 +204,7 @@ TEST(MBPointInterpOp, ShearApply) {
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
         MBLevelBoxData<double, 6, HOST> hostCoefs(layout, ghost);
 
-        Array<double, DIM> exp{4,0,0,0,0,0};
+        Array<double, DIM> exp{3,0,0,0,0,0};
         Array<double, DIM> offset{0,0,0,0,0,0};
         hostSrc.initConvolve(f_polyM, map, exp, offset);
         hostSrc.fillBoundaries();
@@ -228,6 +223,9 @@ TEST(MBPointInterpOp, ShearApply) {
             footprint.push_back(Point::Basis(dir,2));
             footprint.push_back(Point::Basis(dir,-2));
         }
+        //footprint.push_back(Point::Y()*3);
+        //footprint.push_back(Point::Y()*2 + Point::X());
+        //footprint.push_back(Point::Y()*2 - Point::X());
 
         // Create and Apply Operator
         MBInterpOp interp(map, footprint, ghost[0], 4);
@@ -256,8 +254,12 @@ TEST(MBPointInterpOp, ShearApply) {
                 boundErr.copyTo(errPatch);
                 double e = boundErr.absMax();
                 errInf[nn] = e > errInf[nn] ? e : errInf[nn];
-                errL1[nn] += boundErr.sum();
+                errL1[nn] += boundErr.sumAbs();
             }
+        }
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            errL1[nn]*= (1.0/domainSize);
         }
 #if PR_VERBOSE > 0
 

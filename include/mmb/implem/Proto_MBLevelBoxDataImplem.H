@@ -551,6 +551,9 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
             Invalid center Point");
     auto block = layout().block(a_index);
     Box blockDomain = layout().blockLayout(block).domain().box();
+    
+    // TODO: Adjust footprint for points on or near the domain boundary here
+
     std::set<MBDataPoint> footprint;
     for (auto shift : a_footprint)
     {
@@ -580,6 +583,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         }
 
     }
+
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
     return footprint_v;
 }
