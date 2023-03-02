@@ -2,10 +2,6 @@ blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/base
                 ${CMAKE_CURRENT_SOURCE_DIR}/base/implem)
-if(ENABLE_HDF5 AND DEFINED ENV{HDF5_DIR})
-    blt_patch_target(NAME Headers_Base
-        INCLUDES $ENV{HDF5_DIR}/include/ DEPENDS_ON HDF5::HDF5)
-endif()
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr
@@ -73,9 +69,6 @@ if(ENABLE_OPENMP)
     target_link_libraries(Headers_MMB  INTERFACE OpenMP::OpenMP_CXX)
     target_link_libraries(Headers_OPS  INTERFACE OpenMP::OpenMP_CXX)
 endif()
-if(ENABLE_HDF5)
-    target_link_libraries(Headers_Base INTERFACE HDF5::HDF5)
-    target_link_libraries(Headers_AMR  INTERFACE HDF5::HDF5)
-    target_link_libraries(Headers_MMB  INTERFACE HDF5::HDF5)
-    target_link_libraries(Headers_OPS  INTERFACE HDF5::HDF5)
+if (ENABLE_HDF5)
+  target_link_libraries(Headers_Base INTERFACE HDF5::HDF5)
 endif()
