@@ -17,12 +17,12 @@ if(hasParent)
   set(PROTO_LOADED "${Proto_VERSION_MAJOR}.${Proto_VERSION_MINOR}" PARENT_SCOPE)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++11 unavailable
 set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++11
 
 
-option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
 option(AMR "Build AMR libraries" OFF)
 option(MMB "Build MMB libraries" OFF)
@@ -88,10 +88,7 @@ if(NOT TIMERS)
     add_compile_definitions(PR_TURN_OFF_TIMERS)
 endif()
 
-add_compile_options(-Wno-unused-result)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")  # disables compiler warings
-    add_compile_options(-w)
-endif()
+add_compile_options(-w)
 
 if (ENABLE_HIP)
   set(ENV{CXX} "hipcc")  # should set CMAKE_CXX_COMPILER
@@ -264,7 +261,7 @@ if (NOT BLT_LOADED)
 
 # Default to C++11 if not set so GTest/GMock can build
   if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++17" CACHE STRING "")
+    set(BLT_CXX_STD "c++14" CACHE STRING "")
   endif()
 
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
