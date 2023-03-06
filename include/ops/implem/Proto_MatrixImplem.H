@@ -662,6 +662,22 @@ Matrix<T>::transpose() const
 
 template<typename T>
 double
+Matrix<T>::sum() const
+{
+    PR_TIME("Matrix::sum");
+    double s = 0;
+    for (int jj = 0; jj < N(); jj++)
+    {
+        for (int ii = 0; ii < M(); ii++)
+        {
+            s += get(ii,jj);
+        }
+    }
+    return s;
+}
+
+template<typename T>
+double
 Matrix<T>::norm1() const
 {
     PR_TIME("Matrix::norm1");

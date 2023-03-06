@@ -36,6 +36,7 @@ namespace Proto
                 int a_srcComponent = 0);
         
         inline const MBDataPoint& target() const {return m_dst;}
+        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
         inline std::vector<Point> exponents() const {return m_exponents; }
         inline Matrix<double>& MC() {return m_C; }
         inline Matrix<double>& MD() {return m_D; }

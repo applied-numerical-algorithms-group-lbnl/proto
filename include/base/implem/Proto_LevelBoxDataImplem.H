@@ -335,7 +335,6 @@ template<MemType DST_MEM>
 void 
 LevelBoxData<T, C, SRC_MEM, CTR>::copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
-
     PROTO_ASSERT(a_dest.layout().compatible(this->layout()),
         "LevelBoxData::copyToSimple | Error: inputs are not compatible.");
     for (auto iter : m_layout)
@@ -350,7 +349,9 @@ template<MemType DST_MEM>
 void 
 LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
-    if (a_dest.layout().compatible(this->layout()))
+    const auto& srcLayout = this->layout();
+    const auto& dstLayout = a_dest.layout();
+    if (srcLayout.compatible(dstLayout) && (srcLayout.boxSize() == dstLayout.boxSize()))
     {
         this->copyToSimple(a_dest);
         return;

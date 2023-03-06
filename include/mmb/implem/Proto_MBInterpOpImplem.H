@@ -160,8 +160,8 @@ MBPointInterpOp::MBPointInterpOp(
             xi_p.printData(6);
             pout() << "\t\t(X - Xg)/Rg^p at cells: " << std::endl;
             xi_p_avg.printData(6);
-            //pout() << "\t\tJ*(X - Xg)/Rg^p at cells: " << std::endl;
-            //Jx.printData(6);
+            pout() << "\t\tJ*(X - Xg)/Rg^p at cells: " << std::endl;
+            Jx.printData(6);
 #endif 
             PROTO_ASSERT(xi_p_avg.box().contains(srcBox),
                 "MBPointInterpOp::constructor | Error: Box inference error.");
@@ -225,6 +225,7 @@ void MBPointInterpOp::apply(
 {
     PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
+    pout() << m_dst.point << " = ";
     for (int ii = 0; ii < size(); ii++)
     {
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
@@ -233,7 +234,9 @@ void MBPointInterpOp::apply(
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
         }
+        pout() << m_coefs[ii] << " * " << m_srcs[ii].point << " + ";
     }
+    pout() << std::endl;
 }
 
 template<typename T, unsigned int C, MemType MEM>

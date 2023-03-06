@@ -245,6 +245,7 @@ class Matrix
      */
     inline const Matrix<T> transpose() const;
 
+    inline double sum() const;
     inline double norm1() const;
     inline double normInf() const;
     inline double max() const;

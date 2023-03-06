@@ -7,7 +7,7 @@
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 2.0
-#define SHEAR_SLOPE 1.0
+#define SHEAR_SLOPE 0.0
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -459,7 +459,7 @@ PROTO_KERNEL_END(f_polyMF, f_polyM);
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_phiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
-        Var<double, DIM, MEM>& a_X, Point a_k, Array<double, DIM> a_offset)
+        Var<double, DIM, MEM>& a_X, Array<double, DIM> a_k, Array<double, DIM> a_offset)
 {
     double phi = 1.0;
     for (int dir = 0; dir < DIM; dir++)

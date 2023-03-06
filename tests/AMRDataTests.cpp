@@ -179,6 +179,101 @@ TEST(AMRData, Algebraic)
         }
     }
 }
+
+#define NUMCOMPS 1
+PROTO_KERNEL_START
+void f_advectionExactF(
+        Point& a_pt,
+        Var<double,NUMCOMPS>& a_U,
+        double a_h,
+        double a_time)
+{
+    double r0 = .125;
+    for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+        double rsq = 0.;
+        for (int dir = 0; dir < DIM ; dir++)
+        {
+            double xcen = fmod(.5 + a_time,1.); 
+            double xdir = a_pt[dir]*a_h + .5*a_h;
+            double del; 
+            if (xcen > xdir) del = min(abs(xdir - xcen),abs(xdir - xcen + 1.));
+            if (xcen <= xdir) del = min(abs(xdir - xcen),abs(xdir - xcen - 1.));
+            rsq += pow(del,2);
+        }
+        double r = sqrt(rsq);
+        if (r > r0)
+        {
+            a_U(comp) = 0.;
+        }
+        else
+        {
+            a_U(comp) = pow(cos(M_PI*r/r0/2),6);
+        }
+    }
+}
+PROTO_KERNEL_END(f_advectionExactF, f_advectionExact);
+
+TEST(AMRData, CopyToRefinement)
+{
+constexpr int TIME_STEP = 0;
+constexpr int PLOT_NUM = 0;
+#ifdef PR_HDF5
+    HDF5Handler h5;
+#endif
+    PR_TIMER_SETFILE("test_copyTo.time.table");
+    double t0 = .74609375;
+    int maxRefs = 1;
+    Array<bool, DIM> periodicity;
+    periodicity.fill(true);
+    int domainSize = 16;
+    Point boxSize = Point::Ones(4);
+    Point refRatio = Point::Ones(2);
+    double dx0 = 1.0/domainSize;
+    Point ghost = Point::Ones(0);
+    
+    // construct fine grid LBD.
+    Box domainBoxC = Box::Cube(domainSize);
+    ProblemDomain domainC(domainBoxC, periodicity);
+    DisjointBoxLayout layoutC(domainC, boxSize);
+    
+    LevelBoxData<double > dataC(layoutC, ghost);
+    dataC.initialize(f_pointID);
+    //Operator::initConvolve(dataC, f_advectionExact, dx0, t0);
+
+    auto domainBoxF = domainBoxC.refine(refRatio);
+    auto subdomainBoxF = Box::Cube(domainSize); //domainSize * 2 / 2
+    ProblemDomain domainF(domainBoxF, periodicity);
+    std::vector<Point> cfPatches;
+    auto patchKernel = Box::Cube(8);
+    h5.writeLevel(dx0,dataC,"DATA_0");
+    int plotNum = 1;
+    for (int jj = 0; jj < patchKernel.size(1); jj++)
+    {
+        for (int ii = 0; ii < patchKernel.size(0)/2; ii++)
+        {
+            int kk = jj*patchKernel.size(0)+ii;
+
+            cfPatches.push_back(patchKernel[kk]);
+            DisjointBoxLayout layoutF(domainF, cfPatches, boxSize);
+
+            auto layoutCF = layoutF.coarsen(refRatio);
+
+            LevelBoxData<double> dataCF(layoutCF, ghost);
+            dataCF.setVal(1e6);
+            dataC.copyTo(dataCF);
+            pout() << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+            pout() << "NOW PRINTING " << kk+1 << "-PATCH DATASET" << std::endl;
+            for (auto iter : dataCF)
+            {
+                dataCF[iter].printData();
+            }
+            h5.writeLevel(dx0,dataCF,"DATA_%i", plotNum);
+            plotNum++;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

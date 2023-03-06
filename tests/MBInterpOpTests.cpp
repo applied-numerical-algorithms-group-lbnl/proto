@@ -110,7 +110,7 @@ std::vector<Matrix<double>> computeM(MBMap<MAP>& a_map, int a_boxSize, Point a_d
     return M;
 }
 
-#if 0
+#if 1
 TEST(MBPointInterpOp, CheckMatrix)
 {
 
@@ -133,12 +133,12 @@ TEST(MBPointInterpOp, CheckMatrix)
 
     // input footprint
     std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(1))
+    for (auto pi : Box::Kernel(2))
     {
-        footprint.push_back(pi);
-        if (pi.codim() == 1)
+        if (pi.abs().sum() <= 2)
         {
-            footprint.push_back(pi*2);
+            footprint.push_back(pi);
+            std::cout << pi << std::endl;
         }
     }
     
@@ -152,7 +152,6 @@ TEST(MBPointInterpOp, CheckMatrix)
     for (auto pi : B0.extrude(Point::Ones(), 1))
     {
         if (B0.contains(pi)) { continue; }
-        std::cout << "Checking point " << pi << std::endl;
         MBDataPoint t(*layout.begin(), pi, layout);
         auto& op = interp(t);
         auto M = computeM(map, boxSize, pi);
@@ -161,16 +160,35 @@ TEST(MBPointInterpOp, CheckMatrix)
         auto EC = M[0] - op.MC();
         auto ED = M[1] - op.MD();
         auto ES = S - op.MS();
+        //EC.print();
+        //ED.print();
+        //ES.print();
         CErr = std::max(CErr, (EC.absMax()));
         DErr = std::max(DErr, (ED.absMax()));
         SErr = std::max(SErr, (ES.absMax()));
-        M[0].print();
-        M[1].print();
+        //M[0].print();
+        //M[1].print();
+        pout() << "-----------------------------------------------------" << std::endl;
+        pout() << "Stencil at point: " << pi << std::endl;
+        pout() << "Source data: " << std::endl;
+        pout() << "Sum of stencil coefficients: " << op.MS().sum() << std::endl;
+        for (auto& si : op.sources())
+        {
+            pout() << si.point << ", ";
+        }
+        pout() << std::endl;
         S.print();
     }
-    std::cout << "Error in C: " << CErr << std::endl;
-    std::cout << "Error in D: " << DErr << std::endl;
-    std::cout << "Error in S: " << SErr << std::endl;
+    
+    EXPECT_LT(CErr, 1e-12);
+    EXPECT_LT(DErr, 1e-12);
+    EXPECT_LT(SErr, 1e-12);
+
+#if PR_VERBOSE > 0
+    std::cout << "Error in C: " << CErr << std::endl;;
+    std::cout << "Error in D: " << DErr << std::endl;;
+    std::cout << "Error in S: " << SErr << std::endl;;
+#endif
 }
 #endif
 #if 1
@@ -179,7 +197,21 @@ TEST(MBPointInterpOp, ShearApply) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    constexpr int N = 3;
+    Array<double, DIM> exp{0,3,0,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    Array<double, DIM> k{1,1,1,1,1,1};
+
+    // input footprint
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(3))
+    {
+        if (pi.abs().sum() <= 3)
+        {
+            footprint.push_back(pi);
+            std::cout << pi << std::endl;
+        }
+    }
+    constexpr int N = 4;
     double errInf[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -193,10 +225,11 @@ TEST(MBPointInterpOp, ShearApply) {
         Array<Point, DIM+1> ghost;
         ghost.fill(Point::Ones(4));
         ghost[0] = Point::Ones(1);
-        Point boundGhost = Point::Ones();
+        Point boundGhost = Point::Ones(1);
 
         // initialize map
         MBMap<ShearMap_t> map(ShearMap, layout, ghost, boundGhost);
+        //MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
 
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
@@ -204,28 +237,14 @@ TEST(MBPointInterpOp, ShearApply) {
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
         MBLevelBoxData<double, 6, HOST> hostCoefs(layout, ghost);
 
-        Array<double, DIM> exp{3,0,0,0,0,0};
-        Array<double, DIM> offset{0,0,0,0,0,0};
+        //hostSrc.initConvolve(f_phiM, map, k, offset);
         hostSrc.initConvolve(f_polyM, map, exp, offset);
+
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
         hostCoefs.setVal(0);
         
-        // input footprint
-        std::vector<Point> footprint;
-        for (auto pi : Box::Kernel(1))
-        {
-            footprint.push_back(pi);
-        }
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            footprint.push_back(Point::Basis(dir,2));
-            footprint.push_back(Point::Basis(dir,-2));
-        }
-        //footprint.push_back(Point::Y()*3);
-        //footprint.push_back(Point::Y()*2 + Point::X());
-        //footprint.push_back(Point::Y()*2 - Point::X());
 
         // Create and Apply Operator
         MBInterpOp interp(map, footprint, ghost[0], 4);
@@ -247,6 +266,7 @@ TEST(MBPointInterpOp, ShearApply) {
                 BoxData<double, NCOMP, HOST> boundData0(boundBox.grow(1));
                 BoxData<double, NCOMP, HOST> boundData(boundBox);
                 forallInPlace_p(f_polyM, boundData0, block, boundX, exp, offset);
+                //forallInPlace_p(f_phiM, boundData0, block, boundX, k, offset);
                 Operator::convolve(boundData, boundData0);
                 BoxData<double, NCOMP, HOST> boundErr(boundBox);
                 patch.copyTo(boundErr);
@@ -257,9 +277,9 @@ TEST(MBPointInterpOp, ShearApply) {
                 errL1[nn] += boundErr.sumAbs();
             }
         }
+        errL1[nn]*= (1.0/domainSize);
         for (int dir = 0; dir < DIM; dir++)
         {
-            errL1[nn]*= (1.0/domainSize);
         }
 #if PR_VERBOSE > 0
 
@@ -271,18 +291,11 @@ TEST(MBPointInterpOp, ShearApply) {
             coefNames.push_back(var);
         }
 
-        std::cout << "1/Jacobian: " << domainSize*domainSize << std::endl;
         h5.writeMBLevel(coefNames, map, hostCoefs, "MBInterpOpTests_Coefs_%i", nn);
         h5.writeMBLevel({"J"}, map, map.jacobian(), "MBInterpOpTests_J_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_Dst_%i", nn);
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Err_%i", nn);
-        for (auto iter : layout)
-        {
-            pout() << "Block " << iter.global() << std::endl;
-            hostSrc[iter].printData();
-            hostDst[iter].printData(); 
-        }
 #endif
         PR_DEBUG_MSG(1, "Error (Max Norm): %3.2e", errInf[nn]);
         PR_DEBUG_MSG(1, "Error (L1 Norm): %3.2e", errL1[nn]);
@@ -307,11 +320,6 @@ TEST(MBPointInterpOp, XPointApply) {
     int domainSize = 16;
     int boxSize = 16;
     HDF5Handler h5;
-    if (DIM > 2) 
-    {
-       // domainSize = 16;
-       // boxSize = 8;
-    }
 
     constexpr int N = 2;
     Array<double, N> err(0);
