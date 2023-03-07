@@ -1,6 +1,6 @@
 add_subdirectory(_common)
+add_subdirectory(LevelMultigrid)
 if (OPS)
-  add_subdirectory(LevelMultigrid)
   add_subdirectory(LevelEuler)
   add_subdirectory(FASMultigrid)
 endif()
