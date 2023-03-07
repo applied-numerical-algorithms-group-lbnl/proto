@@ -89,7 +89,7 @@ if (os.path.exists('./build')):
 # Configure CMake
 CMAKE_FLAGS = ""
 CMAKE_FLAGS += "-D DIM=" + str(args.DIM) + " "
-CMAKE_FLAGS += "-D MPI=" + args.MPI + " "
+CMAKE_FLAGS += "-D ENABLE_MPI=" + args.MPI + " "
 CMAKE_FLAGS += "-D AMR=" + args.AMR + " "
 CMAKE_FLAGS += "-D MMB=" + args.MMB + " "
 CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
