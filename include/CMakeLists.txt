@@ -1,21 +1,17 @@
 blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/base
-                ${CMAKE_CURRENT_SOURCE_DIR}/base/implem)
+                ${CMAKE_CURRENT_SOURCE_DIR}/base)
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr
-                ${CMAKE_CURRENT_SOURCE_DIR}/amr/implem
                 DEPENDS_ON Headers_Base)
 blt_add_library(NAME Headers_MMB HEADERS ProtoMMB.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/mmb
-                ${CMAKE_CURRENT_SOURCE_DIR}/mmb/implem
                 DEPENDS_ON Headers_Base)
 blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops
-                ${CMAKE_CURRENT_SOURCE_DIR}/ops/implem
                 DEPENDS_ON Headers_Base LAPACK::LAPACK)
 if(DEFINED ENV{OLCF_OPENBLAS_ROOT})
   target_link_directories(Headers_OPS INTERFACE $ENV{OLCF_OPENBLAS_ROOT}/lib/)
