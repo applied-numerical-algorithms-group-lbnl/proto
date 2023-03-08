@@ -90,6 +90,10 @@ endif()
 
 add_compile_options(-w)
 
+if(ENABLE_HDF5)
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "removed -DNDEBUG because it wipes out HDF5 data")
+endif()
+
 if (ENABLE_HIP)
     set(ENV{CXX} "hipcc")  # should set CMAKE_CXX_COMPILER
 endif()
