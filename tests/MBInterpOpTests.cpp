@@ -110,7 +110,7 @@ std::vector<Matrix<double>> computeM(MBMap<MAP>& a_map, int a_boxSize, Point a_d
     return M;
 }
 
-#if 1
+#if 0
 TEST(MBPointInterpOp, CheckMatrix)
 {
 
@@ -205,12 +205,27 @@ TEST(MBPointInterpOp, ShearApply) {
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(3))
     {
-        if (pi.abs().sum() <= 3)
+        if (pi.abs().sum() <= 2)
         {
             footprint.push_back(pi);
-            std::cout << pi << std::endl;
         }
     }
+    /*
+    footprint.push_back(Point::Y()*3);
+    footprint.push_back(Point::Y()*2 + Point::X());
+    footprint.push_back(Point::Y()*2 - Point::X());
+    footprint.push_back(-Point::Y()*3);
+    footprint.push_back(-Point::Y()*2 + Point::X());
+    footprint.push_back(-Point::Y()*2 - Point::X());
+    */
+
+    std::cout << "Stencil footprint: " << std::endl;
+    for (auto pi : footprint)
+    {
+        std::cout << pi << ", ";
+    }
+    std::cout << std::endl;
+
     constexpr int N = 4;
     double errInf[N];
     double errL1[N];
@@ -277,10 +292,7 @@ TEST(MBPointInterpOp, ShearApply) {
                 errL1[nn] += boundErr.sumAbs();
             }
         }
-        errL1[nn]*= (1.0/domainSize);
-        for (int dir = 0; dir < DIM; dir++)
-        {
-        }
+        errL1[nn]*= (1.0/domainSize); //error is only non-zero on a region of codim-1
 #if PR_VERBOSE > 0
 
         std::vector<std::string> coefNames;
