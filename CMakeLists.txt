@@ -90,10 +90,6 @@ endif()
 
 add_compile_options(-w)
 
-if(ENABLE_HDF5)
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "removed -DNDEBUG because it wipes out HDF5 data")
-endif()
-
 if (ENABLE_HIP)
     set(ENV{CXX} "hipcc")  # should set CMAKE_CXX_COMPILER
 endif()
@@ -216,6 +212,15 @@ if(ENABLE_OPENMP)
 endif()
 
 if(ENABLE_HDF5)
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+      set(FLAG ${CMAKE_CXX_FLAGS_RELEASE})
+      string(FIND ${FLAG} "-DNDEBUG" INDEX)
+      if(NOT INDEX EQUAL -1)
+        string(SUBSTRING ${FLAG} 0 4 FLAG)
+        unset(CMAKE_CXX_FLAGS_RELEASE CACHE)
+        set(CMAKE_CXX_FLAGS_RELEASE ${FLAG} CACHE STRING "removed -DNDEBUG")
+      endif()
+    endif()
     add_compile_definitions(PR_HDF5)
     if(ENABLE_MPI)
         set(HDF5_PREFER_PARALLEL TRUE)
