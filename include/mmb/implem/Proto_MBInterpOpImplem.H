@@ -31,7 +31,7 @@ MBPointInterpOp::MBPointInterpOp(
     m_exponents.clear();
     for (auto bi : Box::Cube(a_order))
     {
-        if (bi.sum() < a_order - 1)
+        if (bi.sum() < a_order)
         {
             m_exponents.push_back(bi);
         }
@@ -54,7 +54,7 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    //Rg = 1.0; // temporary for debugging 
+    Rg = 1.0; // temporary for debugging 
     
     // Compute Matrices
     m_C.define(M,N);
@@ -101,8 +101,8 @@ MBPointInterpOp::MBPointInterpOp(
                 "MBPointInterpOp::constructor | Error: Box inference error.");
             PROTO_ASSERT(Jx.box().contains(src.point),
                 "MBPointInterpOp::constructor | Error: Box inference error.");
-            m_C(ii,jj) = Jx(src.point);
-            //m_C(ii,jj) = xi_p_avg(src.point);
+            //m_C(ii,jj) = Jx(src.point);
+            m_C(ii,jj) = xi_p_avg(src.point);
         }
     }
     m_D.define(1,N);
@@ -122,8 +122,8 @@ MBPointInterpOp::MBPointInterpOp(
         auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
         PROTO_ASSERT(Jx.box().contains(a_dst.point),
             "MBPointInterpOp::constructor | Error: Box inference error.");
-        m_D(0,jj) = Jx(a_dst.point);
-        //m_D(0,jj) = xi_p_avg(a_dst.point);
+        //m_D(0,jj) = Jx(a_dst.point);
+        m_D(0,jj) = xi_p_avg(a_dst.point);
     }
 
     // Compute "Stencil"
@@ -147,6 +147,7 @@ void MBPointInterpOp::apply(
 {
     PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
+    pout() << "Applying Stencil at Point: " << m_dst.point << std::endl;
     for (int ii = 0; ii < size(); ii++)
     {
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
@@ -155,6 +156,10 @@ void MBPointInterpOp::apply(
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
         }
+        pout() << "\tSource | point: " << m_srcs[ii].point << " | value: " << src(0);
+        pout() << " | srcBlock: " << m_srcs[ii].srcBlock();
+        pout() << " | dstBlock: " << m_srcs[ii].dstBlock();
+        pout() << std::endl;
     }
 }
 

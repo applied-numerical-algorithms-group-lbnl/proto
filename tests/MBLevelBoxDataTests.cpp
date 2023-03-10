@@ -250,24 +250,24 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
         Point p = s + p0;
         if (domainBox_0.contains(p))
         {
-            MBDataPoint data(mbIndex, p);
+            MBDataPoint data(mbIndex, p, layout);
             soln.push_back(data);
         }
         if (domainBox_X.contains(p))
         {
-            MBDataPoint data(mbIndex, p, Point::Basis(0), 1);
+            MBDataPoint data(mbIndex, p, layout, Point::Basis(0), 1);
             soln.push_back(data);
         }
         if (domainBox_Y.contains(p))
         {
-            MBDataPoint data(mbIndex, p, Point::Basis(1), XPOINT_SIZE-1);
+            MBDataPoint data(mbIndex, p, layout, Point::Basis(1), XPOINT_SIZE-1);
             soln.push_back(data);
         }
         if (domainBox_XY.contains(p))
         {
             for (int bi = 2; bi < XPOINT_SIZE-1; bi++)
             {
-                MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), bi);
+                MBDataPoint data(mbIndex, p, layout, Point::Basis(0) + Point::Basis(1), bi);
                 soln.push_back(data);
             }
         }
@@ -330,17 +330,17 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         Point p = s + p0;
         if (patchBox_0.contains(p))
         {
-            MBDataPoint data(mbIndex, p);
+            MBDataPoint data(mbIndex, p, layout);
             soln.push_back(data);
         }
         if (patchBox_X.contains(p))
         {
-            MBDataPoint data(mbIndex, p, nx, 1);
+            MBDataPoint data(mbIndex, p, layout, nx, 1);
             soln.push_back(data);
         }
         if (patchBox_XY.contains(p))
         {
-            MBDataPoint data(mbIndex, p, nx + ny, 1);
+            MBDataPoint data(mbIndex, p, layout, nx + ny, 1);
             soln.push_back(data);
         }
     }

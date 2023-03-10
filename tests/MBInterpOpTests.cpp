@@ -197,7 +197,7 @@ TEST(MBPointInterpOp, ShearApply) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{0,3,0,0,0,0};
+    Array<double, DIM> exp{0,1,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -210,23 +210,8 @@ TEST(MBPointInterpOp, ShearApply) {
             footprint.push_back(pi);
         }
     }
-    /*
-    footprint.push_back(Point::Y()*3);
-    footprint.push_back(Point::Y()*2 + Point::X());
-    footprint.push_back(Point::Y()*2 - Point::X());
-    footprint.push_back(-Point::Y()*3);
-    footprint.push_back(-Point::Y()*2 + Point::X());
-    footprint.push_back(-Point::Y()*2 - Point::X());
-    */
 
-    std::cout << "Stencil footprint: " << std::endl;
-    for (auto pi : footprint)
-    {
-        std::cout << pi << ", ";
-    }
-    std::cout << std::endl;
-
-    constexpr int N = 4;
+    constexpr int N = 5;
     double errInf[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -243,8 +228,8 @@ TEST(MBPointInterpOp, ShearApply) {
         Point boundGhost = Point::Ones(1);
 
         // initialize map
-        MBMap<ShearMap_t> map(ShearMap, layout, ghost, boundGhost);
-        //MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
+        //MBMap<ShearMap_t> map(ShearMap, layout, ghost, boundGhost);
+        MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
 
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
