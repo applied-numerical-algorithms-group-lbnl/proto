@@ -49,34 +49,34 @@ if (args.TARGET == 'LIST'):
     ii = 0
     print(dash)
     for t in targets:
-        print '{:<30}'.format(t),
+        print('{:<30}'.format(t),)
         ii += 1
         if ii % print_width == 0:
-            print ''
+            print('')
             ii = 0
-    if (ii > 0): print ''
+    if (ii > 0): print('')
     print(dash)
     print('\nExample Targets:')
     ii = 0
     print(dash)
     for e in examples:
-        print '{:<30}'.format(e),
+        print('{:<30}'.format(e),)
         ii += 1
         if ii % print_width == 0:
-            print ''
+            print('')
             ii = 0
-    if (ii > 0): print ''
+    if (ii > 0): print('')
     print(dash)
     print('\nTest Targets:')
     ii = 0
     print(dash)
     for t in tests:
-        print '{:<30}'.format(t),
+        print('{:<30}'.format(t),)
         ii += 1
         if ii % print_width == 0:
-            print ''
+            print('')
             ii = 0
-    if (ii > 0): print ''
+    if (ii > 0): print('')
     print(dash)
     sys.exit()
 
