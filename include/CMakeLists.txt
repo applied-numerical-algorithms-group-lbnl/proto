@@ -13,7 +13,7 @@ blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops
                 DEPENDS_ON Headers_Base LAPACK::LAPACK)
-if(OPS AND BLIS)
+if(BLIS)
     message(STATUS "Linking BLIS library")
     target_compile_definitions(Headers_OPS INTERFACE PR_BLIS)
     file(GLOB CONFIG RELATIVE ${CMAKE_SOURCE_DIR}/blis/include/ ${CMAKE_SOURCE_DIR}/blis/include/*)
