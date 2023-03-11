@@ -23,6 +23,8 @@ if(BLIS)
     blt_import_library(NAME blis INCLUDES ${CMAKE_SOURCE_DIR}/blis/include/${CONFIG}
     TREAT_INCLUDES_AS_SYSTEM ON LIBRARIES ${CMAKE_SOURCE_DIR}/blis/lib/${CONFIG}/libblis.a)
     blt_patch_target(NAME Headers_OPS DEPENDS_ON blis)
+endif()
+if(OPS)
     blt_patch_target(NAME Headers_Base DEPENDS_ON Headers_OPS)
 endif()
 if(DEFINED ENV{OLCF_OPENBLAS_ROOT})
