@@ -118,7 +118,7 @@ if(OPS)
     elseif(NOT EXISTS ${CMAKE_SOURCE_DIR}/blis/configure)
         submodule_error("BLIS")
     elseif(NOT EXISTS ${CMAKE_SOURCE_DIR}/blis/include)
-        execute_process(COMMAND ${CMAKE_SOURCE_DIR}/configure_blis auto)
+        execute_process(COMMAND ${CMAKE_SOURCE_DIR}/blis/configure auto WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/blis) 
     endif()
 endif()
 
