@@ -1,28 +1,35 @@
 blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/base
-                ${CMAKE_CURRENT_SOURCE_DIR}/base/implem)
+                ${CMAKE_CURRENT_SOURCE_DIR}/base)
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr
-                ${CMAKE_CURRENT_SOURCE_DIR}/amr/implem
                 DEPENDS_ON Headers_Base)
 blt_add_library(NAME Headers_MMB HEADERS ProtoMMB.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/mmb
-                ${CMAKE_CURRENT_SOURCE_DIR}/mmb/implem
                 DEPENDS_ON Headers_Base)
 blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops
-                ${CMAKE_CURRENT_SOURCE_DIR}/ops/implem
                 DEPENDS_ON Headers_Base LAPACK::LAPACK)
-if(DEFINED ENV{OLCF_OPENBLAS_ROOT})
-  target_link_directories(Headers_OPS INTERFACE $ENV{OLCF_OPENBLAS_ROOT}/lib/)
-  target_link_libraries(Headers_OPS INTERFACE openblas)
+if(BLIS)
+    message(STATUS "Linking BLIS library")
+    target_compile_definitions(Headers_OPS INTERFACE PR_BLIS)
+    file(GLOB CONFIG RELATIVE ${CMAKE_SOURCE_DIR}/blis/include/ ${CMAKE_SOURCE_DIR}/blis/include/*)
+    if(NOT EXISTS ${CMAKE_SOURCE_DIR}/blis/include/${CONFIG}/blis.h)
+      execute_process(COMMAND make -j WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/blis)
+    endif()
+    blt_import_library(NAME blis INCLUDES ${CMAKE_SOURCE_DIR}/blis/include/${CONFIG}
+    TREAT_INCLUDES_AS_SYSTEM ON LIBRARIES ${CMAKE_SOURCE_DIR}/blis/lib/${CONFIG}/libblis.a)
+    blt_patch_target(NAME Headers_OPS DEPENDS_ON blis)
 endif()
 if(OPS)
     blt_patch_target(NAME Headers_Base DEPENDS_ON Headers_OPS)
+endif()
+if(DEFINED ENV{OLCF_OPENBLAS_ROOT})
+  target_link_directories(Headers_OPS INTERFACE $ENV{OLCF_OPENBLAS_ROOT}/lib/)
+  target_link_libraries(Headers_OPS INTERFACE openblas)
 endif()
 if(ENABLE_CUDA)
     target_link_libraries(Headers_Base INTERFACE nvToolsExt)
@@ -69,6 +76,10 @@ if(ENABLE_OPENMP)
     target_link_libraries(Headers_MMB  INTERFACE OpenMP::OpenMP_CXX)
     target_link_libraries(Headers_OPS  INTERFACE OpenMP::OpenMP_CXX)
 endif()
-if (ENABLE_HDF5)
+if(DEFINED HDF5_INC)
+  target_include_directories(Headers_Base INTERFACE ${HDF5_INC}/include)
+  target_link_directories(Headers_Base INTERFACE ${HDF5_LIB}/lib)
+  target_link_libraries(Headers_Base INTERFACE hdf5)
+elseif(ENABLE_HDF5)
   target_link_libraries(Headers_Base INTERFACE HDF5::HDF5)
 endif()
