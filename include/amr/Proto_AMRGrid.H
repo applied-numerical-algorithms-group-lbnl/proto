@@ -187,7 +187,7 @@ namespace Proto
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;
         std::vector<Point> m_refRatios;
-        int m_nestingDistance;
+      //int m_nestingDistance;
         int m_maxLevels;
     };
 
