@@ -189,6 +189,8 @@ namespace Proto
         // Interpolation Interface
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point);
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
+        inline std::vector<Point> onDomainBoundary(
+                const Point& a_point, const MBIndex& a_index) const;
         inline std::vector<MBDataPoint> interpFootprint(
                 const Point& a_center,
                 const Point& a_ghost,

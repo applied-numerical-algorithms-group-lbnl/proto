@@ -20,6 +20,9 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
+#if PR_VERBOSE == 2
+    pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
+#endif
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
@@ -61,6 +64,7 @@ MBPointInterpOp::MBPointInterpOp(
     auto C2C = Stencil<double>::CornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
+        
         PR_TIME("MBPointInterpOp::constructor::compute_C");
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
@@ -68,21 +72,17 @@ MBPointInterpOp::MBPointInterpOp(
         // 1 ghost cell is needed to compute product with J
         Box srcBox = Box::Kernel(1).shift(src.point);
         Box xSrcBox = C2C.domain(srcBox);
-        Box xSrcBox0 = xSrcBox;
-        CoordPermutation srcToDst; //defaults to identity
-        if (src.inBoundary())
-        {
-            PROTO_ASSERT(dstBlock != srcBlock,
-                    "MBPointInterpOp::constructor | Error: Data corruption.");
-            Box xSrcBox0 = layout.domain().convert(xSrcBox, dstBlock, srcBlock);
-            Point srcToDstConn = layout.domain().graph().connectivity(srcBlock, dstBlock);
-            srcToDst = layout.domain().graph().rotation(srcBlock, srcToDstConn, dstBlock);
-        }
         // compute X at corners analytically on srcBox
         auto xi = a_map(xSrcBox, srcBlock, dstBlock);
-        xi.rotate(xSrcBox.grow(PR_NODE), srcToDst);
+#if PR_VERBOSE == 2
+        pout() << "SRC_POINT: " << src.point << std::endl;
+        pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
+        pout() << "X: " << std::endl;
+        xi.printData();
+#endif
         // get cached J data from relevant patch
         auto& Ji = src.patch(a_map.jacobian());
+    
         // subtract xg
         xi -= xg;
         // divide by Rg
@@ -147,7 +147,6 @@ void MBPointInterpOp::apply(
 {
     PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
-    pout() << "Applying Stencil at Point: " << m_dst.point << std::endl;
     for (int ii = 0; ii < size(); ii++)
     {
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
@@ -156,10 +155,6 @@ void MBPointInterpOp::apply(
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
         }
-        pout() << "\tSource | point: " << m_srcs[ii].point << " | value: " << src(0);
-        pout() << " | srcBlock: " << m_srcs[ii].srcBlock();
-        pout() << " | dstBlock: " << m_srcs[ii].dstBlock();
-        pout() << std::endl;
     }
 }
 

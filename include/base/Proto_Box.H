@@ -800,7 +800,6 @@ namespace Proto
           @endcode
         */
         inline Box flatten(const int a_dir, bool a_upper = false) const;
-
         /// Adjacent Cells
         /**
           Returns a box adjacent to *this in a given direction with a thickness

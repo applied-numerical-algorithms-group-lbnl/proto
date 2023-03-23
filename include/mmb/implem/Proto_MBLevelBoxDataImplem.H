@@ -536,6 +536,36 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point) const
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+std::vector<Point>
+MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
+        const Point& a_point,
+        const MBIndex& a_index) const
+{
+    auto &srcPatch = (*this)[a_index];
+    Box patchDomain = srcPatch.box();
+
+    PROTO_ASSERT(patchDomain.contains(a_point),
+            "MBLevelBoxData::onDomainBoundary | Error: \
+            Point is not contained in the patch or it's ghost region");
+    
+    auto block = layout().block(a_index);
+    Box blockDomain = layout().blockLayout(block).domain().box();
+
+    std::vector<Point> domainBoundaryDirs;
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir.codim() != 1) { continue; }
+        // if there are block boundaries, there is no domain boundary
+        if (this->bounds(a_index, dir).size() > 0) { continue; } 
+        Point orthDir = Point::Ones() - dir.abs();
+        Box boundBox = blockDomain.edge(dir, 1).grow(orthDir*ghost()[0]);
+        if (boundBox.contains(a_point)) { domainBoundaryDirs.push_back(dir); }
+    }
+    return domainBoundaryDirs;
+}
+
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBDataPoint>
 MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const Point &a_center,
@@ -549,13 +579,33 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     PROTO_ASSERT(patchDomain.contains(a_center),
             "MBLevelBoxData::interpFootprint | Error: \
             Invalid center Point");
+    
     auto block = layout().block(a_index);
     Box blockDomain = layout().blockLayout(block).domain().box();
-    
-    // TODO: Adjust footprint for points on or near the domain boundary here
 
+    std::set<Point> extendedFootprint;
+    Box spanBox;
+    for (auto fi : a_footprint)
+    {
+        extendedFootprint.insert(fi);
+        spanBox &= fi;
+    }
+
+    auto domainBoundaryDirs = this->onDomainBoundary(a_center, a_index);
+    for (auto dir : domainBoundaryDirs)
+    {
+        Point contractDirs = Point::Ones() - dir.abs();
+        Box extendDomain = spanBox.grow(-contractDirs).shift(-extendDomain.low()*dir.abs());
+        for (auto fi : a_footprint)
+        {
+            if (extendDomain.contains(contractDirs*fi))
+            {
+                extendedFootprint.insert(fi-dir);
+            }
+        }
+    }
     std::set<MBDataPoint> footprint;
-    for (auto shift : a_footprint)
+    for (auto shift : extendedFootprint)
     {
         Point p = a_center + shift;
         if (blockDomain.contains(p) && patchDomain.contains(p))
@@ -581,7 +631,6 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         } else {
             // skip this point. It's in an adjacent patch that may not be on this proc
         }
-
     }
 
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
