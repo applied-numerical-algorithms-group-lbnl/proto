@@ -333,17 +333,18 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
         else
           {                              
             regridThisLevel = (m_numSteps[a_level]%m_regridInterval[a_level] == 0) 
-              && (m_numSteps[a_level]%
-                  ((m_timeRefRatios[a_level-1]+1)*m_regridInterval[a_level-1]) != 0);
+              && ((m_numSteps[a_level])%
+                  ((m_timeRefRatios[a_level-1])*m_regridInterval[a_level-1]) != 0);
           }  
         if (regridThisLevel)
           {
             if (Proto::procID()==0)
               {
-                //std::cout <<" regridding: " << a_level << std::endl;
+                //std::cout <<" regridding: " << a_level << ", step = " << m_numSteps[a_level] <<  std::endl;
               }
             //h5.writeAMRData(dx0,*m_data,
             //                      "U_lev_pre"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+            
             regrid(a_level);
             // h5.writeAMRData(dx0,*m_data,
             //              "U_lev_post"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
