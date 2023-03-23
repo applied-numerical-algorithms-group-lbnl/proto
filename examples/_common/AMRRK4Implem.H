@@ -1,7 +1,7 @@
 
 PROTO_KERNEL_START
 void
-f_RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+f_RKTaylorCoefsF(Var<double,RKORDER*(NUMCOMPS)>& a_UTaylor,
               Var<double,NUMCOMPS>& a_kstage,
               Var<double,NUMCOMPS>& a_U,
               int a_stage
@@ -39,7 +39,7 @@ PROTO_KERNEL_END(f_RKTaylorCoefsF, f_RKTaylorCoefs)
 PROTO_KERNEL_START
 void
 f_RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
-              Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+                Var<double,RKORDER*(NUMCOMPS)>& a_UTaylor,
               double& a_chi
               )
 {
@@ -74,9 +74,11 @@ PROTO_KERNEL_END(f_stageUpdateF,f_stageUpdate)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 AMRRK4<OpType,T,C,MEM>::AMRRK4(
         AMRData<T, C, MEM>& a_data,
-        const Array<T, DIM>& a_dx)
+        const Array<T, DIM>& a_dx,
+        int a_regridInterval,
+        int a_bufferSize)
 {
-    define(a_data, a_dx, 0);
+  define(a_data, a_dx, 0,a_regridInterval,a_bufferSize);
 }
 
 template<typename T>
@@ -90,19 +92,23 @@ void trimVector(std::vector<T>& a_vector, unsigned int a_size)
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
-        AMRData<T, C, MEM>& a_data,
-        const Array<T, DIM>& a_dx)
+                                    AMRData<T, C, MEM>& a_data,
+                                    const Array<T, DIM>& a_dx,
+                                    int a_regridInterval,
+                                    int a_bufferSize)
 {
-    define(a_data, a_dx, 0);
+  define(a_data, a_dx, 0 ,a_regridInterval,a_bufferSize);
 }
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
-        AMRData<T, C, MEM>& a_data,
-        const Array<T, DIM>& a_dx,
-        int                 a_level)
+                                    AMRData<T, C, MEM>& a_data,
+                                    const Array<T, DIM>& a_dx,
+                                    int                 a_level,
+                                    int                 a_regridInterval,
+                                    int                 a_bufferSize)
 {
-
+     PR_TIMERS("AMRRK4::define");
     // dont do anything fancy, just kill everything and redefine
     if (a_level == 0)
     {
@@ -113,16 +119,23 @@ void AMRRK4<OpType,T,C,MEM>::define(
         m_UTaylor.clear();
         m_UTaylorC.clear();
         m_fluxRegisters.clear();
-
+        m_ops.clear();
+        
         m_UStage.resize(numLevels);
         m_RHSTotal.resize(numLevels);
         m_UTaylor.resize(numLevels - 1);
         m_UTaylorC.resize(numLevels - 1);
-        m_fluxRegisters.resize(numLevels - 1);
-        
+        m_fluxRegisters.resize(numLevels - 1);       
+
         m_ops.resize(numLevels);
+        if (m_numSteps.size() != numLevels)
+          {
+            m_numSteps= std::vector<int>(numLevels,0);
+          }
         m_timeRefRatios.resize(numLevels - 1);
         m_spaceRefRatios.resize(numLevels - 1);
+        m_regridInterval.resize(numLevels - 1);
+        m_bufferSize.resize(numLevels - 1);
         m_cfInterp.resize(numLevels - 1);
         
         m_data = &a_data;
@@ -142,6 +155,8 @@ void AMRRK4<OpType,T,C,MEM>::define(
                 Point spaceRefRatio = a_data.grid().refRatio(lvl);
                 auto cfLayout = fineLayout.coarsen(spaceRefRatio);
 
+                m_regridInterval[lvl] = a_regridInterval;
+                m_bufferSize[lvl] = a_bufferSize;
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
                 m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
@@ -177,20 +192,23 @@ void AMRRK4<OpType,T,C,MEM>::define(
         trimVector(m_fluxRegisters, a_level);
 
         m_ops.resize(numLevels);
+        //m_numSteps.resize(numLevels);
+        m_regridInterval.resize(numLevels-1);
+        m_bufferSize.resize(numLevels-1);
         m_timeRefRatios.resize(numLevels - 1);
         m_spaceRefRatios.resize(numLevels - 1);
         m_cfInterp.resize(numLevels - 1);
-
+        
         m_data = &a_data;
 
         Array<T, DIM> dx = a_dx;
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
-
             m_ops[lvl].define(dx);
             m_UStage.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost()));
             m_RHSTotal.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros()));
+            //m_numSteps[lvl] = 0;
             if (lvl < numLevels-1)
             {
                 auto& fineLayout = a_data.grid()[lvl+1];
@@ -199,6 +217,8 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
+                m_regridInterval[lvl] = a_regridInterval;
+                m_bufferSize[lvl] = a_bufferSize;
                 m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
                 m_UTaylor.push_back(
                         std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
@@ -241,7 +261,7 @@ template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
 {
 #ifdef PR_HDF5
-  //HDF5Handler h5;
+  HDF5Handler h5;
 #endif
     PR_TIMERS("AMRRK4::advance");
     auto dx = m_ops[a_level].dx();
@@ -295,12 +315,47 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
         m_fluxRegisters[a_level]->reset();
       }
     }
-    
+    m_numSteps[a_level]++;
+    // if (a_level == 1) cout << m_numSteps[a_level] << endl;
     // Do Regridding
-    if (a_level == m_regridBaseLevel)
-    {
-      regrid(a_level);
-    }
+    if (a_level < m_data->numLevels() - 1)
+      {
+        bool regridThisLevel = false;
+        if (Proto::procID()==0)
+          {
+            //std::cout <<"regrid level: " << a_level << " , " << m_numSteps[a_level] <<
+            //  " , " << m_regridInterval[a_level] << std::endl;
+          }
+        if (a_level  == 0)
+          {
+            regridThisLevel = (m_numSteps[0]%m_regridInterval[0] == 0);
+          }
+        else
+          {                              
+            regridThisLevel = (m_numSteps[a_level]%m_regridInterval[a_level] == 0) 
+              && ((m_numSteps[a_level])%
+                  ((m_timeRefRatios[a_level-1])*m_regridInterval[a_level-1]) != 0);
+          }  
+        if (regridThisLevel)
+          {
+            if (Proto::procID()==0)
+              {
+                //std::cout <<" regridding: " << a_level << ", step = " << m_numSteps[a_level] <<  std::endl;
+              }
+            //h5.writeAMRData(dx0,*m_data,
+            //                      "U_lev_pre"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+            
+            regrid(a_level);
+            // h5.writeAMRData(dx0,*m_data,
+            //              "U_lev_post"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+       
+          }
+      }
+    else
+      {
+        //h5.writeAMRData(dx0,*m_data,
+        //                    "U_lev_"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+      }
 }
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
@@ -339,7 +394,10 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
             auto UTimeInterp = forall<T, C>(f_RKTimeInterp, UTaylorC_i, chi);
         
             // interpolate boundary conditions
-            UStage_i |= cfInterp(UTimeInterp);
+            {
+              PR_TIMERS("InterpBoundaries single patch");
+              UStage_i |= cfInterp(UTimeInterp);
+            }
             //cfInterp.apply(UStage_i, UTimeInterp);
         
             // copy back the interior
@@ -430,8 +488,9 @@ template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
 {
 #ifdef PR_HDF5
-  //HDF5Handler h5;
+  HDF5Handler h5;
 #endif
+    PR_TIMERS("AMRRK4::regrid");
     AMRGrid newGrids = m_data->grid();
 
     // for all coarse levels (finest to coarsest)
@@ -440,7 +499,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
         auto& layout = newGrids[level];
 
         // Compute tags on this level
-        LevelTagData tags(layout, Point::Ones(m_bufferSize));
+        LevelTagData tags(layout, Point::Ones(m_bufferSize[level]));
         tags.setToZero();
         for (auto iter : layout)
         {
@@ -450,15 +509,23 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
         }
         tags.setBoundary(0);
         newGrids.addFinerTags(tags, level);
-        AMRGrid::buffer(tags, Point::Ones(m_bufferSize));
+        AMRGrid::buffer(tags, Point::Ones(m_bufferSize[level]));
         newGrids.regrid(tags, level);
     }
     for (int level = max(2, a_baseLevel); level < newGrids.numLevels(); level++)
     {
         newGrids.enforceNesting2(level);
     }
+    auto dx0 = m_ops[0].dx();
+     int a_level = a_baseLevel;
+     //h5.writeAMRData(dx0,*m_data,
+     //                        "U_lev_definePre"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+    
     m_data->regrid(newGrids, a_baseLevel, OpType::order());
     
-    define(*m_data, m_ops[a_baseLevel].dx(), a_baseLevel);
+    //h5.writeAMRData(dx0,*m_data,
+    //                         "U_lev_definePost"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
+    
+    define(*m_data, m_ops[a_baseLevel].dx(), a_baseLevel,
+           m_regridInterval[a_baseLevel],m_bufferSize[a_baseLevel]);            
 }
-

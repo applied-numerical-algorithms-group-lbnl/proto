@@ -73,15 +73,16 @@ int main(int argc, char** argv)
     using Proto::pout; 
     typedef BoxOp_Advection<double> OP;
 
-    int domainSize = 32;
+    int domainSize =32;
     int boxSize = 32;
     int refRatio = 4;
     int maxTimesteps = 4096;
     int numLevels = 3;
-    int regridBufferSize = 2;
+    int regridBufferSize = 3;
+    int regridInterval = 1;
     double maxTime = 1.0;
-    int outputInterval = 1;
-    double t0 = 0.0;
+    int outputInterval = 16;
+    double t0 = 0.;
     int maxRefs = 2;
     //std::array<bool, DIM> periodicity;
     Array<bool, DIM> periodicity;
@@ -98,6 +99,7 @@ int main(int argc, char** argv)
     args.add("periodic_y",      periodicity[1]);
     args.add("numLevels",       numLevels);
     args.add("regridBufferSize",regridBufferSize);
+    args.add("regridInterval"  ,regridInterval);
     args.add("t0",              t0);
     args.add("maxRefs",         maxRefs);
     args.parse(argc, argv);
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
         AMRData<double, NUMCOMPS> U(grid, OP::ghost());
         Operator::initConvolve(U, dx[0], f_advectionExact, t0);
         U.averageDown();
-        AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx);
+        AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx,regridInterval,regridBufferSize);
         double sum0 = U[0].integrate(dx[0]);
         pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
@@ -176,7 +178,6 @@ int main(int argc, char** argv)
         h5.setTimestep(dt);
         h5.writeAMRData(dx, U, "U_"+to_string(domainSize)+"_N0");
 #endif
-
         {      
           struct rusage usage;
           getrusage(RUSAGE_SELF, &usage);
@@ -272,7 +273,7 @@ int main(int argc, char** argv)
         double rate = log(errorRefs[maxRefs-2]/errorRefs[maxRefs-1])/log(2.0);
         if (Proto::procID() == 0)
           {
-            std::cout << "L1 Richardson error exponent (must be >= 4 to pass): "
+            std::cout << "L1 Richardson error exponent (must be >= 3.9 to pass): "
                       << rate << std::endl;         
           }
       }

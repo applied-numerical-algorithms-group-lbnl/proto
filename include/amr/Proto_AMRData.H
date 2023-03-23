@@ -255,6 +255,8 @@ namespace Proto
         bool m_defined;
         AMRGrid m_grid;
         Point m_ghost;
+        //PC : debug
+        int m_counter = 0;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
     };
     

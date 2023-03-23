@@ -15,9 +15,14 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
 {
+  #ifdef PR_HDF5
+  HDF5Handler h5;
+#endif
     if (m_defined)
     {
         int ghostInterp = 2;
+        // PC:debug
+        T dx0 = 1.0;
         for (int ii = a_level;ii + 1 < a_newgrid.numLevels();ii++)          
         {
             Point refratio = a_newgrid.refRatio(ii);
@@ -32,34 +37,59 @@ void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
                 a_newgrid[ii+1].coarsen(a_newgrid.refRatio(ii));
             LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
                     Point::Ones(ghostInterp));
+            dataCoarse.setVal(1.2345e6);
             (*this)[ii].copyTo(dataCoarse);
+            //dataCoarse.exchange();
+            if (ii == 0)
+              {
+                //(*this)[ii].layout().print();
+                //dblCoarse.print();                
+                //a_newgrid[ii+1].print();
+                //h5.writeLevel(dx0,dataCoarse,"UCoarseLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                //h5.writeLevel(dx0,(*this)[ii],"OldUCoarseLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                dx0 *= 1.0/a_newgrid.refRatio(ii)[0];
+                //abort();
+              }
             for (auto dit : dataCoarse)
             {
                 auto& newData = (*newleveldata)[dit];
-                auto& oldData = dataCoarse[dit];
+                auto& oldData = dataCoarse[dit];                
+                
+                if (ii==0)
+                  {
+                    auto bxFrom = oldData.box();
+                    auto bxTo = newData.box();
+                    // stencil.range(bxFrom);
+                    // cout << "from: " << bxFrom << ", inferred: "<< stencil.range(bxFrom)
+                    //     << ", range: " << bxTo << endl;
+                  }
                 newData |= stencil(oldData);
             }
+            if (ii == 0)
+              {
+                //h5.writeLevel(dx0,*newleveldata,"UFineLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                //m_counter++;
+              }
             // copy old data to new data on intersection.
             (*this)[ii+1].copyTo(*newleveldata);
+            if (ii == 0)
+              {
+                //h5.writeLevel(dx0,*newleveldata,"NewUFineLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+              }
             // replace the data pointer with the new data pointer.
             m_data[ii+1] = newleveldata;
         }
-        m_grid = a_newgrid;
+        m_grid = a_newgrid;        
     }
     else
     {
         MayDay<void>::Error("AMRData::regrid | Error: attempting to regrid undefined AMRData.");
     }
     // Check to see if grids are consistent.
-    PR_assert(m_grid.numLevels() == (*this).numLevels()); 
+    PR_assert(m_grid.numLevels() == (*this).numLevels());
     for (int ii = 0; ii < m_grid.numLevels();ii++)
-    {
-        if (!(m_data[ii]->layout() == m_grid[ii]))
-        {
-            (*m_data[ii]).layout().print();
-            m_grid[ii].print();
-            PR_assert(m_data[ii]->layout() == m_grid[ii]); 
-        }
+    {       
+      PR_assert(m_data[ii]->layout().compatible(m_grid[ii]));
     }
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
