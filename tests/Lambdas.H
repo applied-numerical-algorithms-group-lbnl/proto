@@ -3,11 +3,11 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 4
+#define XPOINT_SIZE 6
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 2.0
-#define SHEAR_SLOPE 0.0
+#define SHEAR_SLOPE 1.0
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -174,7 +174,7 @@ void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, 
     double theta_ratio = dtheta_mapped/dtheta_unmapped;
     Point ri = Point::Ones(a_radius) - a_pt;
     double r = max(ri[0], ri[1])*(1.0/a_radius);
-    double theta = atan2(ri[1]*1.0, ri[0]*1.0)*theta_ratio + dtheta_mapped*a_block;
+    double theta = 3*M_PI/2.0 + atan2(ri[1]*1.0, ri[0]*1.0)*theta_ratio + dtheta_mapped*a_block;
 
     a_data(0) = r*cos(theta);
     a_data(1) = r*sin(theta);
@@ -191,13 +191,13 @@ PROTO_MAP_START(ShearMap)
     switch (block)
     {
         case 0:
-            x = X; y = Y; break;
+            x = X-1; y = Y-1; break;
         case 3:
-            x = X; y = 1+Y; break;
+            x = X-1; y = Y; break;
         case 1:
-            x = 1+X; y = Y+SHEAR_SLOPE*X; break;
+            x = X; y = Y+SHEAR_SLOPE*X-1; break;
         case 2:
-            x = 1+X; y = 1+Y+SHEAR_SLOPE*X; break;
+            x = X; y = Y+SHEAR_SLOPE*X; break;
     }
 PROTO_MAP_END(ShearMap)
 
@@ -232,7 +232,7 @@ PROTO_MAP_START(XPointMapRigid)
     double r = sqrt(u*u + v*v + 2*u*v*cos(dtheta_mapped));
     //double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
     double alpha = dtheta_mapped;
-    double theta = atan2(v*sin(alpha), u + v*cos(alpha)) + alpha*block;
+    double theta = M_PI + atan2(v*sin(alpha), u + v*cos(alpha)) + alpha*block;
 
     x = r*cos(theta);
     y = r*sin(theta);
@@ -447,7 +447,10 @@ void f_polyMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_blo
     double phi = 0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        phi += pow(a_X(dir) - a_offset[dir], a_exp[dir]);
+        if (a_exp[dir] != 0)
+        {
+            phi += pow(a_X(dir) - a_offset[dir], a_exp[dir]);
+        }
     }
     for (int ii = 0; ii < C; ii++)
     {

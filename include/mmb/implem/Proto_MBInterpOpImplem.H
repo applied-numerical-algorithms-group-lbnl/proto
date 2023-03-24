@@ -20,6 +20,9 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
+#if PR_VERBOSE == 2
+    pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
+#endif
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
@@ -31,7 +34,7 @@ MBPointInterpOp::MBPointInterpOp(
     m_exponents.clear();
     for (auto bi : Box::Cube(a_order))
     {
-        if (bi.sum() < a_order - 1)
+        if (bi.sum() < a_order)
         {
             m_exponents.push_back(bi);
         }
@@ -54,13 +57,14 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    //Rg = 1.0; // temporary for debugging 
+    Rg = 1.0; // temporary for debugging 
     
     // Compute Matrices
     m_C.define(M,N);
     auto C2C = Stencil<double>::CornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
+        
         PR_TIME("MBPointInterpOp::constructor::compute_C");
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
@@ -68,21 +72,17 @@ MBPointInterpOp::MBPointInterpOp(
         // 1 ghost cell is needed to compute product with J
         Box srcBox = Box::Kernel(1).shift(src.point);
         Box xSrcBox = C2C.domain(srcBox);
-        Box xSrcBox0 = xSrcBox;
-        CoordPermutation srcToDst; //defaults to identity
-        if (src.inBoundary())
-        {
-            PROTO_ASSERT(dstBlock != srcBlock,
-                    "MBPointInterpOp::constructor | Error: Data corruption.");
-            Box xSrcBox0 = layout.domain().convert(xSrcBox, dstBlock, srcBlock);
-            Point srcToDstConn = layout.domain().graph().connectivity(srcBlock, dstBlock);
-            srcToDst = layout.domain().graph().rotation(srcBlock, srcToDstConn, dstBlock);
-        }
         // compute X at corners analytically on srcBox
         auto xi = a_map(xSrcBox, srcBlock, dstBlock);
-        xi.rotate(xSrcBox.grow(PR_NODE), srcToDst);
+#if PR_VERBOSE == 2
+        pout() << "SRC_POINT: " << src.point << std::endl;
+        pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
+        pout() << "X: " << std::endl;
+        xi.printData();
+#endif
         // get cached J data from relevant patch
         auto& Ji = src.patch(a_map.jacobian());
+    
         // subtract xg
         xi -= xg;
         // divide by Rg
@@ -101,8 +101,8 @@ MBPointInterpOp::MBPointInterpOp(
                 "MBPointInterpOp::constructor | Error: Box inference error.");
             PROTO_ASSERT(Jx.box().contains(src.point),
                 "MBPointInterpOp::constructor | Error: Box inference error.");
-            m_C(ii,jj) = Jx(src.point);
-            //m_C(ii,jj) = xi_p_avg(src.point);
+            //m_C(ii,jj) = Jx(src.point);
+            m_C(ii,jj) = xi_p_avg(src.point);
         }
     }
     m_D.define(1,N);
@@ -122,8 +122,8 @@ MBPointInterpOp::MBPointInterpOp(
         auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
         PROTO_ASSERT(Jx.box().contains(a_dst.point),
             "MBPointInterpOp::constructor | Error: Box inference error.");
-        m_D(0,jj) = Jx(a_dst.point);
-        //m_D(0,jj) = xi_p_avg(a_dst.point);
+        //m_D(0,jj) = Jx(a_dst.point);
+        m_D(0,jj) = xi_p_avg(a_dst.point);
     }
 
     // Compute "Stencil"

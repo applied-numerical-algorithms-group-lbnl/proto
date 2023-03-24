@@ -667,7 +667,42 @@ TEST(BoxData, CopyDeviceToDevice)
 }
 #endif
 
+TEST(BoxData, Rotate)
+{
+    constexpr unsigned int C = 1;
+    int Nx = 8;
+    int Ny = 4;
+    auto CW = CoordPermutation::cw();
+    Box B0(Point(Nx, Ny, 1,1,1,1));
+    Box B1(Point(Ny, Nx, 1,1,1,1));
 
+    BoxData<double, C> data0(B0);
+    BoxData<double, C> data1(B0);
+    forallInPlace_p(f_pointID, data0);
+    forallInPlace_p(f_pointID, data1);
+    data1.rotate(B1, CW);
+
+    pout() << "Data 0: " << std::endl;
+    data0.printData();
+    pout() << "Data 1: " << std::endl;
+    data1.printData();
+
+    for (auto pi : B0)
+    {
+        auto qi = CW.rotateCell(pi, B0, B1);
+        auto v0 = data0.var(pi);
+        auto v1 = data1.var(qi);
+                
+        //pout() << "v0(" << pi << "): ";
+        //pout() << v0(0);
+        //pout() << " | v1(" << qi << "): ";
+        //pout() << v1(0) << std::endl;
+        for (int ii = 0; ii < C; ii++)
+        {
+            EXPECT_TRUE(v0(ii) == v1(ii));
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

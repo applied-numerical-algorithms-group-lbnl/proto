@@ -90,8 +90,8 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()
     {
-        std::cout << " | localBoundary: " << localData->box();
-        std::cout << " | adjBoundary: " << adjData->box() << std::endl;
+        pout() << " | localBoundary: " << localData->box();
+        pout() << " | adjBoundary: " << adjData->box() << std::endl;
     }
 } // end namespace Proto
 #endif //end include guard

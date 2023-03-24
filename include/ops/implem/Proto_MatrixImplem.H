@@ -933,7 +933,7 @@ Matrix<T>::print(std::string a_format) const
         Proto::pout() << std::endl;
         for (int jj = 0; jj < N(); jj++)
         {
-            Proto::pout() << get(ii,jj);
+            Proto::pout() << setw(10) << get(ii,jj);
             if (jj != N()-1) {Proto::pout() << ", "; }
         }
     }
