@@ -158,38 +158,41 @@ template<typename Func, MemType MEM>
 BoxData<double, DIM>
 MBMap<Func, MEM>::operator()(
         const Box& a_domain,
-        unsigned int a_block,
-        unsigned int a_refBlock,
+        unsigned int a_computeBlock,
+        unsigned int a_domainBlock,
         Centering a_ctr) const
 {
     PR_TIME("MBMap::operator()(Box, Block, RefBlock, Centering)");
     
     // Compute x in a_block
     auto domain = m_X.layout().domain();
-    Point blockSize = domain.blockSize(a_block);
-    Box domainBox;
+    Point blockSize = domain.blockSize(a_computeBlock);
+    Box domainBox = a_domain;
     switch (a_ctr)
     {
-        case PR_CELL: domainBox = a_domain; break;
-        case PR_NODE: domainBox = a_domain.extrude(Point::Ones(), 1); break;
+        case PR_CELL: break;
+        case PR_NODE: domainBox = domainBox.extrude(Point::Ones(), 1); break;
         default:
-            domainBox = a_domain.extrude(Point::Basis((int)a_ctr, 1), 1); break;
+            domainBox = domainBox.extrude(Point::Basis((int)a_ctr, 1), 1); break;
     }
     Box domainBox0 = domainBox;
-    if (a_block != a_refBlock)
+    if (a_computeBlock != a_domainBlock)
     {
-        domainBox0 = domain.convert(domainBox, a_refBlock, a_block);
+        domainBox0 = domain.convert(domainBox, a_domainBlock, a_computeBlock, a_ctr);
     }
+    
+#if PR_VERBOSE == 2
+    pout() << "MBMap::operator(): Computing X on box: " << domainBox << " in block " << a_computeBlock << std::endl;
+#endif
 
     BoxData<double, DIM> xLocal(domainBox0);
-    forallInPlace_p(*m_func, xLocal, a_block, blockSize, a_ctr);
+    forallInPlace_p(*m_func, xLocal, a_computeBlock, blockSize, a_ctr);
    
     // If a_refBlock is non-trivial, rotate the output
-    if (a_block != a_refBlock)
+    if (a_computeBlock != a_domainBlock)
     {
-        Point conn = domain.graph().connectivity(a_block, a_refBlock);
-        auto R = domain.graph().rotation(a_block, conn, a_refBlock);
-        Box refBox = domain.convert(xLocal.box(), a_block, a_refBlock);
+        Point conn = domain.graph().connectivity(a_computeBlock, a_domainBlock);
+        auto R = domain.graph().rotation(a_computeBlock, conn, a_domainBlock);
         xLocal.rotate(domainBox, R);
     }
     return xLocal;

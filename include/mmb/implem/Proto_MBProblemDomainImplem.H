@@ -122,13 +122,33 @@ share a codimension 1 boundary.");
 Box MBProblemDomain::convert(
         Box a_box,
         unsigned int a_srcBlock,
-        unsigned int a_dstBlock) const
+        unsigned int a_dstBlock,
+        Centering a_ctr) const
 {
-    Point L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-    Point H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
-    Box B(L, L);
-    B = B & H;
-    return Box(B.low(), B.high()-Point::Ones());
+    Point L, H;
+    switch (a_ctr)
+    {
+        case PR_CELL:
+        {
+            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
+            Box B(L, L);
+            B = B & H;
+            return Box(B.low(), B.high()-Point::Ones());
+        }
+        case PR_NODE:
+        {
+            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convert(a_box.high(), a_srcBlock, a_dstBlock);
+            Box B(L, L);
+            B = B & H;
+            return B;
+        }
+        default:
+        {
+            MayDay<void>::Abort("Method Not Implemented");
+        }
+    }
 }
 
 MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const

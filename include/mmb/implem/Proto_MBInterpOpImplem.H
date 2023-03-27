@@ -26,6 +26,12 @@ MBPointInterpOp::MBPointInterpOp(
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
+
+#if PR_VERBOSE == 2
+    pout() << "SRC_POINTS: ";
+    for (auto si : m_srcs) { pout() << si.point << ", "; }
+    pout() << std::endl;
+#endif
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
@@ -73,7 +79,7 @@ MBPointInterpOp::MBPointInterpOp(
         Box srcBox = Box::Kernel(1).shift(src.point);
         Box xSrcBox = C2C.domain(srcBox);
         // compute X at corners analytically on srcBox
-        auto xi = a_map(xSrcBox, srcBlock, dstBlock);
+        auto xi = a_map(xSrcBox, srcBlock, dstBlock, PR_NODE);
 #if PR_VERBOSE == 2
         pout() << "SRC_POINT: " << src.point << std::endl;
         pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
@@ -105,6 +111,11 @@ MBPointInterpOp::MBPointInterpOp(
             m_C(ii,jj) = xi_p_avg(src.point);
         }
     }
+
+#if PR_VERBOSE == 2
+    pout() << "C MATRIX" << std::endl;
+    m_C.print("%4.4f");
+#endif
     m_D.define(1,N);
 
     for (int jj = 0; jj < N; jj++)
@@ -125,6 +136,10 @@ MBPointInterpOp::MBPointInterpOp(
         //m_D(0,jj) = Jx(a_dst.point);
         m_D(0,jj) = xi_p_avg(a_dst.point);
     }
+#if PR_VERBOSE == 2
+    pout() << "D MATRIX" << std::endl;
+    m_D.print("%4.4f");
+#endif
 
     // Compute "Stencil"
     {

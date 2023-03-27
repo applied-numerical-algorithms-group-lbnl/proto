@@ -67,7 +67,8 @@ namespace Proto
         inline Box convert(
                 Box a_box,
                 unsigned int a_srcBlock,
-                unsigned int a_dstBlock) const;
+                unsigned int a_dstBlock,
+                Centering a_ctr = PR_CELL) const;
 
         inline MBProblemDomain coarsen(Point a_refRatio) const;
         inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;

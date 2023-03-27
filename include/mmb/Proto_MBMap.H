@@ -141,8 +141,8 @@ class MBMap
     /// Compute Mapped Region
     inline BoxData<double, DIM> operator()(
             const Box& a_domain,
-            unsigned int a_block,
-            unsigned int a_refBlock,
+            unsigned int a_computeBlock,
+            unsigned int a_domainBlock,
             Centering a_ctr = PR_NODE) const;
     
     /// Compute Mapped Region (No Reference Block)

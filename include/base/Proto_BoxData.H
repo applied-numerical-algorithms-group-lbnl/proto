@@ -553,7 +553,9 @@ namespace Proto
          *  \param a_dst        Destination data holder
          *  \param a_rotation   Permutation from this to a_dst's coordinates
         */
-        void copyTo(BoxData<T, C, MEM, D, E>&   a_dst, const CoordPermutation& a_rotation) const;
+        void copyTo(
+                BoxData<T, C, MEM, D, E>&   a_dst,
+                const CoordPermutation& a_rotation) const;
        
         /// Rotate Coordinates
         /**
@@ -562,7 +564,9 @@ namespace Proto
          * \param a_box         Rotated domain. Must have the same number of points as the current one
          * \param a_rotation    Permutation from current to desired coordinates
         */
-        void rotate(Box a_box, const CoordPermutation& a_rotation);
+        void rotate(
+                Box a_box,
+                const CoordPermutation& a_rotation);
         ///@}
 
         ///////////////////////////////////////////////////////////////////////////////////////

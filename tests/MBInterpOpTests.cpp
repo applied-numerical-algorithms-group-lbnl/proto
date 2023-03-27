@@ -6,13 +6,13 @@
 #define NCOMP 1
 
 using namespace Proto;
-#if 0
+#if 1
 TEST(MBPointInterpOp, RigidXPoint) {
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{1,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -26,7 +26,7 @@ TEST(MBPointInterpOp, RigidXPoint) {
         }
     }
     
-    constexpr int N = 4;
+    constexpr int N = 3;
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
@@ -48,7 +48,6 @@ TEST(MBPointInterpOp, RigidXPoint) {
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
 
         hostSrc.initConvolve(f_polyM, map, exp, offset);
-
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
@@ -113,7 +112,7 @@ TEST(MBPointInterpOp, Shear) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{1,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -127,11 +126,12 @@ TEST(MBPointInterpOp, Shear) {
         }
     }
 
-    constexpr int N = 1;
+    constexpr int N = 3;
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
         auto domain = buildShear(domainSize);
+        //auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -142,6 +142,7 @@ TEST(MBPointInterpOp, Shear) {
 
         // initialize map
         MBMap<ShearMap_t> map(ShearMap, layout, ghost, boundGhost);
+        //MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
 
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
