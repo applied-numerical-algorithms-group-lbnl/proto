@@ -5,7 +5,9 @@
 using namespace Proto;
 
 TEST(StencilLib, CornersToCells) {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     auto S = Stencil<double>::CornersToCells(4);
 
     int boxSize = 64;
@@ -28,8 +30,10 @@ TEST(StencilLib, CornersToCells) {
         dstData.copyTo(errData);
         errData -= slnData;
 
+#ifdef PR_HDF5
         h5.writePatch(dx, errData, "C2C_ERR_%i", nn);
         h5.writePatch(dx, srcData, "C2C_SRC_%i", nn);
+#endif
 
         err[nn] = errData.absMax();
         boxSize *= 2;
