@@ -75,6 +75,7 @@ void f_consToPrim_(
     }
 
     a_W(NUMCOMPS-1) = (a_U(NUMCOMPS-1) - .5 * rho * v2) * (a_gamma - 1.0);
+    
 }
 PROTO_KERNEL_END(f_consToPrim_, f_consToPrim)
 
@@ -152,6 +153,10 @@ void f_getFlux_(
 
     a_F(a_dir+1) += a_W(NUMCOMPS-1);
     a_F(NUMCOMPS-1) = gamma/(gamma - 1.0) * a_W(a_dir+1) * a_W(NUMCOMPS-1) + 0.5 * F0 * W2;
+    for (int c = 0 ; c < NUMCOMPS; c++)
+      {
+        a_F(c) = -a_F(c);
+      }
 }
 PROTO_KERNEL_END(f_getFlux_, f_getFlux)
 
@@ -267,7 +272,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             computeFlux(a_fluxes[dir], W_ave, dir);
             a_Rhs += m_divergence[dir](a_fluxes[dir]);
         }
-        a_Rhs *= (-1.0*a_scale / dx); //Assuming isotropic grid spacing
+        a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
     }
   static inline void generateTags(
                                   TagData& a_tags,
