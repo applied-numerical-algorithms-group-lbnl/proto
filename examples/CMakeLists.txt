@@ -1,3 +1,4 @@
+blt_add_executable(NAME repro SOURCES repro.cpp DEPENDS_ON ${LIB_DEP} kokkos Headers_AMR common)
 add_subdirectory(_common)
 add_subdirectory(LevelMultigrid)
 add_subdirectory(LevelEuler)

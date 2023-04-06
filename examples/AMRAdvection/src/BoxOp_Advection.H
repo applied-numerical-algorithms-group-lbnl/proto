@@ -17,7 +17,6 @@ f_thresholdF(
   if (a_U(0) > thresh) {a_tags(0) = 1;}
   else {a_tags(0) = 0;};
 };
-
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
@@ -61,12 +60,35 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
         }
         a_flux |= interp(a_state, -vel);
     }
-    
+
     static inline void generateTags(
-            TagData& a_tags,
-            BoxData<T, NUMCOMPS>& a_state)
+            TagData& a_tags, // BoxData<short,1>
+            BoxData<T, NUMCOMPS>& a_state) {
+      forallInPlace(f_threshold, a_tags, a_state);
+    }
+
+    struct Advection_helper {
+      Kokkos::View<short**> tags;
+      Kokkos::View<T**> state;
+
+      Advection_helper(short* tags_ptr, T* state_ptr, const Box box) : 
+        tags(tags_ptr, box.size(0), box.size(1)), state(state_ptr, box.size(0), box.size(1)) {}
+
+      KOKKOS_INLINE_FUNCTION
+      void operator()(const int64_t i, const int64_t j) const {
+          double thresh = .0001;
+          if (state(i,j) > thresh) {tags(i,j) = 1;}
+          else {tags(i,j) = 0;}
+      }
+    };
+
+    static inline void kokkos_generateTags(
+            TagData& a_tags, // BoxData<short,1>
+            BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1
     {
-        forallInPlace(f_threshold, a_tags, a_state);
+        Box box = a_state.box();
+        Kokkos::parallel_for("threshold", Kokkos::MDRangePolicy<Kokkos::Rank<2>>(
+            {0,0}, {box.size(0),box.size(1)}), Advection_helper(a_tags.data(), a_state.data(), box));
     }
 };
 #endif //end include guard

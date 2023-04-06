@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include "Proto.H"
+#include "Kokkos_Core.hpp"
 #include "BoxOp_Advection.H"
 #include "AMRRK4.H"
 #include "InputParser.H"
@@ -67,6 +68,8 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Init(&argc,&argv);
 #endif
+  Kokkos::initialize(argc, argv);
+  {
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
@@ -151,9 +154,14 @@ int main(int argc, char** argv)
                 LevelBoxData<double, NUMCOMPS> initData(grid[lvl], Point::Zeros());
                 Operator::initConvolve(initData, f_advectionExact, dxLevel, t0);
                 LevelTagData tags(grid[lvl], bufferSize);
+                LevelTagData kokkos_tags(grid[lvl], bufferSize);
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
                   {
                     OP::generateTags(tags[*iter], initData[*iter]);
+                  }
+                for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
+                  {
+                    OP::kokkos_generateTags(kokkos_tags[*iter], initData[*iter]);
                   }
                 AMRGrid::buffer(tags, bufferSize);
                 grid.regrid(tags, lvl);
@@ -278,6 +286,8 @@ int main(int argc, char** argv)
           }
       }
     PR_TIMER_REPORT();
+    }
+    Kokkos::finalize();
 #ifdef PR_MPI
     MPI_Finalize();
 #endif

@@ -306,7 +306,8 @@ namespace Proto
       \tparam C (Optional) Size of first component axis. Defaults to 1. 
       \tparam D (Optional) Size of second component axis. Defaults to 1. 
       \tparam E (Optional) Size of third component axis. Defaults to 1.
-      \tparam MEM (Optional) Where memory is allocated (device or host). Defaults to host.
+      \tparam MEM (Optional) Where memory is allocated (device or host). 
+          Default depends on how Proto is configured.
       */
     template <class T=double, unsigned int C=1,
     MemType MEM=MEMTYPE_DEFAULT,
