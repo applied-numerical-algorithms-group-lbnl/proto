@@ -73,6 +73,7 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
             BoxData<T, NUMCOMPS>& a_state) {
       forallInPlace(f_threshold, a_tags, a_state);
     }
+
     static inline void kokkos_generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1

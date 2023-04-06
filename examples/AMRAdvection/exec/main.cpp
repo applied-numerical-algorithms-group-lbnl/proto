@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include "Proto.H"
+#include "Kokkos_Core.hpp"
 #include "BoxOp_Advection.H"
 #include "AMRRK4.H"
 #include "InputParser.H"
