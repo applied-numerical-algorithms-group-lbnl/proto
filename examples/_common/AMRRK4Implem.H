@@ -448,11 +448,6 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
           PR_TIMERS("AMRRK4::stageUpdate apply operator");
           op(kStage, fluxes, UStage_i);
         }
-        for (int dir = 0; dir < DIM ;dir++)
-        {
-          //BoxData<T> flux_d = slice(Fluxes[iter], dir);
-          //fluxes[dir].copyTo(flux_d);
-        }
 
         // do stage update
         {
