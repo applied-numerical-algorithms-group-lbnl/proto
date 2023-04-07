@@ -15,7 +15,6 @@
 #include "mpi.h"
 #endif
 
-using namespace std;
 namespace Proto
 {
 #ifdef PR_MPI
