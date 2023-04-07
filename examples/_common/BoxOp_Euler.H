@@ -244,7 +244,17 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         Vector W_ave = Operator::_convolve(W, W_bar);
         computeFlux(a_flux, W_ave, a_dir);
     }
-    
+    // Apply BCs by filling ghost cells in stage values. For Euler, this is done by calling
+    // exchange. For the MHD code, it will be more complicated.
+    // The interface is very provisional. We expect it to evolve as we d more real problems.
+    inline void bcStage(
+                        LevelBoxData<T,NUMCOMPS>& a_UStage,
+                        const LevelBoxData<T,NUMCOMPS>& a_U0,
+                        int a_stage)
+    {
+      a_UStage.exchange();
+    }                 
+    inline 
     // Apply Operator
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_Rhs,
