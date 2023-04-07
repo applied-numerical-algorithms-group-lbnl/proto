@@ -38,6 +38,8 @@ namespace Proto
 
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+            template<typename T, unsigned int C, MemType MEM, Centering CTR>
+            inline BoxData<T, C, MEM>& srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
         private:
             int  block;
             bool m_inBoundary;

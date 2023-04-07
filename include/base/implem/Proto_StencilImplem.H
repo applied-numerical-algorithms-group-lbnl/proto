@@ -718,87 +718,95 @@ struct sIndexer3 {
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
 void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
-                           BoxData<T,C,MemType::HOST,D,E>&        a_dest,
-                           const Box&               a_box,
-                           bool                     a_initToZero,
-                           T                        a_scale) const                      
+        BoxData<T,C,MemType::HOST,D,E>&        a_dest,
+        const Box&               a_box,
+        bool                     a_initToZero,
+        T                        a_scale) const                      
 {
-/**/
-  PR_TIME("Stencil::hostApply");
-  if (m_coefs.size() == 0){return;}
-   
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-  if (a_initToZero)
-  {
-      for (int ee = 0; ee < E; ee++)
-      for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-      for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-      {
-          Point pt = (*iter)*m_destRefratio + m_destShift;
-          T* val = a_dest.data(pt,cc,dd,ee);
-          for (int ii = 0; ii < npencil; ii++)
-          {
-              val[ii*m_destRefratio[0]] = 0;
-          }
-      }
-  }
-    
-  // if a_scale is 0, nothing left to do...
-  if (a_scale == 0){return;}
-    
-  // ...otherwise make a copy of m_coefs and multiply by a_scale
-  std::vector<T> coefs = m_coefs;
-  if (a_scale != 1)
-  {
-      for (int ii = 0; ii < this->size(); ii++)
-      {
-          coefs[ii] *= a_scale;
-      }
-  }
+    /**/
+    PR_TIME("Stencil::hostApply");
+    if (m_coefs.size() == 0){return;}
 
-  // convert Points in m_offsets to linear offsets in a_src's data
-  int offsetFactor[DIM];
-  offsetFactor[0] = 1;
-  for (int ii = 1; ii < DIM; ii++)
-  {
-      offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
-  }
-  std::vector<int> offsets;
-  offsets.resize(this->size());
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-      offsets[ii] = 0;
-      for (int dir = 0; dir < DIM; dir++)
-      {
-          offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
-      }
-  }
+    Box cross = a_box.flatten(0);
+    int npencil = a_box.size(0);
+    if (a_initToZero)
+    {
+        PR_TIME("Stencil::hostApply::initToZero");
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+        {
+            Point pt = (*iter)*m_destRefratio + m_destShift;
+            T* val = a_dest.data(pt,cc,dd,ee);
+            for (int ii = 0; ii < npencil; ii++)
+            {
+                val[ii*m_destRefratio[0]] = 0;
+            }
+        }
+    }
 
-  // apply the stencil
-  
-    //PR_TIMERS("hostApply::applyStencil");
-  for (int ee = 0; ee < E; ee++)
-  for (int dd = 0; dd < D; dd++)
-  for (int cc = 0; cc < C; cc++)
-  {    
-      for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-      {
-          for (int jj = 0; jj < this->size(); jj++)
-          {
-              Point dpt = (*iter)*m_destRefratio + m_destShift;
-              if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
-              Point spt = (*iter)*m_srcRefratio;
-              T* destVal = a_dest.data(dpt,cc,dd,ee);
-              const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
-              for (int ii = 0; ii < npencil; ii++)
-              {
-                  destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
-              }
-          }
-      }
-  }
+    // if a_scale is 0, nothing left to do...
+    if (a_scale == 0){return;}
+
+    // ...otherwise make a copy of m_coefs and multiply by a_scale
+    std::vector<T> coefs = m_coefs;
+    if (a_scale != 1)
+    {
+        PR_TIME("Stencil::hostApply::initToZero");
+        for (int ii = 0; ii < this->size(); ii++)
+        {
+            coefs[ii] *= a_scale;
+        }
+    }
+
+    // convert Points in m_offsets to linear offsets in a_src's data
+    int offsetFactor[DIM];
+    offsetFactor[0] = 1;
+    for (int ii = 1; ii < DIM; ii++)
+    {
+        offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
+    }
+
+    std::vector<int> offsets;
+    {
+        PR_TIME("Stencil::hostApply::linearizeOffsets");
+        offsets.resize(this->size());
+        for (int ii = 0; ii < this->size(); ii++)
+        {
+            offsets[ii] = 0;
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
+            }
+        }
+    }
+
+    // apply the stencil
+
+    {
+        PR_TIME("Stencil::hostApply::applyStencil");
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {    
+            for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+            {
+                Point dpt = (*iter)*m_destRefratio + m_destShift;
+                if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+                for (int jj = 0; jj < this->size(); jj++)
+                {
+                    Point spt = (*iter)*m_srcRefratio;
+                    T* destVal = a_dest.data(dpt,cc,dd,ee);
+                    const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
+                    for (int ii = 0; ii < npencil; ii++)
+                    {
+                        destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
+                    }
+                }
+            }
+        }
+    }
 }
 
 template <typename T>

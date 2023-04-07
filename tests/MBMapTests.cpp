@@ -164,7 +164,6 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
     return success;
 }
 #endif
-#if 0
 TEST(MBMap, Identity) {
     HDF5Handler h5;
     int domainSize = 8;
@@ -259,6 +258,25 @@ TEST(MBMap, CubeSphere) {
 
     EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
 }
+TEST(MBMap, ThinCubeSphere) {
+    constexpr int C = 1;
+    HDF5Handler h5;
+    int domainSize = 32;
+    int boxSize = 16;
+    auto domain = buildThinCubeSphere(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    MBMap<CubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
+
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
+    h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
+
+    EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
+}
 #endif
 
 TEST(MBMap, InitializeWithMap)
@@ -323,7 +341,6 @@ TEST(MBMap, AnalyticOps) {
         }
     }
 }
-#endif
 TEST(MBMap, AnalyticOps2) {
     int domainSize = 8;
     int boxSize = 8;

@@ -917,7 +917,7 @@ Matrix<T>::print(std::string a_format) const
         switch (blisDatatype())
         {
             case BLIS_DOUBLE:
-                bli_printm("", &(A.m_object), "%4.2f", "");
+                bli_printm("", &(A.m_object), "%8.2f", "");
                 break;
             default:
                 bli_printm("", &(A.m_object), "%i", "");
@@ -933,7 +933,14 @@ Matrix<T>::print(std::string a_format) const
         Proto::pout() << std::endl;
         for (int jj = 0; jj < N(); jj++)
         {
-            Proto::pout() << setw(10) << get(ii,jj);
+            char buffer[50];
+            if (a_format == "")
+            {
+                std::sprintf(buffer, "%4.2f", get(ii,jj));
+            } else {
+                std::sprintf(buffer, a_format.c_str(), get(ii,jj));
+            }
+            Proto::pout() << buffer;
             if (jj != N()-1) {Proto::pout() << ", "; }
         }
     }

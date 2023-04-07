@@ -180,9 +180,9 @@ MBMap<Func, MEM>::operator()(
     {
         domainBox0 = domain.convert(domainBox, a_domainBlock, a_computeBlock, a_ctr);
     }
-    
-#if PR_VERBOSE == 2
-    pout() << "MBMap::operator(): Computing X on box: " << domainBox << " in block " << a_computeBlock << std::endl;
+     
+#if PR_VERBOSE == 3
+    //pout() << "MBMap::operator(): Computing X on box: " << domainBox0 << " (converted from " << domainBox << ") in block " << a_computeBlock << std::endl;
 #endif
 
     BoxData<double, DIM> xLocal(domainBox0);

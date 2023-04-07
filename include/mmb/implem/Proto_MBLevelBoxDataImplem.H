@@ -592,10 +592,35 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     }
 
     auto domainBoundaryDirs = this->onDomainBoundary(a_center, a_index);
+    bool nearBoundary = false;
+    if (domainBoundaryDirs.size() > 0 )
+    {
+        nearBoundary = true;
+#if PR_VERBOSE == 5
+
+        pout() << "Processing a point near the domain boundary: " << a_center << std::endl;
+        pout() << "Initial footprint: " << std::endl;
+        for (auto pi : a_footprint)
+        {
+            pout() << pi << ", ";
+        }
+        pout() << std::endl;
+#endif
+    } 
     for (auto dir : domainBoundaryDirs)
     {
         Point contractDirs = Point::Ones() - dir.abs();
-        Box extendDomain = spanBox.grow(-contractDirs).shift(-extendDomain.low()*dir.abs());
+        Box extendDomain = spanBox.grow(-contractDirs);
+        while (extendDomain.contains(dir))
+        {
+            extendDomain = extendDomain.shift(-dir);
+        }
+#if PR_VERBOSE == 5
+        pout() << "boundary dir: " << dir << std::endl;
+        pout() << "contract dirs: " << contractDirs << std::endl;
+        pout() << "span box: " << spanBox << std::endl;
+        pout() << "extend domain: " << extendDomain << std::endl;
+#endif
         for (auto fi : a_footprint)
         {
             if (extendDomain.contains(contractDirs*fi))
@@ -634,6 +659,17 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     }
 
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
+#if PR_VERBOSE == 5
+    if (nearBoundary)
+    {
+        pout() << "Final footprint: " << std::endl;
+        for (auto fi : footprint_v)
+        {
+            pout() << fi.point - a_center << ", ";
+        }
+        pout() << std::endl;
+    }
+#endif
     return footprint_v;
 }
 
@@ -1162,6 +1198,17 @@ BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) c
     {
         auto& boundData = a_data.bound(index, boundaryDir, block);
         return *boundData.localData;
+    } else {
+        return a_data[index];
+    }
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
+{
+    if (m_inBoundary)
+    {
+        auto& boundData = a_data.bound(index, boundaryDir, block);
+        return *boundData.adjData;
     } else {
         return a_data[index];
     }

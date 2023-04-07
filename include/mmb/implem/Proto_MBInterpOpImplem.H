@@ -63,7 +63,7 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    Rg = 1.0; // temporary for debugging 
+    //Rg = 1.0; // temporary for debugging 
     
     // Compute Matrices
     m_C.define(M,N);
@@ -80,15 +80,16 @@ MBPointInterpOp::MBPointInterpOp(
         Box xSrcBox = C2C.domain(srcBox);
         // compute X at corners analytically on srcBox
         auto xi = a_map(xSrcBox, srcBlock, dstBlock, PR_NODE);
+        // get cached J data from relevant patch
+        auto& Ji = src.patch(a_map.jacobian());
 #if PR_VERBOSE == 2
         pout() << "SRC_POINT: " << src.point << std::endl;
         pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
         pout() << "X: " << std::endl;
         xi.printData();
+        pout() << "J: " << std::endl;
+        Ji.printData();
 #endif
-        // get cached J data from relevant patch
-        auto& Ji = src.patch(a_map.jacobian());
-    
         // subtract xg
         xi -= xg;
         // divide by Rg
@@ -107,14 +108,28 @@ MBPointInterpOp::MBPointInterpOp(
                 "MBPointInterpOp::constructor | Error: Box inference error.");
             PROTO_ASSERT(Jx.box().contains(src.point),
                 "MBPointInterpOp::constructor | Error: Box inference error.");
-            //m_C(ii,jj) = Jx(src.point);
-            m_C(ii,jj) = xi_p_avg(src.point);
+            m_C(ii,jj) = Jx(src.point);
+            //m_C(ii,jj) = xi_p_avg(src.point);
         }
     }
 
-#if PR_VERBOSE == 2
-    pout() << "C MATRIX" << std::endl;
-    m_C.print("%4.4f");
+#if PR_VERBOSE == 3
+    auto condNum = m_C.conditionNumber();
+    if (1.0/condNum < 1e-10)
+    {
+        pout() << "C Matrix has questionable conditioning: " << std::endl;
+        pout() << "\tDST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
+        pout() << "\t1/CN: " << 1.0/condNum << std::endl;
+        m_C.print("%10.2e");
+        pout() << "Source points: " << std::endl;
+        for (auto si : m_srcs)
+        {
+            pout() << si.point << ", ";
+        }
+        pout() << std::endl;
+    }
+    //pout() << "C MATRIX" << std::endl;
+    //m_C.print("%10.2e");
 #endif
     m_D.define(1,N);
 
@@ -133,12 +148,12 @@ MBPointInterpOp::MBPointInterpOp(
         auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
         PROTO_ASSERT(Jx.box().contains(a_dst.point),
             "MBPointInterpOp::constructor | Error: Box inference error.");
-        //m_D(0,jj) = Jx(a_dst.point);
-        m_D(0,jj) = xi_p_avg(a_dst.point);
+        m_D(0,jj) = Jx(a_dst.point);
+        //m_D(0,jj) = xi_p_avg(a_dst.point);
     }
 #if PR_VERBOSE == 2
     pout() << "D MATRIX" << std::endl;
-    m_D.print("%4.4f");
+    m_D.print("%10.2e");
 #endif
 
     // Compute "Stencil"
@@ -153,6 +168,10 @@ MBPointInterpOp::MBPointInterpOp(
             m_coefs[ii] = m_S(0,ii);
         }
     }
+#if PR_VERBOSE == 2
+    pout() << "S MATRIX" << std::endl;
+    m_S.print("%4.4f");
+#endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -169,6 +188,15 @@ void MBPointInterpOp::apply(
         {
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
+#if PR_VERBOSE == 4
+            if (std::abs(dst(cc)) > 1e5)
+            {
+                pout() << "DST_POINT: " << m_dst.point << " | BLOCK: " << m_dst.dstBlock() << std::endl;
+                pout() << "SRC_POINT: " << m_srcs[ii].point << " | VALUE: " << src(cc) << std::endl;
+                pout() << "COEF: " << m_coefs[ii] << std::endl;
+                pout() << "OUTPUT: " << dst(cc) << std::endl;
+            }
+#endif
         }
     }
 }
