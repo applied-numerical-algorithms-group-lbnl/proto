@@ -609,7 +609,13 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     } 
     for (auto dir : domainBoundaryDirs)
     {
-        Point contractDirs = Point::Ones() - dir.abs();
+        Point absDir = dir.abs();
+        // if the span in direction dir is size 1, assume that the stencil is not meant to be extended
+        if (spanBox.low()*absDir == spanBox.high()*absDir)
+        {
+            continue;
+        }
+        Point contractDirs = Point::Ones() - absDir;
         Box extendDomain = spanBox.grow(-contractDirs);
         while (extendDomain.contains(dir))
         {

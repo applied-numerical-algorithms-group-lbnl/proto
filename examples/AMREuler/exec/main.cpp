@@ -4,7 +4,7 @@
 #include "BoxOp_Euler.H"
 #include "AMRRK4.H"
 #include "InputParser.H"
-#include "Lambdas.H"
+//#include "Lambdas.H"
 using namespace Proto;
 
 int TIME_STEP = 0;
@@ -107,11 +107,11 @@ using Proto::pout;
             boxSize = domainSize;
           }
         PR_TIMER_SETFILE(to_string(domainSize) 
-                         + ".DIM=" + to_string(DIM) + ".numProc=" + to_string(numProc())
+                         + "_DIM" + to_string(DIM) + "_NProc" + to_string(numProc())
                          + "AMREuler.time.table");
 
         ofstream sizeout(to_string(domainSize) 
-                         + ".DIM=" + to_string(DIM) + ".numProc=" + to_string(numProc())
+                         + "_DIM" + to_string(DIM) + "_NProc" + to_string(numProc())
                          + "HWM.curve");
         Point boxSizeVect = Point::Ones(boxSize);
         Box domainBox = Box::Cube(domainSize);
@@ -161,13 +161,12 @@ using Proto::pout;
             sum0[c] = U.integrate(dx[0],c);
           }
         auto l1Soln = U.integrateAbs(dx[0]);
-        //pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
         double time = t0;
 #ifdef PR_HDF5
         h5.setTime(time);
         h5.setTimestep(dt);
-        h5.writeAMRData(dx, U, "U_"+to_string(domainSize)+"_N0");
+        h5.writeAMRData(dx, U, "AMREuler_U_"+to_string(domainSize)+"_N0");
 #endif
         {      
           struct rusage usage;
@@ -220,7 +219,7 @@ using Proto::pout;
                       "  |  number of Boxes: " << numBoxes << std::endl;
                   }
 #ifdef PR_HDF5             
-                h5.writeAMRData(dx, U, "U_"+to_string(domainSize)+"_N"+to_string(k+1));
+                h5.writeAMRData(dx, U, "AMREuler_U_"+to_string(domainSize)+"_N"+to_string(k+1));
 #endif
               }        
           }

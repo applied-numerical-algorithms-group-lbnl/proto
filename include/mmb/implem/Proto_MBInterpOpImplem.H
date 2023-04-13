@@ -29,7 +29,10 @@ MBPointInterpOp::MBPointInterpOp(
 
 #if PR_VERBOSE == 2
     pout() << "SRC_POINTS: ";
-    for (auto si : m_srcs) { pout() << si.point << ", "; }
+    for (auto si : m_srcs)
+    {
+        pout() << "\tpoint: " << si.point << " | block: " << si.srcBlock() << std::endl;
+    }
     pout() << std::endl;
 #endif
     // References
@@ -82,7 +85,7 @@ MBPointInterpOp::MBPointInterpOp(
         auto xi = a_map(xSrcBox, srcBlock, dstBlock, PR_NODE);
         // get cached J data from relevant patch
         auto& Ji = src.patch(a_map.jacobian());
-#if PR_VERBOSE == 2
+#if PR_VERBOSE == 3
         pout() << "SRC_POINT: " << src.point << std::endl;
         pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
         pout() << "X: " << std::endl;
@@ -151,7 +154,7 @@ MBPointInterpOp::MBPointInterpOp(
         m_D(0,jj) = Jx(a_dst.point);
         //m_D(0,jj) = xi_p_avg(a_dst.point);
     }
-#if PR_VERBOSE == 2
+#if PR_VERBOSE == 3
     pout() << "D MATRIX" << std::endl;
     m_D.print("%10.2e");
 #endif
@@ -168,7 +171,7 @@ MBPointInterpOp::MBPointInterpOp(
             m_coefs[ii] = m_S(0,ii);
         }
     }
-#if PR_VERBOSE == 2
+#if PR_VERBOSE == 3
     pout() << "S MATRIX" << std::endl;
     m_S.print("%4.4f");
 #endif

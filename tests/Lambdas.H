@@ -6,7 +6,7 @@
 #define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
-#define CUBED_SPHERE_R1 2.0
+#define CUBED_SPHERE_R1 1.1
 #define SHEAR_SLOPE 1.0
 using namespace Proto;
 
@@ -94,7 +94,7 @@ void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
 }
 PROTO_KERNEL_END(f_TestMapF, f_TestMap);
 
-MBProblemDomain buildRing(int a_domainSize)
+MBProblemDomain buildRing(Point a_domainSize)
 {
     MBProblemDomain domain(4);
     CoordPermutation I;
@@ -105,7 +105,7 @@ MBProblemDomain buildRing(int a_domainSize)
     domain.graph().fixRotations();
     for (int bi = 0; bi < 4; bi++)
     {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
+        domain.defineDomain(bi, a_domainSize);
     }
     return domain;
 }
@@ -141,12 +141,12 @@ MBProblemDomain buildCubeSphere(int a_domainSize)
 #endif
 
 #if DIM > 2
-MBProblemDomain buildThinCubeSphere(int a_domainSize)
+MBProblemDomain buildThinCubeSphere(int a_domainSize, int a_thickness = 1)
 {
     MBProblemDomain domain(6);
     auto CCWX = CoordPermutation::ccw(0);
     auto CWX = CoordPermutation::cw(0);
-    CoordPermutation RNorth, RSouth;
+    CoordPermutation RNorth, RSouth, RI;
     Point x = Point::X();
     Point y = Point::Y();
     Point z = Point::Z();
@@ -155,15 +155,32 @@ MBProblemDomain buildThinCubeSphere(int a_domainSize)
         int srcBlock = bi;
         int dstBlock = bi+1;
         if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, y, R_I);
+        domain.defineBoundary(srcBlock, dstBlock, y, RI);
         domain.defineBoundary(srcBlock, 1, z, RNorth);
         domain.defineBoundary(srcBlock, 0, -z, RSouth);
         RNorth = RNorth*CWX;
         RSouth = RSouth*CCWX;
     }
     domain.graph().fixRotations();
-    Point domainSize(1, a_domainSize, a_domainSize);
+    Point domainSize(a_thickness, a_domainSize, a_domainSize);
     for (int bi = 0; bi < 6; bi++)
+    {
+        domain.defineDomain(bi, domainSize);
+    }
+    return domain;
+}
+MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
+{
+    MBProblemDomain domain(4);
+   
+    CoordPermutation I;
+    for (int bi = 0; bi < 4; bi++)
+    {
+        domain.defineBoundary(bi, (bi+1)%4, Point::Y(), I);
+    }
+    domain.graph().fixRotations();
+    Point domainSize(a_thickness, a_domainSize, a_domainSize);
+    for (int bi = 0; bi < 4; bi++)
     {
         domain.defineDomain(bi, domainSize);
     }
@@ -411,6 +428,21 @@ PROTO_MAP_START(CubedSphereMap)
     }
 PROTO_MAP_END(CubedSphereMap)
 
+PROTO_MAP_START(MHDMap)
+    double r0 = 0.2;
+    double r1 = 1.2;
+    double c = 1.0;
+
+    double rt = (r1 - r0)/(exp(c)-1.0);
+    double R = r0 + rt*(exp(c*X) - 1.0);
+    double xi2 = M_PI/2.0*(block + Y); //theta
+    double xi3 = M_PI/4.0 + (M_PI/2.0*Z); //phi
+
+    x = R*cos(xi2)*sin(xi3);
+    y = R*sin(xi2)*sin(xi3);
+    z = R*cos(xi3);
+PROTO_MAP_END(MHDMap)
+
 PROTO_MAP_START(ThinCubedSphereMap)
     double r0 = CUBED_SPHERE_R0;
     double r1 = CUBED_SPHERE_R1;
@@ -464,7 +496,7 @@ PROTO_MAP_START(ThinCubedSphereMap)
             z = 0;
             break;
     }
-PROTO_MAP_END(CubedSphereMap)
+PROTO_MAP_END(ThinCubedSphereMap)
 
 #endif
 
