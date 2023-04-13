@@ -62,9 +62,9 @@ int main(int argc, char** argv)
 using Proto::pout; 
     typedef BoxOp_Euler<double> OP;
 
-    int domainSize = 32;
-    int boxSize = 32;
-    int refRatio = 4;
+    int domainSize = 64;
+    int boxSize = 64;
+    int refRatio = 2;
     int maxTimesteps = 4096;
     int numLevels = 1;
     int regridBufferSize = 1;

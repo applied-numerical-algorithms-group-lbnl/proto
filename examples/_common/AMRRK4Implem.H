@@ -427,7 +427,8 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     T dtStageNext = a_dt*m_stageTimes[a_stage+1];
     T stageWeight = m_stageWeights[a_stage];
     T dtWeight    = a_dt*m_stageWeights[a_stage];   
-    UStage.exchange();   
+    op.bcStage(UStage,U0,a_stage);
+    
     for (auto iter : layout)
     {
         // get data

@@ -35,6 +35,17 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
     inline BoxOp_Advection(Array<T, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
 
     //inline T spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
+  
+    // Apply BCs by filling ghost cells in stage values. For Euler, this is done by calling
+    // exchange. For the MHD code, it will be more complicated.
+    // The interface is very provisional. We expect it to evolve as we d more real problems.
+    inline void bcStage(
+                        LevelBoxData<T,NUMCOMPS>& a_UStage,
+                        const LevelBoxData<T,NUMCOMPS>& a_U0,
+                        int a_stage)
+    {
+      a_UStage.exchange();
+    }
     inline void flux(
             BoxData<T, NUMCOMPS>& a_flux,
             const BoxData<T, NUMCOMPS>& a_state,
