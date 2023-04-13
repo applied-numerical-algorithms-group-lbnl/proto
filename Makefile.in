@@ -1,5 +1,5 @@
 
-SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
+SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../_common/*.cpp) 
 NODIRSRC = $(notdir $(SRC))
 NODIROBJ = $(subst .cpp,.o,$(NODIRSRC))
 OBJ=$(patsubst %.o,o/%.o, $(NODIROBJ))
@@ -7,10 +7,10 @@ OBJ=$(patsubst %.o,o/%.o, $(NODIROBJ))
 NODIRDEP = $(subst .cpp,.d,$(NODIRSRC))
 DEPENDS=$(patsubst %.d,d/%.d, $(NODIRDEP))
 
-VPATH=o. ../src  ../../common
+VPATH=o. ../src  ../../_common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/EBProto/include -I. -I../src -I../../_common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
 
 LIBS += $(LAPACK_LIB)
@@ -19,9 +19,10 @@ ifdef HDF5_LIB
 LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
 CPPFLAGS+= -I$(HDF5_INC)
 endif
+
 ifdef OLCF_HDF5_ROOT
-LIBS+= -L$(OLCF_HDF5_ROOT) -lhdf5 -lz
-CPPFLAGS+= -I$(OLCF_HDF5_ROOT)
+LIBS+= -L$(OLCF_HDF5_ROOT)/lib -lhdf5 -lz
+CPPFLAGS+= -I$(OLCF_HDF5_ROOT)/include
 endif
 
 ifdef FFTW3_DIR
@@ -36,9 +37,9 @@ LIBS+= -lnvToolsExt
 endif
 
 ifeq ($(DEPXX),hipcc)
-CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer
+CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer -I${MPICH_DIR}/include
 CXXFLAGS+=--amdgpu-target=gfx906 -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
-LIBS+= -L/$(ROCM_PATH)/lib/
+LIBS+= -L/$(ROCM_PATH)/lib/ -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 LIBS+= -lroctx64
 endif
 
@@ -79,10 +80,10 @@ vars:
 	$(foreach v,$(filter-out $(VARS_OLD) VARS_OLD,$(.VARIABLES)), $(info $(v) = $($(v))))
 
 clean:
-	rm -rf d o *.o *.exe *.d ../../common/*.o ../src/*.o ../../common/*.d ../src/*.d
+	rm -rf d o *.o *.exe *.d ../../_common/*.o ../src/*.o ../../common/*.d ../src/*.d
 
 dataclean:
-	rm -rf *.hdf5 *.vtk *.table
+	rm -rf *.hdf5 *.vtk *.table pout*
 
 
 

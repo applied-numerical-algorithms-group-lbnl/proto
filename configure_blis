@@ -1,0 +1,19 @@
+#!/bin/bash
+cd ./blis
+if [ ! -d "./include" ]
+then
+    if [ $# -eq 0 ]
+    then
+        ./configure auto
+    else
+        ./configure $1
+    fi
+fi
+
+dir=$(ls -A "./include")
+
+if [ -z "$(ls -A "./include/$dir")" ]
+then
+    make -j  
+fi
+cd ..

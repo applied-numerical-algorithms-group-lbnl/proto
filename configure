@@ -3,6 +3,9 @@ from argparse import *
 import os
 import glob
 import platform
+import subprocess
+
+home=os.path.expanduser('~')
 
 parser = ArgumentParser()
 default_compiler='g++'
@@ -13,24 +16,35 @@ if platform.machine()=='ppc64le':
 
 hdf5_lib_parallel = [
     '/usr/lib/x86_64-linux-gnu/hdf5/openmpi',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    os.path.expandvars('$OLCF_HDF5_ROOT') + '/lib',
+    home + '/hdf5_parallel/lib'
 ]
+print(hdf5_lib_parallel)
 hdf5_inc_parallel = [
     '/usr/include/hdf5/openmpi',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    os.path.expandvars('$OLCF_HDF5_ROOT') + '/include',
+    home + '/hdf5_parallel/include'
 ]
 hdf5_lib_serial = [
     '/usr/lib/x86_64-linux-gnu/hdf5/serial',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    home + '/hdf5/lib'
 ]
 hdf5_inc_serial = [
     '/usr/include/hdf5/serial',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    home + '/hdf5/include'
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
 parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc','CC'], default=default_compiler)
-parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
+parser.add_argument('--dim', type=int, help='dimensionality to build executables [3]',default='3')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
                     action="store_true",default=False)
@@ -38,6 +52,8 @@ parser.add_argument('--memtrack', help="print the amount of data allocated per p
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--mpi', help='force compilation using MPI', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--amr', help='compile with AMR libraries', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--mmb', help='compile with MMB libraries', choices=['TRUE', 'FALSE'], default='FALSE')
 parser.add_argument('--stack', help='define how many GB to allocate to the stack', choices=['1GB', '2GB', '4GB'], default='4GB')
 args = parser.parse_args()
 
@@ -55,7 +71,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['FluxRegister','interpolation', 'meshRefine', 'laplacian','testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'spiralPointRelax']
+targets=['FluxRegister','interpolation', 'LevelEuler', 'meshRefine', 'laplacian','testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'spiralPointRelax']
 
 top = os.getcwd()
 
@@ -76,7 +92,8 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     use_mpi = (args.mpi == 'TRUE')
-    f.write('\nLAPACK_LIB=-lblas -llapack');
+    if args.cxx != 'CC' and args.cxx != 'hipcc':
+      f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':
@@ -87,13 +104,20 @@ for t in targets:
         f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
     if args.memtrack:
         f.write('\nCXXOPTFLAGS+=-DmemoryFootPrint')
+    if args.amr:
+        f.write('\nCXXOPTFLAGS+=-DPR_AMR')
+    if args.mmb:
+        f.write('\nCXXOPTFLAGS+=-DPR_MMB')
     if args.timers != 'TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda --expt-relaxed-constexpr')
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
+        f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_CUDA -arch=compute_70')
     if args.cxx == 'hipcc':
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
+       f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_HIP -I${MPICH_DIR}/include') 
+       f.write('\nLIBS+=-L${MPICH_DIR}/lib -lmpi')
+    if os.path.isdir(os.path.expandvars('$ROCM_COMPILER_PATH')):
+        f.write('\nCXXOPTFLAGS+= -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
     if args.cxx=='mpicxx':
       use_mpi = True
     if args.hdf5=='TRUE':

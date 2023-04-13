@@ -1,0 +1,197 @@
+.ci-runner:
+  tags:
+    - cori
+  variables:
+    SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
+    GIT_SUBMODULE_STRATEGY: normal
+
+.common_script: &label
+  - module swap PrgEnv-intel PrgEnv-gnu
+  - module load cmake
+  - module swap gcc gcc/8.3.0
+  - module load cray-hdf5
+  - export SLURM_CPU_BIND="cores"
+
+stages:
+  - build
+  - test
+
+configure_basic_host:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+    script:
+      - cmake -S . -B basic_host_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=OFF
+      - cmake --build basic_host_build --parallel
+    artifacts:
+      paths:
+        - basic_host_build/*
+
+configure_basic_mpi:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+      - module load cray-mpich
+      - module swap cray-hdf5 cray-hdf5-parallel
+      - export PE_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
+      - export PE_HDF5_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
+    script:
+      - cmake -S . -B basic_mpi_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=ON 
+      - cmake --build basic_mpi_build --parallel
+    artifacts:
+      paths:
+        - basic_mpi_build/*
+
+configure_basic_cuda:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+      - module load cgpu
+      - module load cuda
+    script:
+      - cmake -S . -B basic_cuda_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
+      - cmake --build basic_cuda_build --parallel
+    artifacts:
+      paths:
+        - basic_cuda_build/*
+
+host_basic_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_basic_host]
+    variables:
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
+    before_script:
+      - *label
+    script:
+      - cmake --build basic_host_build --target test
+
+mpi_basic_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_basic_mpi]
+    variables:
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
+    before_script:
+      - *label
+    script:
+      - srun basic_mpi_build/bin/BoxTests
+      - srun basic_mpi_build/bin/BoxDataTests
+      - srun basic_mpi_build/bin/ReductionTests
+      - srun basic_mpi_build/bin/ForallTests
+      - srun basic_mpi_build/bin/StencilTests
+        #      - srun basic_mpi_build/bin/InterpTests
+
+cuda_basic_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_basic_cuda]
+    tags: [cori-esslurm]
+    variables:
+        SLURM_CONF: /etc/esslurm/slurm.conf
+        SCHEDULER_PARAMETERS: "-M escori -q regular -N 1 -G 1 -C gpu"
+    before_script:
+      - *label
+      - module load cgpu
+      - module load cuda
+    script:
+      - cmake --build basic_cuda_build --target test
+
+configure_full_host:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+    script:
+      - cmake -S . -B full_host_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=OFF
+      - cmake --build full_host_build --parallel
+    artifacts:
+      paths:
+        - full_host_build/*
+
+configure_full_mpi:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+      - module load cray-mpich
+      - module swap cray-hdf5 cray-hdf5-parallel
+      - export PE_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
+      - export PE_HDF5_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
+    script:
+      - cmake -S . -B full_mpi_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=ON 
+      - cmake --build full_mpi_build --parallel
+    artifacts:
+      paths:
+        - full_mpi_build/*
+
+configure_full_cuda:
+    stage: build
+    extends:
+      - .ci-runner
+    before_script:
+      - *label
+      - module load cgpu
+      - module load cuda
+    script:
+      - cmake -S . -B full_cuda_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
+      - cmake --build full_cuda_build --parallel
+    artifacts:
+      paths:
+        - full_cuda_build/*
+
+host_full_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_full_host]
+    variables:
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
+    before_script:
+      - *label
+    script:
+      - cmake --build full_host_build --target test
+
+mpi_full_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_full_mpi]
+    variables:
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
+    before_script:
+      - *label
+    script:
+      - srun full_mpi_build/bin/BoxTests
+      - srun full_mpi_build/bin/BoxDataTests
+      - srun full_mpi_build/bin/ReductionTests
+      - srun full_mpi_build/bin/ForallTests
+      - srun full_mpi_build/bin/StencilTests
+        #      - srun full_mpi_build/bin/InterpTests
+
+cuda_full_execute:
+    stage: test
+    extends:
+      - .ci-runner
+    needs: [configure_full_cuda]
+    tags: [cori-esslurm]
+    variables:
+        SLURM_CONF: /etc/esslurm/slurm.conf
+        SCHEDULER_PARAMETERS: "-M escori -q regular -N 1 -G 1 -C gpu"
+    before_script:
+      - *label
+      - module load cgpu
+      - module load cuda
+    script:
+      - cmake --build full_cuda_build --target test

@@ -1,0 +1,6 @@
+[submodule "blt"]
+	path = blt
+	url = https://github.com/LLNL/blt.git
+[submodule "blis"]
+	path = blis
+	url = https://github.com/flame/blis.git
