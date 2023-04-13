@@ -20,6 +20,52 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
+    m_dst = a_dst;
+    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
+    // References
+    auto& layout = a_map.map().layout();
+    unsigned int dstBlock = a_dst.dstBlock();
+
+    // Compute exponents
+    m_exponents.clear();
+    for (auto bi : Box::Cube(a_order))
+    {
+        if (bi.sum() < a_order)
+        {
+            m_exponents.push_back(bi);
+        }
+    }
+    int N = m_exponents.size();
+    int M = m_srcs.size();
+
+    auto C2C = Stencil<double>::CornersToCells(4);
+    // Compute Moments
+    std::unordered_map<int, Box> srcBoxes;
+    
+    for (auto si : m_srcs)
+    {
+        int bi = si.srcBlock();
+        auto B = Box::Kernel(1).shift(si.point);
+        B = C2C.domain(B);
+        if (srcBoxes.find(si) == srcBoxes.end())
+        {
+            srcBoxes[si] = B; 
+        } else {
+            srcBoxes[si] &= B.low();
+            srcBoxes[si] &= B.high();
+        }
+    }
+
+}
+template<typename Func>
+MBPointInterpOp::MBPointInterpOp(
+        MBDataPoint a_dst,
+        Point a_ghost,
+        MBMap<Func>& a_map,
+        const std::vector<Point>& a_footprint,
+        unsigned int a_order)
+{
+    PR_TIME("MBPointInterpOp::constructor");
 #if PR_VERBOSE == 2
     pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
 #endif
