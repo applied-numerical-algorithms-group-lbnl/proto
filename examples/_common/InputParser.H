@@ -119,61 +119,61 @@ class InputArgs
     inline void print()
     {
         using Proto::pout;
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
+        pout() << std::setw(50) << std::setfill('=') << "=" << std::endl;
         pout() << "Input Arguments:" << std::endl;
-        pout() << setw(50) << setfill('-') << "-" << std::endl;
+        pout() << std::setw(50) << std::setfill('-') << "-" << std::endl;
         for (auto iter = stringArgs.begin(); iter != stringArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pout() << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+            pout() << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = boolArgs.begin(); iter != boolArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pout() << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+            pout() << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = intArgs.begin(); iter != intArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pout() << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+            pout() << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = doubleArgs.begin(); iter != doubleArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pout() << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+            pout() << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
         }
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
+        pout() << std::setw(50) << std::setfill('=') << "=" << std::endl;
 #ifdef PR_MPI
         // also print to the command line for better user feedback
         if (procID() == 0)
         {
-            std::cout << setw(50) << setfill('=') << "=" << std::endl;
+            std::cout << std::setw(50) << std::setfill('=') << "=" << std::endl;
             std::cout << "Input Arguments:" << std::endl;
-            std::cout << setw(50) << setfill('-') << "-" << std::endl;
+            std::cout << std::setw(50) << std::setfill('-') << "-" << std::endl;
             for (auto iter = stringArgs.begin(); iter != stringArgs.end(); ++iter)
             {
-                std::cout << setw(30) << left << setfill(' ') << iter->first;
-                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+                std::cout << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+                std::cout << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
             }
             for (auto iter = boolArgs.begin(); iter != boolArgs.end(); ++iter)
             {
-                std::cout << setw(30) << left << setfill(' ') << iter->first;
-                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+                std::cout << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+                std::cout << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
             }
             for (auto iter = intArgs.begin(); iter != intArgs.end(); ++iter)
             {
-                std::cout << setw(30) << left << setfill(' ') << iter->first;
-                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+                std::cout << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+                std::cout << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
             }
             for (auto iter = doubleArgs.begin(); iter != doubleArgs.end(); ++iter)
             {
-                std::cout << setw(30) << left << setfill(' ') << iter->first;
-                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+                std::cout << std::setw(30) << std::left << std::setfill(' ') << iter->first;
+                std::cout << std::setw(20) << std::left << std::setfill(' ') << *iter->second << std::endl;
             }
-            std::cout << setw(50) << setfill('-') << "-" << std::endl;
+            std::cout << std::setw(50) << std::setfill('-') << "-" << std::endl;
             std::cout << "Set above variables on the command line using: " << std::endl;
             std::cout << ">> ./<executable> -<var_name> value" << std::endl;
-            std::cout << setw(50) << setfill('=') << "=" << std::endl;
+            std::cout << std::setw(50) << std::setfill('=') << "=" << std::endl;
         }
 #endif
     }
