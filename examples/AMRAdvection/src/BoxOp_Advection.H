@@ -7,17 +7,16 @@
 
 using namespace Proto;
 
-PROTO_KERNEL_START
 void
-f_thresholdF(
-           Var<short>& a_tags,
-           Var<double, NUMCOMPS>& a_U)
+f_thresholdF(const int64_t i, const int64_t j,
+           Kokkos::View<short**>& a_tags,
+           Kokkos::View<double**>& a_U)
 {
   double thresh = .0001;
-  if (a_U(0) > thresh) {a_tags(0) = 1;}
-  else {a_tags(0) = 0;};
+  if (a_U(i,j) > thresh) {a_tags(i,j) = 1;}
+  else {a_tags(i,j) = 0;};
 };
-PROTO_KERNEL_END(f_thresholdF, f_threshold);
+PROTO_KOKKOS(f_thresholdF, f_threshold);
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
@@ -88,7 +87,7 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
     {
         Box box = a_state.box();
         Kokkos::parallel_for("threshold", Kokkos::MDRangePolicy<Kokkos::Rank<2>>(
-            {0,0}, {box.size(0),box.size(1)}), Advection_helper(a_tags.data(), a_state.data(), box));
+            {0,0}, {box.size(0),box.size(1)}), struct_f_thresholdF(box, a_tags.data(), a_state.data()));
     }
 };
 #endif //end include guard
