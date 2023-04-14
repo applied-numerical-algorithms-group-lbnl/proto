@@ -7,6 +7,7 @@
 
 using namespace Proto;
 
+PROTO_KERNEL_START
 void
 f_thresholdF(const int64_t i, const int64_t j,
            Kokkos::View<short**>& a_tags,
@@ -15,8 +16,8 @@ f_thresholdF(const int64_t i, const int64_t j,
   double thresh = .0001;
   if (a_U(i,j) > thresh) {a_tags(i,j) = 1;}
   else {a_tags(i,j) = 0;};
-};
-PROTO_KOKKOS(f_thresholdF, f_threshold);
+}
+PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>

@@ -38,6 +38,7 @@ option(ENABLE_TESTS "Build default tests only" ON)
 option(ENABLE_ALL_TESTS "Build all tests" OFF)
 option(ENABLE_EXAMPLES "Build examples" ON)
 option(ENABLE_DOCS "Build Proto documentation" OFF)
+option(ENABLE_EXPERIMENTAL "Include experimental directory" OFF)
 option(MEMCHECK "turns on code in BoxData that checks that copying/aliasing is working correctly" OFF)
 option(MEMTRACK "print the amount of data allocated per protoMalloc" OFF)
 option(TIMERS "whether to turn on timers" ON)
@@ -291,6 +292,10 @@ endif()
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
+endif()
+
+if(ENABLE_EXPERIMENTAL)
+  add_subdirectory(experimental)
 endif()
 
 if(ENABLE_DOCUMENTATION)
