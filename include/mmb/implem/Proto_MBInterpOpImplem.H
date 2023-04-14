@@ -20,52 +20,6 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
-    m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
-    // References
-    auto& layout = a_map.map().layout();
-    unsigned int dstBlock = a_dst.dstBlock();
-
-    // Compute exponents
-    m_exponents.clear();
-    for (auto bi : Box::Cube(a_order))
-    {
-        if (bi.sum() < a_order)
-        {
-            m_exponents.push_back(bi);
-        }
-    }
-    int N = m_exponents.size();
-    int M = m_srcs.size();
-
-    auto C2C = Stencil<double>::CornersToCells(4);
-    // Compute Moments
-    std::unordered_map<int, Box> srcBoxes;
-    
-    for (auto si : m_srcs)
-    {
-        int bi = si.srcBlock();
-        auto B = Box::Kernel(1).shift(si.point);
-        B = C2C.domain(B);
-        if (srcBoxes.find(si) == srcBoxes.end())
-        {
-            srcBoxes[si] = B; 
-        } else {
-            srcBoxes[si] &= B.low();
-            srcBoxes[si] &= B.high();
-        }
-    }
-
-}
-template<typename Func>
-MBPointInterpOp::MBPointInterpOp(
-        MBDataPoint a_dst,
-        Point a_ghost,
-        MBMap<Func>& a_map,
-        const std::vector<Point>& a_footprint,
-        unsigned int a_order)
-{
-    PR_TIME("MBPointInterpOp::constructor");
 #if PR_VERBOSE == 2
     pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
 #endif
@@ -117,6 +71,38 @@ MBPointInterpOp::MBPointInterpOp(
     // Compute Matrices
     m_C.define(M,N);
     auto C2C = Stencil<double>::CornersToCells(4);
+#if 1
+    std::unordered_map<int, Box> srcBoxes;
+    std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
+    std::unordered_map<int, BoxData<double>*> srcJ;
+    for (auto si : m_srcs)
+    {
+        int bi = si.srcBlock();
+        auto B = Box::Kernel(1).shift(si.point);
+        B = C2C.domain(B);
+        if (srcBoxes.find(bi) == srcBoxes.end())
+        {
+            srcBoxes[bi] = B; 
+            srcJ[bi] = &si.patch(a_map.jacobian());
+        } else {
+            srcBoxes[bi] &= B.low();
+            srcBoxes[bi] &= B.high();
+        }
+    }
+    for (auto& [block, box] : srcBoxes)
+    {
+        auto Xi = a_map(box, block, dstBlock, PR_NODE);
+        Xi -= xg;
+        Xi /= Rg;
+        for (int jj = 0; jj < N; jj++)
+        {
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            BoxData<double> Xi_p_avg = C2C(Xi_p);
+            srcData[block].push_back(Operator::cellProduct(*srcJ[block], Xi_p_avg));
+        }
+    }
+#endif
+    
     for (int ii = 0; ii < M; ii++)
     {
         
@@ -124,6 +110,7 @@ MBPointInterpOp::MBPointInterpOp(
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
         auto srcBlock = src.srcBlock();
+#if 0
         // 1 ghost cell is needed to compute product with J
         Box srcBox = Box::Kernel(1).shift(src.point);
         Box xSrcBox = C2C.domain(srcBox);
@@ -131,6 +118,7 @@ MBPointInterpOp::MBPointInterpOp(
         auto xi = a_map(xSrcBox, srcBlock, dstBlock, PR_NODE);
         // get cached J data from relevant patch
         auto& Ji = src.patch(a_map.jacobian());
+
 #if PR_VERBOSE == 3
         pout() << "SRC_POINT: " << src.point << std::endl;
         pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
@@ -143,11 +131,12 @@ MBPointInterpOp::MBPointInterpOp(
         xi -= xg;
         // divide by Rg
         xi /= Rg;
-
         PROTO_ASSERT(Ji.box().contains(srcBox),
                 "MBPointInterpOp::constructor | Error: Not enough cached Jacobian data.");
+#endif
         for (int jj = 0; jj < N; jj++)
         {
+#if 0
             // compute exponent at corners
             auto xi_p = forall<double, 1>(f_binomialPower, xi, m_exponents[jj]);
             // corners to cells
@@ -158,6 +147,8 @@ MBPointInterpOp::MBPointInterpOp(
             PROTO_ASSERT(Jx.box().contains(src.point),
                 "MBPointInterpOp::constructor | Error: Box inference error.");
             m_C(ii,jj) = Jx(src.point);
+#endif
+            m_C(ii,jj) = srcData[srcBlock][jj](src.point);
             //m_C(ii,jj) = xi_p_avg(src.point);
         }
     }

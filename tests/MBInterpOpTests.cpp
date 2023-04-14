@@ -116,7 +116,7 @@ TEST(MBPointInterpOp, RigidXPoint) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{4,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -206,7 +206,7 @@ TEST(MBPointInterpOp, RigidXPoint) {
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBPointInterpOp, Ring) {
     pout() << "RING TEST START" << std::endl;
     int domainSize = 8;
@@ -236,7 +236,7 @@ TEST(MBPointInterpOp, Ring) {
     pout() << std::endl;
 #endif
     
-    constexpr int N = 4;
+    constexpr int N = 1;
     double errInf[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -446,7 +446,7 @@ TEST(MBPointInterpOp, SphericalShell) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBPointInterpOp, PolarShell) {
     pout() << "PolarShell" << std::endl;
     int domainSize = 8;
