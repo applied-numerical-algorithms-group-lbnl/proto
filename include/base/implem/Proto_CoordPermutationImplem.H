@@ -171,7 +171,7 @@ Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Bo
     Point s;
     for (int d = 0; d < DIM; d++)
     {
-        s[d] = max(0,b[d]);
+        s[d] = std::max(0,b[d]);
     }
     Point r = (*this)(a_point - src0) + s + dst0;
     //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
@@ -190,7 +190,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
     Point s;
     for (int d = 0; d < DIM; d++)
     {
-        s[d] = max(0,b[d]);
+        s[d] = std::max(0,b[d]);
     }
     Point r = (*this)(a_point - src0) + s + dst0;
     //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;

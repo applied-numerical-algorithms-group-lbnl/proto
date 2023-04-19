@@ -9,15 +9,13 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_thresholdF(const int64_t i, const int64_t j,
-           Kokkos::View<short**>& a_tags,
-           Kokkos::View<double**>& a_U)
+f_thresholdF(const Point p, BoxData<short> &a_tags, BoxData<double,NUMCOMPS> &a_U)
 {
   double thresh = .0001;
-  if (a_U(i,j) > thresh) {a_tags(i,j) = 1;}
-  else {a_tags(i,j) = 0;};
+  if (a_U(p) > thresh) {a_tags(p) = 1;}
+  else {a_tags(p) = 0;};
 }
-PROTO_KERNEL_END(f_thresholdF, f_threshold);
+PROTO_KOKKOS_END(f_thresholdF, f_threshold);
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
@@ -64,7 +62,7 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
     static inline void generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) {
-      forallInPlace(f_threshold, a_tags, a_state);
+     // forallInPlace(f_threshold, a_tags, a_state);
     }
 
     struct Advection_helper {
@@ -87,8 +85,10 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
             BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1
     {
         Box box = a_state.box();
-        Kokkos::parallel_for("threshold", Kokkos::MDRangePolicy<Kokkos::Rank<2>>(
-            {0,0}, {box.size(0),box.size(1)}), struct_f_thresholdF(box, a_tags.data(), a_state.data()));
+        std::tuple<TagData&,BoxData<T,NUMCOMPS>&> tuple(a_tags, a_state);
+        Point lo(box.low()), hi(box.high());
+        Kokkos::parallel_for("threshold", policy_t(
+            {lo[0],lo[1]}, {hi[0],hi[1]}), struct_f_thresholdF<TagData&,BoxData<T,NUMCOMPS>&>(tuple));
     }
 };
 #endif //end include guard

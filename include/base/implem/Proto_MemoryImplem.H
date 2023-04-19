@@ -1,3 +1,4 @@
+#include "Proto_PAssert.H"
 
 #ifdef PROTO_ACCEL
 #if defined PROTO_HIP

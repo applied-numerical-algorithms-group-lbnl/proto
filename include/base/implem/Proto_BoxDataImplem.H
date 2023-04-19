@@ -1,51 +1,40 @@
 
 #define PROTO_KERNEL_START inline ACCEL_DECORATION
-#if DIM==2
 #define PROTO_KERNEL_END(local_name, app_name)                  \
-template <typename... T> \
 struct struct_##local_name {   \
+    template <typename... T> \
     inline ACCEL_DECORATION void operator()(T... args) const { local_name(args...);} \
-    Kokkos::View<T**>... views; \
-    T... params; \
-    struct_##local_name(Box box, T* only) { \
-      if constexpr (std::is_pod<decltype(only)>::value) \
-        params(only); \
-      else \
-        views(only.data(), box.size(0), box.size(1)); \
-    } \
-    struct_##local_name(Box box, T first, T... rest) : struct_##local_name(box, rest) { \
-      if constexpr (std::is_pod<decltype(first)>::value) \
-        params(first); \
-      else \
-        views(first.data(), box.size(0), box.size(1)); \
-    } \
-    KOKKOS_INLINE_FUNCTION \
-    void operator()(const int64_t i, const int64_t j, Kokkos::View<T**>... views) const { \
-      local_name(i, j, views...); } \
     const char* myname = #app_name; \
 };        \
 static struct_##local_name app_name;
-#elif DIM==3
-#define PROTO_KERNEL_END(local_name, app_name)                  \
-template <typename... T> \
+#if DIM==2
+#define policy_t Kokkos::MDRangePolicy<Kokkos::Rank<2>>
+#define PROTO_KOKKOS_END(local_name, app_name)                  \
+template <class... Args> \
 struct struct_##local_name {   \
-    Kokkos::View<T***>... views; \
-    T... params; \
-    struct_##local_name(Box box, T* only) { \
-      views(only, box.size(0), box.size(1), box.size(2)); \
-    } \
-    struct_##local_name(Box box, T* first, T*... rest) : struct_##local_name(box, rest) { \
-      if constexpr (std::is_pod<decltype(first)>::value) \
-        params(first); \
-      else \
-        views(first.data(), box.size(0), box.size(1), box.size(2)); \
-    } \
+    std::tuple<Args...> tuple; \
+    struct_##local_name(std::tuple<Args...> tup) : tuple(tup) {} \
     KOKKOS_INLINE_FUNCTION \
-    void operator()(const int64_t i, const int64_t j, const int64_t k, Kokkos::View<T***>... views) const { \
-      local_name(i, j, k, views...); } \
+    void operator()(const int64_t i, const int64_t j) const { \
+      Proto::Point p(i,j); \
+      std::apply([p](Args... args) { local_name(p, args...); }, tuple); \
+    } \
     const char* myname = #app_name; \
-};        \
-static struct_##kokkos_name app_name;
+};        
+#elif DIM==3
+#define policy_t Kokkos::MDRangePolicy<Kokkos::Rank<3>>
+#define PROTO_KOKKOS_END(local_name, app_name)                  \
+template <class... Args> \
+struct struct_##local_name {   \
+    std::tuple<Args...> tuple; \
+    struct_##local_name(std::tuple<Args...> tup) : tuple(tup) {} \
+    KOKKOS_INLINE_FUNCTION \
+    void operator()(const int64_t i, const int64_t j, const int64_t k) const { \
+      Proto::Point p(i,j,k); \
+      std::apply([p](Args... args) { local_name(p, args...); }, tuple); \
+    } \
+    const char* myname = #app_name; \
+};        
 #endif
 #define PROTO_LAMBDA ACCEL_DECORATION
 
