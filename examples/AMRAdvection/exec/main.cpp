@@ -157,7 +157,7 @@ int main(int argc, char** argv)
                 LevelTagData kokkos_tags(grid[lvl], bufferSize);
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
                   {
-                //    OP::generateTags(tags[*iter], initData[*iter]);
+                    //OP::generateTags(tags[*iter], initData[*iter]);
                   }
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
                   {

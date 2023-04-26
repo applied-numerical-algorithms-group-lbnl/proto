@@ -9,7 +9,7 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_thresholdF(const Point p, BoxData<short> &a_tags, BoxData<double,NUMCOMPS> &a_U)
+f_threshold(const Point p, BoxData<short> &a_tags, BoxData<double,NUMCOMPS> &a_U)
 {
   double thresh = .0001;
   if (a_U(p) > thresh) {a_tags(p) = 1;}
@@ -62,33 +62,13 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
     static inline void generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) {
-     // forallInPlace(f_threshold, a_tags, a_state);
+//      forallInPlace(f_threshold, a_tags, a_state);
     }
-
-    struct Advection_helper {
-      Kokkos::View<short**> tags;
-      Kokkos::View<T**> state;
-
-      Advection_helper(short* tags_ptr, T* state_ptr, const Box box) : 
-        tags(tags_ptr, box.size(0), box.size(1)), state(state_ptr, box.size(0), box.size(1)) {}
-
-      KOKKOS_INLINE_FUNCTION
-      void operator()(const int64_t i, const int64_t j) const {
-          double thresh = .0001;
-          if (state(i,j) > thresh) {tags(i,j) = 1;}
-          else {tags(i,j) = 0;}
-      }
-    };
-
     static inline void kokkos_generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1
     {
-        Box box = a_state.box();
-        std::tuple<TagData&,BoxData<T,NUMCOMPS>&> tuple(a_tags, a_state);
-        Point lo(box.low()), hi(box.high());
-        Kokkos::parallel_for("threshold", policy_t(
-            {lo[0],lo[1]}, {hi[0],hi[1]}), struct_f_thresholdF<TagData&,BoxData<T,NUMCOMPS>&>(tuple));
+        Kokkos::parallel_for("threshold", policy(a_tags.box()&a_state.box()), f_thresholdF(a_tags,a_state));
     }
 };
 #endif //end include guard

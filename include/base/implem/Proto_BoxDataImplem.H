@@ -8,32 +8,38 @@ struct struct_##local_name {   \
 };        \
 static struct_##local_name app_name;
 #if DIM==2
-#define policy_t Kokkos::MDRangePolicy<Kokkos::Rank<2>>
-#define PROTO_KOKKOS_END(local_name, app_name)                  \
+typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_t;
+policy_t policy(Box box) {
+  Point lo = box.low(), hi = box.high();
+  return policy_t({lo[0],lo[1]},{hi[0],hi[1]});
+}
+#define PROTO_KOKKOS_END(class_name, func_name)                  \
 template <class... Args> \
-struct struct_##local_name {   \
-    std::tuple<Args...> tuple; \
-    struct_##local_name(std::tuple<Args...> tup) : tuple(tup) {} \
+struct class_name {   \
+    std::tuple<Args&...> tuple; \
+    class_name(Args&... tup) : tuple(std::make_tuple(std::ref(tup)...)) {} \
     KOKKOS_INLINE_FUNCTION \
     void operator()(const int64_t i, const int64_t j) const { \
       Proto::Point p(i,j); \
-      std::apply([p](Args... args) { local_name(p, args...); }, tuple); \
+      std::apply([p](Args&... args) { func_name(p, args...); }, tuple); \
     } \
-    const char* myname = #app_name; \
 };        
 #elif DIM==3
-#define policy_t Kokkos::MDRangePolicy<Kokkos::Rank<3>>
-#define PROTO_KOKKOS_END(local_name, app_name)                  \
+typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_t;
+policy_t policy(Box box) {
+  Point lo = box.low(), hi = box.high();
+  return policy_t({lo[0],lo[1],lo[2]},{hi[0],hi[1],hi[2]});
+}
+#define PROTO_KOKKOS_END(struct_name, func_name)                  \
 template <class... Args> \
-struct struct_##local_name {   \
+struct struct_name {   \
     std::tuple<Args...> tuple; \
-    struct_##local_name(std::tuple<Args...> tup) : tuple(tup) {} \
+    struct_name(std::tuple<Args...> tup) : tuple(tup) {} \
     KOKKOS_INLINE_FUNCTION \
     void operator()(const int64_t i, const int64_t j, const int64_t k) const { \
       Proto::Point p(i,j,k); \
-      std::apply([p](Args... args) { local_name(p, args...); }, tuple); \
+      std::apply([p](Args... args) { func_name(p, args...); }, tuple); \
     } \
-    const char* myname = #app_name; \
 };        
 #endif
 #define PROTO_LAMBDA ACCEL_DECORATION
