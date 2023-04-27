@@ -12,11 +12,13 @@ dash = '-' *100
 
 # Parse Arguments
 parser = ArgumentParser()
-parser.add_argument('--DIM', type=int, help="Dimensionality [2]", default='2')
-parser.add_argument('--MPI', help="Use MPI [ON]", choices=['ON', 'OFF'], default='ON')
-parser.add_argument('--AMR', help="Use AMR library [ON]", choices=['ON', 'OFF'], default='ON')
-parser.add_argument('--MMB', help="Use MMB library [ON]", choices=['ON', 'OFF'], default='ON')
-parser.add_argument('--OPS', help="Use build in Linear Algebra interface [ON]",
+parser.add_argument('--DIM',  type=int, help="Dimensionality [2]", default='2')
+parser.add_argument('--MPI',  help="Use MPI [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--AMR',  help="Use AMR library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--CUDA', help="Compile for Cuda acceleration [ON]", choices=['ON', 'OFF'], default='OFF')
+parser.add_argument('--HIP',  help="Compile for HIP acceleration [ON]", choices=['ON', 'OFF'], default='OFF')
+parser.add_argument('--MMB',  help="Use MMB library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
         choices=['ON', 'OFF'], default='ON')
 parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
 parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
@@ -92,6 +94,8 @@ CMAKE_FLAGS += "-D DIM=" + str(args.DIM) + " "
 CMAKE_FLAGS += "-D ENABLE_MPI=" + args.MPI + " "
 CMAKE_FLAGS += "-D AMR=" + args.AMR + " "
 CMAKE_FLAGS += "-D MMB=" + args.MMB + " "
+CMAKE_FLAGS += "-D ENABLE_CUDA=" + args.CUDA + " "
+CMAKE_FLAGS += "-D ENABLE_HIP=" + args.HIP + " "
 CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
 CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
 CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
