@@ -49,7 +49,8 @@ void MBMap<Func, MEM>::define(
             NT[d] = Operator::cofactor(X0, d);
         }
         auto J = Operator::jacobian(X0, NT);
-
+        PROTO_ASSERT(J.min() > 0,
+                "MBMap::define | Error: Inverted Jacobian detected in block %u", block);
         X0.copyTo(patch);
         J.copyTo(m_J[iter]);
     
@@ -74,10 +75,12 @@ void MBMap<Func, MEM>::define(
                 {
                     NT[d] = Operator::cofactor(X0, d);
                 }
-                auto J = Operator::jacobian(X0, NT);
+                auto Jb = Operator::jacobian(X0, NT);
 
                 XBound.fill(X0);
-                JBound.fill(J);
+                JBound.fill(Jb);
+                PROTO_ASSERT(Jb.min() > 0,
+                        "MBMap::define | Error: Inverted Jacobian detected in block %u boundary", block);
             }
         }
     }

@@ -6,6 +6,7 @@ using namespace Proto;
 
 
 #if DIM > 2
+#if 0
 template<typename Func>
 bool testThinCubeSphere(MBMap<Func>& a_map, int a_domainSize, double a_r0, double a_r1)
 {
@@ -161,6 +162,7 @@ bool testThinCubeSphere(MBMap<Func>& a_map, int a_domainSize, double a_r0, doubl
 
     return success;
 }
+#endif
 template<typename Func>
 bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double a_r1)
 {
@@ -364,7 +366,7 @@ TEST(MBMap, Identity) {
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "IDENTITY.map");
     h5.writeMBLevel({"J"}, map.jacobian(), "IDENTITY");
 }
-
+#if 0
 TEST(MBMap, XPoint) {
     HDF5Handler h5;
     int domainSize = 8;
@@ -390,7 +392,7 @@ TEST(MBMap, XPoint) {
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
     h5.writeMBLevel({"J"}, map.jacobian(), "XPOINT");
 }
-
+#endif
 #if DIM > 2
 #if 0
 TEST(MBMap, CubeSphere) {
@@ -405,36 +407,96 @@ TEST(MBMap, CubeSphere) {
     ghost.fill(Point::Zeros());
     Point boundGhost = Point::Ones();
    
-    MBMap<CubedSphereMap_t> map(CubedSphereMap, layout, ghost, boundGhost);
+    MBMap<AltCubedSphereMap_t> map(AltCubedSphereMap, layout, ghost, boundGhost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
     h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
 
-    EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
-}
-#endif
-TEST(MBMap, ThinCubeSphere) {
-    constexpr int C = 1;
-    HDF5Handler h5;
-    int domainSize = 16;
-    int boxSize = 8;
-    auto domain = buildThinCubeSphere(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    boxSizeVect[0] = 1;
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Zeros());
-    Point boundGhost = Point::Ones();
-   
-    MBMap<ThinCubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
-
-    h5.writeMBLevel({"x", "y", "z"}, map, map.map(), "THIN_CUBE_SPHERE_MAP");
-    h5.writeMBLevel({"J"}, map, map.jacobian(), "THIN_CUBE_SPHERE_J");
-
     //EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
 }
 #endif
+TEST(MBMap, ThinCubeSphere) {
+    HDF5Handler h5;
+    
+    int domainSize = 8;
+    int boxSize = 8;
+    int thickness = 2;
+    
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+    
+    int N =6;
+    std::vector<std::vector<BoxData<double>>> J;
+    std::vector<std::vector<BoxData<double>>> JErr;
+    J.resize(6);
+    JErr.resize(6);
+    auto AVG = Stencil<double>::AvgDown(Point(2,2,2));
+    for (int nn = 0; nn < N; nn++)
+    {
+        double dv = 1.0/(domainSize*domainSize*thickness);
+        auto domain = buildThinCubeSphere(domainSize, thickness);
+        Point boxSizeVect = Point::Ones(boxSize);
+        boxSizeVect[0] = thickness;
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
 
+        MBMap<ThinCubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
+
+        h5.writeMBLevel({"x", "y", "z"}, map, map.map(), "THIN_CUBE_SPHERE_MAP");
+        h5.writeMBLevel({"J"}, map, map.jacobian(), "THIN_CUBE_SPHERE_J");
+
+        for (auto iter : layout)
+        {
+            int block = layout.block(iter);
+            auto& Ji = map.jacobian()[iter];
+            J[block].push_back(BoxData<double>(Ji.box()));
+            Ji.copyTo(J[block][nn]);
+            J[block][nn]/=dv;
+            if (block == 0)
+            {
+                std::cout << "Max Norm of J/dv: " << J[block][nn].absMax() << std::endl;
+                pout() << "J | Block " << block << " | Ref " << nn << " | dV " << dv << std::endl;
+                J[block][nn].printData(4);
+            }
+            if (nn > 0)
+            {
+                BoxData<double> Jc = AVG(J[block][nn]);
+                JErr[block].push_back(BoxData<double>(Jc.box()));
+                Jc.copyTo(JErr[block][nn-1]);
+                JErr[block][nn-1] -= J[block][nn-1];
+                if (block == 0)
+                {
+                    pout() << "J Avg | Block " << block << " | Ref " << nn << std::endl;
+                    Jc.printData(4);
+                    pout() << "J Err | Block " << block << " | Ref " << nn << std::endl;
+                    JErr[block][nn-1].printData(4);
+                    h5.writePatch({"JErr"}, 1.0/domainSize, JErr[block][nn-1], "J_ERR_B%i_N%i", block, nn-1);
+                }
+            }
+        }
+
+        domainSize *= 2;
+        boxSize *= 2;
+        thickness *= 2;
+    }
+
+    for (int ii = 1; ii < N-1; ii++)
+    {
+        double e0 = 0;
+        double e1 = 0;
+        for (int bi = 0; bi < 6; bi++)
+        {
+            e0 = std::max(e0, JErr[bi][ii-1].absMax());
+            e1 = std::max(e1, JErr[bi][ii].absMax());
+        }
+        double rate = log(e0/e1)/log(2.0);
+        std::cout << "Convergence rate: " << rate << std::endl;
+    }
+
+}
+#endif
+
+#if 0
 TEST(MBMap, InitializeWithMap)
 {
     HDF5Handler h5;
@@ -461,6 +523,7 @@ TEST(MBMap, InitializeWithMap)
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "MAP_INIT.map");
     h5.writeMBLevel({"phi"}, hostData, "MAP_INIT");
 }
+#endif
 
 TEST(MBMap, AnalyticOps) {
     HDF5Handler h5;

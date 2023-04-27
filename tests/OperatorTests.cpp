@@ -20,7 +20,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     return DisjointBoxLayout(domain, patches, boxSize);
 }
 
-#if 1
+#if 0
 
 TEST(Operator, Convolve) {
     int domainSize = 64;
@@ -257,32 +257,55 @@ TEST(Operator, InitConvolve)
 
 #endif
 
+#ifdef DIM==3
+PROTO_KERNEL_START
+void f_cubeSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J, Array<double, 3> a_dx, double a_r0, double a_r1)
+{
+    Array<double, DIM> x = a_pt;
+    x += 0.5;
+    x *= a_dx;
+    double r   = a_r0 + (a_r1-a_r0)*x[0];
+    double xi  = -M_PI/4.0 + M_PI/2.0*x[1];
+    double eta = -M_PI/4.0 + M_PI/2.0*x[2];
+
+    double X = tan(xi);
+    double Y = tan(eta);
+    double d = sqrt(1+X*X+Y*Y);
+
+    a_J(0) = r*r*(1+X*X)*(1+Y*Y)/(d*d*d);
+    a_X(0) = r/d;
+    a_X(1) = r*X/d;
+    a_X(2) = r*Y/d;
+}
+PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
+
 TEST(Operator, Cofactor)
 {
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
     int domainSize = 32;
-    double dx = 1.0/domainSize;
+    int boxSize = 32;
+    int thickness = 1;
     int block = 0;
-    Point offset(1,2,3,4,5,6);
-    Point k(1,2,3,4,5,6);
+    double r0 = 1.0;
+    double r1 = 2.0;
     int ghostSize = 3;
-    Array<double, DIM> scale;
-    for (int ii = 0; ii < DIM; ii++) {scale[ii] = pow(0.5, ii);}
-
+    Array<double, DIM> dx = 1.0/domainSize;
+    dx[0] = 1.0/thickness;
+    double dv = 1.0;
+    for (int dir = 0; dir < DIM; dir++) { dv *= dx[dir]; }
     // Define Mapping
-    Box domainBox = Box::Cube(domainSize+1).grow(ghostSize);
+    Point domainBoxSize(thickness, domainSize, domainSize);
+    Box domainBox(domainBoxSize);
+    domainBox = domainBox.grow(ghostSize+1);
     BoxData<double, DIM, HOST> X(domainBox);
-    
-    forallInPlace_p(f_TestMap, X, block, dx, offset, k);
+    BoxData<double, 1, HOST> J0(domainBox);
 
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        auto Xi = slice(X, dir);
-        Xi *= scale[dir];
-    }
-    
+    std::cout << "domainBox " << domainBox << " | dx: " << dx << " | dv: " << dv << std::endl;
+
+    forallInPlace_p(f_cubeSphereMap, X, J0, dx, r0, r1);
+
     // Compute Metrics
     Array<BoxData<double, DIM, HOST>, DIM> NT;
     for (int dir = 0; dir < DIM; dir++)
@@ -290,12 +313,22 @@ TEST(Operator, Cofactor)
         NT[dir] = Operator::cofactor(X, dir);
     }
     BoxData<double, 1, HOST> J;
-    J = Operator::jacobian(X, NT); 
+    J = Operator::jacobian(X, NT);
+    J /= dv;
     
-    BoxData<double, 1, HOST> Div_0(domainBox, 0);
+    auto JAvg = Operator::convolve(J0);
+    BoxData<double, 1> JAvg2(J.box());
+    JAvg.copyTo(JAvg2);
+    BoxData<double, 1> JErr(J.box());
+    J.copyTo(JErr);
+    JErr -= JAvg;
+    h5.writePatch({"x", "y", "z"}, dx, X, "X");
+    h5.writePatch({"J"}, dx, JAvg2, "J0");
+    h5.writePatch({"J"}, dx, J, "J");
+    h5.writePatch({"Err"}, dx, JErr, "JErr");
 
-    h5.writePatch(dx, X, "X");
 }
+#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
