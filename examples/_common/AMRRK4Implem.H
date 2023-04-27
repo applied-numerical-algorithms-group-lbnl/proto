@@ -380,6 +380,7 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 
     for (auto iter : layout)
     {
+      PR_STACK_ON;
         if (layout.onLevelBoundary(layout.point(iter)))
         {
             // get data
@@ -403,6 +404,7 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
             // copy back the interior
             UStage_i |= I(UStageTemp);
         }
+        PR_STACK_OFF;
     }
     UStage.exchange();
 
@@ -431,6 +433,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     
     for (auto iter : layout)
     {
+      PR_STACK_ON;
         // get data
         auto& UStage_i   = UStage[iter];
         auto& U0_i       = U0[iter];
@@ -477,6 +480,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
                 m_fluxRegisters[a_level-1]->incrementFine(fluxes[dir], iter, dtWeight, dir);
             }
         }
+        PR_STACK_OFF;
     } // end patch loop
 }
 
