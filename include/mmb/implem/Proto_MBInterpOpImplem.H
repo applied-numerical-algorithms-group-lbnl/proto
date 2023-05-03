@@ -20,60 +20,14 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
-    m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
-    // References
-    auto& layout = a_map.map().layout();
-    unsigned int dstBlock = a_dst.dstBlock();
-
-    // Compute exponents
-    m_exponents.clear();
-    for (auto bi : Box::Cube(a_order))
-    {
-        if (bi.sum() < a_order)
-        {
-            m_exponents.push_back(bi);
-        }
-    }
-    int N = m_exponents.size();
-    int M = m_srcs.size();
-
-    auto C2C = Stencil<double>::CornersToCells(4);
-    // Compute Moments
-    std::unordered_map<int, Box> srcBoxes;
-    
-    for (auto si : m_srcs)
-    {
-        int bi = si.srcBlock();
-        auto B = Box::Kernel(1).shift(si.point);
-        B = C2C.domain(B);
-        if (srcBoxes.find(si) == srcBoxes.end())
-        {
-            srcBoxes[si] = B; 
-        } else {
-            srcBoxes[si] &= B.low();
-            srcBoxes[si] &= B.high();
-        }
-    }
-
-}
-template<typename Func>
-MBPointInterpOp::MBPointInterpOp(
-        MBDataPoint a_dst,
-        Point a_ghost,
-        MBMap<Func>& a_map,
-        const std::vector<Point>& a_footprint,
-        unsigned int a_order)
-{
-    PR_TIME("MBPointInterpOp::constructor");
-#if PR_VERBOSE == 2
+#if PR_VERBOSE > 1
     pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
 #endif
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
 
-#if PR_VERBOSE == 2
+#if PR_VERBOSE > 1
     pout() << "SRC_POINTS: ";
     for (auto si : m_srcs)
     {
@@ -112,115 +66,78 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    //Rg = 1.0; // temporary for debugging 
+   
+    // Cache Moment Data
+    auto C2C = Stencil<double>::CornersToCells(4);
+    std::unordered_map<int, Box> srcBoxes;
+    std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
+    std::unordered_map<int, BoxData<double>*> srcJ;
+    Box B0 = C2C.domain(Box::Kernel(1).shift(a_dst.point));
+    srcBoxes[a_dst.dstBlock()] = B0;
+    srcJ[a_dst.dstBlock()] = &a_dst.patch(a_map.jacobian());
+    for (auto si : m_srcs)
+    {
+        int bi = si.srcBlock();
+        auto B = Box::Kernel(1).shift(si.point);
+        B = C2C.domain(B);
+        if (srcBoxes.find(bi) == srcBoxes.end())
+        {
+            srcBoxes[bi] = B; 
+            srcJ[bi] = &si.patch(a_map.jacobian());
+        } else {
+            srcBoxes[bi] &= B.low();
+            srcBoxes[bi] &= B.high();
+        }
+    }
+    for (auto& [block, box] : srcBoxes)
+    {
+        auto Xi = a_map(box, block, dstBlock, PR_NODE);
+        Xi -= xg;
+        Xi /= Rg;
+#if PR_VERBOSE==3
+        if (dstBlock == 0)
+        {
+            pout() << "Cached Jacobian for data from block " << block << " to block " << dstBlock << std::endl;
+            srcJ[block]->printData(4);
+        }
+#endif
+        for (int jj = 0; jj < N; jj++)
+        {
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            BoxData<double> Xi_p_avg = C2C(Xi_p);
+            //BoxData<double> ones(srcJ[block]->box());
+            //ones.setVal(1);
+            srcData[block].push_back(Operator::cellProduct(*srcJ[block], Xi_p_avg));
+            //srcData[block].push_back(Operator::cellProduct(ones, Xi_p_avg));
+        }
+    }
     
     // Compute Matrices
     m_C.define(M,N);
-    auto C2C = Stencil<double>::CornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
-        
-        PR_TIME("MBPointInterpOp::constructor::compute_C");
-        // Get data at (and near) the source point
         auto& src = m_srcs[ii];
         auto srcBlock = src.srcBlock();
-        // 1 ghost cell is needed to compute product with J
-        Box srcBox = Box::Kernel(1).shift(src.point);
-        Box xSrcBox = C2C.domain(srcBox);
-        // compute X at corners analytically on srcBox
-        auto xi = a_map(xSrcBox, srcBlock, dstBlock, PR_NODE);
-        // get cached J data from relevant patch
-        auto& Ji = src.patch(a_map.jacobian());
-#if PR_VERBOSE == 3
-        pout() << "SRC_POINT: " << src.point << std::endl;
-        pout() << "xSrcBox: " << xSrcBox << " | srcBlock: " << srcBlock << " | dstBlock: " << dstBlock << std::endl;
-        pout() << "X: " << std::endl;
-        xi.printData();
-        pout() << "J: " << std::endl;
-        Ji.printData();
-#endif
-        // subtract xg
-        xi -= xg;
-        // divide by Rg
-        xi /= Rg;
-
-        PROTO_ASSERT(Ji.box().contains(srcBox),
-                "MBPointInterpOp::constructor | Error: Not enough cached Jacobian data.");
         for (int jj = 0; jj < N; jj++)
         {
-            // compute exponent at corners
-            auto xi_p = forall<double, 1>(f_binomialPower, xi, m_exponents[jj]);
-            // corners to cells
-            BoxData<double> xi_p_avg = C2C(xi_p);
-            auto Jx = Operator::cellProduct(Ji, xi_p_avg);
-            PROTO_ASSERT(xi_p_avg.box().contains(srcBox),
-                "MBPointInterpOp::constructor | Error: Box inference error.");
-            PROTO_ASSERT(Jx.box().contains(src.point),
-                "MBPointInterpOp::constructor | Error: Box inference error.");
-            m_C(ii,jj) = Jx(src.point);
-            //m_C(ii,jj) = xi_p_avg(src.point);
+            m_C(ii,jj) = srcData[srcBlock][jj](src.point);
         }
     }
-
-#if PR_VERBOSE == 3
-    auto condNum = m_C.conditionNumber();
-    if (1.0/condNum < 1e-10)
-    {
-        pout() << "C Matrix has questionable conditioning: " << std::endl;
-        pout() << "\tDST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
-        pout() << "\t1/CN: " << 1.0/condNum << std::endl;
-        m_C.print("%10.2e");
-        pout() << "Source points: " << std::endl;
-        for (auto si : m_srcs)
-        {
-            pout() << si.point << ", ";
-        }
-        pout() << std::endl;
-    }
-    //pout() << "C MATRIX" << std::endl;
-    //m_C.print("%10.2e");
-#endif
     m_D.define(1,N);
-
     for (int jj = 0; jj < N; jj++)
     {
-        PR_TIME("MBPointInterpOp::constructor::compute_D");
-        Box dstBox = Box::Kernel(1).shift(a_dst.point);
-        auto xi = a_map(C2C.domain(dstBox), dstBlock);
-        auto& Jdst = a_dst.patch(a_map.jacobian());
-        xi -= xg;
-        xi /= Rg;
-        auto xi_p = forall<double, 1>(f_binomialPower, xi, m_exponents[jj]);
-        BoxData<double> xi_p_avg = C2C(xi_p);
-        PROTO_ASSERT(xi_p_avg.box().contains(dstBox),
-            "MBPointInterpOp::constructor | Error: Box inference error.");
-        auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
-        PROTO_ASSERT(Jx.box().contains(a_dst.point),
-            "MBPointInterpOp::constructor | Error: Box inference error.");
-        m_D(0,jj) = Jx(a_dst.point);
-        //m_D(0,jj) = xi_p_avg(a_dst.point);
+        m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
     }
-#if PR_VERBOSE == 3
-    pout() << "D MATRIX" << std::endl;
-    m_D.print("%10.2e");
-#endif
-
+    
     // Compute "Stencil"
+    m_Cinv = m_C.inverse();
+    m_S = m_D*m_Cinv;
+    m_coefs.clear();
+    m_coefs.resize(M);
+    for (int ii = 0; ii < M; ii++)
     {
-        PR_TIME("MBPointInterpOp::constructor::compute_S");
-        m_Cinv = m_C.inverse();
-        m_S = m_D*m_Cinv;
-        m_coefs.clear();
-        m_coefs.resize(M);
-        for (int ii = 0; ii < M; ii++)
-        {
-            m_coefs[ii] = m_S(0,ii);
-        }
+        m_coefs[ii] = m_S(0,ii);
     }
-#if PR_VERBOSE == 3
-    pout() << "S MATRIX" << std::endl;
-    m_S.print("%4.4f");
-#endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -237,15 +154,6 @@ void MBPointInterpOp::apply(
         {
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
-#if PR_VERBOSE == 4
-            if (std::abs(dst(cc)) > 1e5)
-            {
-                pout() << "DST_POINT: " << m_dst.point << " | BLOCK: " << m_dst.dstBlock() << std::endl;
-                pout() << "SRC_POINT: " << m_srcs[ii].point << " | VALUE: " << src(cc) << std::endl;
-                pout() << "COEF: " << m_coefs[ii] << std::endl;
-                pout() << "OUTPUT: " << dst(cc) << std::endl;
-            }
-#endif
         }
     }
 }

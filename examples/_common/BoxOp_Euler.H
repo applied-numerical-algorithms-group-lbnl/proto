@@ -254,7 +254,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     {
       a_UStage.exchange();
     }                 
-    inline 
+    
     // Apply Operator
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_Rhs,

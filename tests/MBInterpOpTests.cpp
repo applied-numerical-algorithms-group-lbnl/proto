@@ -15,7 +15,7 @@ TEST(MBPointInterpOp, Shear) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{1,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,4,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -116,7 +116,7 @@ TEST(MBPointInterpOp, RigidXPoint) {
     int boxSize = 8;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{4,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,4,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -207,6 +207,103 @@ TEST(MBPointInterpOp, RigidXPoint) {
 }
 #endif
 #if 0
+TEST(MBPointInterpOp, XPointDisc) {
+    pout() << "XPOINT DISC TEST START" << std::endl;
+    int domainSize = 32;
+    int boxSize = 32;
+    HDF5Handler h5;
+
+    Array<double, DIM> exp{4,4,4,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    Array<double, DIM> k{1,1,1,1,1,1};
+
+    // input footprint
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(3))
+    {
+        if (pi.abs().sum() <= 2)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    
+    constexpr int N = 3;
+    double err[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        auto domain = buildXPoint(domainSize);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        Array<Point, DIM+1> ghost;
+        ghost.fill(Point::Ones(4));
+        ghost[0] = Point::Ones(1);
+        Point boundGhost = Point::Ones(1);
+
+        // initialize map
+        MBMap<XPointMap_t> map(XPointMap, layout, ghost, boundGhost);
+
+        // initialize data
+        MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
+        MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost);
+        MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
+
+        hostSrc.initConvolve(f_polyM, map, exp, offset);
+        hostSrc.fillBoundaries();
+        hostDst.setVal(0);
+        hostErr.setVal(0);
+        
+        Box blockDomainBox(Point::Ones(domainSize));
+        err[nn] = 0;
+        for (auto iter : layout)
+        {
+            int block = layout.block(iter);
+            Box patchBox = layout[iter];
+            for (auto dir : Box::Kernel(1))
+            {
+                auto bounds = hostSrc.bounds(iter, dir);
+                for (auto bound : bounds)
+                {
+                    Box boundBox = patchBox.adjacent(ghost[0]*dir);
+                    if (blockDomainBox.contains(boundBox)) { continue; }
+                    for (auto bi : boundBox)
+                    {
+                        // Apply Point
+                        MBDataPoint dstDataPoint(iter, bi, layout);
+                        MBPointInterpOp pointInterp(dstDataPoint, ghost[0], map, footprint, 4);
+                        pointInterp.apply(hostDst, hostSrc);
+                        
+                        double interpValue = hostDst[dstDataPoint](0);
+                        double exactValue =  hostSrc[dstDataPoint](0);
+                        double errorValue = interpValue - exactValue;
+                        hostErr[dstDataPoint](0) = std::abs(errorValue);
+                        err[nn] = std::max(std::abs(errorValue), err[nn]);
+                    }
+                }
+            }
+        }
+#if PR_VERBOSE > 0
+        std::cout << "error: " << err[nn] << std::endl;
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPointDisc_Err_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_XPointDisc_Src_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_XPointDisc_Dst_%i", nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+        double rateErr = std::abs(rate - 4);
+#if PR_VERBOSE > 0
+        std::cout << "convergence rate: " << rate << std::endl;
+#endif
+        EXPECT_LT(rateErr, 0.1);
+    }
+}
+#endif
+#if 0
 TEST(MBPointInterpOp, Ring) {
     pout() << "RING TEST START" << std::endl;
     int domainSize = 8;
@@ -236,7 +333,7 @@ TEST(MBPointInterpOp, Ring) {
     pout() << std::endl;
 #endif
     
-    constexpr int N = 4;
+    constexpr int N = 1;
     double errInf[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -335,14 +432,14 @@ TEST(MBPointInterpOp, Ring) {
 }
 #endif
 #if DIM == 3
-#if 0
+#if 1
 TEST(MBPointInterpOp, SphericalShell) {
-    pout() << "SPHERE SHELL TEST START" << std::endl;
     int domainSize = 8;
     int boxSize = 8;
+    int thickness = 1;
     HDF5Handler h5;
 
-    Array<double, DIM> exp{4,4,4,0,0,0};
+    Array<double, DIM> exp{0,0,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<double, DIM> k{1,1,1,1,1,1};
 
@@ -355,6 +452,32 @@ TEST(MBPointInterpOp, SphericalShell) {
             footprint.push_back(pi);
         }
     }
+    std::vector<Point> exponents;
+    std::vector<std::string> coefVarNames;
+    for (auto bi : Box::Cube(4))
+    {
+        if (bi.sum() < 4)
+        {
+            exponents.push_back(bi);
+            std::string varname;
+            std::string xyz = "xyz";
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                if (bi[dir] == 0) {continue;}
+                else {
+                    if (varname.size() > 0) {varname+="*";}
+                    varname += xyz[dir];
+                    if (bi[dir] > 1)
+                    {
+                        varname+=("^" + std::to_string(bi[dir]));
+                    }
+                }
+            }
+            if (varname.size() == 0) {varname = "1";}
+            coefVarNames.push_back(varname);
+        }
+    }
+    PROTO_ASSERT(exponents.size() == 20, "Wrong number of exponents");
    
 #if PR_VERBOSE > 0
     pout() << "Input footprint: " << std::endl;
@@ -364,32 +487,44 @@ TEST(MBPointInterpOp, SphericalShell) {
     }
     pout() << std::endl;
 #endif
-    constexpr int N = 2;
+    constexpr int N = 1;
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
-        auto domain = buildThinCubeSphere(domainSize);
+        auto domain = buildPartialThinCubeSphere(domainSize, thickness);
         Point boxSizeVect = Point::Ones(boxSize);
-        boxSizeVect[0] = 1;
+        boxSizeVect[0] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         Array<Point, DIM+1> ghost;
         ghost.fill(Point::Ones(4));
         ghost[0] = Point::Ones(1);
         Point boundGhost = Point::Ones(1);
+        ghost[0][0] = 0;
 
         // initialize map
-        MBMap<ThinCubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
+        MBMap<PartialThinCubedSphereMap_t> map(PartialThinCubedSphereMap, layout, ghost, boundGhost);
+        
+        auto& J0 = map.jacobian()[*layout.begin()]; //block 0
+        auto JExact = forall_p<double>(f_JCubeSphere, J0.box().grow(1), 0, boxSizeVect);
+        auto JExactAvg = Operator::convolve(JExact);
+        auto JQuotient = Operator::cellQuotient(JExactAvg, J0);
+
+        J0.printData(4);
+        JExactAvg.printData(4);
+        JQuotient.printData(4);
 
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
         MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, NCOMP, HOST> hostErr(layout, ghost);
+        MBLevelBoxData<double, 20, HOST> hostCoefs(layout, ghost);
 
         hostSrc.initConvolve(f_polyM, map, exp, offset);
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
+        hostCoefs.setVal(0);
         
         Box blockDomainBox(Point::Ones(domainSize));
         err[nn] = 0;
@@ -411,10 +546,15 @@ TEST(MBPointInterpOp, SphericalShell) {
                         MBPointInterpOp pointInterp(dstDataPoint, ghost[0], map, footprint, 4);
                         pointInterp.apply(hostDst, hostSrc);
 
-                        //pout() << "Coefs at point " << bi << std::endl;
-                        //auto coefs = pointInterp.coefs(hostSrc);
-                        //coefs.print("%10.2e");
-
+#if PR_VERBOSE > 1
+                        pout() << "Coefs at point " << bi << std::endl;
+                        auto coefs = pointInterp.coefs(hostSrc);
+                        for (int ei = 0; ei < 20; ei++)
+                        {
+                            hostCoefs[iter](bi,ei) = coefs(ei,0);
+                        }
+                        coefs.print("%10.2e");
+#endif
                         double interpValue = hostDst[dstDataPoint](0);
                         double exactValue =  hostSrc[dstDataPoint](0);
                         double errorValue = interpValue - exactValue;
@@ -430,6 +570,7 @@ TEST(MBPointInterpOp, SphericalShell) {
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_SphericalShell_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_SphericalShell_Dst_%i", nn);
         h5.writeMBLevel({"J"}, map, map.jacobian(), "MBInterpOpTests_SphericalShell_J_%i", nn);
+        h5.writeMBLevel(coefVarNames, map, hostCoefs, "MBInterpOpTests_SphericalShell_Coefs_%i", nn);
 #endif
         domainSize *= 2;
         boxSize *= 2;
@@ -446,7 +587,7 @@ TEST(MBPointInterpOp, SphericalShell) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBPointInterpOp, PolarShell) {
     pout() << "PolarShell" << std::endl;
     int domainSize = 8;

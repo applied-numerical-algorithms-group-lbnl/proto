@@ -3,7 +3,7 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 5
+#define XPOINT_SIZE 3
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 1.1
@@ -138,9 +138,6 @@ MBProblemDomain buildCubeSphere(int a_domainSize)
     }
     return domain;
 }
-#endif
-
-#if DIM > 2
 MBProblemDomain buildThinCubeSphere(int a_domainSize, int a_thickness = 1)
 {
     MBProblemDomain domain(6);
@@ -164,6 +161,28 @@ MBProblemDomain buildThinCubeSphere(int a_domainSize, int a_thickness = 1)
     domain.graph().fixRotations();
     Point domainSize(a_thickness, a_domainSize, a_domainSize);
     for (int bi = 0; bi < 6; bi++)
+    {
+        domain.defineDomain(bi, domainSize);
+    }
+    return domain;
+}
+MBProblemDomain buildPartialThinCubeSphere(int a_domainSize, int a_thickness = 1)
+{
+    MBProblemDomain domain(3);
+    auto CCWX = CoordPermutation::ccw(0);
+    CoordPermutation RI;
+    Point x = Point::X();
+    Point y = Point::Y();
+    Point z = Point::Z();
+
+    domain.defineBoundary(1, 2, y, RI);
+    domain.defineBoundary(1, 0, -z, RI);
+    domain.defineBoundary(2, 0, -z, CCWX);
+
+    domain.graph().fixRotations();
+
+    Point domainSize(a_thickness, a_domainSize, a_domainSize);
+    for (int bi = 0; bi < 3; bi++)
     {
         domain.defineDomain(bi, domainSize);
     }
@@ -443,13 +462,43 @@ PROTO_MAP_START(MHDMap)
     z = R*cos(xi3);
 PROTO_MAP_END(MHDMap)
 
+PROTO_MAP_START(AltCubedSphereMap)
+    double r0 = 1.0;
+    double r1 = 3.0;
+
+    double a = (2*X-1);
+    double b = (2*Y-1);
+    double c = (2*Z-1);
+
+    //double r = 0.5*(r0*(1.0-a) + r1*(1.0+a));
+    double r = 1;
+    double s = r*sqrt((r1-r0)/((r1-r)+(r-r0)*(1+b*b+c*c)));
+
+    switch (block)
+    {
+        case 0:
+            x = b*s;    y = c*s;    z = -s; break;
+        case 1:
+            x = -b*s;   y = c*s;    z = s; break;
+        case 2:
+            x = s;      y = c*s;    z = b*s; break;
+        case 3:
+            x = -c*s;   y = s;      z = b*s; break;
+        case 4:
+            x = -s;     y = -c*s;   z = b*s; break;
+        case 5:
+            x =  c*s;   y = -s;     z = b*s; break;
+    }
+PROTO_MAP_END(AltCubedSphereMap)
+
 PROTO_MAP_START(ThinCubedSphereMap)
-    double r0 = CUBED_SPHERE_R0;
-    double r1 = CUBED_SPHERE_R1;
+    double r0 = CUBED_SPHERE_R0 - 0.1;
+    double r1 = CUBED_SPHERE_R0 + 0.1;
 
     double L = -M_PI/4;
     double H = M_PI/4;
-    
+   
+    // X is radial
     double xi = L + Y*(H - L);
     double eta = L + Z*(H - L);
     double R = r0 + X*(r1 - r0);
@@ -458,37 +507,45 @@ PROTO_MAP_START(ThinCubedSphereMap)
     double v = a*tan(eta);
     double r = sqrt(a*a + u*u + v*v);
     
+    x = R/r; y = R/r; z = R/r;
+
     switch (block)
     {
+        // -z axis
         case 0:
-            x =  R/r*u;
-            y = -R/r*v;
-            z = -R/r*a;
+            x *=  u;
+            y *= -v;
+            z *= -a;
             break;
+        // +z axis
         case 1:
-            x =  R/r*u;
-            y =  R/r*v;
-            z =  R/r*a;
+            x *=  u;
+            y *=  v;
+            z *=  a;
             break;
+        // -y axis
         case 2:
-            x =  R/r*u;
-            y = -R/r*a;
-            z =  R/r*v;
+            x *=  u;
+            y *= -a;
+            z *=  v;
             break;
+        // +x axis
         case 3:
-            x =  R/r*a;
-            y =  R/r*u;
-            z =  R/r*v;
+            x *=  a;
+            y *=  u;
+            z *=  v;
             break;
+        // +y axis
         case 4:
-            x = -R/r*u;
-            y =  R/r*a;
-            z =  R/r*v;
+            x *= -u;
+            y *=  a;
+            z *=  v;
             break;
+        // -x axis
         case 5:
-            x = -R/r*a;
-            y = -R/r*u;
-            z =  R/r*v;
+            x *= -a;
+            y *= -u;
+            z *=  v;
             break;
         default:
             x = 0;
@@ -498,6 +555,108 @@ PROTO_MAP_START(ThinCubedSphereMap)
     }
 PROTO_MAP_END(ThinCubedSphereMap)
 
+PROTO_MAP_START(PartialThinCubedSphereMap)
+    
+    // I want the center of each cell to be at CUBED_SPHERE_R0
+    double r0 = CUBED_SPHERE_R0 - 0.1;
+    double r1 = CUBED_SPHERE_R0 + 0.1;
+
+    double L = -M_PI/4;
+    double H = M_PI/4;
+   
+    // X,Y,Z are mapped coodinates
+    // X is radial 
+    // Y and Z are in the phi, theta plane
+
+    double xi = L + Y*(H - L);
+    double eta = L + Z*(H - L);
+    double R = r0 + X*(r1 - r0);
+    double a = sqrt(3.0)/3.0*R;
+    double u = a*tan(xi);
+    double v = a*tan(eta);
+    double r = sqrt(a*a + u*u + v*v);
+    
+    // x,y,z are cartesian, physical space coordinates
+    x = R/r; y = R/r; z = R/r;
+
+    switch (block)
+    {
+        // -z axis
+        case 0:
+            x *=  u;
+            y *= -v;
+            z *= -a;
+            break;
+        // -y axis
+        case 1:
+            x *=  u;
+            y *= -a;
+            z *=  v;
+            break;
+        // +x axis
+        case 2:
+            x *=  a;
+            y *=  u;
+            z *=  v;
+            break;
+        default:
+            x = 0;
+            y = 0;
+            z = 0;
+            break;
+    }
+PROTO_MAP_END(PartialThinCubedSphereMap)
+
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSize)
+{
+    double r0 = CUBED_SPHERE_R0 - 0.1;
+    double r1 = CUBED_SPHERE_R0 + 0.1;
+
+    double L = -M_PI/4;
+    double H = M_PI/4;
+  
+    double dX = 1.0/((double)a_blockSize[0]);
+    double dY = 1.0/((double)a_blockSize[1]);
+    double dZ = 1.0/((double)a_blockSize[2]);
+
+    double X = a_pt[0]*dX + dX/2.0;
+    double Y = a_pt[1]*dX + dY/2.0;
+    double Z = a_pt[2]*dX + dZ/2.0;
+
+    double xi = L + Y*(H - L);
+    double eta = L + Z*(H - L);
+    double R = r0 + X*(r1 - r0);
+
+    double u = tan(xi);
+    double v = tan(eta);
+    double r = sqrt(1+u*u + v*v);
+
+    double dR_dZ = (r1-r0);
+    double du_dY = (H-L)/(cos(xi)*cos(xi));
+    double dv_dZ = (H-L)/(cos(eta)*cos(eta));
+    double drinv_dY = -u*(H-L)/(cos(eta)*cos(eta)*r*r*r);
+    double drinv_dZ = -v*(H-L)/(cos(eta)*cos(eta)*r*r*r);
+
+    double dx_dX =  dR_dZ*u/r;
+    double dy_dX = -dR_dZ*v/r;
+    double dz_dX =  dR_dZ/r;
+
+    double dx_dY =  R*(drinv_dY + du_dY);
+    double dy_dY = -R*v*(drinv_dY);
+    double dz_dY =  R*(drinv_dY);
+    
+    double dx_dZ =  R*u*(drinv_dZ);
+    double dy_dZ = -R*(drinv_dZ + dv_dZ);
+    double dz_dZ =  R*(drinv_dZ);
+
+    a_J(0) = dx_dX*dy_dY*dz_dZ + dx_dY*dy_dZ*dz_dX + dx_dZ*dy_dX*dz_dY
+           - dx_dZ*dy_dY*dz_dX - dx_dX*dy_dZ*dz_dY - dx_dY*dy_dX*dz_dZ;
+
+    a_J(0) *= -(dX*dY*dZ);
+}
+PROTO_KERNEL_END(f_JCubeSphere_, f_JCubeSphere);
 #endif
 
 ACCEL_DECORATION
@@ -590,7 +749,7 @@ PROTO_KERNEL_START
 void f_polyMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
         Var<double, DIM, MEM>& a_X, Array<double, DIM> a_exp, Array<double, DIM> a_offset)
 {
-    double phi = 0;
+    double phi = 1;
     for (int dir = 0; dir < DIM; dir++)
     {
         if (a_exp[dir] != 0)

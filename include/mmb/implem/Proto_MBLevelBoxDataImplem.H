@@ -592,6 +592,15 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     }
 
     auto domainBoundaryDirs = this->onDomainBoundary(a_center, a_index);
+    Point ignoreDirs = Point::Zeros();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (spanBox.size(ii) == 1)
+        {
+            ignoreDirs += Point::Basis(ii);
+        }
+    }
+    Point useDirs = Point::Ones() - ignoreDirs;
     bool nearBoundary = false;
     if (domainBoundaryDirs.size() > 0 )
     {
@@ -611,11 +620,11 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     {
         Point absDir = dir.abs();
         // if the span in direction dir is size 1, assume that the stencil is not meant to be extended
-        if (spanBox.low()*absDir == spanBox.high()*absDir)
+        if (absDir*ignoreDirs != Point::Zeros())
         {
             continue;
         }
-        Point contractDirs = Point::Ones() - absDir;
+        Point contractDirs = useDirs - absDir;
         Box extendDomain = spanBox.grow(-contractDirs);
         while (extendDomain.contains(dir))
         {
