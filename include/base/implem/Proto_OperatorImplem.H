@@ -869,12 +869,312 @@ cofactorMatrix(
 {
     MayDay<void>::Abort("Operator::cofactorMatrix | Error: Function not implemented.");
 }
+template<class T,unsigned int C,MemType MEM>
+void spreadBottom(BoxData<T,C,MEM>& a_bd)
+{
+  Box bx= a_bd.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  for (int i = bx.low()[0] + 1; i < bx.high()[0] + 1; i++)
+    {
+      Point lowi = low0;
+      Point highi = high0;
+      lowi[0] = i;
+      highi[0]  = i;
+      Box bxi(lowi,highi);
+      auto shiftedBd = alias(a_bd,Point::Basis(0,i));
+      forallInPlace([]PROTO_LAMBDA
+                    (Var<T,C,MEM>& a_slice,
+                     const Var<T,C,MEM>& a_slice0)
+                    {
+                      for (int c = 0; c < C; c++)
+                        {
+                          a_slice(c) = a_slice0(c);
+                        }
+                    },bxi,a_bd,shiftedBd);
+    }
+}
+// CoFactor Matrix for the Cubed-sphere equiangular mapping.
+// We use the fact that the map is known analytically, and is a spherical map.
 
+// copy lowest slice to all the other slices.
+template<class T, MemType MEM>
+void
+cubedSphere_nSphere(
+                    BoxData<T,DIM,MEM>& a_nSphere,
+                    T a_h)                      
+{
+  // compute the location of the points in a_bx projected back to the surface of the
+  // sphere of radius 1.
+  Box bx = a_nSphere.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  // Fill in loweest slice using analytic formula for n.
+  forallInPlace_p([]PROTO_LAMBDA
+                 (Point a_pt,
+                  Var<T,DIM,MEM>& a_nSphere,                 
+                  T a_h)
+                 {
+                   T alpha = -.25*M_PI + a_pt[1]*a_h;
+                   T beta = -.25*M_PI + a_pt[2]*a_h;
+                   T tana = tan(alpha);
+                   T tanb = tan(beta);
+                   T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
+                   a_nSphere(0) = norm;
+                   a_nSphere(1) = tana*norm;
+                   a_nSphere(2) = tanb*norm;
+                 },bx0,a_nSphere,a_h);
+  spreadBottom(a_nSphere);   
+}                   
+  // Compute the average of D_1(n) x n along 1-edges.
+template<class T, MemType MEM>
+void
+cubedSphere_edge1(
+                  BoxData<T,DIM,MEM>& a_d1n_cross_n,
+                  T a_h)
+{
+  Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Box bx = a_d1n_cross_n.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  forallInPlace_p([]PROTO_LAMBDA
+                  (Point a_pt,
+                   Var<T,DIM,MEM>& a_d1n_cross_n,
+                   Array<T,5>& a_weights,
+                   T a_h)
+                  {
+                    a_d1n_cross_n(0) = 0.0;
+                    a_d1n_cross_n(1) = 0.0;
+                    a_d1n_cross_n(2) = 0.0;
+                    for (int k = 0; k < 5;k++)
+                      {
+                        T alpha = -.25*M_PI + a_pt[1]*a_h + k*a_h/4;
+                        T beta = -.25*M_PI + a_pt[2]*a_h;
+                        T tana = tan(alpha);
+                        T tanb = tan(beta);
+                        T seca = 1.0/cos(alpha);
+                        T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);               
+                        Array<T,DIM> cross;
+                        cross[0] = seca*seca*tanb*normsq;
+                        cross[1] = 0;
+                        cross[2] = -seca*seca*normsq;
+                        a_d1n_cross_n(0) += cross[0]*a_weights[k];
+                        a_d1n_cross_n(1) += cross[1]*a_weights[k];
+                        a_d1n_cross_n(2) += cross[2]*a_weights[k];
+                      }
+                  },bx0,a_d1n_cross_n,weights,a_h);
+  // copy lowest slice to all the other slices. 
+  spreadBottom(a_d1n_cross_n);
+}
+  // Compute the integral of n x D_2(n) along 2-edges.
+template<class T, MemType MEM>
+void
+cubedSphere_edge2(
+                  BoxData<T,DIM,MEM>& a_n_cross_d2n,
+                  T a_h)
+{
+  Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Box bx = a_n_cross_d2n.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  forallInPlace_p([]PROTO_LAMBDA
+                  (Point a_pt,
+                   Var<T,DIM,MEM>&  a_n_cross_d2n,
+                   Array<T,5>& weights,
+                   T a_h)
+                  {
+                    a_n_cross_d2n(0) = 0.0;
+                    a_n_cross_d2n(1) = 0.0;
+                    a_n_cross_d2n(2) = 0.0;
+                    for (int k = 0; k < 5;k++)
+                      {
+                        T alpha = -.25*M_PI + a_pt[1]*a_h;
+                        T beta = -.25*M_PI + a_pt[2]*a_h + k*a_h/4;
+                        T tana = tan(alpha);
+                        T tanb = tan(beta);
+                        T secb =  1.0/cos(beta);
+                        T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);
+                        Array<T,DIM> n;                              
+                        Array<T,DIM> cross;
+                        cross[0] = tana*secb*secb*normsq;
+                        cross[1] = -secb*secb*normsq;
+                        cross[2] = 0;
+                        a_n_cross_d2n(0) += cross[0]*weights[k];
+                        a_n_cross_d2n(1) += cross[1]*weights[k];
+                        a_n_cross_d2n(2) += cross[2]*weights[k];
+                      }
+                  },bx0,a_n_cross_d2n,weights,a_h);
+  // copy lowest slice to all the other slices.
+  spreadBottom(a_n_cross_d2n);
+}
+template<class T, MemType MEM>
+void
+cubedSphereDetAFlux1(
+                     BoxData<T,1,MEM>& a_detAFlux1,
+                     T a_h)
+{
+  Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Box bx = a_detAFlux1.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  forallInPlace_p([]PROTO_LAMBDA
+                  (Point a_pt,
+                   Var<T,1,MEM>&  a_detaflux1,
+                   Array<T,5>& weights,
+                   T a_h)
+                  {
+                    a_detaflux1(0) = 0.0;
+                    for (int k = 0; k < 5;k++)
+                      {
+                        T alpha = -.25*M_PI + a_pt[1]*a_h;
+                        T beta = -.25*M_PI + a_pt[2]*a_h + k*a_h/4;
+                        T tana = tan(alpha);
+                        T tanb = tan(beta);
+                        T secb =  1.0/cos(beta);
+                        T fluxpt = tana*secb*secb/
+                          sqrt(tana*tana + tanb*tanb + 1.0)/(1.0 + tanb*tanb);        
+                        a_detaflux1(0) += fluxpt*weights[k];                
+              }
+          },bx0,a_detAFlux1,weights,a_h);
+  // copy lowest slice to all the other slices.
+  spreadBottom(a_detAFlux1);
+}
+template<class T, MemType MEM>
+void
+cubedSphereDetAFlux2(
+                     BoxData<T,1,MEM>& a_detAFlux2,
+                     T a_h)
+{
+  Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Box bx = a_detAFlux2.box();
+  Point low0 = bx.low();
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  forallInPlace_p([]PROTO_LAMBDA
+                  (Point a_pt,
+                   Var<T,1,MEM>&  a_detaflux2,
+                   Array<T,5>& weights,
+                   T a_h)
+                  {
+                    a_detaflux2(0) = 0.0;
+                    for (int k = 0; k < 5;k++)
+                      {
+                        T alpha = -.25*M_PI + a_pt[1]*a_h  + k*a_h/4;
+                        T beta = -.25*M_PI + a_pt[2]*a_h;
+                        T tana = tan(alpha);
+                        T tanb = tan(beta);
+                        T seca =  1.0/cos(alpha);
+                        T fluxpt = tanb*seca*seca/
+                          sqrt(tana*tana + tanb*tanb + 1.0)/(1.0 + tanb*tanb);
+                        a_detaflux2(0) += fluxpt*weights[k];                
+                      }
+                  },bx0,a_detAFlux2,weights,a_h);
+  // copy lowest slice to all the other slices.
+  spreadBottom(a_detAFlux2);
+}
+// Compute cubed-sphere geometry on faces.
+template<class T, MemType MEM>
+void
+cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
+                    Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                    BoxData<T,1,MEM>& a_J,
+                    BoxData<T, 1, MEM>& a_radius,
+                    const Box& a_bx,
+                    T a_h)
+{
+  a_X.define(a_bx.extrude(Point::Ones()));
+  cubedSphere_nSphere(a_X,a_h);
+  forallInPlace([]PROTO_LAMBDA(
+                               Var<T,DIM,MEM>& a_x,
+                               Var<T,1,MEM>& a_r
+                               )
+                {
+                  a_x(0) *= a_r(0);
+                  a_x(1) *= a_r(0);
+                  a_x(2) *= a_r(0);
+                },a_X,a_radius);
+
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      a_NT[dir].define(a_bx.extrude(Point::Basis(dir)));
+    }
+  BoxData<T,DIM,MEM> d1n_cross_n(a_bx.extrude(Point::Ones() - Point::Basis(1)));
+  BoxData<T,DIM,MEM> n_cross_d2n(a_bx.extrude(Point::Ones() - Point::Basis(2)));
+  cubedSphere_edge1(d1n_cross_n,a_h);
+  cubedSphere_edge2(n_cross_d2n,a_h);
+  // Cofactors.
+  
+  a_NT[0].setToZero();
+  a_NT[0] += Stencil<T>::FluxDivergence(2)(d1n_cross_n,1/2);
+  a_NT[0] += Stencil<T>::FluxDivergence(1)(n_cross_d2n,1/2);
+
+  forallInPlace([]PROTO_LAMBDA(
+                               Var<T,DIM,MEM>& a_NT0,
+                               const Var<T,1,MEM>& a_r)
+                {
+                  T rsq = a_r(0)*a_r(0);
+                  a_NT0(0) *= rsq;
+                  a_NT0(1) *= rsq;
+                  a_NT0(2) *= rsq;  
+                },a_NT[0],a_radius);
+                
+  n_cross_d2n.copyTo(a_NT[1]);
+  d1n_cross_n.copyTo(a_NT[2]);
+  a_NT[1]*= -1;
+  a_NT[2]*= -1;
+ 
+  {
+    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0));
+    forallInPlace([]PROTO_LAMBDA(
+                                 Var<T,DIM,MEM>& a_nttan1,
+                                 Var<T,DIM,MEM>& a_nttan2,
+                                 const Var<T,1,MEM>& a_rtop,
+                                 const Var<T,1,MEM>& a_r)
+                {
+                  T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
+                  for (int dir = 0; dir < DIM ; dir++)
+                    {
+                      a_nttan1(dir) *= drsq;
+                      a_nttan2(dir) *= drsq;
+                    }
+                },a_NT[1],a_NT[2],rtop,a_radius);
+  }
+   //Jacobian.
+  a_J.define(a_bx);
+  a_J.setToZero();
+  BoxData<T,MEM> detAFlux1(a_bx.extrude(Point::Basis(1)));
+  BoxData<T,MEM> detAFlux2(a_bx.extrude(Point::Basis(2)));
+  cubedSphereDetAFlux1(detAFlux1,a_h);
+  cubedSphereDetAFlux2(detAFlux2,a_h);
+  a_J += Stencil<T>::FluxDivergence(1)(detAFlux1,1/2);
+  a_J += Stencil<T>::FluxDivergence(2)(detAFlux2,1/2);
+  {
+    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0));
+    forallInPlace([]PROTO_LAMBDA(
+                                 Var<T,1,MEM>& a_j,
+                                 const Var<T,1,MEM>& a_rtop,
+                                 const Var<T,1,MEM>& a_r)
+                  {
+                    a_j(0) *=(a_rtop(0)*a_rtop(0)*a_rtop(0)
+                              - a_r(0)*a_r(0)*a_r(0))/3; 
+                  },a_J,rtop,a_radius);
+  }
+}
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 cofactorMatrix(
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-        int a_dirNorm)                         
+               const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+               int a_dirNorm)                         
 {
     PR_TIME("Operator::cofactorMatrix");
     Array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
