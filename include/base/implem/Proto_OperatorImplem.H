@@ -872,10 +872,16 @@ cofactorMatrix(
 template<class T,unsigned int C,MemType MEM>
 void spreadBottom(BoxData<T,C,MEM>& a_bd)
 {
+  PR_TIMERS("spreadBottom");
   Box bx= a_bd.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
   high0[0] = low0[0];
+  Point lowUpper = low0;
+  lowUpper[0] += 1;
+  Box bxUpper(lowUpper,bx.high());
+  BoxData<T,C,MEM> bdcopy(bxUpper);
+  bdcopy.setToZero();
   for (int i = bx.low()[0] + 1; i < bx.high()[0] + 1; i++)
     {
       Point lowi = low0;
@@ -883,8 +889,8 @@ void spreadBottom(BoxData<T,C,MEM>& a_bd)
       lowi[0] = i;
       highi[0]  = i;
       Box bxi(lowi,highi);
-      auto shiftedBd = alias(a_bd,Point::Basis(0,i));
-      forallInPlace([]PROTO_LAMBDA
+      Stencil<T> shiftUp = 1.0*Shift(Point::Basis(0,-i));         
+      /*forallInPlace([]PROTO_LAMBDA
                     (Var<T,C,MEM>& a_slice,
                      const Var<T,C,MEM>& a_slice0)
                     {
@@ -892,8 +898,15 @@ void spreadBottom(BoxData<T,C,MEM>& a_bd)
                         {
                           a_slice(c) = a_slice0(c);
                         }
-                    },bxi,a_bd,shiftedBd);
+                        },bxi,a_bd,shiftedBd);*/
+        bdcopy |= shiftUp(a_bd,bxi);
+        //cout << i << endl;
+        // bdcopy.print();
+        //a_bd.print();
+        //bxi.print();
+        //cout << endl;       
     }
+  bdcopy.copyTo(a_bd,bxUpper);
 }
 // CoFactor Matrix for the Cubed-sphere equiangular mapping.
 // We use the fact that the map is known analytically, and is a spherical map.
@@ -907,6 +920,8 @@ cubedSphere_nSphere(
 {
   // compute the location of the points in a_bx projected back to the surface of the
   // sphere of radius 1.
+  PR_TIMERS("cubedSphere_nSphere");
+  HDF5Handler h5;
   Box bx = a_nSphere.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
@@ -918,8 +933,8 @@ cubedSphere_nSphere(
                   Var<T,DIM,MEM>& a_nSphere,                 
                   T a_h)
                  {
-                   T alpha = -.25*M_PI + a_pt[1]*a_h;
-                   T beta = -.25*M_PI + a_pt[2]*a_h;
+                   T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h;
+                   T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h;
                    T tana = tan(alpha);
                    T tanb = tan(beta);
                    T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
@@ -927,7 +942,9 @@ cubedSphere_nSphere(
                    a_nSphere(1) = tana*norm;
                    a_nSphere(2) = tanb*norm;
                  },bx0,a_nSphere,a_h);
-  spreadBottom(a_nSphere);   
+  //h5.writePatch(a_h,a_nSphere,"nSphere_pre_" + to_string(bx.high()[0]));
+  spreadBottom(a_nSphere);
+  //h5.writePatch(a_h,a_nSphere,"nSphere_post_" + to_string(bx.high()[0]));
 }                   
   // Compute the average of D_1(n) x n along 1-edges.
 template<class T, MemType MEM>
@@ -936,40 +953,50 @@ cubedSphere_edge1(
                   BoxData<T,DIM,MEM>& a_d1n_cross_n,
                   T a_h)
 {
+  PR_TIMERS("cubedSphere_edge1");
+#if QUADRATURE1D == 5
   Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+#endif
+#if QUADRATURE1D == 3
+  Array<T,3> weights={1.0/6.0,2.0/3.0,1.0/6.0};
+#endif
+#if QUADRATURE1D == 2
+  Array<T,2> weights={.5,.5};
+#endif
+  int q1d = QUADRATURE1D;
   Box bx = a_d1n_cross_n.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  forallInPlace_p([]PROTO_LAMBDA
+  forallInPlace_p([q1d]PROTO_LAMBDA
                   (Point a_pt,
                    Var<T,DIM,MEM>& a_d1n_cross_n,
-                   Array<T,5>& a_weights,
+                   Array<T,QUADRATURE1D>& a_weights,
                    T a_h)
                   {
                     a_d1n_cross_n(0) = 0.0;
                     a_d1n_cross_n(1) = 0.0;
                     a_d1n_cross_n(2) = 0.0;
-                    for (int k = 0; k < 5;k++)
+                    T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
+                    T tanb = tan(beta);
+                    for (int k = 0; k < q1d;k++)
                       {
-                        T alpha = -.25*M_PI + a_pt[1]*a_h + k*a_h/4;
-                        T beta = -.25*M_PI + a_pt[2]*a_h;
+                        T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + k*a_h/(q1d-1));
                         T tana = tan(alpha);
-                        T tanb = tan(beta);
                         T seca = 1.0/cos(alpha);
                         T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);               
                         Array<T,DIM> cross;
                         cross[0] = seca*seca*tanb*normsq;
-                        cross[1] = 0;
+                        //cross[1] = 0;
                         cross[2] = -seca*seca*normsq;
                         a_d1n_cross_n(0) += cross[0]*a_weights[k];
-                        a_d1n_cross_n(1) += cross[1]*a_weights[k];
+                        //a_d1n_cross_n(1) += cross[1]*a_weights[k];
                         a_d1n_cross_n(2) += cross[2]*a_weights[k];
                       }
-                  },bx0,a_d1n_cross_n,weights,a_h);
+                  },a_d1n_cross_n,weights,a_h);
   // copy lowest slice to all the other slices. 
-  spreadBottom(a_d1n_cross_n);
+  // spreadBottom(a_d1n_cross_n);
 }
   // Compute the integral of n x D_2(n) along 2-edges.
 template<class T, MemType MEM>
@@ -978,41 +1005,50 @@ cubedSphere_edge2(
                   BoxData<T,DIM,MEM>& a_n_cross_d2n,
                   T a_h)
 {
+  PR_TIMERS("cubedSphere_edge2");
+#if QUADRATURE1D == 5
   Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+#endif
+#if QUADRATURE1D == 3
+  Array<T,3> weights={1.0/6.0,2.0/3.0,1.0/6.0};
+#endif
+#if QUADRATURE1D == 2
+  Array<T,2> weights={.5,.5};
+#endif
+  int q1d = QUADRATURE1D;
   Box bx = a_n_cross_d2n.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  forallInPlace_p([]PROTO_LAMBDA
+  forallInPlace_p([q1d]PROTO_LAMBDA
                   (Point a_pt,
                    Var<T,DIM,MEM>&  a_n_cross_d2n,
-                   Array<T,5>& weights,
+                   Array<T,QUADRATURE1D>& weights,
                    T a_h)
                   {
                     a_n_cross_d2n(0) = 0.0;
                     a_n_cross_d2n(1) = 0.0;
                     a_n_cross_d2n(2) = 0.0;
-                    for (int k = 0; k < 5;k++)
+                    T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h;
+                    T tana = tan(alpha);
+                    for (int k = 0; k < q1d;k++)
                       {
-                        T alpha = -.25*M_PI + a_pt[1]*a_h;
-                        T beta = -.25*M_PI + a_pt[2]*a_h + k*a_h/4;
-                        T tana = tan(alpha);
+                        T beta = -.25*M_PI + .5*M_PI*(a_pt[2]*a_h + k*a_h/(q1d-1));
                         T tanb = tan(beta);
                         T secb =  1.0/cos(beta);
-                        T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);
-                        Array<T,DIM> n;                              
+                        T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);         
                         Array<T,DIM> cross;
                         cross[0] = tana*secb*secb*normsq;
                         cross[1] = -secb*secb*normsq;
-                        cross[2] = 0;
+                        //cross[2] = 0;
                         a_n_cross_d2n(0) += cross[0]*weights[k];
                         a_n_cross_d2n(1) += cross[1]*weights[k];
-                        a_n_cross_d2n(2) += cross[2]*weights[k];
+                        //a_n_cross_d2n(2) += cross[2]*weights[k];
                       }
-                  },bx0,a_n_cross_d2n,weights,a_h);
+                  },a_n_cross_d2n,weights,a_h);
   // copy lowest slice to all the other slices.
-  spreadBottom(a_n_cross_d2n);
+  //spreadBottom(a_n_cross_d2n);
 }
 template<class T, MemType MEM>
 void
@@ -1020,31 +1056,44 @@ cubedSphereDetAFlux1(
                      BoxData<T,1,MEM>& a_detAFlux1,
                      T a_h)
 {
-  Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  PR_TIMERS("cubedSphereDetAFlux1");
+  HDF5Handler h5;
+#if QUADRATURE1D == 5
+ Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+#endif
+#if QUADRATURE1D == 3
+  Array<T,3> weights={1.0/6.0,2.0/3.0,1.0/6.0};
+#endif
+#if QUADRATURE1D == 2
+  Array<T,2> weights={.5,.5};
+#endif
+  int q1d = QUADRATURE1D;
   Box bx = a_detAFlux1.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  forallInPlace_p([]PROTO_LAMBDA
+  a_detAFlux1.setToZero();
+  forallInPlace_p([q1d]PROTO_LAMBDA
                   (Point a_pt,
                    Var<T,1,MEM>&  a_detaflux1,
-                   Array<T,5>& weights,
+                   Array<T,QUADRATURE1D>& weights,
                    T a_h)
                   {
                     a_detaflux1(0) = 0.0;
-                    for (int k = 0; k < 5;k++)
-                      {
-                        T alpha = -.25*M_PI + a_pt[1]*a_h;
-                        T beta = -.25*M_PI + a_pt[2]*a_h + k*a_h/4;
-                        T tana = tan(alpha);
-                        T tanb = tan(beta);
+                    T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h;
+                    T tana = tan(alpha);
+                    for (int k = 0; k < q1d;k++)
+                      {                      
+                        T beta = -.25*M_PI + .5*M_PI*(a_pt[2]*a_h + k*a_h/(q1d-1));                           T tanb = tan(beta);
                         T secb =  1.0/cos(beta);
                         T fluxpt = tana*secb*secb/
-                          sqrt(tana*tana + tanb*tanb + 1.0)/(1.0 + tanb*tanb);        
-                        a_detaflux1(0) += fluxpt*weights[k];                
-              }
+                          (sqrt(tana*tana + tanb*tanb + 1.0)*
+                           (1.0 + tanb*tanb));        
+                        a_detaflux1(0) += fluxpt*weights[k];
+                      }                   
           },bx0,a_detAFlux1,weights,a_h);
+
   // copy lowest slice to all the other slices.
   spreadBottom(a_detAFlux1);
 }
@@ -1054,28 +1103,38 @@ cubedSphereDetAFlux2(
                      BoxData<T,1,MEM>& a_detAFlux2,
                      T a_h)
 {
+  PR_TIMERS("cubedSphereDetAFlux2");
+#if QUADRATURE1D == 5
   Array<T,5> weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+#endif
+#if QUADRATURE1D == 3
+  Array<T,3> weights={1.0/6.0,2.0/3.0,1.0/6.0};
+#endif
+#if QUADRATURE1D == 2
+  Array<T,2> weights={.5,.5};
+#endif
+  int q1d = QUADRATURE1D;
   Box bx = a_detAFlux2.box();
   Point low0 = bx.low();
   Point high0 = bx.high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  forallInPlace_p([]PROTO_LAMBDA
+  forallInPlace_p([q1d]PROTO_LAMBDA
                   (Point a_pt,
                    Var<T,1,MEM>&  a_detaflux2,
-                   Array<T,5>& weights,
+                   Array<T,QUADRATURE1D>& weights,
                    T a_h)
                   {
                     a_detaflux2(0) = 0.0;
-                    for (int k = 0; k < 5;k++)
+                    T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h;
+                    T tanb = tan(beta);
+                    for (int k = 0; k < q1d;k++)
                       {
-                        T alpha = -.25*M_PI + a_pt[1]*a_h  + k*a_h/4;
-                        T beta = -.25*M_PI + a_pt[2]*a_h;
+                        T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + k*a_h/(q1d-1));
                         T tana = tan(alpha);
-                        T tanb = tan(beta);
                         T seca =  1.0/cos(alpha);
                         T fluxpt = tanb*seca*seca/
-                          sqrt(tana*tana + tanb*tanb + 1.0)/(1.0 + tanb*tanb);
+                          sqrt(tana*tana + tanb*tanb + 1.0)/(1.0 + tana*tana);
                         a_detaflux2(0) += fluxpt*weights[k];                
                       }
                   },bx0,a_detAFlux2,weights,a_h);
@@ -1092,6 +1151,8 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                     const Box& a_bx,
                     T a_h)
 {
+  PR_TIMERS("cubedSphereGeometry");
+  HDF5Handler  h5;
   a_X.define(a_bx.extrude(Point::Ones()));
   cubedSphere_nSphere(a_X,a_h);
   forallInPlace([]PROTO_LAMBDA(
@@ -1111,13 +1172,31 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
   BoxData<T,DIM,MEM> d1n_cross_n(a_bx.extrude(Point::Ones() - Point::Basis(1)));
   BoxData<T,DIM,MEM> n_cross_d2n(a_bx.extrude(Point::Ones() - Point::Basis(2)));
   cubedSphere_edge1(d1n_cross_n,a_h);
+  h5.writePatch(a_h,d1n_cross_n,"d1n_x_n_" + to_string(a_bx.high()[0]+1));
   cubedSphere_edge2(n_cross_d2n,a_h);
+  h5.writePatch(a_h,n_cross_d2n,"n_x_d2n_" + to_string(a_bx.high()[0]+1));
   // Cofactors.
-  
-  a_NT[0].setToZero();
-  a_NT[0] += Stencil<T>::FluxDivergence(2)(d1n_cross_n,1/2);
-  a_NT[0] += Stencil<T>::FluxDivergence(1)(n_cross_d2n,1/2);
 
+  Stencil<T> div1 = (1.0)*(Shift(Point::Basis(1)))+ (-1.0)*(Shift(Point::Zeros()));
+  Stencil<T> div2 = (1.0)*(Shift(Point::Basis(2)))+ (-1.0)*(Shift(Point::Zeros()));
+  a_NT[0].setToZero(); 
+  a_NT[0] += div2(d1n_cross_n);
+  /*cout<< endl << d1n_cross_n.box() << endl;
+  cout << n_cross_d2n.box() << endl;
+  cout << a_NT[0].box() << endl<<endl;
+  h5.writePatch(a_h,a_NT[0],"d2(d1n_x_n)_" + to_string(a_bx.high()[0]+1));
+  BoxData<T,DIM,MEM> foo2 = div1(n_cross_d2n);
+  n_cross_d2n.print();
+  d1n_cross_n.print();
+  foo2.print();
+  h5.writePatch(a_h,foo2,"d1(n_x_d2n)_" + to_string(a_bx.high()[0]+1)); */
+  a_NT[0] += div1(n_cross_d2n);
+  a_NT[0] *= .5;
+  //a_NT[0].print();
+  //div1.print();
+  //Stencil<T>::FluxDivergence(1).print();
+  //div2.print();
+  //Stencil<T>::FluxDivergence(2).print();
   forallInPlace([]PROTO_LAMBDA(
                                Var<T,DIM,MEM>& a_NT0,
                                const Var<T,1,MEM>& a_r)
@@ -1130,13 +1209,23 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                 
   n_cross_d2n.copyTo(a_NT[1]);
   d1n_cross_n.copyTo(a_NT[2]);
-  a_NT[1]*= -1;
-  a_NT[2]*= -1;
+  a_NT[1]*= -1.0;
+  a_NT[2]*= -1.0;
  
   {
-    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0));
+    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0,-1));
     forallInPlace([]PROTO_LAMBDA(
-                                 Var<T,DIM,MEM>& a_nttan1,
+                                 Var<T,DIM,MEM>& a_nttan1,  
+                                 const Var<T,1,MEM>& a_rtop,
+                                 const Var<T,1,MEM>& a_r)
+                {
+                  T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
+                  for (int dir = 0; dir < DIM ; dir++)
+                    {
+                      a_nttan1(dir) *= drsq;              
+                    }
+                },a_NT[1],rtop,a_radius);
+    forallInPlace([]PROTO_LAMBDA(
                                  Var<T,DIM,MEM>& a_nttan2,
                                  const Var<T,1,MEM>& a_rtop,
                                  const Var<T,1,MEM>& a_r)
@@ -1144,10 +1233,9 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                   T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
                   for (int dir = 0; dir < DIM ; dir++)
                     {
-                      a_nttan1(dir) *= drsq;
                       a_nttan2(dir) *= drsq;
                     }
-                },a_NT[1],a_NT[2],rtop,a_radius);
+                },a_NT[2],rtop,a_radius);
   }
    //Jacobian.
   a_J.define(a_bx);
@@ -1156,17 +1244,40 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
   BoxData<T,MEM> detAFlux2(a_bx.extrude(Point::Basis(2)));
   cubedSphereDetAFlux1(detAFlux1,a_h);
   cubedSphereDetAFlux2(detAFlux2,a_h);
-  a_J += Stencil<T>::FluxDivergence(1)(detAFlux1,1/2);
-  a_J += Stencil<T>::FluxDivergence(2)(detAFlux2,1/2);
+  //cout << "J calculation" << endl;
+  BoxData<T,MEM> foo;
+  foo = div1(detAFlux1);
+  
+  //foo.print();
+  a_J += foo; 
+  foo = div2(detAFlux2);
+   h5.writePatch(a_h,detAFlux2,"AFlux2" + to_string(a_bx.high()[0]+1));
+  //foo.print();
+  a_J += foo;
+  a_J *= .5;
+  h5.writePatch(a_h,a_J,"JNoDr" + to_string(a_bx.high()[0]+1));
+  //a_J.print();
   {
-    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0));
+    //cout << "drtest" << endl;
+    BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0,-1));
+    /* BoxData<T,1,MEM> drtest = ((1.0)*Shift(Point::Basis(0)))(rtop,-1.0);
+    drtest += a_radius;
+    drtest.print();*/
     forallInPlace([]PROTO_LAMBDA(
                                  Var<T,1,MEM>& a_j,
                                  const Var<T,1,MEM>& a_rtop,
                                  const Var<T,1,MEM>& a_r)
                   {
-                    a_j(0) *=(a_rtop(0)*a_rtop(0)*a_rtop(0)
-                              - a_r(0)*a_r(0)*a_r(0))/3; 
+                    T factor = (a_rtop(0)*a_rtop(0)*a_rtop(0)
+                                - a_r(0)*a_r(0)*a_r(0))/3;
+                    if (factor < 0.)
+                      {
+                        //cout << endl << a_j(0) << endl;
+                        //cout << factor << endl;
+                        //cout << a_rtop(0) << endl;
+                        //cout << a_r(0) << endl << endl;
+                      }
+                    a_j(0) *= factor;
                   },a_J,rtop,a_radius);
   }
 }
@@ -1256,7 +1367,7 @@ jacobian(
         BoxData<T,DIM,MEM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
         BoxData<T,DIM,MEM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
         auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
-        dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux);
+        dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux,-1);
     }
 #if DIM==3
     auto jac =
