@@ -5,7 +5,7 @@
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
 #include "Proto_LevelBoxData.H"
-
+#define QUADRATURE1D 5
 namespace Operator {
 
     using namespace Proto;    
