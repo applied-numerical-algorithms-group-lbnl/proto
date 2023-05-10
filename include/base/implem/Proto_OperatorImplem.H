@@ -1352,7 +1352,7 @@ jacobian(
         BoxData<T,DIM,MEM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
         BoxData<T,DIM,MEM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
         auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
-        dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux,-1);
+        dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux,+1);
     }
 #if DIM==3
     auto jac =
