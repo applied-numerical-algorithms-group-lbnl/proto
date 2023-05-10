@@ -5,7 +5,7 @@
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
 #include "Proto_LevelBoxData.H"
-
+#define QUADRATURE1D 5
 namespace Operator {
 
     using namespace Proto;    
@@ -1023,6 +1023,43 @@ namespace Operator {
                 const BoxData<T,1,MEM>& a_JFace4,
                 const BoxData<T,1,MEM>& a_JFace2,
                 int a_dir);
+  
+  template<class T,unsigned int C,MemType MEM>
+  void spreadBottom(BoxData<T,C,MEM>& a_bd);
+  
+  template<class T, MemType MEM>
+  inline void
+  cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
+                      Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                      BoxData<T,1,MEM>& a_J,
+                      BoxData<T, 1, MEM>& a_radius,
+                      const Box& a_bx,
+                      T a_h);
+  template<class T, MemType MEM>
+  inline void
+  cubedSphere_nSphere(
+                      BoxData<T,DIM,MEM>& a_nSphere,
+                      T a_h);        
+  template<class T, MemType MEM>
+  inline void
+  cubedSphere_edge1(
+                    BoxData<T,DIM,MEM>& a_d1n_cross_n,
+                    T a_h);
+  template<class T, MemType MEM>
+  inline void
+  cubedSphere_edge2(
+                    BoxData<T,DIM,MEM>& a_n_cross_d2n,
+                    T a_h);
+  template<class T, MemType MEM>
+  inline void
+  cubedSphereDetAFlux1(
+                       BoxData<T,1,MEM>& a_detAFlux1,
+                       T a_h);
+  template<class T, MemType MEM>
+  void
+  cubedSphereDetAFlux2(
+                       BoxData<T,1,MEM>& a_detAFlux2,
+                       T a_h);
 #include "implem/Proto_OperatorImplem.H"
 }
 #endif

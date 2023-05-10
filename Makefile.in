@@ -38,7 +38,7 @@ endif
 
 ifeq ($(DEPXX),hipcc)
 CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer -I${MPICH_DIR}/include
-CXXFLAGS+=--amdgpu-target=gfx906 -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
+CXXFLAGS+= -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
 LIBS+= -L/$(ROCM_PATH)/lib/ -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 LIBS+= -lroctx64
 endif
