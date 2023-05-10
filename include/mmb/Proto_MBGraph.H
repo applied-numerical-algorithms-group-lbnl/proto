@@ -86,11 +86,13 @@ namespace Proto
         
         inline Point connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
 
+        // Get direction from dst to src along the graph arc from a_dir
         inline Point reverseArc(
                 unsigned int a_srcBlock,
                 unsigned int a_dstBlock,
                 Point a_dir) const;
-
+        
+        // Reverses the direction a_dir across the boundary between src and dst blocks
         inline Point reverseDir(
                 unsigned int a_srcBlock,
                 unsigned int a_dstBlock,

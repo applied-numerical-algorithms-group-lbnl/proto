@@ -20,8 +20,6 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     return DisjointBoxLayout(domain, patches, boxSize);
 }
 
-#if 0
-
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -255,80 +253,7 @@ TEST(Operator, InitConvolve)
     }
 }
 
-#endif
-
-#ifdef DIM==3
-PROTO_KERNEL_START
-void f_cubeSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J, Array<double, 3> a_dx, double a_r0, double a_r1)
-{
-    // subscript 0 are at corners
-    Array<double, DIM> x  = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-
-    double r0   = a_r0 + (a_r1-a_r0)*x0[0];
-    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-    
-    double r   = a_r0 + (a_r1-a_r0)*x[0];
-    double xi  = -M_PI/4.0 + M_PI/2.0*x[1];
-    double eta = -M_PI/4.0 + M_PI/2.0*x[2];
-
-    double X0 = tan(xi0);
-    double Y0 = tan(eta0);
-    double d0 = sqrt(1+X0*X0+Y0*Y0);
-    
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = sqrt(1+X*X+Y*Y);
-
-    a_J(0) = r*r*(1+X*X)*(1+Y*Y)/(d*d*d);
-    a_X(0) = r0/d0;
-    a_X(1) = r0*X0/d0;
-    a_X(2) = r0*Y0/d0;
-}
-PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
-PROTO_KERNEL_START
-void f_classicSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J, Array<double, 3> a_dx, double a_r0, double a_r1)
-{
-    Array<double, DIM> x = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-    Array<double, DIM> x1 = x0 + a_dx;
-
-    double r      = a_r0 + (a_r1-a_r0)*x[0];
-    double phi    = M_PI/4.0 + M_PI/2.0*x[1];
-    double theta  = 2.0*M_PI*x[2];
-    
-    double r0      = a_r0 + (a_r1-a_r0)*x0[0];
-    double phi0    = M_PI/4.0 + M_PI/2.0*x0[1];
-    double theta0  = 2.0*M_PI*x0[2];
-    
-    double r1      = a_r0 + (a_r1-a_r0)*x1[0];
-    double phi1    = M_PI/4.0 + M_PI/2.0*x1[1];
-    double theta1  = 2.0*M_PI*x1[2];
-    
-    a_J(0) = r*r*sin(phi);
-    
-    a_X(0) = r0*cos(theta0)*sin(phi0);
-    a_X(1) = r0*sin(theta0)*sin(phi0);
-    a_X(2) = r0*cos(phi0);
-
-    //a_N(0,0) =  r0*sin(phi)*sin(theta);
-    //a_N(1,0) = -r0*sin(phi)*cos(theta);
-    //a_N(2,0) =  r0*cos(phi)*cos(theta);
-    //a_N(0,1) = -r*cos(phi0)*cos(theta);
-    //a_N(1,1) =  r*cos(phi0)*sin(theta);
-    //a_N(2,1) =  0;
-    //a_N(0,2) =  -r*sin(phi)*cos(theta0);
-    //a_N(1,2) =  -r*sin(phi)*sin(theta0);
-    //a_N(2,2) =  -r*sin(phi);
-}
-PROTO_KERNEL_END(f_classicSphereMapF, f_classicSphereMap);
-
+#if DIM==3
 TEST(Operator, Cofactor)
 {
 #ifdef PR_HDF5
@@ -405,9 +330,11 @@ TEST(Operator, Cofactor)
         for (int ii = 1; ii < N; ii++)
         {
             double rate = log(JErrNorm[ii-1]/JErrNorm[ii])/log(2.0);
+            double rateErr = std::abs(rate - 4);
 #if PR_VERBOSE > 0
             std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
+            EXPECT_LT(rateErr, 0.3);
         }
 
     }

@@ -295,12 +295,23 @@ class BoxOp
     
     /// Mapped Multiblock Utilities
 #ifdef PR_MMB
+
+    /// Map Constructor
+    /** a_x is node centered, a_J is cell averaged */
     inline BoxOp(const BoxData<double, DIM, MEM>& a_x, 
         const BoxData<double, 1, MEM>& a_J);
+    
+    /// Map Define
+    /** a_x is node centered, a_J is cell averaged */
     inline void define(const BoxData<double, DIM, MEM>& a_x, 
         const BoxData<double, 1, MEM>& a_J);
     
+    /// Get Coordinates
+    /** Output is immutable and node centered */
     inline const BoxData<double, DIM, MEM>& x() const;
+    
+    /// Get Coordinates
+    /** Output is immutable and cell averaged */
     inline const BoxData<double, 1, MEM>& jacobian() const;
 #endif
 

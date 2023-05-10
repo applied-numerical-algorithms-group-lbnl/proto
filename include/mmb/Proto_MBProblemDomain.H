@@ -53,6 +53,11 @@ namespace Proto
         
         // Get Size of Block
         inline Point blockSize(unsigned int a_blockID) const;
+        
+        // Get Differential Volume
+        inline double dv(unsigned int a_blockID) const;
+
+
         inline std::vector<MBGraphArc> boundaries(
                 unsigned int a_srcBlock,
                 Point        a_dir) const;

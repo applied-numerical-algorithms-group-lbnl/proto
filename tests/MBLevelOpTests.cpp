@@ -25,7 +25,7 @@ TEST(MBLevelOp, Laplace) {
     // Laplace Operator
     MBLevelOp<BoxOp_TestMBLaplace, double, XPointMapRigid_t> op(map);
    
-#if 1
+#if 0
     // Interpolation Operator
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(1))
@@ -47,7 +47,7 @@ TEST(MBLevelOp, Laplace) {
     Point k{1,1,1,1,1,1};
     Array<double, DIM> offset{1,1,1,1,1,1};
     hostSrc.initialize(f_phiM, map, k, offset);
-#if 1
+#if 0
     hostSrc.fillBoundaries();
     interp.apply(hostSrc, hostSrc);
 #endif
@@ -58,8 +58,8 @@ TEST(MBLevelOp, Laplace) {
     h5.writeMBLevel({"phi"}, map, hostSrc, "MBLevelOpTests_Phi_0");
     h5.writeMBLevel({"Lphi"}, map, hostDst, "MBLevelOpTests_LPhi_0");
 #endif
-    hostDst.fillBoundaries();
-    interp.apply(hostDst, hostDst);
+    //hostDst.fillBoundaries();
+    //interp.apply(hostDst, hostDst);
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "MBLevelOpTests_Phi_1");
     h5.writeMBLevel({"Lphi"}, map, hostDst, "MBLevelOpTests_LPhi_1");
