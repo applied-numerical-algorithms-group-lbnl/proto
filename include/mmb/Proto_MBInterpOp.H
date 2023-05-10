@@ -41,7 +41,6 @@ namespace Proto
         inline Matrix<double>& MC() {return m_C; }
         inline Matrix<double>& MD() {return m_D; }
         inline Matrix<double>& MS() {return m_S; }
-
         private:
        
         std::vector<Point> m_exponents;

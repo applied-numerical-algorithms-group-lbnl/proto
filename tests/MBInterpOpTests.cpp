@@ -447,7 +447,7 @@ TEST(MBPointInterpOp, SphericalShell) {
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(2))
     {
-        if (pi.abs().sum() <= 2 && (pi[0] == 0))
+        if (pi.abs().sum() <= 2)// && (pi[0] == 0))
         {
             footprint.push_back(pi);
         }
@@ -477,7 +477,6 @@ TEST(MBPointInterpOp, SphericalShell) {
             coefVarNames.push_back(varname);
         }
     }
-    PROTO_ASSERT(exponents.size() == 20, "Wrong number of exponents");
    
 #if PR_VERBOSE > 0
     pout() << "Input footprint: " << std::endl;
@@ -487,7 +486,7 @@ TEST(MBPointInterpOp, SphericalShell) {
     }
     pout() << std::endl;
 #endif
-    constexpr int N = 1;
+    constexpr int N = 3;
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
@@ -505,15 +504,6 @@ TEST(MBPointInterpOp, SphericalShell) {
         // initialize map
         MBMap<PartialThinCubedSphereMap_t> map(PartialThinCubedSphereMap, layout, ghost, boundGhost);
         
-        auto& J0 = map.jacobian()[*layout.begin()]; //block 0
-        auto JExact = forall_p<double>(f_JCubeSphere, J0.box().grow(1), 0, boxSizeVect);
-        auto JExactAvg = Operator::convolve(JExact);
-        auto JQuotient = Operator::cellQuotient(JExactAvg, J0);
-
-        J0.printData(4);
-        JExactAvg.printData(4);
-        JQuotient.printData(4);
-
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
         MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost);
@@ -546,15 +536,12 @@ TEST(MBPointInterpOp, SphericalShell) {
                         MBPointInterpOp pointInterp(dstDataPoint, ghost[0], map, footprint, 4);
                         pointInterp.apply(hostDst, hostSrc);
 
-#if PR_VERBOSE > 1
-                        pout() << "Coefs at point " << bi << std::endl;
                         auto coefs = pointInterp.coefs(hostSrc);
                         for (int ei = 0; ei < 20; ei++)
                         {
                             hostCoefs[iter](bi,ei) = coefs(ei,0);
                         }
-                        coefs.print("%10.2e");
-#endif
+                        
                         double interpValue = hostDst[dstDataPoint](0);
                         double exactValue =  hostSrc[dstDataPoint](0);
                         double errorValue = interpValue - exactValue;
@@ -575,6 +562,15 @@ TEST(MBPointInterpOp, SphericalShell) {
         domainSize *= 2;
         boxSize *= 2;
     }
+    for (int ii = 1; ii < N-1; ii++)
+    {
+        for (int mi = 0; mi < 20; mi++)
+        {
+#if PR_VERBOSE > 0
+            //std::cout << "Error in moment " << exponents[mi] << ": " << momentErrNorm[ii-1][mi] << std::endl;
+#endif
+        }
+    }
 
     for (int ii = 1; ii < N; ii++)
     {
@@ -592,7 +588,7 @@ TEST(MBPointInterpOp, PolarShell) {
     pout() << "PolarShell" << std::endl;
     int domainSize = 8;
     int boxSize = 8;
-    int thickness = 8;
+    int thickness = 1;
     HDF5Handler h5;
 
     Array<double, DIM> exp{4,4,4,0,0,0};

@@ -6,7 +6,10 @@ void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, DIM, MEM>& a_x, Poin
     a_xp(0) = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        a_xp(0) *= pow(a_x(dir), a_p[dir]);
+        if (a_p[dir] != 0)
+        {
+            a_xp(0) *= pow(a_x(dir), a_p[dir]);
+        }
     }
 }
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
@@ -38,9 +41,23 @@ MBPointInterpOp::MBPointInterpOp(
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
-
+    
+    // Compute footprint span
+#if 0
+    Box spanBox;
+    for (auto si : m_srcs)
+    {
+        spanBox &= si.point;
+    }
+    Point ignoreDims = Point::Zeros();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (spanBox.size(ii) == 1) {ignoreDims[ii] = 1; }
+    }
+#endif
     // Compute exponents
     m_exponents.clear();
+    //for (auto bi : Box((a_order-1)*ignoreDims))
     for (auto bi : Box::Cube(a_order))
     {
         if (bi.sum() < a_order)
@@ -89,6 +106,7 @@ MBPointInterpOp::MBPointInterpOp(
             srcBoxes[bi] &= B.high();
         }
     }
+    int ind = 0;
     for (auto& [block, box] : srcBoxes)
     {
         auto Xi = a_map(box, block, dstBlock, PR_NODE);
@@ -110,6 +128,7 @@ MBPointInterpOp::MBPointInterpOp(
             srcData[block].push_back(Operator::cellProduct(*srcJ[block], Xi_p_avg));
             //srcData[block].push_back(Operator::cellProduct(ones, Xi_p_avg));
         }
+        ind++;
     }
     
     // Compute Matrices

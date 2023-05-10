@@ -60,6 +60,16 @@ Point MBProblemDomain::blockSize(unsigned int a_blockID) const
     return blockDomain(a_blockID).box().sizes();
 }
 
+double MBProblemDomain::dv(unsigned int a_blockID) const
+{
+    double ret = 1.0;
+    Point sizes = blockSize(a_blockID);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        ret /= ((double)sizes[dir]);
+    }
+}
+
 std::vector<MBGraphArc> MBProblemDomain::boundaries(
         unsigned int a_srcBlock,
         Point        a_dir) const

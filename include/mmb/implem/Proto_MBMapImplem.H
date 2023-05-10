@@ -49,12 +49,65 @@ void MBMap<Func, MEM>::define(
             NT[d] = Operator::cofactor(X0, d);
         }
         auto J = Operator::jacobian(X0, NT);
+        //J /= domain.dv(iter);
+        PROTO_ASSERT(J.max() > 0,
+                "MBMap::define | Error: Strictly non-positive Jacobian detected in block %u", block);
         PROTO_ASSERT(J.min() > 0,
                 "MBMap::define | Error: Inverted Jacobian detected in block %u", block);
         X0.copyTo(patch);
         J.copyTo(m_J[iter]);
-    
+
         // manually fill the boundary data
+        for (auto dir : Box::Kernel(1))
+        {
+            auto XBounds = m_X.bounds(iter, dir);
+            auto JBounds = m_J.bounds(iter, dir);
+            
+            for (int bi = 0; bi < XBounds.size(); bi++)
+            {
+                auto XBound = XBounds[bi];
+                auto adjBlock = a_layout.block(XBound.adjIndex);
+                Box adjDomain = XBound.adjData->box();
+                //adjDomain = adjDomain.grow(Point::Ones()); // extra data for computing J;
+                adjDomain = adjDomain.grow(a_boundGhost.max()+3);
+                Box locDomain = XBound.localData->box();
+                locDomain = locDomain.grow(a_boundGhost.max()+3);
+
+                auto Xadj = (*this)(adjDomain, adjBlock, adjBlock, PR_NODE);
+                Xadj.copyTo(*(XBound.adjData));
+                auto Xloc = (*this)(locDomain, adjBlock, block, PR_NODE);
+                Xloc.copyTo(*(XBound.localData));
+            
+                auto JBound = JBounds[bi];
+                /*
+                for (int d = 0; d < DIM; d++)
+                {
+                    NT[d] = Operator::cofactor(Xadj, d);
+                }
+                auto Jadj = Operator::jacobian(Xadj, NT);
+                Jadj.copyTo(*(JBound.adjData));
+                */
+                for (int d = 0; d < DIM; d++)
+                {
+                    NT[d] = Operator::cofactor(Xloc, d);
+                }
+                auto Jloc = Operator::jacobian(Xloc, NT);
+                Jloc.copyTo(*(JBound.localData));
+                JBound.localData->copyTo(*(JBound.adjData), JBound.adjToLocal.inverse());
+                
+                pout() << "BLOCK " << block << " -> " << dir << " BLOCK " << adjBlock << std::endl;
+                pout() << "J in block " << block << std::endl;
+                m_J[iter].printData(4);
+                pout() << "JLoc Computed: " << std::endl;
+                Jloc.printData(4);
+                pout() << "JLoc Initialized: " << std::endl;
+                JBound.localData->printData(4);
+                pout() << "JAdj Initialized: " << std::endl;
+                JBound.adjData->printData(4);
+            }
+        }
+
+        /* // Same as the previous block with slightly better memory / computation properties 
         for (auto dir : Box::Kernel(1))
         {
             auto XBounds = m_X.bounds(iter, dir);
@@ -76,13 +129,17 @@ void MBMap<Func, MEM>::define(
                     NT[d] = Operator::cofactor(X0, d);
                 }
                 auto Jb = Operator::jacobian(X0, NT);
-
+                
+                //X0 -= (*XBound.adjData);
+                //Jb -= (*JBound.adjData);
+                X0.printData();
+                Jb.printData();
                 XBound.fill(X0);
                 JBound.fill(Jb);
-                PROTO_ASSERT(Jb.min() > 0,
-                        "MBMap::define | Error: Inverted Jacobian detected in block %u boundary", block);
             }
         }
+        */
+        
     }
 }
 
@@ -210,3 +267,21 @@ bool MBMap<Func, MEM>::contains(
     std::cout << "MBMap::contains is not yet implemented!!" << std::endl;
     return true;
 }
+
+template<typename Func, MemType MEM>
+Array<double, DIM> MBMap<Func, MEM>::dx(const MBIndex& a_patch) const
+{
+    return this->dx(m_X.layout().block(a_patch));
+}
+template<typename Func, MemType MEM>
+Array<double, DIM> MBMap<Func, MEM>::dx(unsigned int a_block) const
+{
+    Point blockSize = m_X.layout().domain().blockSize(a_block);
+    Array<double, DIM> h;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        h[dir] = 1.0/((double)blockSize[dir]);
+    }
+    return h;
+}
+

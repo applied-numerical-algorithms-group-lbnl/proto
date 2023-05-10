@@ -94,6 +94,114 @@ void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
 }
 PROTO_KERNEL_END(f_TestMapF, f_TestMap);
 
+#ifdef DIM == 3
+PROTO_KERNEL_START
+void f_cubeSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J, Array<double, 3> a_dx, double a_r0, double a_r1, int a_block = 0)
+{
+    // subscript 0 are at corners
+    Array<double, DIM> x  = a_pt;
+    x += 0.5;
+    x *= a_dx;
+    Array<double, DIM> x0 = x - (0.5*a_dx);
+
+    double r0   = a_r0 + (a_r1-a_r0)*x0[0];
+    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
+    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
+    
+    double r   = a_r0 + (a_r1-a_r0)*x[0];
+    double xi  = -M_PI/4.0 + M_PI/2.0*x[1];
+    double eta = -M_PI/4.0 + M_PI/2.0*x[2];
+
+    double X0 = tan(xi0);
+    double Y0 = tan(eta0);
+    double d0 = sqrt(1+X0*X0+Y0*Y0);
+    
+    double X = tan(xi);
+    double Y = tan(eta);
+    double d = sqrt(1+X*X+Y*Y);
+
+    a_J(0) = r*r*(1+X*X)*(1+Y*Y)/(d*d*d);
+    switch (a_block)
+    {
+        case 0:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = -r0*Y0/d0;
+            a_X(2) = -r0/d0;
+            break;
+        case 1:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = r0*Y0/d0;
+            a_X(2) = r0/d0;
+            break;
+        case 2:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = -r0/d0;
+            a_X(2) = r0*Y0/d0;
+            break;
+        case 3:
+            a_X(0) = r0/d0;
+            a_X(1) = r0*X0/d0;
+            a_X(2) = r0*Y0/d0;
+            break;
+        case 4:
+            a_X(0) = -r0*X0/d0;
+            a_X(1) = r0/d0;
+            a_X(2) = r0*Y0/d0;
+            break;
+        case 5:
+            a_X(0) = -r0/d0;
+            a_X(1) = -r0*X0/d0;
+            a_X(2) = r0*Y0/d0;
+            break;
+        default:
+            a_X(0) = 0;
+            a_X(1) = 0;
+            a_X(2) = 0;
+            break;
+    }
+}
+PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
+
+PROTO_KERNEL_START
+void f_classicSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J,
+        Array<double, 3> a_dx, double a_r0, double a_r1)
+{
+    Array<double, DIM> x = a_pt;
+    x += 0.5;
+    x *= a_dx;
+    Array<double, DIM> x0 = x - (0.5*a_dx);
+    Array<double, DIM> x1 = x0 + a_dx;
+
+    double r      = a_r0 + (a_r1-a_r0)*x[0];
+    double phi    = M_PI/4.0 + M_PI/2.0*x[1];
+    double theta  = 2.0*M_PI*x[2];
+    
+    double r0      = a_r0 + (a_r1-a_r0)*x0[0];
+    double phi0    = M_PI/4.0 + M_PI/2.0*x0[1];
+    double theta0  = 2.0*M_PI*x0[2];
+    
+    double r1      = a_r0 + (a_r1-a_r0)*x1[0];
+    double phi1    = M_PI/4.0 + M_PI/2.0*x1[1];
+    double theta1  = 2.0*M_PI*x1[2];
+    
+    a_J(0) = r*r*sin(phi);
+    
+    a_X(0) = r0*cos(theta0)*sin(phi0);
+    a_X(1) = r0*sin(theta0)*sin(phi0);
+    a_X(2) = r0*cos(phi0);
+
+    //a_N(0,0) =  r0*sin(phi)*sin(theta);
+    //a_N(1,0) = -r0*sin(phi)*cos(theta);
+    //a_N(2,0) =  r0*cos(phi)*cos(theta);
+    //a_N(0,1) = -r*cos(phi0)*cos(theta);
+    //a_N(1,1) =  r*cos(phi0)*sin(theta);
+    //a_N(2,1) =  0;
+    //a_N(0,2) =  -r*sin(phi)*cos(theta0);
+    //a_N(1,2) =  -r*sin(phi)*sin(theta0);
+    //a_N(2,2) =  -r*sin(phi);
+}
+PROTO_KERNEL_END(f_classicSphereMapF, f_classicSphereMap);
+#endif
 MBProblemDomain buildRing(Point a_domainSize)
 {
     MBProblemDomain domain(4);
@@ -141,8 +249,8 @@ MBProblemDomain buildCubeSphere(int a_domainSize)
 MBProblemDomain buildThinCubeSphere(int a_domainSize, int a_thickness = 1)
 {
     MBProblemDomain domain(6);
-    auto CCWX = CoordPermutation::ccw(0);
-    auto CWX = CoordPermutation::cw(0);
+    auto CCW = CoordPermutation::ccw(2);
+    auto CW = CoordPermutation::cw(2);
     CoordPermutation RNorth, RSouth, RI;
     Point x = Point::X();
     Point y = Point::Y();
@@ -152,14 +260,14 @@ MBProblemDomain buildThinCubeSphere(int a_domainSize, int a_thickness = 1)
         int srcBlock = bi;
         int dstBlock = bi+1;
         if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, y, RI);
-        domain.defineBoundary(srcBlock, 1, z, RNorth);
-        domain.defineBoundary(srcBlock, 0, -z, RSouth);
-        RNorth = RNorth*CWX;
-        RSouth = RSouth*CCWX;
+        domain.defineBoundary(srcBlock, dstBlock, x, RI);
+        domain.defineBoundary(srcBlock, 1, y, RNorth);
+        domain.defineBoundary(srcBlock, 0, -y, RSouth);
+        RNorth = RNorth*CW;
+        RSouth = RSouth*CCW;
     }
     domain.graph().fixRotations();
-    Point domainSize(a_thickness, a_domainSize, a_domainSize);
+    Point domainSize(a_domainSize, a_domainSize, a_thickness);
     for (int bi = 0; bi < 6; bi++)
     {
         domain.defineDomain(bi, domainSize);
@@ -195,7 +303,7 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     CoordPermutation I;
     for (int bi = 0; bi < 4; bi++)
     {
-        domain.defineBoundary(bi, (bi+1)%4, Point::Y(), I);
+        domain.defineBoundary(bi, (bi+1)%4, Point::Z(), I);
     }
     domain.graph().fixRotations();
     Point domainSize(a_thickness, a_domainSize, a_domainSize);
@@ -304,6 +412,8 @@ PROTO_MAP_START(XPointMap)
 PROTO_MAP_END(XPointMap)
 
 PROTO_MAP_START(XPointMapRigid)
+
+    // x, y, z | X, Y, Z | block
     double numBlocks = XPOINT_SIZE;
     
     double dtheta_mapped = 2*M_PI/numBlocks;
@@ -454,12 +564,12 @@ PROTO_MAP_START(MHDMap)
 
     double rt = (r1 - r0)/(exp(c)-1.0);
     double R = r0 + rt*(exp(c*X) - 1.0);
-    double xi2 = M_PI/2.0*(block + Y); //theta
-    double xi3 = M_PI/4.0 + (M_PI/2.0*Z); //phi
+    double xi2 = M_PI/4.0 + (M_PI/2.0*Y); //phi
+    double xi3 = M_PI/2.0*(block + Z); //theta
 
-    x = R*cos(xi2)*sin(xi3);
-    y = R*sin(xi2)*sin(xi3);
-    z = R*cos(xi3);
+    x = R*cos(xi3)*sin(xi2);
+    y = R*sin(xi3)*sin(xi2);
+    z = R*cos(xi2);
 PROTO_MAP_END(MHDMap)
 
 PROTO_MAP_START(AltCubedSphereMap)
@@ -499,13 +609,13 @@ PROTO_MAP_START(ThinCubedSphereMap)
     double H = M_PI/4;
    
     // X is radial
-    double xi = L + Y*(H - L);
-    double eta = L + Z*(H - L);
-    double R = r0 + X*(r1 - r0);
+    double xi = L + X*(H - L);
+    double eta = L + Y*(H - L);
+    double R = r0 + Z*(r1 - r0);
     double a = sqrt(3.0)/3.0*R;
-    double u = a*tan(xi);
-    double v = a*tan(eta);
-    double r = sqrt(a*a + u*u + v*v);
+    double u = tan(xi);
+    double v = tan(eta);
+    double r = sqrt(1 + u*u + v*v);
     
     x = R/r; y = R/r; z = R/r;
 
@@ -515,35 +625,35 @@ PROTO_MAP_START(ThinCubedSphereMap)
         case 0:
             x *=  u;
             y *= -v;
-            z *= -a;
+            z *= -1;
             break;
         // +z axis
         case 1:
             x *=  u;
             y *=  v;
-            z *=  a;
+            //z *=  1;
             break;
         // -y axis
         case 2:
             x *=  u;
-            y *= -a;
+            y *= -1;
             z *=  v;
             break;
         // +x axis
         case 3:
-            x *=  a;
+            //x *=  1;
             y *=  u;
             z *=  v;
             break;
         // +y axis
         case 4:
             x *= -u;
-            y *=  a;
+            //y *=  1;
             z *=  v;
             break;
         // -x axis
         case 5:
-            x *= -a;
+            x *= -1;
             y *= -u;
             z *=  v;
             break;

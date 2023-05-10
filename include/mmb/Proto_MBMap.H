@@ -154,12 +154,18 @@ class MBMap
     // Find Cell
     inline bool contains(
             const MBIndex& a_patch, const Point& a_cell, const Array<double, DIM>& a_X) const;
+    
+    // Grid Spacing
+    inline Array<double, DIM> dx(const MBIndex& a_patch) const;
+    inline Array<double, DIM> dx(unsigned int a_block) const;
     private:
 
         unsigned int m_order;
         const Func* m_func;
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
         MBLevelBoxData<double, 1, MEM, PR_CELL>   m_J;
+
+        
 };
 
 // TODO: This doesn't quite work without a copy function / move constructor
