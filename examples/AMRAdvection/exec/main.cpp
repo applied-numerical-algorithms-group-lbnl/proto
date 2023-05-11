@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include "Kokkos_Core.hpp"
 #include "Proto.H"
 #include "BoxOp_Advection.H"
 #include "AMRRK4.H"
@@ -157,12 +156,17 @@ int main(int argc, char** argv)
                 LevelTagData kokkos_tags(grid[lvl], bufferSize);
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
                   {
-                    //OP::generateTags(tags[*iter], initData[*iter]);
+                    OP::generateTags(tags[*iter], initData[*iter]);
                   }
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
                   {
                     OP::kokkos_generateTags(kokkos_tags[*iter], initData[*iter]);
                   }
+                for (auto iter : grid[lvl]) {
+                  auto diff = kokkos_tags[iter] - tags[iter];
+                  auto norm = diff.absMax();
+                  pout() << "Norm of level " << lvl << " = " << norm << "\n";
+                }
                 AMRGrid::buffer(tags, bufferSize);
                 grid.regrid(tags, lvl);
                 dxLevel /= refRatio;

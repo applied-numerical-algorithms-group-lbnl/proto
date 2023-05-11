@@ -1,6 +1,7 @@
 blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/base)
+                ${CMAKE_CURRENT_SOURCE_DIR}/base
+                DEPENDS_ON kokkos)
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr

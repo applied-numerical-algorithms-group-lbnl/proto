@@ -9,13 +9,22 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_threshold(const Point p, BoxData<short> &a_tags, BoxData<double,NUMCOMPS> &a_U)
+k_threshold(const Point p, DevData<short> &a_tags, DevData<double,NUMCOMPS> &a_U)
 {
   double thresh = .0001;
   if (a_U(p) > thresh) {a_tags(p) = 1;}
   else {a_tags(p) = 0;};
 }
-PROTO_KOKKOS_END(f_thresholdF, f_threshold);
+PROTO_KOKKOS_END(k_thresholdF, k_threshold);
+PROTO_KERNEL_START
+void
+f_thresholdF(Var<short> &a_tags, const Var<double,NUMCOMPS> &a_U)
+{
+  double thresh = .0001;
+  if (a_U(0) > thresh) {a_tags(0) = 1;}
+  else {a_tags(0) = 0;};
+}
+PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
@@ -62,13 +71,14 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
     static inline void generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) {
-//      forallInPlace(f_threshold, a_tags, a_state);
+      forallInPlace(f_threshold, a_tags, a_state);
     }
     static inline void kokkos_generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1
     {
-        Kokkos::parallel_for("threshold", policy(a_tags.box()&a_state.box()), f_thresholdF(a_tags,a_state));
+        DevData<short> d_tags(a_tags); DevData<double, NUMCOMPS> d_state(a_state);
+        Kokkos::parallel_for("threshold", policy(a_tags.box()&a_state.box()), k_thresholdF(d_tags,d_state));
     }
 };
 #endif //end include guard

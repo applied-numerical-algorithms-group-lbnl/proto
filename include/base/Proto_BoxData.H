@@ -16,6 +16,8 @@
 #include "Proto_Stack.H"
 #include "Proto_DisjointBoxLayout.H"
 
+#include "Kokkos_Core.hpp"
+
 #include <memory>   //for shared_ptr
 #include <iostream>
 #include <fstream>  // for parallel pretty printing
@@ -1400,6 +1402,41 @@ namespace Proto
         ::std::shared_ptr<T>    m_data; ///< Data array
         T*                      m_rawPtr; ///< Raw pointer to the data
     }; // end class BoxData
+
+#ifdef PROTO_ACCEL
+template<typename T, size_t C=1, size_t D=1, size_t E=1>
+ACCEL_DECORATION
+class DevData {
+public:
+  DevData<T>(BoxData<T> &bd) : ptr(bd.data()), m_box(bd.box()) {}
+  ACCEL_DECORATION
+  size_t index(
+          const Point a_pt,
+          unsigned int a_c=0,
+          unsigned int a_d=0,
+          unsigned int a_e=0) const
+  {
+      PROTO_ASSERT(m_box.contains(a_pt),
+              "BoxData::data | Error: Point argument must be in this->box().");   
+      PROTO_ASSERT((a_c < C),
+              "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
+      PROTO_ASSERT((a_d < D),
+              "BoxData::data | Error: Invalid component a_d = %i. a_d must be in [0,%i)",a_d,D);
+      PROTO_ASSERT((a_e < E),
+              "BoxData::data | Error: Invalid component a_e = %i. a_e must be in [0,%i)",a_e,E);
+      size_t m = m_box.size();
+      size_t k = m_box.index(a_pt);
+      return k+m*a_c+a_d*m*C+a_e*m*C*D;
+  }
+  ACCEL_DECORATION
+  T& operator()(const Point &p, size_t a_c=0, size_t a_d=0, size_t a_e=0) const { 
+    return ptr[index(p,a_c,a_d,a_e)];
+  }
+private:
+  T *ptr;
+  Box m_box;
+};
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /** @name Alias and Slice Operators 
