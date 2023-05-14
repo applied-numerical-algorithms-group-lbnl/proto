@@ -873,9 +873,9 @@ cofactorMatrix(
 // Copy lowest 0-index slice to all the other slices.
 
 template<class T,unsigned int C,MemType MEM>
-void spreadBottom(BoxData<T,C,MEM>& a_bd)
+void spreadSlice(BoxData<T,C,MEM>& a_bd)
 {
-  PR_TIMERS("spreadBottom");
+  PR_TIMERS("spreadSlice");
   Box bx= a_bd.box();
   Point low = bx.low();
   Point high = bx.high();
@@ -883,7 +883,7 @@ void spreadBottom(BoxData<T,C,MEM>& a_bd)
   Point high0 = high;
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  for (int c = 0; c < C; c++)
+  /* for (int c = 0; c < C; c++)
     {
       for (auto bit : bx0)
         {
@@ -901,21 +901,21 @@ void spreadBottom(BoxData<T,C,MEM>& a_bd)
                           a_data(a_c) = a_baseval;
                         },pencil,a_bd,baseval,c);
         }
-        }
+        }*/
                        
   // The version below is about 6x faster on a CPU than the forall version above.
   // Reduces the run time of CubedSphereGeometry by about 25%.
-  /*for (int c = 0; c < C; c++)
+  for (int c = 0; c < C; c++)
     {
       for (auto bit : bx0)
         {
           T* data0 = a_bd.data(bit,c);
-          for (int i = bx.low()[0] + 1; i < bx.high()[0] + 1; i++)
+          for (int i = 1; i < bx.high()[0] - bx.low()[0] + 1; i++)
             {
               *(data0 + i) = *data0;
             }
         }
-        }   */ 
+    }   
 }
 
 template<class T, MemType MEM>
@@ -948,7 +948,7 @@ cubedSphere_nSphere(
                    a_nSphere(1) = tana*norm;
                    a_nSphere(2) = tanb*norm;
                  },bx0,a_nSphere,a_h); 
-  spreadBottom(a_nSphere);
+  spreadSlice(a_nSphere);
 }                   
   // Compute the average of D_1(n) x n along 1-edges.
 template<class T, MemType MEM>
@@ -1000,7 +1000,7 @@ cubedSphere_edge1(
                       }
                   },bx0,a_d1n_cross_n,weights,a_h);
   // copy lowest slice to all the other slices. 
-  spreadBottom(a_d1n_cross_n);
+  spreadSlice(a_d1n_cross_n);
 }
   // Compute the integral of n x D_2(n) along 2-edges.
 template<class T, MemType MEM>
@@ -1052,7 +1052,7 @@ cubedSphere_edge2(
                       }
                   },bx0,a_n_cross_d2n,weights,a_h);
   // copy lowest slice to all the other slices.
-  spreadBottom(a_n_cross_d2n);
+  spreadSlice(a_n_cross_d2n);
 }
 template<class T, MemType MEM>
 void
@@ -1099,7 +1099,7 @@ cubedSphereDetAFlux1(
                   },bx0,a_detAFlux1,weights,a_h);
 
   // copy lowest slice to all the other slices.
-  spreadBottom(a_detAFlux1);
+  spreadSlice(a_detAFlux1);
 }
 template<class T, MemType MEM>
 void
@@ -1143,9 +1143,60 @@ cubedSphereDetAFlux2(
                       }
                   },bx0,a_detAFlux2,weights,a_h);
   // copy lowest slice to all the other slices.
-   spreadBottom(a_detAFlux2);
+   spreadSlice(a_detAFlux2);
 }
-// Compute cubed-sphere geometry on faces.
+template<class T, MemType MEM>
+void
+cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
+                    Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                    BoxData<T,1,MEM>& a_J,
+                    BoxData<T, 1, MEM>& a_radius,
+                    const Box& a_bx,
+                    T a_h,
+                    int a_block)
+{
+  Array<BoxData<T, DIM, MEM>, DIM> NT3;
+  BoxData<T, DIM, MEM> X3;
+  cubedSphereGeometry(X3,NT3,a_J,a_radius,a_bx,a_h); 
+  a_X.define(X3.box());
+  // Shuffle data to get correct orientation.
+  Array<Array<unsigned int,DIM>, 6>
+    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM> , 6>
+    Xsigns = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  //Array<Array<unsigned int,DIM>, 6>
+  //   permuteT = {{2,0,1},{2,0,1},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  //Array<Array<int,DIM> , 6>
+  //  XsignsT = {{-1,1,-1},{1,1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
+  forallInPlace([]PROTO_LAMBDA(
+                               Var<T,DIM,MEM>& a_XTrans,                      
+                               Var<T,DIM,MEM>& a_X3,
+                               Array<unsigned int,DIM> a_permute,
+                               Array<int,DIM> a_signs)         
+         {       
+           for (int dir = 0; dir < DIM ; dir++)
+             {
+               a_XTrans(dir) = a_signs[dir]*a_X3(a_permute[dir]);
+             }
+         },a_X,X3,permute[a_block],Xsigns[a_block]);
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      a_NT[dir].define(NT3[dir].box());
+      forallInPlace([]PROTO_LAMBDA(
+                                   Var<T,DIM,MEM>& a_ntface,                      
+                                   Var<T,DIM,MEM>& a_ntface3,
+                                   Array<unsigned int,DIM> a_permute,
+                                   Array<int,DIM> a_signs)         
+                    {       
+                      for (int dir = 0; dir < DIM; dir++)
+                        {
+                          a_ntface(dir) = a_signs[dir]*a_ntface3(a_permute[dir]);
+                        }
+                    },a_NT[dir],NT3[dir],permute[a_block],Xsigns[a_block]);
+    }
+}
+
+// Compute cubed-sphere geometry for the case of radial normal at block center = \f$ \hat{x} \f$ .
 template<class T, MemType MEM>
 void
 cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,

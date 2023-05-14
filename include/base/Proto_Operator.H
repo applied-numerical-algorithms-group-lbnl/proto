@@ -1023,33 +1023,74 @@ namespace Operator {
                 const BoxData<T,1,MEM>& a_JFace4,
                 const BoxData<T,1,MEM>& a_JFace2,
                 int a_dir);
-  
+
+  /// Spreads a slice.
   template<class T,unsigned int C,MemType MEM>
-  void spreadBottom(BoxData<T,C,MEM>& a_bd);
+  inline void
+  spreadSlice(BoxData<T,C,MEM>& a_bd);
   
+  /// Calculation of equiangular cubed-sphere finite-volume metric terms using a semi-analytic approach.
+   /** 
+Calculation of equiangular cubed-sphere finite-volume metric terms using a semi-analytic approach - the only numerical quadratures that appear are integrals along coordinate lines. The mapping is given by  \f[ \textbf{X}(\xi_0,\xi_1,\xi_2) = r(\xi_0) \frac{(1,tan(\alpha), tan(\beta))}{(1 + tan(\alpha)^2 + tan(\beta)^2)^{\frac{1}{2}}} , 
+\alpha = (\xi_1 - \frac{1}{2} )  \frac{\pi}{2}, \beta = (\xi_2 - \frac{1}{2} )  \frac{\pi}{2} \f]
+
+\param a_bx: cell-centered Box that define where the metric terms are being computed.
+\param a_h: mesh spacing in \f$ \xi \f$ space.
+\param a_radius: \f$r(\textbf{p} ~ {a\_h})\f$ for Points \f$\textbf{p}\f$ corresponding to the corners of a_bx.
+
+\param a_X: the mapping \f$\textbf{X}(\textbf{p} ~ \text{a_h} ) \f$ for Points corresponding to the corners of a_bx.
+\param a_NT[d]: for d = 0,1,2, the average of the d-th row of the cofactor matrix over the d-faces of a_bx.
+  \param a_J: the average of the  \f$ \det ( \nabla_\xi\textbf{X} )\f$ over the control volumes centered at the points in a_bx.
+For more details, see ref[].
+   */
+  template<class T, MemType MEM>
+  inline void
+  cubedSphereGeometry(BoxData<T,DIM,MEM>& a_X,
+                      Array<BoxData<T,DIM,MEM>, DIM>& a_NT,
+                      BoxData<T,1,MEM>& a_J,
+                      BoxData<T,1,MEM>& a_radius,
+                      const Box& a_bx,
+                      T a_h);
+  
+  /// Cubed-sphere for each of the six patches that cover the cube.
+  /** Cubed-sphere for each of the patches that covers the cube. Arguments the same as above, with an additional argument a_case = 0, ..., 5 for the patch index. 
+\f[
+\textbf{X}_c(\Xi ) = \textbf{X}(\Xi) \cdot P_c \\
+\{P_c\} = \left[ \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & -1 \\ -1 & 0 & 0 \end{pmatrix}
+ \text{ , } \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 1 & 0 & 0 \end{pmatrix} 
+ \text{ , } \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 1 & 0 & 0 \end{pmatrix}
+ \text{ , } \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{pmatrix}
+ \text{ , } \begin{pmatrix} 0 & -1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{pmatrix}
+ \text{ , } \begin{pmatrix} -1 & 0 & 0 \\ 0 & -1 & 0 \\ 0 & 0 & 1 \end{pmatrix}\right] \f] 
+*/
   template<class T, MemType MEM>
   inline void
   cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                       Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
-                      BoxData<T,1,MEM>& a_J,
-                      BoxData<T, 1, MEM>& a_radius,
+                      BoxData<T, 1,   MEM>& a_J,
+                      BoxData<T, 1,   MEM>& a_radius,
                       const Box& a_bx,
-                      T a_h);
+                      T a_h,
+                      int a_case);
+  
   template<class T, MemType MEM>
   inline void
   cubedSphere_nSphere(
                       BoxData<T,DIM,MEM>& a_nSphere,
-                      T a_h);        
+                      T a_h);
+  
   template<class T, MemType MEM>
   inline void
   cubedSphere_edge1(
                     BoxData<T,DIM,MEM>& a_d1n_cross_n,
                     T a_h);
+  
   template<class T, MemType MEM>
   inline void
   cubedSphere_edge2(
                     BoxData<T,DIM,MEM>& a_n_cross_d2n,
                     T a_h);
+  
   template<class T, MemType MEM>
   inline void
   cubedSphereDetAFlux1(
