@@ -102,7 +102,8 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
                             // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj, ghostSize);
+                            Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
+                            //Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj, ghostSize);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             PROTO_ASSERT(adjIter != *a_layout.end(),

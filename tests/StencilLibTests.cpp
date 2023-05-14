@@ -52,6 +52,8 @@ TEST(StencilLib, CornersToCells) {
 #if PR_VERBOSE > 0
         std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
+        double rateErr = std::abs(rate - 4);
+        EXPECT_LT(rateErr, 0.1);
     }
 }
 
