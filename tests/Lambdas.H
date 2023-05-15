@@ -1021,7 +1021,8 @@ PROTO_KERNEL_END(f_phi_face_avgF, f_phi_face_avg);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_LphiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+void f_LphiF(const Point& a_pt, Var<double, C, MEM>& a_data,
+        Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset)
 {
     double x[DIM];
     double k[DIM];
@@ -1029,7 +1030,9 @@ void f_LphiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point 
     double L0 = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx + a_dx/2.0;
+        //x[dir] = (a_pt[dir] + a_offset[dir])*a_dx + a_dx/2.0;
+        //k[dir] = (a_k[dir]*M_PI*2);
+        x[dir] = a_pt[dir]*a_dx[dir] + a_dx[dir]/2.0 + a_offset[dir];
         k[dir] = (a_k[dir]*M_PI*2);
         k2 += k[dir]*k[dir];
         L0 *= sin(k[dir]*x[dir]);

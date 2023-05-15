@@ -29,7 +29,7 @@ void LevelOp<OpType, T, MEM>::define(DisjointBoxLayout& a_layout, Array<T, DIM> 
     m_ops.clear();
     for (auto iter : a_layout)
     {
-        m_ops.push_back(OpType(a_layout[iter], a_dx));
+        m_ops.push_back(OpType<T, MEM>(a_layout[iter], a_dx));
     }
 }
 
@@ -79,6 +79,15 @@ void LevelOp<OpType, T, MEM>::operator()(
         m_ops[iter](out_i, fluxes, state_i, a_scale);
     }
 }
+
+template <template<typename, MemType> class OpType, typename T, MemType MEM>
+void LevelOp<OpType, T, MEM>::applyBC(LevelStateData& a_state) const
+{
+    // temporary
+    a_state.exchange();
+}
+
+
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::setDiagScale(T a_value)
 {
@@ -106,5 +115,15 @@ void LevelOp<OpType, T, MEM>::setTime(T a_time)
     for (auto iter : m_layout)
     {
         m_ops[iter].setTime(a_time);
+    }
+}
+
+template <template<typename, MemType> class OpType, typename T, MemType MEM>
+void LevelOp<OpType, T, MEM>::setRKStage(unsigned int a_stage)
+{
+    m_rkStage = a_stage;
+    for (auto iter : m_layout)
+    {
+        m_ops[iter].setRKStage(a_stage);
     }
 }

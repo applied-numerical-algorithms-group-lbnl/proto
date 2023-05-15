@@ -274,12 +274,18 @@ class BoxOp
    
     /// Set Time
     inline void setTime(T a_time);
+
+    /// Set Runge Kutta Stage
+    inline void setRKStage(unsigned int a_stage);
     
     /// Read Diagonal Term Scaling
     inline T diagScale() const { return m_scaleDiag; }
     
     /// Read Flux Term Scaling
     inline T fluxScale() const { return m_scaleFlux; }
+    
+    /// Read Flux Term Scaling
+    inline unsigned int RKStage() const { return m_RKStage; }
     
     /// Get Time
     inline T time() const { return m_time; }
@@ -329,6 +335,7 @@ class BoxOp
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
+    unsigned int m_RKStage;
     Box m_box;
 
     mutable bool m_definedSrce;

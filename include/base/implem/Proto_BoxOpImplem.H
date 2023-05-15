@@ -350,6 +350,16 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::setTime(T a_time)
     m_time = a_time;
 }
 
+/// Set Runge Kutta Stage
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::setRKStage(unsigned int a_stage)
+{
+    m_RKStage = a_stage;
+}
+
 /// Get Grid Spacing
 template <typename T,
     unsigned int C_STATE,

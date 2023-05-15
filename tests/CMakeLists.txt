@@ -39,6 +39,10 @@ blt_add_executable(NAME BoxOpTests SOURCES BoxOpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME BoxOpTests COMMAND BoxOpTests)
+blt_add_executable(NAME LevelOpTests SOURCES LevelOpTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME LevelOpTests COMMAND LevelOpTests)
 blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

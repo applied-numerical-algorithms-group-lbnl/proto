@@ -24,8 +24,8 @@ TEST(BoxOp, Flux) {
     OP op(B0, dx);
     op.setFluxScale(fluxScale);
     
-    Box B1 = B0.grow(op.ghost());
-    Box B2 = B0.grow(op.auxGhost());
+    Box B1 = B0.grow(OP::ghost());
+    Box B2 = B0.grow(OP::auxGhost());
     BoxData<double, OP::numState()> hostSrc(B1);
     BoxData<double, OP::numAux()>   hostAux(B2);
     BoxData<double, OP::numState()> hostDst(B0);
