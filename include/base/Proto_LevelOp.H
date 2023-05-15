@@ -99,15 +99,23 @@ class LevelOp
     inline void
     operator()(
         LevelStateData& a_output,
-        const LevelStateData& a_stat,
+        const LevelStateData& a_state,
         T                     a_scale = 1.0) const;
+
+    // Apply Boundary Conditions
+    /**
+        This is a stopgap implementation until I can finish the LevelBC implementation
+    */
+    inline void applyBC(LevelStateData& a_state) const;
 
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline void setTime(T a_time);
+    inline void setRKStage(unsigned int a_stage);
     inline T diagScale() const { return m_diagScale; }
     inline T fluxScale() const { return m_fluxScale; }
     inline T time() const {return m_time; }
+    inline unsigned int RKStage() const {return m_rkStage; }
     inline Array<T, DIM> dx() const { return m_dx; }
     inline const OP& op(LevelIndex& a_index) const { return m_ops[a_index]; }
    
@@ -116,6 +124,7 @@ class LevelOp
     T m_diagScale;
     T m_fluxScale;
     T m_time;
+    unsigned int m_rkStage;
     Array<T, DIM> m_dx;
 
     DisjointBoxLayout m_layout;
