@@ -18,10 +18,12 @@ TEST(BoxOp, Flux) {
     Point d{1,2,3,4,5,6};
     double fluxScale = 31.0;
     double opScale = 17.0;
-    OP op(dx);
-    op.setFluxScale(fluxScale);
 
     Box B0 = Box::Cube(domainSize);
+    
+    OP op(B0, dx);
+    op.setFluxScale(fluxScale);
+    
     Box B1 = B0.grow(op.ghost());
     Box B2 = B0.grow(op.auxGhost());
     BoxData<double, OP::numState()> hostSrc(B1);
@@ -54,6 +56,7 @@ TEST(BoxOp, Flux) {
         hostSln += D1(F, 1.0/dx);
     }
     hostSln *= (fluxScale*opScale);
+    
 
     op(hostDst, hostFlx, hostSrc, hostAux, opScale);
 
@@ -77,10 +80,12 @@ TEST(BoxOp, Source) {
     Point d1 = -d0;
     double fluxScale = 31.0;
     double opScale = 17.0;
-    OP op(dx);
-    op.setFluxScale(fluxScale);
 
     Box B0 = Box::Cube(domainSize);
+    
+    OP op(B0, dx);
+    op.setFluxScale(fluxScale);
+    
     Box B1 = B0.grow(op.ghost());
     Box B2 = B0.grow(op.auxGhost());
     BoxData<double, OP::numState()> hostSrc(B1);
@@ -113,10 +118,10 @@ TEST(BoxOp, Diag) {
     Point d1 = -d0;
     double fluxScale = 31.0;
     double opScale = 17.0;
-    OP op(dx);
-    op.setDiagScale(fluxScale);
 
     Box B0 = Box::Cube(domainSize);
+    OP op(B0, dx);
+    op.setDiagScale(fluxScale);
     Box B1 = B0.grow(op.ghost());
     Box B2 = B0.grow(op.auxGhost());
     BoxData<double, OP::numState()> hostSrc(B1);

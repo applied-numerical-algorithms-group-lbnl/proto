@@ -36,7 +36,7 @@ class AMRRK4
     
     std::vector<int> m_timeRefRatios;
     std::vector<Point>  m_spaceRefRatios;
-    std::vector<OpType> m_ops;
+    std::vector<LevelOp<OpType>> m_ops;
     std::vector<int> m_numSteps;
     std::vector<int>  m_regridInterval;
     std::vector<int>  m_bufferSize;

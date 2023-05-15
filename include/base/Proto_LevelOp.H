@@ -61,18 +61,18 @@ class LevelOp
     /**
         \param dx   Grid spacing
     */
-    inline LevelOp(T a_dx);
-    inline LevelOp(Array<T, DIM> a_dx);
+    inline LevelOp(DisjointBoxLayout& a_layout, T a_dx);
+    inline LevelOp(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx);
     
     /// Lazy Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(T a_dx);
-    inline void define(Array<T, DIM> a_dx);
+    inline void define(DisjointBoxLayout& a_layout, T a_dx);
+    inline void define(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx);
 
     /// Spectral Radius
-    inline T spectralRadius() const {return m_op.spectralRadius(); }
+    inline T spectralRadius() const {return m_ops[0].spectralRadius(); }
             
     /// Apply
     /**
@@ -105,15 +105,21 @@ class LevelOp
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline void setTime(T a_time);
-    inline T diagScale() const { return m_op.diagScale(); }
-    inline T fluxScale() const { return m_op.fluxScale(); }
-    inline T time() const {return m_op.time(); }
-    inline Array<T, DIM> dx() const;
-    inline const OP& op() const {return m_op; }
+    inline T diagScale() const { return m_diagScale; }
+    inline T fluxScale() const { return m_fluxScale; }
+    inline T time() const {return m_time; }
+    inline Array<T, DIM> dx() const { return m_dx; }
+    inline const OP& op(LevelIndex& a_index) const { return m_ops[a_index]; }
    
     private:
+   
+    T m_diagScale;
+    T m_fluxScale;
+    T m_time;
+    Array<T, DIM> m_dx;
 
-    OP m_op;
+    DisjointBoxLayout m_layout;
+    std::vector<OP> m_ops;
 };
 
 #include "implem/Proto_LevelOpImplem.H"

@@ -62,25 +62,25 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(T a_dx);
+    inline BoxOp(const Box& a_box, T a_dx);
     
     /// Non-Trivial Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(Array<T, DIM> a_dx);
+    inline BoxOp(const Box& a_box, Array<T, DIM> a_dx);
 
     /// Lazy Isotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(T a_dx);
+    inline void define(const Box& a_box, T a_dx);
     
     /// Lazy Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(Array<T, DIM> a_dx);
+    inline void define(const Box& a_box, Array<T, DIM> a_dx);
 
 
 
@@ -293,17 +293,24 @@ class BoxOp
     /// Get Max Grid Spacing
     inline T dxMax() const;
     
+    /// Get Box
+    inline const Box& box() const {return m_box; }
+    
     /// Mapped Multiblock Utilities
 #ifdef PR_MMB
 
     /// Map Constructor
     /** a_x is node centered, a_J is cell averaged */
-    inline BoxOp(const BoxData<double, DIM, MEM>& a_x, 
+    inline BoxOp(
+            const Box& a_box,
+            const BoxData<double, DIM, MEM>& a_x, 
         const BoxData<double, 1, MEM>& a_J);
     
     /// Map Define
     /** a_x is node centered, a_J is cell averaged */
-    inline void define(const BoxData<double, DIM, MEM>& a_x, 
+    inline void define(
+            const Box& a_box,
+            const BoxData<double, DIM, MEM>& a_x, 
         const BoxData<double, 1, MEM>& a_J);
     
     /// Get Coordinates
@@ -322,6 +329,7 @@ class BoxOp
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
+    Box m_box;
 
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;
