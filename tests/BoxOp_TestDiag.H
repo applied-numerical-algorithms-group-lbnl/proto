@@ -11,6 +11,8 @@ class BoxOp_TestDiag : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
 {
     public:
 
+        using BoxOp<T, NUMCOMPS, NUMAUX, MEM>::BoxOp;
+
     // How many ghost cells does the operator need from the state variables
     inline static Point ghost() { return Point::Ones(1);}
     
@@ -19,12 +21,6 @@ class BoxOp_TestDiag : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     
     // What is the intended order of accuracy of the operator
     inline static constexpr int order() { return 2; }
-
-    inline BoxOp_TestDiag() : BoxOp<T, NUMCOMPS, NUMAUX, MEM>() {}
-    inline BoxOp_TestDiag(double a_dx) : BoxOp<T, NUMCOMPS, NUMAUX, MEM>(a_dx) {}
-    inline BoxOp_TestDiag(Array<double, DIM> a_dx) : BoxOp<T, NUMCOMPS, NUMAUX, MEM>(a_dx)
-    {
-    }
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver

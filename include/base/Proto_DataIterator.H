@@ -109,7 +109,9 @@ namespace Proto
         inline bool compatible(const DataIndex<P>& a_index) const;
         
         inline bool compatible(const DataIterator<P>& a_iter) const;
-        
+       
+        inline operator int() const { return m_current.local(); }
+
         protected:
         
         std::shared_ptr<P> m_partition;

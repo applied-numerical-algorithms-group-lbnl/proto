@@ -4,25 +4,24 @@ template <typename T,
         MemType MEM>
 BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp()
 {
-    define(1);
 }
 
 template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
-BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(T a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(const Box& a_box, T a_dx)
 {
-    define(a_dx);
+    define(a_box, a_dx);
 }
 
 template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
-BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(Array<T, DIM> a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(const Box& a_box, Array<T, DIM> a_dx)
 {
-    define(a_dx);
+    define(a_box, a_dx);
 }
 
 
@@ -31,11 +30,11 @@ template <typename T,
         unsigned int C_AUX,
         MemType MEM>
 void
-BoxOp<T, C_STATE, C_AUX, MEM>::define(T a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, T a_dx)
 {
     Array<T, DIM> dx;
     dx.fill(a_dx);
-    define(dx);
+    define(a_box, dx);
 }
 
 template <typename T,
@@ -43,11 +42,12 @@ template <typename T,
         unsigned int C_AUX,
         MemType MEM>
 void
-BoxOp<T, C_STATE, C_AUX, MEM>::define(Array<T, DIM> a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, Array<T, DIM> a_dx)
 {
     m_scaleDiag = 0;
     m_scaleFlux = 1;
     m_dx = a_dx;
+    m_box = a_box;
     m_time = 0;
         
     m_definedFlux = true;
@@ -394,21 +394,23 @@ T BoxOp<T, C_STATE, C_AUX, MEM>::dxMax() const
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(
+    const Box& a_box,
     const BoxData<double, DIM, MEM>& a_x,
     const BoxData<double, 1,   MEM>& a_J)
 {
-    define(a_x, a_J);
+    define(a_box, a_x, a_J);
 }
 
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 void BoxOp<T, C_STATE, C_AUX, MEM>::define(
+    const Box& a_box,
     const BoxData<double, DIM, MEM>& a_x,
     const BoxData<double, 1,   MEM>& a_J)
 {
     m_x = &a_x;
     m_J = &a_J;
-    define(1);
+    define(a_box, 1);
 }
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>

@@ -518,13 +518,8 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
     }
     auto dx0 = m_ops[0].dx();
      int a_level = a_baseLevel;
-     //h5.writeAMRData(dx0,*m_data,
-     //                        "U_lev_definePre"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
     
     m_data->regrid(newGrids, a_baseLevel, OpType::order());
-    
-    //h5.writeAMRData(dx0,*m_data,
-    //                         "U_lev_definePost"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
     
     define(*m_data, m_ops[a_baseLevel].dx(), a_baseLevel,
            m_regridInterval[a_baseLevel],m_bufferSize[a_baseLevel]);            
