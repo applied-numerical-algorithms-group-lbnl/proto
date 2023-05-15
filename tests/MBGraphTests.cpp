@@ -5,6 +5,7 @@
 
 
 using namespace Proto;
+
 MBGraph buildXPoint()
 {
     MBGraph graph(XPOINT_SIZE);

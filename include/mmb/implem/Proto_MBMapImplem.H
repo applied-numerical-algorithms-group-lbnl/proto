@@ -49,7 +49,6 @@ void MBMap<Func, MEM>::define(
             NT[d] = Operator::cofactor(X0, d);
         }
         auto J = Operator::jacobian(X0, NT);
-        //J /= domain.dv(iter);
         PROTO_ASSERT(J.max() > 0,
                 "MBMap::define | Error: Strictly non-positive Jacobian detected in block %u", block);
         PROTO_ASSERT(J.min() > 0,

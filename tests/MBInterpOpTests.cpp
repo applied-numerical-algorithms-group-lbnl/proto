@@ -490,19 +490,21 @@ TEST(MBPointInterpOp, SphericalShell) {
     double err[N];
     for (int nn = 0; nn < N; nn++)
     {
-        auto domain = buildPartialThinCubeSphere(domainSize, thickness);
+        //auto domain = buildPartialThinCubeSphere(domainSize, thickness);
+        auto domain = buildThinCubeSphere(domainSize, thickness);
         Point boxSizeVect = Point::Ones(boxSize);
-        boxSizeVect[0] = thickness;
+        boxSizeVect[2] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         Array<Point, DIM+1> ghost;
         ghost.fill(Point::Ones(4));
         ghost[0] = Point::Ones(1);
         Point boundGhost = Point::Ones(1);
-        ghost[0][0] = 0;
+        ghost[0][2] = 0;
 
         // initialize map
-        MBMap<PartialThinCubedSphereMap_t> map(PartialThinCubedSphereMap, layout, ghost, boundGhost);
+        //MBMap<PartialThinCubedSphereMap_t> map(PartialThinCubedSphereMap, layout, ghost, boundGhost);
+        MBMap<ThinCubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
         
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);

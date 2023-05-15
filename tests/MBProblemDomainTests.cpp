@@ -20,6 +20,38 @@ MBProblemDomain buildXPoint(int a_domainSize)
     return domain;
 }
 
+TEST(MBProblemDomain, ConvertSimple)
+{
+    int boxSize = 4;
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir.codim() != 1) { continue; }
+        for (int axis = 0; axis < DIM; axis++)
+        {
+            if (dir[axis] != 0) { continue; }
+            CoordPermutation R;
+            for (int rot = 0; rot < 4; rot++)
+            {
+                MBProblemDomain domain(2);
+                domain.defineBoundary(0,1,dir,R);
+                domain.defineDomain(0,Point::Ones(boxSize));
+                domain.defineDomain(1,Point::Ones(boxSize));
+                auto& graph = domain.graph();
+                Point revDir = graph.reverseDir(0,1,dir);
+                Point revArc = graph.reverseArc(0,1,dir);
+                EXPECT_EQ(R(dir), -revDir);
+
+                Box B0 = Box::Cube(boxSize).adjacent(dir);
+                Box B1 = Box::Cube(boxSize).edge(revDir);
+                Box B10 = domain.convert(B0,0,1);
+                EXPECT_EQ(B10, B1);
+                
+                R = R*CoordPermutation::ccw(axis);
+            }
+        }
+    }
+}
+
 TEST(MBProblemDomain, Convert) {
     int domainSize = 64;
     auto domain = buildXPoint(domainSize);

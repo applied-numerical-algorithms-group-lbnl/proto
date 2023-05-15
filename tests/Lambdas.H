@@ -50,14 +50,14 @@ double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 {
     Point x = a_pt;
 #if DIM == 1
-        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2;
+        return x[0]*1e-2;
 #endif
 #if DIM == 2
-        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4;
+        return x[0]*1e-2 + x[1]*1e-4;
 #endif
 #if DIM > 2
-        //return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4 + x[2]*1e-6;
-        return x[0]*1e-0 + x[1]*1e-1 + x[2]*1e-2;
+        //return x[0]*1e-0 + x[1]*1e-1 + x[2]*1e-2;
+        return x[1];
 #endif
 }
 
@@ -67,7 +67,8 @@ void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
 {
     for (int comp = 0; comp < C; comp++)
     {
-        a_data(comp) = MBPointID(a_block, comp, a_pt);
+        //a_data(comp) = MBPointID(a_block, comp, a_pt);
+        a_data(comp) = a_pt[comp];
     }
 }
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
@@ -612,19 +613,18 @@ PROTO_MAP_START(ThinCubedSphereMap)
     double xi = L + X*(H - L);
     double eta = L + Y*(H - L);
     double R = r0 + Z*(r1 - r0);
-    double a = sqrt(3.0)/3.0*R;
     double u = tan(xi);
     double v = tan(eta);
-    double r = sqrt(1 + u*u + v*v);
+    double d = sqrt(1 + u*u + v*v);
     
-    x = R/r; y = R/r; z = R/r;
+    x = R/d; y = R/d; z = R/d;
 
     switch (block)
     {
         // -z axis
         case 0:
             x *=  u;
-            y *= -v;
+            y *=  -v;
             z *= -1;
             break;
         // +z axis
@@ -681,13 +681,12 @@ PROTO_MAP_START(PartialThinCubedSphereMap)
     double xi = L + Y*(H - L);
     double eta = L + Z*(H - L);
     double R = r0 + X*(r1 - r0);
-    double a = sqrt(3.0)/3.0*R;
-    double u = a*tan(xi);
-    double v = a*tan(eta);
-    double r = sqrt(a*a + u*u + v*v);
+    double u = tan(xi);
+    double v = tan(eta);
+    double d = sqrt(1 + u*u + v*v);
     
     // x,y,z are cartesian, physical space coordinates
-    x = R/r; y = R/r; z = R/r;
+    x = R/d; y = R/d; z = R/d;
 
     switch (block)
     {
@@ -695,17 +694,17 @@ PROTO_MAP_START(PartialThinCubedSphereMap)
         case 0:
             x *=  u;
             y *= -v;
-            z *= -a;
+            z *= -1;
             break;
         // -y axis
         case 1:
             x *=  u;
-            y *= -a;
+            y *= -1;
             z *=  v;
             break;
         // +x axis
         case 2:
-            x *=  a;
+            x *=  1;
             y *=  u;
             z *=  v;
             break;

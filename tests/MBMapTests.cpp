@@ -12,28 +12,17 @@ bool testMapBoundData(MBMap<Func>& a_map)
     auto& graph = domain.graph();
 
     auto ghost = a_map.map().ghost();
-
-    pout() << "ghost: ";
-    for (auto gi : ghost)
-    {
-        pout() << gi << ", ";
-    }
-    pout() << std::endl;
     for (auto iter : layout)
     {
         auto locBlock = layout.block(iter);
         auto locBoxInterior  = layout[iter];
 #if PR_VERBOSE > 0
-        pout() << "\n\nBLOCK: " << locBlock << std::endl;
         auto& locX = a_map.map()[iter];
         auto& locJ = a_map.jacobian()[iter];
-        pout() << "Local J Data: " << std::endl;
-        locJ.printData(4);
 #endif
         for (auto dir : Box::Kernel(1))
         {
             auto ghostDir = ghost[dir.codim()];
-#if 0
             auto XBounds = a_map.map().bounds(iter, dir);
             for (auto XBound : XBounds)
             {
@@ -46,13 +35,23 @@ bool testMapBoundData(MBMap<Func>& a_map)
                 Box locBoundBox0 = locBoxInterior.adjacent(dir*ghostDir);
                 Box adjBoundBox0 = adjBoxInterior.edge(adjDir*ghostDir);
                 
-                auto adjBoundX = a_map(adjBoundBox0, adjBlock, adjBlock);
-                auto locBoundX = a_map(locBoundBox0, adjBlock, locBlock);
-                
                 Box locBoundBox1 = XBound.localData->box();
                 Box adjBoundBox1 = XBound.adjData->box();
+                
+                auto adjBoundX = a_map(adjBoundBox0, adjBlock, adjBlock);
+                auto locBoundX = a_map(locBoundBox0, adjBlock, locBlock);
 
                 auto& adjX = a_map.map()[XBound.adjIndex];
+
+                //EXPECT_EQ(locBoundBox0, locBoundBox1);
+                //EXPECT_EQ(adjBoundBox0, adjBoundBox1);
+               
+                auto adjBoundErr = adjBoundX - (*XBound.adjData);
+                auto locBoundErr = locBoundX - (*XBound.localData);
+
+                //EXPECT_LT(adjBoundErr.absMax(), 1e-10);
+                //EXPECT_LT(locBoundErr.absMax(), 1e-10);
+
 #if PR_VERBOSE > 0
                 pout() << "DIR: " << dir << std::endl;
                 pout() << "adjBlock: " << adjBlock << " | adjDir: " << adjDir << std::endl;
@@ -76,8 +75,6 @@ bool testMapBoundData(MBMap<Func>& a_map)
 #endif
 
             }
-#endif
-#if 0
             auto JBounds = a_map.jacobian().bounds(iter, dir);
             for (auto JBound : JBounds)
             {
@@ -113,7 +110,6 @@ bool testMapBoundData(MBMap<Func>& a_map)
 
 #endif
             }
-#endif
         }
     }
     return true;
@@ -121,163 +117,6 @@ bool testMapBoundData(MBMap<Func>& a_map)
 
 
 #if DIM > 2
-#if 0
-template<typename Func>
-bool testThinCubeSphere(MBMap<Func>& a_map, int a_domainSize, double a_r0, double a_r1)
-{
-    bool success = true;
-
-    auto& map = a_map.map();
-    auto& layout = map.layout();
-    const auto& domain = layout.domain();
-    const auto& graph = domain.graph();
-
-    Box B0(Point(1, a_domainSize, a_domainSize));
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
-    Point z = Point::Basis(2);
-    
-    for (auto iter : layout)
-    {
-        auto block = layout.block(iter);
-        auto& patch = map[iter];
-        
-        Box b_r0 = B0.edge(-x) & patch.box();
-        Box b_r1 = B0.edge(x)  & patch.box();
-        for (auto pi : b_r0)
-        {
-            double r0 = sqrt(patch(pi, 0)*patch(pi, 0)
-                           + patch(pi, 1)*patch(pi, 1)
-                           + patch(pi, 2)*patch(pi, 2));
-            success &= (abs(r0 - a_r0) < 1e-12);
-        }
-        for (auto pi : b_r1)
-        {
-            double r1 = sqrt(patch(pi, 0)*patch(pi, 0)
-                           + patch(pi, 1)*patch(pi, 1)
-                           + patch(pi, 2)*patch(pi, 2));
-            success &= (abs(r1 - a_r1) < 1e-12);
-        }
-    }
-
-    for (int b0 = 2; b0 < 6; b0++)
-    {
-        auto& L0 = layout.blockLayout(b0);
-        auto& D0 = map.blockData(b0);
-        int b1 = b0+1;
-        if (b1 == 6) {b1 = 2;}
-        auto& L1 = layout.blockLayout(b1);
-        auto& D1 = map.blockData(b1);
-        for (auto i0 : L0)
-        {
-            for (auto i1 : L1)
-            {
-                Point p0 = L0.point(i0);
-                Point p1 = L1.point(i1);
-                if (!L0.patchDomain().box().edge(y).contains(p0)) {continue; }
-                if (!L1.patchDomain().box().edge(-y).contains(p1)) {continue; }
-                if (p0[0] != p1[0]) {continue; }
-                if (p0[2] != p1[2]) {continue; }
-                auto& d0 = D0[i0];
-                auto& d1 = D1[i1];
-                Box b = B0.edge(-y) & d1.box();
-                BoxData<double, 3, HOST> tmp0(b), tmp1(b);
-                d0.copyTo(tmp0, d0.box(), -y*a_domainSize);
-                d1.copyTo(tmp1);
-                tmp0 -= tmp1;
-                success &= tmp0.absMax() < 1e-12;
-            }
-        }
-    }
-
-    for (auto iter : layout)
-    {
-        auto& patch = map[iter];
-        auto block = layout.block(iter);
-        for (auto pi : patch.box())
-        {
-            Array<double, 3> x = patch.array(pi);
-            Array<double, 3> X;
-            for (int xi = 0; xi < 3; xi++)
-            {
-                X[xi] = (1.0*pi[xi])/(1.0*a_domainSize[xi]);
-            }
-            auto x_map = a_map(X, block);
-            auto x_err = x_map - x;
-            double err = x_err.absMax();
-            EXPECT_LT(err, 1e-12);
-        }
-
-        for (auto pi : patch.box().extrude(Point::Ones(), -1))
-        {
-            Array<double, 3> x = patch.array(pi + Point::Ones());
-            auto x_map = a_map(pi, Point::Ones(), block);
-            auto x_err = x_map - x;
-            double err = x_err.absMax();
-            EXPECT_LT(err, 1e-12);
-        }
-    }
-
-    for (unsigned int bi = 0; bi < 6; bi++)
-    {
-        Point dir_ij = Point::Basis(0);
-        unsigned int bj = graph.adjacent(bi, dir_ij);
-        Box box_0 = domain.blockDomain(bi).box();
-        Box box_i = box_0.shift(dir_ij*(a_domainSize / 2));
-        Point dir_ji = graph.connectivity(bj, bi);
-        Box box_j = box_0.shift(dir_ji*(a_domainSize / 2));
-
-        auto data_i = a_map(box_i, bi, bi);
-        auto data_j = a_map(box_i, bi, bj);
-
-        auto soln_i = forall_p<double, 3>(ThinCubedSphereMap, box_i, bi, domain.blockSize(bi), PR_NODE);
-        BoxData<double, 3> soln_j(box_j);
-        soln_i.copyTo(soln_j, graph.rotation(bi, dir_ij, bj));
-       
-        BoxData<double, 3> err_i(box_i);
-        BoxData<double, 3> err_j(box_j);
-        data_i.copyTo(err_i);
-        err_i -= soln_i;
-        data_j.copyTo(err_j);
-        err_j -= soln_j;
-       
-        double ei = err_i.absMax();
-        double ej = err_j.absMax();
-
-        EXPECT_LT(ei, 1e-12);
-        EXPECT_LT(ej, 1e-12);
-    }
-    HDF5Handler h5;
-    for (unsigned int bi = 0; bi < 6; bi++)
-    {
-        Box B = domain.blockDomain(bi).box();
-        auto data = a_map(B, bi, PR_CELL);
-        double err = 0.0;
-        for (auto pi : B)
-        {
-            Array<double, DIM> x = pi;
-            x += 0.5;
-            Array<double, DIM> dx = a_domainSize;
-            x /= dx;
-            auto soln = a_map(x, bi);
-            for (int dir = 0; dir < DIM; dir++)
-            {
-                err = max(err, abs(data(pi, dir) - soln[dir]));
-            }
-        }
-        EXPECT_LT(err, 1e-12);
-    }
-
-    auto& J = a_map.jacobian();
-    for (auto iter : layout)
-    {
-        auto& Ji = J[iter];
-        EXPECT_GT(Ji.min(), 0);
-    }
-
-    return success;
-}
-#endif
 template<typename Func>
 bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double a_r1)
 {
@@ -533,31 +372,13 @@ TEST(MBMap, CubeSphere) {
 }
 #endif
 #if 1
-TEST(MBMap, BoxTransform) {
-    
-    Box B0(Point(0,-1,0), Point(3,-1,0));
-    Box B1(Point(1,1,0), Point(4,1,0));
-
-    std::cout << "B0: " << B0 << " | size: " << B0.size() << std::endl;
-    std::cout << "B1: " << B1 << " | size: " << B1.size() << std::endl;
-    
-    MBProblemDomain domain(2);
-    auto R = CoordPermutation::cw();
-    auto RR = R*R;
-    domain.defineBoundary(0,1,-Point::Y(), RR);
-    domain.defineDomain(0,Point::Ones(4));
-    domain.defineDomain(1,Point::Ones(4));
-
-    Box T0 = domain.convert(B0,0,1,PR_NODE);
-    std::cout << "domain.convert(B0): " << T0 << std::endl;
-}
 
 TEST(MBMap, ThinCubeSphere) {
     HDF5Handler h5;
     
     int domainSize = 8;
     int boxSize = 8;
-    int thickness = 1;
+    int thickness = 4;
     
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones() - Point::Z());
@@ -583,88 +404,19 @@ TEST(MBMap, ThinCubeSphere) {
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         MBMap<ThinCubedSphereMap_t> map(ThinCubedSphereMap, layout, ghost, boundGhost);
+        MBLevelBoxData<double, 2, HOST> testData(layout, ghost);
+        testData.initialize(f_MBPointID); 
         //testMapBoundData(map);
 
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"x", "y", "z"}, map, map.map(), "THIN_CUBE_SPHERE_MAP");
         h5.writeMBLevel({"J"}, map, map.jacobian(), "THIN_CUBE_SPHERE_J");
-#endif
-        // Richardson testing
-#if 0
-        auto C2C = Stencil<double>::CornersToCells();
-        for (auto iter : layout)
-        {
-            int block = layout.block(iter);
-            BoxData<double> JTotal(layout[iter].grow(2));
-            //BoxData<double, DIM> XTotal(layout[iter].grow(2+3));
-            JTotal.setVal(0);
-            //XTotal.setVal(0);
-            auto& Ji = map.jacobian()[iter];
-            Ji.copyTo(JTotal);
-            
-            for (auto dir : Box::Kernel(1))
-            {
-                auto Jbounds = map.jacobian().bounds(iter, dir);
-                for (auto Jbound : Jbounds)
-                {
-                    Jbound.localData->copyTo(JTotal);
-                }
-                //auto Xbounds = map.map().bounds(iter, dir);
-                //for (auto Xbound : Xbounds)
-                //{
-                //    XTotal |= C2C(*(Xbound.localData));
-                //}
-            }
-            J[block].push_back(BoxData<double>(JTotal.box()));
-           // X[block].push_back(BoxData<double,DIM>(XTotal.box()));
-            JTotal.copyTo(J[block][nn]);
-            //XTotal.copyTo(X[block][nn]);
-            if (nn > 0)
-            {
-                BoxData<double> Jc = AVG(J[block][nn]);
-                //BoxData<double, DIM> Xc = AVG(X[block][nn]);
-                JErr[block].push_back(BoxData<double>(Jc.box()));
-                //XErr[block].push_back(BoxData<double, DIM>(Xc.box()));
-                Jc.copyTo(JErr[block][nn-1]);
-                //Xc.copyTo(XErr[block][nn-1]);
-                JErr[block][nn-1] -= J[block][nn-1];
-                //XErr[block][nn-1] -= X[block][nn-1];
-#if PR_VERBOSE > 0
-                h5.writePatch({"JErr"}, 1, JErr[block][nn-1], "JERR_B%i_N%i", block, nn-1);
-                //h5.writePatch({"XErr"}, 1, XErr[block][nn-1], "XERR_B%i_N%i", block, nn-1);
-#endif
-            }
-        }
+        h5.writeMBLevel({"i", "j"}, map, testData, "THIN_CUBE_SPHERE_ID");
 #endif
         domainSize *= 2;
         boxSize *= 2;
         thickness *= 2;
     }
-#if 0
-    for (int ii = 1; ii < N-1; ii++)
-    {
-        double Je0 = 0;
-        double Je1 = 0;
-        for (int bi = 0; bi < 6; bi++)
-        {
-            Je0 = std::max(Je0, JErr[bi][ii-1].absMax());
-            Je1 = std::max(Je1, JErr[bi][ii].absMax());
-        }
-        double Jrate = log(Je0/Je1)/log(2.0);
-        std::cout << "Convergence rate (J): " << Jrate << std::endl;
-        /*
-        double Xe0 = 0;
-        double Xe1 = 0;
-        for (int bi = 0; bi < 6; bi++)
-        {
-            Xe0 = std::max(Xe0, XErr[bi][ii-1].absMax());
-            Xe1 = std::max(Xe1, XErr[bi][ii].absMax());
-        }
-        double Xrate = log(Xe0/Xe1)/log(2.0);
-        std::cout << "Convergence rate (X): " << Xrate << std::endl;
-        */
-    }
-#endif
 }
 #endif
 #endif
