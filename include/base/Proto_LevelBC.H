@@ -14,6 +14,14 @@ namespace Proto {
         // Basic interface
         inline virtual void apply(LevelBoxData<T,C,MEM,CTR>& a_data) const {}
 
+        // Helper methods (not yet implemented)
+        inline void setFlux(LevelBoxData<T,C,MEM,CTR>& a_data,
+                T a_fluxValue, int a_comp, int a_coordinate, Side::LoHiSide a_side);
+        inline void setValue(LevelBoxData<T,C,MEM,CTR>& a_data,
+                T a_fluxValue, int a_comp, int a_coordinate, Side::LoHiSide a_side);
+        
+        // ... many useful things here ...
+
         // Fixed data interface
         inline void setNumFixedData(int a_numFixed);
         inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data);
