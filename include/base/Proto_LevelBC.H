@@ -5,45 +5,40 @@
 #include "Proto_LevelBoxData.H"
 
 namespace Proto {
-
-    // [coord, side]
-    typedef std::tuple<int, Side::LoHiSide> Face;
-    
-    public enum BCType
-    {
-        DIRICHLET_CONST,
-        DIRICHLET_ANALYTIC,
-        DIRICHLET_EMPIRICAL
-        NEUMANN_CONST,
-        NEUMANN_ANALYTIC,
-        NEUMANN_EMPIRICAL
-    }
-
-    /// Abstract class for defining a BC operator
-    /**
-     * MMB will be handled in a separate MBLevelBCOp 
-     *
-     * Different BCType will need different constructor signatures
-     * */
-    template<BCType>
-    class LevelBCOp {
-        public:
-
-
-        private:
-        Face m_face;
-    };
     
     /// Storage for the LevelBCOps on each face 
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class LevelBC {
         public:
-
         
+        // Basic interface
+        inline virtual void apply(LevelBoxData<T,C,MEM>& a_data);
 
+        // Fixed data interface
+        inline void setNumFixedData(int a_numFixed);
+        inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM>& a_data);
+        inline const LevelBoxData<T,C,MEM>& getFixedData(int a_index);
+
+        // RK interface
+        inline void setNumRKStages(int a_numStages);
+        inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM>& a_data);
+        inline const LevelBoxData<T,C,MEM>& getRKStageData(int a_index);
+        
         private:
+        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM>>> m_fixedData;
+        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM>>> m_rkStageData;
 
-        std::map<Face, LevelBCOp> m_ops
     };
+
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class PeriodicBC : LevelBC
+    {
+        inline void apply(LevelBoxData<T,C,MEM>& a_data)
+        {
+            a_data.exchange();
+        }
+    }
+
     #include "implem/Proto_LevelBCImplem.H"
 } // end namespace Proto
 #endif //end include guard
