@@ -178,6 +178,7 @@ template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
 {
     public:
+    using BoxOp<T,NUMCOMPS,1,MEM>::BoxOp;
 
     T gamma = 1.4;
     mutable T umax;
@@ -190,10 +191,6 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     
     // What is the intended order of accuracy of the operator
     inline static constexpr int order() { return 4; }
-    
-    inline BoxOp_Euler() : BoxOp<T, NUMCOMPS, 1, MEM>() {}
-    inline BoxOp_Euler(Array<double, DIM> a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
-    inline BoxOp_Euler(double a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
     
     // Initialization
     inline void init()
