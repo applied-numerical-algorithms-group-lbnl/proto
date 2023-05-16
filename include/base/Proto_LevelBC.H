@@ -12,33 +12,24 @@ namespace Proto {
         public:
         
         // Basic interface
-        inline virtual void apply(LevelBoxData<T,C,MEM>& a_data);
+        inline virtual void apply(LevelBoxData<T,C,MEM,CTR>& a_data) const {}
 
         // Fixed data interface
         inline void setNumFixedData(int a_numFixed);
-        inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM>& a_data);
-        inline const LevelBoxData<T,C,MEM>& getFixedData(int a_index);
+        inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data);
+        inline const LevelBoxData<T,C,MEM,CTR>& getFixedData(int a_index);
 
         // RK interface
         inline void setNumRKStages(int a_numStages);
-        inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM>& a_data);
-        inline const LevelBoxData<T,C,MEM>& getRKStageData(int a_index);
+        inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM,CTR>& a_data);
+        inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index);
         
         private:
-        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM>>> m_fixedData;
-        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM>>> m_rkStageData;
-
+        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_fixedData;
+        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_rkStageData;
     };
-
-    template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class PeriodicBC : LevelBC
-    {
-        inline void apply(LevelBoxData<T,C,MEM>& a_data)
-        {
-            a_data.exchange();
-        }
-    }
 
     #include "implem/Proto_LevelBCImplem.H"
 } // end namespace Proto
+#include "Proto_LevelBCLib.H" // intentionally outside the namespace
 #endif //end include guard

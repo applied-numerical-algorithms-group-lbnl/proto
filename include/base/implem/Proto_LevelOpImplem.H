@@ -1,29 +1,44 @@
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-LevelOp<OpType, T, MEM>::LevelOp() {}
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+LevelOp<OpType, T, BCType, MEM>::LevelOp() {}
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-LevelOp<OpType, T, MEM>::LevelOp(DisjointBoxLayout& a_layout, T a_dx)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+LevelOp<OpType, T, BCType, MEM>::LevelOp(DisjointBoxLayout& a_layout, T a_dx)
 {
     define(a_layout, a_dx);
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-LevelOp<OpType, T, MEM>::LevelOp(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+LevelOp<OpType, T, BCType, MEM>::LevelOp(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx)
 {
     define(a_layout, a_dx);
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::define(DisjointBoxLayout& a_layout, T a_dx)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, T a_dx)
 {
     Array<T, DIM> dx;
     dx.fill(a_dx);
     define(a_layout, dx);
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::define(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx)
 {
     m_layout = a_layout;
     m_ops.clear();
@@ -33,8 +48,11 @@ void LevelOp<OpType, T, MEM>::define(DisjointBoxLayout& a_layout, Array<T, DIM> 
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::operator()(
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::operator()(
         LevelStateData& a_output,
         const LevelStateData& a_state,
         const LevelAuxData&   a_aux,
@@ -56,8 +74,11 @@ void LevelOp<OpType, T, MEM>::operator()(
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::operator()(
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::operator()(
         LevelStateData&       a_output,
         const LevelStateData& a_state,
         T                     a_scale) const
@@ -80,16 +101,20 @@ void LevelOp<OpType, T, MEM>::operator()(
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::applyBC(LevelStateData& a_state) const
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::applyBC(LevelStateData& a_state) const
 {
-    // temporary
-    a_state.exchange();
+    m_bc.apply(a_state);
 }
 
-
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::setDiagScale(T a_value)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::setDiagScale(T a_value)
 {
     m_diagScale = a_value;
     for (auto iter : m_layout)
@@ -98,8 +123,11 @@ void LevelOp<OpType, T, MEM>::setDiagScale(T a_value)
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::setFluxScale(T a_value)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::setFluxScale(T a_value)
 {
     m_fluxScale = a_value;
     for (auto iter : m_layout)
@@ -108,8 +136,11 @@ void LevelOp<OpType, T, MEM>::setFluxScale(T a_value)
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::setTime(T a_time)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::setTime(T a_time)
 {
     m_time = a_time;
     for (auto iter : m_layout)
@@ -118,8 +149,11 @@ void LevelOp<OpType, T, MEM>::setTime(T a_time)
     }
 }
 
-template <template<typename, MemType> class OpType, typename T, MemType MEM>
-void LevelOp<OpType, T, MEM>::setRKStage(unsigned int a_stage)
+template <template<typename, MemType> class OpType,
+         typename T,
+         template<typename, unsigned int, MemType, Centering> class BCType,
+         MemType MEM>
+void LevelOp<OpType, T, BCType, MEM>::setRKStage(unsigned int a_stage)
 {
     m_rkStage = a_stage;
     for (auto iter : m_layout)

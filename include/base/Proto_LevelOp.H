@@ -3,6 +3,7 @@
 #define _PROTO_LEVEL_OP_
 
 #include "Proto_LevelBoxData.H"
+#include "Proto_LevelBC.H"
 
 namespace Proto {
 
@@ -18,13 +19,17 @@ namespace Proto {
     \tparam MEM     Proto::MemType of the data holder
 */
 
-template <template<typename, MemType> class OPType,
-    typename T, MemType MEM = MEMTYPE_DEFAULT>
+template <
+    template<typename, MemType> class OPType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    MemType MEM = MEMTYPE_DEFAULT>
 class LevelOp
 {
     public:
 
     typedef OPType<T, MEM> OP;
+    typedef BCType<T, OP::numState(), MEM, PR_CELL> BC;
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef BoxData<T, OP::numAux(), MEM> AuxData;
     typedef LevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
@@ -118,6 +123,7 @@ class LevelOp
     inline unsigned int RKStage() const {return m_rkStage; }
     inline Array<T, DIM> dx() const { return m_dx; }
     inline const OP& op(LevelIndex& a_index) const { return m_ops[a_index]; }
+    inline BC& bc() const { return m_bc; }
    
     private:
    
@@ -129,6 +135,7 @@ class LevelOp
 
     DisjointBoxLayout m_layout;
     std::vector<OP> m_ops;
+    BC m_bc;
 };
 
 #include "implem/Proto_LevelOpImplem.H"

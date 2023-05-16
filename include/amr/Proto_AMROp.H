@@ -23,7 +23,8 @@ class AMROp
     public:
 
     typedef OPType<T, MEM> BOP;
-    typedef LevelOp<OPType, T, MEM> LOP;
+    // NB: PeriodicBC isn't used because BCs are computed manually by AMROp
+    typedef LevelOp<OPType, T, PeriodicBC, MEM> LOP;
     typedef AMRData<T, BOP::numState(), MEM, PR_CELL> AMRStateData;
     typedef AMRData<T, BOP::numAux(),   MEM, PR_CELL> AMRAuxData;
     typedef LevelBoxData<T, BOP::numState(), MEM, PR_CELL> LevelStateData;
