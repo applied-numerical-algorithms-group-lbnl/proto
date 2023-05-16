@@ -31,6 +31,7 @@
 #include "base/Proto_DisjointBoxLayout.H"
 #include "base/Proto_LevelBoxData.H"
 #include "base/Proto_Reduction.H"
+#include "base/Proto_LevelBC.H"
 #include "base/Proto_LevelOp.H"
 #include "base/Proto_MayDay.H"
 

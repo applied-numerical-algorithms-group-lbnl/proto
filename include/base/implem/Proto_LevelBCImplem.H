@@ -9,7 +9,7 @@ void LevelBC<T,C,MEM,CTR>::setNumFixedData(int a_numStages)
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBC<T,C,MEM,CTR>::setFixedData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data)
 {
-    PROTO_ASSERT(a_stage < m_fixedData.size(),
+    PROTO_ASSERT(a_index < m_fixedData.size(),
     "LevelBC::setFixedData | Error: stage %i is out of bounds. Call setNumFixedData first.");
 
     m_fixedData[a_index] = &a_data;
@@ -18,10 +18,10 @@ void LevelBC<T,C,MEM,CTR>::setFixedData(int a_index, const LevelBoxData<T,C,MEM,
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T,C,MEM,CTR>& LevelBC<T,C,MEM,CTR>::getFixedData(int a_index)
 {
-    PROTO_ASSERT(a_stage < m_fixedData.size(),
+    PROTO_ASSERT(a_index < m_fixedData.size(),
     "LevelBC::getFixedData | Error: stage %i is out of bounds. Call setNumFixedData first.");
 
-    return *m_fixed[a_index];
+    return *m_fixedData[a_index];
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
