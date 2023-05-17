@@ -33,8 +33,8 @@ namespace Proto {
         inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index);
         
         private:
-        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_fixedData;
-        std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_rkStageData;
+        mutable std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_fixedData;
+        mutable std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_rkStageData;
     };
 
     #include "implem/Proto_LevelBCImplem.H"
