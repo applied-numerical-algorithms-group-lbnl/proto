@@ -1,84 +1,97 @@
 
+//PROTO_KERNEL_START
+//void
+//f_RKTaylorCoefsF(Var<double,RKORDER*(NUMCOMPS)>& a_UTaylor,
+//              Var<double,NUMCOMPS>& a_kstage,
+//              Var<double,NUMCOMPS>& a_U,
+//              int a_stage
+//              )
+template<unsigned int C>
 PROTO_KERNEL_START
 void
-f_RKTaylorCoefsF(Var<double,RKORDER*(NUMCOMPS)>& a_UTaylor,
-              Var<double,NUMCOMPS>& a_kstage,
-              Var<double,NUMCOMPS>& a_U,
+f_RKTaylorCoefsF(Var<double,RKORDER*(C)>& a_UTaylor,
+              Var<double,C>& a_kstage,
+              Var<double,C>& a_U,
               int a_stage
               )
 {
-  for (int n = 0; n < NUMCOMPS;n++)
+    for (int n = 0; n < C;n++)
     {
-      if (a_stage == 0) 
+        if (a_stage == 0) 
         {
-          a_UTaylor(n*RKORDER) = a_U(n);
-          a_UTaylor(1 + n*RKORDER) = a_kstage(n);
-          a_UTaylor(2 + n*RKORDER) = -(3.0/2)*a_kstage(n);
-          a_UTaylor(3 + n*RKORDER) = (2.0/3)*a_kstage(n);
+            a_UTaylor(n*RKORDER) = a_U(n);
+            a_UTaylor(1 + n*RKORDER) = a_kstage(n);
+            a_UTaylor(2 + n*RKORDER) = -(3.0/2)*a_kstage(n);
+            a_UTaylor(3 + n*RKORDER) = (2.0/3)*a_kstage(n);
         }
-      if (a_stage == 1)
+        if (a_stage == 1)
         {
-          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
-          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
+            a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+            a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
         }
-      if (a_stage == 2)
+        if (a_stage == 2)
         {
-          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
-          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
-          
+            a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+            a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
+
         }
-      if (a_stage == 3)
+        if (a_stage == 3)
         {
-          a_UTaylor(2 + n*RKORDER) += (-1.0/2)*a_kstage(n);
-          a_UTaylor(3 + n*RKORDER) += (2.0/3)*a_kstage(n);
+            a_UTaylor(2 + n*RKORDER) += (-1.0/2)*a_kstage(n);
+            a_UTaylor(3 + n*RKORDER) += (2.0/3)*a_kstage(n);
         }
     }
 }
 PROTO_KERNEL_END(f_RKTaylorCoefsF, f_RKTaylorCoefs)
 
+template<unsigned int C>
 PROTO_KERNEL_START
 void
-f_RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
-                Var<double,RKORDER*(NUMCOMPS)>& a_UTaylor,
-              double& a_chi
-              )
+f_RKTimeInterpF(Var<double,C>& a_U,
+    Var<double,RKORDER*(C)>& a_UTaylor,
+    double& a_chi)
 {
-  for (int n = 0; n < NUMCOMPS;n++)
+    for (int n = 0; n < C;n++)
     {
-      a_U(n) = 0.;
-      for (int term = 0; term < RKORDER; term++)
+        a_U(n) = 0.;
+        for (int term = 0; term < RKORDER; term++)
         {
-          a_U(n) = a_U(n)*a_chi + a_UTaylor(RKORDER-term-1 + n*RKORDER);
+            a_U(n) = a_U(n)*a_chi + a_UTaylor(RKORDER-term-1 + n*RKORDER);
         }
     }
 }
 PROTO_KERNEL_END(f_RKTimeInterpF,f_RKTimeInterp)
 
+template<unsigned int C>
 PROTO_KERNEL_START
 void f_stageUpdateF(
-                 Var<double,NUMCOMPS>& a_UStage,
-                 Var<double,NUMCOMPS>& a_rhsTot,
-                 const Var<double,NUMCOMPS>& a_U0,
-                 const Var<double,NUMCOMPS>& a_kStage,
-                 const double& a_dtStageNext,
-                 const double& a_stageWeight)
+    Var<double,C>& a_UStage,
+    Var<double,C>& a_rhsTot,
+    const Var<double,C>& a_U0,
+    const Var<double,C>& a_kStage,
+    const double& a_dtStageNext,
+    const double& a_stageWeight)
 {
-  for (int comp = 0; comp < NUMCOMPS; comp++)
+    for (int comp = 0; comp < C; comp++)
     {
-      a_rhsTot(comp) += a_stageWeight*a_kStage(comp);
-      a_UStage(comp) = a_U0(comp) + a_dtStageNext*a_kStage(comp); 
+        a_rhsTot(comp) += a_stageWeight*a_kStage(comp);
+        a_UStage(comp) = a_U0(comp) + a_dtStageNext*a_kStage(comp); 
     }
 }
 PROTO_KERNEL_END(f_stageUpdateF,f_stageUpdate)
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-AMRRK4<OpType,T,C,MEM>::AMRRK4(
-        AMRData<T, C, MEM>& a_data,
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+AMRRK4<OpType,T,BCType,MEM>::AMRRK4(
+        AMRStateData& a_data,
         const Array<T, DIM>& a_dx,
         int a_regridInterval,
         int a_bufferSize)
 {
-  define(a_data, a_dx, 0,a_regridInterval,a_bufferSize);
+    define(a_data, a_dx, 0,a_regridInterval,a_bufferSize);
 }
 
 template<typename T>
@@ -90,23 +103,31 @@ void trimVector(std::vector<T>& a_vector, unsigned int a_size)
     }
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::define(
-                                    AMRData<T, C, MEM>& a_data,
-                                    const Array<T, DIM>& a_dx,
-                                    int a_regridInterval,
-                                    int a_bufferSize)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::define(
+        AMRStateData& a_data,
+        const Array<T, DIM>& a_dx,
+        int a_regridInterval,
+        int a_bufferSize)
 {
-  define(a_data, a_dx, 0 ,a_regridInterval,a_bufferSize);
+    define(a_data, a_dx, 0 ,a_regridInterval,a_bufferSize);
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::define(
-                                    AMRData<T, C, MEM>& a_data,
-                                    const Array<T, DIM>& a_dx,
-                                    int                 a_level,
-                                    int                 a_regridInterval,
-                                    int                 a_bufferSize)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::define(
+        AMRStateData& a_data,
+        const Array<T, DIM>& a_dx,
+        int                 a_level,
+        int                 a_regridInterval,
+        int                 a_bufferSize)
 {
      PR_TIMERS("AMRRK4::define");
     // dont do anything fancy, just kill everything and redefine
@@ -129,9 +150,9 @@ void AMRRK4<OpType,T,C,MEM>::define(
 
         m_ops.resize(numLevels);
         if (m_numSteps.size() != numLevels)
-          {
+        {
             m_numSteps= std::vector<int>(numLevels,0);
-          }
+        }
         m_timeRefRatios.resize(numLevels - 1);
         m_spaceRefRatios.resize(numLevels - 1);
         m_regridInterval.resize(numLevels - 1);
@@ -144,10 +165,12 @@ void AMRRK4<OpType,T,C,MEM>::define(
         {
             auto& layout = a_data.grid()[lvl];
 
-            m_ops[lvl].define(dx);
-            m_UStage[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost());
+            m_ops[lvl].define(layout, dx);
+            m_UStage[lvl] = std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
+                    layout, OP::ghost());
             m_UStage[lvl]->setToZero();
-            m_RHSTotal[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros());
+            m_RHSTotal[lvl] = std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
+                    layout, Point::Zeros());
             m_RHSTotal[lvl]->setToZero();
             if (lvl < numLevels-1)
             {
@@ -159,20 +182,23 @@ void AMRRK4<OpType,T,C,MEM>::define(
                 m_bufferSize[lvl] = a_bufferSize;
                 m_spaceRefRatios[lvl] = spaceRefRatio;
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
-                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OP::order());
                 m_UTaylor[lvl] =
-                    std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros());
+                    std::make_shared<LevelBoxData<T, OP::numState()*RKORDER, MEM>>(
+                            layout, Point::Zeros());
                 m_UTaylor[lvl]->setToZero();
                 m_fluxRegisters[lvl] =
-                    std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio, dx);
+                    std::make_shared<LevelFluxRegister<T, OP::numState(), MEM>>(
+                            layout, fineLayout, spaceRefRatio, dx);
 
                 m_fluxRegisters[lvl]->reset();
                 // Point::Ones() are here to make the division a ceil instead of a floor
-                Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
+                Point interpGhost = OP::ghost() / spaceRefRatio + Point::Ones();
                 interpGhost += m_cfInterp[lvl].ghost();
 
                 m_UTaylorC[lvl] =
-                    std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost);
+                    std::make_shared<LevelBoxData<T, OP::numState()*RKORDER, MEM>>(
+                            cfLayout, interpGhost);
                 m_UTaylorC[lvl]->setToZero();
                 for (int dir = 0; dir < DIM; dir++)
                 {
@@ -205,9 +231,13 @@ void AMRRK4<OpType,T,C,MEM>::define(
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
-            m_ops[lvl].define(dx);
-            m_UStage.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost()));
-            m_RHSTotal.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros()));
+            m_ops[lvl].define(layout, dx);
+            m_UStage.push_back(
+                    std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
+                        layout, OP::ghost()));
+            m_RHSTotal.push_back(
+                    std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
+                        layout, Point::Zeros()));
             //m_numSteps[lvl] = 0;
             if (lvl < numLevels-1)
             {
@@ -219,18 +249,21 @@ void AMRRK4<OpType,T,C,MEM>::define(
                 m_timeRefRatios[lvl] = spaceRefRatio.max();
                 m_regridInterval[lvl] = a_regridInterval;
                 m_bufferSize[lvl] = a_bufferSize;
-                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OpType::order());
+                m_cfInterp[lvl] = InterpStencil<T>::FiniteVolume(spaceRefRatio, OP::order());
                 m_UTaylor.push_back(
-                        std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
+                        std::make_shared<LevelBoxData<T, OP::numState()*RKORDER, MEM>>(
+                            layout, Point::Zeros()));
                 m_fluxRegisters.push_back(
-                        std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio, dx));
+                        std::make_shared<LevelFluxRegister<T, OP::numState(), MEM>>(
+                            layout, fineLayout, spaceRefRatio, dx));
 
                 // Point::Ones() are here to make the division a ceil instead of a floor
-                Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
+                Point interpGhost = OP::ghost() / spaceRefRatio + Point::Ones();
                 interpGhost += m_cfInterp[lvl].ghost();
 
                 m_UTaylorC.push_back(
-                        std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost));
+                        std::make_shared<LevelBoxData<T, OP::numState()*RKORDER, MEM>>(
+                            cfLayout, interpGhost));
                 for (int dir = 0; dir < DIM; dir++)
                 {
                     dx[dir] /= spaceRefRatio[dir];
@@ -238,27 +271,34 @@ void AMRRK4<OpType,T,C,MEM>::define(
             }
         }
         PROTO_ASSERT(m_UStage.size() == numLevels, 
-                "AMRRK4::define | Error: Wrong number of elements.")
-            PROTO_ASSERT(m_RHSTotal.size() == numLevels, 
-                    "AMRRK4::define | Error: Wrong number of elements.")
-            PROTO_ASSERT(m_UTaylor.size() == numLevels - 1, 
-                    "AMRRK4::define | Error: Wrong number of elements.")
-            PROTO_ASSERT(m_UTaylorC.size() == numLevels - 1, 
-                    "AMRRK4::define | Error: Wrong number of elements.")
-            PROTO_ASSERT(m_fluxRegisters.size() == numLevels - 1, 
-                    "AMRRK4::define | Error: Wrong number of elements.")
+                "AMRRK4::define | Error: Wrong number of elements.");
+        PROTO_ASSERT(m_RHSTotal.size() == numLevels, 
+                "AMRRK4::define | Error: Wrong number of elements.");
+        PROTO_ASSERT(m_UTaylor.size() == numLevels - 1, 
+                "AMRRK4::define | Error: Wrong number of elements.");
+        PROTO_ASSERT(m_UTaylorC.size() == numLevels - 1, 
+                "AMRRK4::define | Error: Wrong number of elements.");
+        PROTO_ASSERT(m_fluxRegisters.size() == numLevels - 1, 
+                "AMRRK4::define | Error: Wrong number of elements.");
     }
-
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::advance(T a_dt)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::advance(T a_dt)
 {
     advance(0, a_dt, 0);
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::advance(int a_level, T a_dt, T a_chi)
 {
 #ifdef PR_HDF5
   HDF5Handler h5;
@@ -321,11 +361,6 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
     if (a_level < m_data->numLevels() - 1)
       {
         bool regridThisLevel = false;
-        if (Proto::procID()==0)
-          {
-            //std::cout <<"regrid level: " << a_level << " , " << m_numSteps[a_level] <<
-            //  " , " << m_regridInterval[a_level] << std::endl;
-          }
         if (a_level  == 0)
           {
             regridThisLevel = (m_numSteps[0]%m_regridInterval[0] == 0);
@@ -338,28 +373,20 @@ void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
           }  
         if (regridThisLevel)
           {
-            if (Proto::procID()==0)
-              {
-                //std::cout <<" regridding: " << a_level << ", step = " << m_numSteps[a_level] <<  std::endl;
-              }
-            //h5.writeAMRData(dx0,*m_data,
-            //                      "U_lev_pre"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
-            
             regrid(a_level);
-            // h5.writeAMRData(dx0,*m_data,
-            //              "U_lev_post"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
-       
           }
       }
     else
       {
-        //h5.writeAMRData(dx0,*m_data,
-        //                    "U_lev_"+to_string(a_level)+"_NC_"+to_string(m_data->grid()[0].domain().sizes()[0])+ "_step_"+to_string(m_numSteps[a_level]));
       }
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 {
     PROTO_ASSERT(a_level > 0,
         "AMRRK4::interpBoundaries | Error: Interpolation is only done for level > 0.");
@@ -386,13 +413,13 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
             // get data
             auto& UStage_i   = UStage[iter];
             auto& UTaylorC_i = UTaylorC[iter];
-            BoxData<T, C, MEM> UStageTemp(layout[iter]);
+            BoxData<T, OP::numState(), MEM> UStageTemp(layout[iter]);
             
             // save copy of interior
             UStageTemp |= I(UStage_i);
 
             // interpolate in time
-            auto UTimeInterp = forall<T, C>(f_RKTimeInterp, UTaylorC_i, chi);
+            auto UTimeInterp = forall<T, OP::numState()>(f_RKTimeInterp, UTaylorC_i, chi);
         
             // interpolate boundary conditions
             {
@@ -410,8 +437,12 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 {
 #ifdef PR_HDF5
   //HDF5Handler h5;
@@ -429,34 +460,42 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     T dtStageNext = a_dt*m_stageTimes[a_stage+1];
     T stageWeight = m_stageWeights[a_stage];
     T dtWeight    = a_dt*m_stageWeights[a_stage];   
-    op.bcStage(UStage,U0,a_stage);
+    //op.bcStage(UStage,U0,a_stage);
     
+    // give BC a reference to a_stage
+    op.bc().setRKStage(a_stage);
+    op.bc().setNumFixedData(1);
+    op.bc().setFixedData(0,U0);
+    // apply the BC to UStage
+    op.applyBC(UStage);
     for (auto iter : layout)
     {
-      PR_STACK_ON;
+        PR_STACK_ON;
         // get data
+        auto& op_i       = op[iter];
         auto& UStage_i   = UStage[iter];
         auto& U0_i       = U0[iter];
         auto& RHSTotal_i = RHSTotal[iter];
 
-        Array<BoxData<T, C, MEM>, DIM> fluxes;
+        Array<BoxData<T, OP::numState(), MEM>, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
             fluxes[dir].define(layout[iter].grow(dir, Side::Hi, 1));
             fluxes[dir].setToZero();
         }
-        BoxData<T,C,MEM> kStage(layout[iter], 0.0);
-        
+        BoxData<T,OP::numState(),MEM> kStage(layout[iter], 0.0);
+
         // apply spatial operator to compute k
         {
-          PR_TIMERS("AMRRK4::stageUpdate apply operator");
-          op(kStage, fluxes, UStage_i);
+            PR_TIMERS("AMRRK4::stageUpdate apply operator");
+            op_i(kStage, fluxes, UStage_i);
         }
 
         // do stage update
         {
-           PR_TIMERS("AMRRK4::stageUpdate do stage update");
-           forallInPlace(f_stageUpdate, UStage_i, RHSTotal_i, U0_i, kStage, dtStageNext, stageWeight);
+            PR_TIMERS("AMRRK4::stageUpdate do stage update");
+            forallInPlace(f_stageUpdate, UStage_i, RHSTotal_i,
+                    U0_i, kStage, dtStageNext, stageWeight);
         }
         if (a_level < m_data->numLevels() - 1)
         {
@@ -484,8 +523,12 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     } // end patch loop
 }
 
-template <class OpType, typename T,unsigned int C,MemType MEM>
-void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
+template<
+    template<typename, MemType> class OpType,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void AMRRK4<OpType,T,BCType,MEM>::regrid(int a_baseLevel)
 {
 #ifdef PR_HDF5
   HDF5Handler h5;
@@ -505,7 +548,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
         {
             auto& tags_i = tags[iter];
             auto& U0_i   = (*m_data)[level][iter];
-            m_ops[level].generateTags(tags_i, U0_i);
+            m_ops[level][iter].generateTags(tags_i, U0_i);
         }
         tags.setBoundary(0);
         newGrids.addFinerTags(tags, level);
@@ -519,7 +562,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
     auto dx0 = m_ops[0].dx();
      int a_level = a_baseLevel;
     
-    m_data->regrid(newGrids, a_baseLevel, OpType::order());
+    m_data->regrid(newGrids, a_baseLevel, OP::order());
     
     define(*m_data, m_ops[a_baseLevel].dx(), a_baseLevel,
            m_regridInterval[a_baseLevel],m_bufferSize[a_baseLevel]);            

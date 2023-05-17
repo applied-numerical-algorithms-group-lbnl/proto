@@ -23,18 +23,21 @@ namespace Proto {
         // ... many useful things here ...
 
         // Fixed data interface
-        inline void setNumFixedData(int a_numFixed);
-        inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data);
-        inline const LevelBoxData<T,C,MEM,CTR>& getFixedData(int a_index);
+        inline void setNumFixedData(int a_numFixed) const;
+        inline void setFixedData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data) const;
+        inline const LevelBoxData<T,C,MEM,CTR>& getFixedData(int a_index) const;
 
         // RK interface
-        inline void setNumRKStages(int a_numStages);
-        inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM,CTR>& a_data);
-        inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index);
+        inline void setRKStage(int a_stage) const { m_rkStage = a_stage; }
+        inline void setNumRKStages(int a_numStages) const;
+        inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM,CTR>& a_data) const;
+        inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index) const;
+        inline int rkStage() { return m_rkStage; }
         
         private:
-        mutable std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_fixedData;
-        mutable std::vector<std::weak_ptr<const LevelBoxData<T,C,MEM,CTR>>> m_rkStageData;
+        mutable int m_rkStage;
+        mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_fixedData;
+        mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_rkStageData;
     };
 
     #include "implem/Proto_LevelBCImplem.H"

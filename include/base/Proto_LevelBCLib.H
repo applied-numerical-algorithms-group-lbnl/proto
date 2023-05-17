@@ -7,7 +7,7 @@
 namespace Proto {
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class PeriodicBC : LevelBC<T,C,MEM,CTR>
+    class PeriodicBC : public LevelBC<T,C,MEM,CTR>
     {
         public:
         inline void apply(LevelBoxData<T,C,MEM,CTR>& a_data) const;

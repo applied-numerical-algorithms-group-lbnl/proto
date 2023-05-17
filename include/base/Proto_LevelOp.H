@@ -123,8 +123,8 @@ class LevelOp
     inline unsigned int RKStage() const {return m_rkStage; }
     inline Array<T, DIM> dx() const { return m_dx; }
     inline const OP& op(LevelIndex& a_index) const { return m_ops[a_index]; }
-    inline BC& bc() const { return m_bc; }
-   
+    inline const BC& bc() const { return m_bc; }
+    inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
     private:
    
     T m_diagScale;

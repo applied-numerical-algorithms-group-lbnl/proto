@@ -10,44 +10,45 @@ using namespace Proto;
 int TIME_STEP = 0;
 int PLOT_NUM = 0;
 
+template<unsigned int C>
 PROTO_KERNEL_START
 void f_eulerInitializeF(
         Point& a_pt,
-        Var<double,NUMCOMPS>& a_U,
+        Var<double,C>& a_U,
         double a_h,
         double a_gamma,        
         double a_offset)
 {
-  double r0 = .125;
-  double rsq = 0.;
-  double amp = .01;
-  for (int dir = 0; dir < DIM ; dir++)
+    double r0 = .125;
+    double rsq = 0.;
+    double amp = .01;
+    for (int dir = 0; dir < DIM ; dir++)
     {
-      double xcen = fmod(.5 + a_offset,1.); 
-      double xdir = a_pt[dir]*a_h + .5*a_h;
-      double del; 
-      if (xcen > xdir) del = min(abs(xdir - xcen),abs(xdir - xcen + 1.));
-      if (xcen <= xdir) del = min(abs(xdir - xcen),abs(xdir - xcen - 1.));
-      rsq += pow(del,2);
+        double xcen = fmod(.5 + a_offset,1.); 
+        double xdir = a_pt[dir]*a_h + .5*a_h;
+        double del; 
+        if (xcen > xdir) del = min(abs(xdir - xcen),abs(xdir - xcen + 1.));
+        if (xcen <= xdir) del = min(abs(xdir - xcen),abs(xdir - xcen - 1.));
+        rsq += pow(del,2);
     }
-  double r = sqrt(rsq);
-  if (r > r0)
+    double r = sqrt(rsq);
+    if (r > r0)
     {
-      a_U(0) = 1.;
+        a_U(0) = 1.;
     }
-  else
+    else
     {
-      a_U(0) = 1.0 + amp*pow(cos(M_PI*r/r0/2),6);
+        a_U(0) = 1.0 + amp*pow(cos(M_PI*r/r0/2),6);
     }
-  double ke = 0.;
-  for (int dir = 0; dir < DIM; dir++)
+    double ke = 0.;
+    for (int dir = 0; dir < DIM; dir++)
     {
-      a_U(dir+1) = 0.;
-      ke += a_U(dir+1)*a_U(dir+1)/2;
-      a_U(dir+1) *= a_U(0);
+        a_U(dir+1) = 0.;
+        ke += a_U(dir+1)*a_U(dir+1)/2;
+        a_U(dir+1) *= a_U(0);
     }
-  double pressure = pow(a_U(0),a_gamma);
-  a_U(NUMCOMPS-1) = a_gamma*pressure/(a_gamma - 1.) + a_U(0)*ke;
+    double pressure = pow(a_U(0),a_gamma);
+    a_U(C-1) = a_gamma*pressure/(a_gamma - 1.) + a_U(0)*ke;
 }
 PROTO_KERNEL_END(f_eulerInitializeF, f_eulerInitialize);
 
@@ -94,7 +95,7 @@ using Proto::pout;
     args.parse(argc, argv);
     std::vector<double> errorRefs;
     double consError;
-    vector<LevelBoxData<double, NUMCOMPS> > UCoarse(maxRefs);
+    vector<LevelBoxData<double, OP::numState()> > UCoarse(maxRefs);
     double physDomainSize = 1.0;
     double dxCoarsest = physDomainSize / domainSize;
     for (int numRef = 0;numRef < maxRefs;numRef++)
@@ -133,7 +134,7 @@ using Proto::pout;
           {
             for (int lvl = 0; lvl < numLevels-1; lvl++)
               {
-                LevelBoxData<double, NUMCOMPS> initData(grid[lvl], Point::Zeros());
+                LevelBoxData<double, OP::numState()> initData(grid[lvl], Point::Zeros());
                 Operator::initConvolve(initData, f_eulerInitialize, dxLevel, gamma, t0);
                 LevelTagData tags(grid[lvl], bufferSize);
                 for (auto iter : grid[lvl])
@@ -151,12 +152,12 @@ using Proto::pout;
               }
           }
 
-        AMRData<double, NUMCOMPS> U(grid, OP::ghost());
+        AMRData<double, OP::numState()> U(grid, OP::ghost());
         Operator::initConvolve(U, dx[0], f_eulerInitialize, gamma, t0);
         U.averageDown();
-        AMRRK4<OP, double, NUMCOMPS> amrrk4(U, dx);
-        Array<double,NUMCOMPS> sum0;
-        for (int c = 0;c < NUMCOMPS;c++)
+        AMRRK4<BoxOp_Euler, double> amrrk4(U, dx);
+        Array<double,OP::numState()> sum0;
+        for (int c = 0;c < OP::numState();c++)
           {
             sum0[c] = U.integrate(dx[0],c);
           }
@@ -249,7 +250,7 @@ using Proto::pout;
     for (int ref = 0; ref < maxRefs-1; ref++)
       {
         auto dblCoarsened = UCoarse[ref+1].layout().coarsen(Point::Ones(2));
-        LevelBoxData<double,NUMCOMPS> UCoarsened(dblCoarsened,Point::Zeros());
+        LevelBoxData<double,OP::numState()> UCoarsened(dblCoarsened,Point::Zeros());
         UCoarse[ref].copyTo(UCoarsened);
         
         for (auto iter : dblCoarsened)

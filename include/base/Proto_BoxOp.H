@@ -89,7 +89,7 @@ class BoxOp
         User defined function that is called inside of define.
         Useful for caching things like Stencil instances.
     */
-    inline virtual void init(){}
+    inline virtual void init(const Box& a_box, const Array<T,DIM>& a_dx ){}
 
     /// Spectral Radius (User Defined)
     /**
