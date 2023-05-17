@@ -29,15 +29,17 @@ class LevelRK4
 public:
     typedef OPType<T, MEM> OP; 
     typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef LevelOp<OPType, double, BCType, MEM> LOP;
     typedef LevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     
     LevelRK4(DisjointBoxLayout& a_layout, T a_dx);
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
-    void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
+    inline void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
+    inline LOP& op() { return m_f; }
 protected:
     LevelStateData m_k;
     LevelStateData m_delta;
-    LevelOp<OPType, T, BCType, MEM> m_f;
+    LOP m_f;
     LevelStateData m_U0;
 };
 
