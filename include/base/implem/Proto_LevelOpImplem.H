@@ -42,9 +42,10 @@ void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<
 {
     m_layout = a_layout;
     m_ops.clear();
+    m_ops.resize(a_layout.localSize());
     for (auto iter : a_layout)
     {
-        m_ops.push_back(OpType<T, MEM>(a_layout[iter], a_dx));
+        m_ops[iter].define(a_layout[iter], a_dx);
     }
 }
 
