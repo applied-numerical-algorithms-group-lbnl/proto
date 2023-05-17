@@ -41,6 +41,7 @@ template <template<typename, MemType> class OpType,
 void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx)
 {
     m_layout = a_layout;
+    m_dx = a_dx;
     m_ops.clear();
     m_ops.resize(a_layout.localSize());
     for (auto iter : a_layout)

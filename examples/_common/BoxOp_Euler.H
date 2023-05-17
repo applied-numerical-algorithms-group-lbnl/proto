@@ -193,7 +193,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     inline static constexpr int order() { return 4; }
     
     // Initialization
-    inline void init()
+    inline void init(const Box& a_box, const Array<T, DIM>& a_dx)
     {
         for (int dir = 0; dir < DIM; dir++)
         {
