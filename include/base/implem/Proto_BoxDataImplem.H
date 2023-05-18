@@ -30,15 +30,15 @@ policy_t policy(Box box) {
   Point lo = box.low(), hi = box.high();
   return policy_t({lo[0],lo[1],lo[2]},{hi[0],hi[1],hi[2]});
 }
-#define PROTO_KOKKOS_END(struct_name, func_name)                  \
+#define PROTO_KOKKOS_END(class_name, func_name)                  \
 template <class... Args> \
-struct struct_name {   \
-    std::tuple<Args...> tuple; \
-    struct_name(std::tuple<Args...> tup) : tuple(tup) {} \
+struct class_name {   \
+    std::tuple<Args&...> tuple; \
+    class_name(Args&... tup) : tuple(std::make_tuple(std::ref(tup)...)) {} \
     KOKKOS_INLINE_FUNCTION \
     void operator()(const int64_t i, const int64_t j, const int64_t k) const { \
       Proto::Point p(i,j,k); \
-      std::apply([p](Args... args) { func_name(p, args...); }, tuple); \
+      std::apply([p](Args&... args) { func_name(p, args...); }, tuple); \
     } \
 };        
 #endif

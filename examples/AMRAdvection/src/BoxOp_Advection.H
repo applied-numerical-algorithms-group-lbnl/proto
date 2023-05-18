@@ -7,6 +7,7 @@
 
 using namespace Proto;
 
+#ifdef PROTO_ACCEL
 PROTO_KERNEL_START
 void
 k_threshold(const Point p, DevData<short> &a_tags, DevData<double,NUMCOMPS> &a_U)
@@ -16,6 +17,7 @@ k_threshold(const Point p, DevData<short> &a_tags, DevData<double,NUMCOMPS> &a_U
   else {a_tags(p) = 0;};
 }
 PROTO_KOKKOS_END(k_thresholdF, k_threshold);
+#endif
 PROTO_KERNEL_START
 void
 f_thresholdF(Var<short> &a_tags, const Var<double,NUMCOMPS> &a_U)
@@ -74,6 +76,7 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
       forallInPlace(f_threshold, a_tags, a_state);
     }
 
+#ifdef PROTO_ACCEL
     static inline void kokkos_generateTags(
             TagData& a_tags, // BoxData<short,1>
             BoxData<T, NUMCOMPS>& a_state) // NUMCOMPS=1
@@ -81,5 +84,6 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
         DevData<short> d_tags(a_tags); DevData<double, NUMCOMPS> d_state(a_state);
         Kokkos::parallel_for("threshold", policy(a_tags.box()&a_state.box()), k_thresholdF(d_tags,d_state));
     }
+#endif
 };
 #endif //end include guard

@@ -1429,8 +1429,9 @@ public:
       return k+m*a_c+a_d*m*C+a_e*m*C*D;
   }
   ACCEL_DECORATION
-  T& operator()(const Point &p, size_t a_c=0, size_t a_d=0, size_t a_e=0) const { 
-    return ptr[index(p,a_c,a_d,a_e)];
+  T& operator()(const Point p, size_t a_c=0, size_t a_d=0, size_t a_e=0) const { 
+    size_t idx = index(p,a_c,a_d,a_e);
+    return ptr[idx];
   }
 private:
   T *ptr;

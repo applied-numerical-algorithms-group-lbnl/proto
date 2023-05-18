@@ -23,6 +23,7 @@ namespace Proto
         Equivalently, a Box is a collection of \f$DIM\f$ linear intervals in \f$\mathbb{Z}^{DIM}\f$ 
         \f$[low[i] ,high[i]] : i \in [0,DIM)\f$. Boxes are written using the notation <code> [low, high] </code>.
      */
+ACCEL_DECORATION
     class Box
     {
 #ifdef PR_HDF5
