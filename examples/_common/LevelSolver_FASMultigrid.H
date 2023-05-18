@@ -13,7 +13,8 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
     public:
    
     typedef OpType<T, MEM> BOP;
-    typedef LevelOp<OpType, T, MEM> LOP;
+    //Note: PeriodicBC is just a default
+    typedef LevelOp<OpType, T, PeriodicBC, MEM> LOP;
     typedef LevelBoxData<T, BOP::numState(), MEM> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(), MEM> LevelAuxData;
 

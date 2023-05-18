@@ -165,7 +165,7 @@ class AMROp
     inline void setFluxScale(T a_value, int a_gridFactor = 0);
     inline Array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
     const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
-    const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
+    const BOP& boxOp(int a_level, const LevelIndex& a_index) const { return levelOp(a_level)[a_index]; }
 
     private:
 

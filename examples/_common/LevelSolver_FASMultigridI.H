@@ -141,12 +141,12 @@ T LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
 {
     a_state.exchange();
     Reduction<T, Abs> rxn;
-    for (auto iter = a_state.begin(); iter.ok(); ++iter)
+    for (auto iter : m_mg->op().layout())
     {
-        auto& state_i = a_state[*iter];
-        auto& force_i = a_force[*iter];
-        auto& res = a_residual[*iter];
-        m_mg->op().op()(res, state_i);
+        auto& state_i = a_state[iter];
+        auto& force_i = a_force[iter];
+        auto& res = a_residual[iter];
+        m_mg->op()[iter](res, state_i);
         res += force_i;
         res.reduce(rxn);
     }
@@ -203,7 +203,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
     m_numPostRelax = 2*DIM;
     m_numBottomRelax = 10;
 
-    m_levelOp.define(a_dx);
+    m_levelOp.define(a_layout, a_dx);
     m_levelOp.setFluxScale(-1);
     m_lambda = 0.5/m_levelOp.spectralRadius();
 
@@ -317,21 +317,21 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
     PR_TIMERS("LevelMultigrid::coarseResidual");
     a_state.exchange();
     a_crseState.exchange();
-    for (auto iter = a_state.begin(); iter.ok(); ++iter)
+    for (auto iter : m_levelOp.layout())
     {
-        auto& state_i = a_state[*iter];
-        auto& resC_i  = m_crseLocal[*iter];
-        auto& force_i = a_force[*iter];
-        auto res = m_levelOp.op()(state_i, a_state.layout()[*iter]);
+        auto& state_i = a_state[iter];
+        auto& resC_i  = m_crseLocal[iter];
+        auto& force_i = a_force[iter];
+        auto res = m_levelOp[iter](state_i, a_state.layout()[iter]);
         res += force_i;
         resC_i |= m_average(res);
     }
     m_crseLocal.copyTo(a_crseForce);
-    for (auto iter = a_crseForce.begin(); iter.ok(); ++iter)
+    for (auto iter : a_crseForce.layout())
     {
-        auto& state_i = a_crseState[*iter];
-        auto& force_i = a_crseForce[*iter];
-        auto lphi = m_crseMG->m_levelOp.op()(state_i, a_crseForce.layout()[*iter]);
+        auto& state_i = a_crseState[iter];
+        auto& force_i = a_crseForce[iter];
+        auto lphi = m_crseMG->m_levelOp[iter](state_i, a_crseForce.layout()[iter]);
         force_i -= lphi;
     }
 }
@@ -345,13 +345,13 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::residual(
         LevelStateData& a_force)
 {
     a_state.exchange();
-    for (auto iter = a_residual.begin(); iter.ok(); ++iter)
+    for (auto iter : a_residual.layout())
     {
-        auto& res_i   = a_residual[*iter];
-        auto& state_i = a_state[*iter];
-        auto& force_i = a_force[*iter];
+        auto& res_i   = a_residual[iter];
+        auto& state_i = a_state[iter];
+        auto& force_i = a_force[iter];
 
-        m_levelOp.op()(res_i, state_i);
+        m_levelOp[iter](res_i, state_i);
         res_i += force_i;
     }
 }
@@ -368,11 +368,11 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::relax(
     for (int ii = 0; ii < a_numIter; ii++)
     {
         a_state.exchange();
-        for (auto iter = a_state.begin(); iter.ok(); ++iter)
+        for (auto iter : m_levelOp.layout())
         {
-            auto& state_i = a_state[*iter];
-            auto& force_i = a_force[*iter];
-            auto res = m_levelOp.op()(state_i, a_state.layout()[*iter]);
+            auto& state_i = a_state[iter];
+            auto& force_i = a_force[iter];
+            auto res = m_levelOp[iter](state_i, a_state.layout()[iter]);
             res += force_i;
             state_i += m_increment(res);
         }

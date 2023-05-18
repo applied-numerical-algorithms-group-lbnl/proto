@@ -13,7 +13,8 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
     public:
     
     typedef OpType<T, MEM> BOP;
-    typedef LevelOp<OpType, T, MEM> LOP;
+    // Note: PeriodicBC isn't used
+    typedef LevelOp<OpType, T, PeriodicBC, MEM> LOP;
     typedef AMROp<OpType, T, MEM> AMROP;
     typedef LevelBoxData<T, BOP::numState(), MEM> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(), MEM>   LevelAuxData;

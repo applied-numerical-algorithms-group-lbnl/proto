@@ -212,13 +212,13 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
     a_ResC.increment(a_GC); // GC - LC(PhiC)
 
     auto AVG = Stencil<T>::AvgDown(refRatio);
-    for (auto iter = Phi.begin(); iter.ok(); ++iter)
+    for (auto iter : Phi.layout())
     {
-        auto& phi_i  = Phi[*iter];
-        auto& g_i    = a_G[*iter];
-        auto& temp_i = m_crseLocal[*iter];
+        auto& phi_i  = Phi[iter];
+        auto& g_i    = a_G[iter];
+        auto& temp_i = m_crseLocal[iter];
         
-        auto res_i = m_op->boxOp(m_level)(phi_i, Phi.layout()[*iter], -1.0); // -L(Phi)
+        auto res_i = m_op->boxOp(m_level, iter)(phi_i, Phi.layout()[iter], -1.0); // -L(Phi)
         res_i += g_i;
         temp_i |= AVG(res_i); // m_crseLocal now holds average of residual.
     }
