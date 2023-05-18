@@ -11,6 +11,8 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
 {
     public:
 
+    using BoxOp<T,MEM>::BoxOp;
+
     // How many ghost cells does the operator need from the state variables
     inline static Point ghost() { return Point::Ones(2);}
     

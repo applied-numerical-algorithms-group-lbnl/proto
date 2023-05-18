@@ -8,6 +8,8 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
 {
     public:
 
+    using BoxOp<T,1,0,MEM>::BoxOp;
+
     // These functions are not optional
     inline static Point ghost() { return Point::Ones(2);}
     inline static Point auxGhost() { return Point::Zeros();}

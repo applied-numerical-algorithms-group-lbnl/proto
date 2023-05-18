@@ -148,7 +148,7 @@ int main(int argc, char** argv)
           {
             for (int lvl = 0; lvl < numLevels-1; lvl++)
               {
-                LevelBoxData<double, NUMCOMPS> initData(grid[lvl], Point::Zeros());
+                LevelBoxData<double, OP::numState()> initData(grid[lvl], Point::Zeros());
                 Operator::initConvolve(initData, f_advectionExact, dxLevel, t0);
                 LevelTagData tags(grid[lvl], bufferSize);
                 for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
@@ -165,10 +165,10 @@ int main(int argc, char** argv)
                 grid.enforceNesting2(lvl);
               }
           }
-        AMRData<double, NUMCOMPS> U(grid, OP::ghost());
+        AMRData<double, OP::numState()> U(grid, OP::ghost());
         Operator::initConvolve(U, dx[0], f_advectionExact, t0);
         U.averageDown();
-        AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx,regridInterval,regridBufferSize);
+        AMRRK4<BoxOp_Advection, double> advectionOp(U, dx,regridInterval,regridBufferSize);
         double sum0 = U[0].integrate(dx[0]);
         pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
@@ -234,10 +234,10 @@ int main(int argc, char** argv)
         }
         U.averageDown();
         
-        AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
+        AMRData<double, OP::numState()> USoln(U.grid(), Point::Zeros());
         Operator::initConvolve(USoln, dx[0], f_advectionExact, time);
 
-        AMRData<double, NUMCOMPS> UError(U.grid(), Point::Zeros());
+        AMRData<double, OP::numState()> UError(U.grid(), Point::Zeros());
         U.copyTo(UError);
         UError.increment(USoln, -1);
     

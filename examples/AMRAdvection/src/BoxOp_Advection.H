@@ -25,14 +25,12 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
 {
     public:
 
+    using BoxOp<T,NUMCOMPS,0,MEM>::BoxOp;
+
     // These functions are not optional
     inline static Point ghost() { return Point::Ones(3);}
     inline static Point auxGhost() { return Point::Zeros();}
     inline static constexpr int order() { return 4; }
-
-    inline BoxOp_Advection() : BoxOp<T, 1, 0, MEM>() {}
-    inline BoxOp_Advection(T a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
-    inline BoxOp_Advection(Array<T, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
 
     //inline T spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
   
