@@ -148,7 +148,7 @@ void AMRRK4<OpType,T,BCType,MEM>::define(
         m_UTaylorC.resize(numLevels - 1);
         m_fluxRegisters.resize(numLevels - 1);       
 
-        m_ops.resize(numLevels);
+        //m_ops.resize(numLevels);
         if (m_numSteps.size() != numLevels)
         {
             m_numSteps= std::vector<int>(numLevels,0);
@@ -164,8 +164,9 @@ void AMRRK4<OpType,T,BCType,MEM>::define(
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
-
-            m_ops[lvl].define(layout, dx);
+            
+            m_ops.push_back(LevelOp<OpType, double, BCType, MEM>(layout, dx));
+            //m_ops[lvl].define(layout, dx);
             m_UStage[lvl] = std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
                     layout, OP::ghost());
             m_UStage[lvl]->setToZero();
