@@ -52,7 +52,7 @@ BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, Array<T, DIM> a_dx)
         
     m_definedFlux = true;
     m_definedSrce = true;
-    init(a_box, a_dx); //user initialization
+    init(); //user initialization
 }
 
 template <typename T,
