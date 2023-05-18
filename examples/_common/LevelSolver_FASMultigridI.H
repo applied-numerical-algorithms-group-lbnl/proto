@@ -141,7 +141,7 @@ T LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
 {
     a_state.exchange();
     Reduction<T, Abs> rxn;
-    for (auto iter : m_mg->op().layout())
+    for (auto iter : a_state.layout())
     {
         auto& state_i = a_state[iter];
         auto& force_i = a_force[iter];

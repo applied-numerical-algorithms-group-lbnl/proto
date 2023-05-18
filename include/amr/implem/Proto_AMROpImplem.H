@@ -250,7 +250,7 @@ void AMROp<OPType, T, MEM>::reflux(
     
     fluxRegister.reset();
    
-    for (auto iter : fluxRegister.crseLayout().begin())
+    for (auto iter : fluxRegister.crseLayout())
     {
         for (int dir = 0; dir < DIM; dir++)
         {
