@@ -33,7 +33,7 @@ namespace Proto {
         inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM,CTR>& a_data) const;
         inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index) const;
         inline int rkStage() { return m_rkStage; }
-        
+
         private:
         mutable int m_rkStage;
         mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_fixedData;
