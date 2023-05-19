@@ -70,6 +70,8 @@ class BoxOp
     */
     inline BoxOp(const Box& a_box, Array<T, DIM> a_dx);
 
+    inline BoxOp(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
+    inline BoxOp<T,C_STATE,C_AUX,MEM>& operator=(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
     /// Lazy Isotropic Constructor
     /**
         \param dx   Grid spacing
