@@ -20,7 +20,7 @@ namespace Proto {
 */
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, MemType> class OpType,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
     MemType MEM = MEMTYPE_DEFAULT>
@@ -28,7 +28,7 @@ class LevelOp
 {
     public:
 
-    typedef OPType<T, MEM> OP;
+    typedef OpType<T, MEM> OP;
     typedef BCType<T, OP::numState(), MEM, PR_CELL> BC;
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef BoxData<T, OP::numAux(), MEM> AuxData;
@@ -68,7 +68,10 @@ class LevelOp
     */
     inline LevelOp(DisjointBoxLayout& a_layout, T a_dx);
     inline LevelOp(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx);
-    
+
+    inline LevelOp(LevelOp<OpType, T, BCType, MEM>&& a_op) = default;
+    inline LevelOp<OpType, T, BCType, MEM>& operator=(LevelOp<OpType, T, BCType, MEM>&& a_op) = default;
+
     /// Lazy Constructor
     /**
         \param dx   Grid spacing
