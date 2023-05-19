@@ -289,7 +289,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
   }
 private:
 
-  Array<std::shared_ptr<Array<BoxData<double>,DIM>>,DIM> m_data;
+  //Array<std::shared_ptr<Array<BoxData<double>,DIM>>,DIM> m_data;
   //std::shared_ptr<BoxData<double, 1>> m_data;
   Stencil<T> m_interp_H[DIM];
   Stencil<T> m_interp_L[DIM];

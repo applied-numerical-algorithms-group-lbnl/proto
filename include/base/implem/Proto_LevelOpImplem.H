@@ -43,10 +43,13 @@ void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<
     m_layout = a_layout;
     m_dx = a_dx;
     m_ops.clear();
+    int index = 0;
     for (auto iter : a_layout)
     {
-        //m_ops.push_back(BoxOp<T,MEM>(a_layout[iter], a_dx));
         m_ops.push_back(OpType<T,MEM>(a_layout[iter], a_dx));
+        // make sure the user-defined initialization is called
+        m_ops[index].init();
+        index++;
     }
 }
 
