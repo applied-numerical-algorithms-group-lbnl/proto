@@ -12,9 +12,9 @@
 #include "mmb/Proto_MBBoxPartition.H"
 #include "mmb/Proto_MBDisjointBoxLayout.H"
 #include "mmb/Proto_MBLevelBoxData.H"
-#include "mmb/Proto_MBMap.H"
-#include "mmb/Proto_MBLevelOp.H"
+#include "mmb/Proto_MBLevelMap.H"
+//#include "mmb/Proto_MBLevelOp.H"
 #ifdef PR_OPS 
-#include "mmb/Proto_MBInterpOp.H"
+//#include "mmb/Proto_MBInterpOp.H"
 #endif
 #endif

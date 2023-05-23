@@ -74,8 +74,10 @@ void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 
 #ifdef DIM == 3
+template<MemType MEM>
 PROTO_KERNEL_START
-void f_cubeSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J, Array<double, 3> a_dx, double a_r0, double a_r1, int a_block = 0)
+void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
+        Array<double, DIM> a_dx, double a_r0, double a_r1, int a_block = 0)
 {
     // subscript 0 are at corners
     Array<double, DIM> x  = a_pt;
@@ -296,6 +298,7 @@ MBProblemDomain buildCubeSphereShell(int a_domainSize, int a_thickness, int a_ra
                 domain.defineBoundary(srcBlock, dstBlock, y, RI);
                 domain.defineBoundary(srcBlock, 1, z, RNorth);
                 domain.defineBoundary(srcBlock, 0, -z, RSouth);
+                break;
             case 2:
                 domain.defineBoundary(srcBlock, dstBlock, x, RI);
                 domain.defineBoundary(srcBlock, 1, y, RNorth);

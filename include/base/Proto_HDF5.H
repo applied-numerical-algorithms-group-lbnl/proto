@@ -18,8 +18,8 @@ namespace Proto
     class LevelFluxRegister;
 #endif
 #ifdef PR_MMB
-    template<typename MAP, MemType MEM>
-    class MBMap;
+    template<MemType MEM>
+    class MBLevelMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
 #endif
@@ -275,10 +275,10 @@ namespace Proto
                         Args... a_params);
 #endif
 #ifdef PR_MMB
-        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename MAP, typename... Args>
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void writeMBLevel(
                 std::vector<std::string> a_varNames,
-                const MBMap<MAP, MEM>& a_map,
+                const MBLevelMap<MEM>& a_map,
                 const MBLevelBoxData<T, C, MEM, CTR>& a_data,
                 std::string a_filename,
                 Args... a_params);

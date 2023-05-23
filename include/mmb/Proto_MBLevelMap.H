@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _PROTO_MB_MAP_
-#define _PROTO_MB_MAP_
+#ifndef _PROTO_MB_LEVEL_MAP_
+#define _PROTO_MB_LEVEL_MAP_
 
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
@@ -10,19 +10,20 @@ namespace Proto
 {
 
 template<MemType MEM = MEMTYPE_DEFAULT>
-class MBMap
+class MBLevelMap
 {
     public:
 
-    inline MBMap(
+    inline MBLevelMap(){}
+    inline MBLevelMap(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
-            int a_order = 4)
+            int a_order = 4);
 
     inline void define(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
-            int a_order = 4)
+            int a_order = 4);
 
     /// Node Centered Map
     inline MBLevelBoxData<double, DIM, MEM, PR_NODE>& map();
@@ -39,16 +40,21 @@ class MBMap
     /**
      *  \param a_X:     Coordinates at nodes [output]
      *  \param a_J:     Cell averaged jacobian [output]
-     *  \param a_box:   Domain [cell centered]
-     *  \param a_h:     Anisotropic grid spacing in mapped space
-     *  \param a_block: ID of the application block
      */
-    inline virtual void compute(
+    inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            const Box& a_box,
-            Array<double, DIM> a_h,
-            int a_block);
+            const MBIndex& a_index) {std::cout << "called base apply" << std::endl;}
+
+    /// Get Layout
+    inline const MBDisjointBoxLayout& layout() const;
+    /// Get Mapped Grid Spacing
+    inline const Array<double, DIM>& dx(int a_blockID) const;
+    /// Get Mapped Coordinate Values
+    /** 
+     *  /param 
+     */
+    inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     /// Compute Mapped Point From Array
     /** a_X is an array in mapped space in the specified block
@@ -87,16 +93,14 @@ class MBMap
     inline bool contains(
             const MBIndex& a_patch, const Point& a_cell, const Array<double, DIM>& a_X) const;
     
-    // Grid Spacing
-    inline Array<double, DIM> dx(const MBIndex& a_patch) const;
-    inline Array<double, DIM> dx(unsigned int a_block) const;
     private:
-        int m_order;
-        Array<Point, DIM+1> m_ghost;
+        int                                         m_order;
+        Array<Point, DIM+1>                         m_ghost;
+        std::vector<Array<double, DIM>>             m_dx;
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
         MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;
 };
 
-#include "implem/Proto_MBMapImplem.H"
+#include "implem/Proto_MBLevelMapImplem.H"
 } // end namespace Proto
 #endif // end include guard
