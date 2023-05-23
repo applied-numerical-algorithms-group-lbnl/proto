@@ -464,10 +464,6 @@ void AMRRK4<OpType,T,BCType,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     T dtWeight    = a_dt*m_stageWeights[a_stage];   
     //op.bcStage(UStage,U0,a_stage);
     
-    // give BC a reference to a_stage
-    op.bc().setRKStage(a_stage);
-    op.bc().setNumFixedData(1);
-    op.bc().setFixedData(0,U0);
     // apply the BC to UStage
     op.applyBC(UStage);
     for (auto iter : layout)
