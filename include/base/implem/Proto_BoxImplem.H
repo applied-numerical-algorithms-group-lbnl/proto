@@ -377,6 +377,7 @@ Box Box::grow(Centering a_ctr) const
     {
         case PR_FACE:
         case PR_EDGE:
+            MayDay<void>::Abort("Box::grow(Centering) | Error: Operation undefined for FACE / EDGE centering.");
         case PR_CELL:
             return Box(*this);
         case PR_NODE:

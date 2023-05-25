@@ -96,7 +96,8 @@ void LevelBoxData<T, C, MEM, CTR>::define(
             }
             default:
             {
-                auto patch = std::make_shared<BoxData<T,C,MEM>>(patchBox(iter).grow(m_ghost));
+                Box b = a_layout[iter].grow(CTR).grow(m_ghost);
+                auto patch = std::make_shared<BoxData<T,C,MEM>>(b);
                 m_data[iter].push_back(patch);
                 break;
             }
@@ -183,14 +184,6 @@ void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs&... a_srcs)
         auto& patch = (*this)[iter];
         call_level_forall(a_func, iter, srcs, patch);
     }
-}
-
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-Box
-LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
-{
-    PROTO_ASSERT(DIM <= 6, "LevelBoxData::patchBox | Error: This function will fail for DIM > 6");
-    return layout()[a_index].grow(CTR);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -729,6 +722,16 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
 {
     //TODO: Does this do the right thing?
     return C*a_box.size()*sizeof(T);
+    /*
+    switch (CTR)
+    {
+        case PR_FACE:
+        case PR_EDGE:
+            return C*a_box.size()*sizeof(T)*DIM;
+        default:
+            return C*a_box.size()*sizeof(T);
+    }
+    */
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
@@ -740,17 +743,20 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
     PROTO_ASSERT(mem == SRC_MEM,
         "LevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
         mem, SRC_MEM);
-    auto& patch = (*m_src)[a_info.fromIndex];
-    CInterval cint(0,C-1);
-    if (a_info.rotation.isIdentity())
+    for (int fi = 0; fi < m_src->numFluxes(); fi++)
     {
-        patch.linearOut(a_buf, a_info.fromRegion, cint); 
-    } else {
-        BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
-        patch.copyTo(tmp);
-        BoxData<T, C, SRC_MEM> buffer;
-        buffer.define((T*)a_buf, a_info.toRegion);
-        tmp.copyTo(buffer, a_info.rotation);
+        auto& patch = (*m_src)(a_info.fromIndex, fi);
+        CInterval cint(0,C-1);
+        if (a_info.rotation.isIdentity())
+        {
+            patch.linearOut(a_buf, a_info.fromRegion, cint); 
+        } else {
+            BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
+            patch.copyTo(tmp);
+            BoxData<T, C, SRC_MEM> buffer;
+            buffer.define((T*)a_buf, a_info.toRegion);
+            tmp.copyTo(buffer, a_info.rotation);
+        }
     }
 }
 
@@ -843,8 +849,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     // to this Box.
     for (auto diter : destlayout) 
     {
-        //Box bx = destlayout[diter].grow(destGhost);
-        Box bx = a_op.m_dst->patchBox(diter).grow(destGhost);
+        Box bx = destlayout[diter].grow(CTR).grow(destGhost);
 
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
 
@@ -895,8 +900,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
         // We grow the source Box by dstGhost to capture all the patches that the
         // source will copy to. dProbC contains all the points in the bitmap for
         // the destination.
-        //Box srcBox = srclayout[siter];
-        Box srcBox = a_op.m_src->patchBox(siter);
+        Box srcBox = srclayout[siter].grow(CTR);
         Box dProbC = srcBox.grow(destGhost).coarsen(destlayout.boxSize());
         for (auto pt : dProbC)
         {
@@ -934,8 +938,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     int myProcID = Proto::procID();
     for (auto dit : layout)
     {
-        //Box bx0 = layout[dit];
-        Box bx0 = a_op.m_src->patchBox(dit);
+        Box bx0 = layout[dit].grow(CTR);
         Box bx = layout.domain() & bx0.grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)

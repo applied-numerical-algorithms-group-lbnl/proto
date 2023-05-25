@@ -243,15 +243,6 @@ namespace Proto
          */
         inline unsigned int patchSize() const;
         
-        /// Patch Box
-        /**
-            Returns the Box corresponding to the valid cells of the data at a given index.
-            This box does not include ghost cells, but does account for centering.
-            For cell centered data, this is the same as layout()[a_index], but will
-            in general be different for other types of centering.
-         */
-        inline Box patchBox(const DataIndex<BoxPartition>& a_index) const;
-
         /// Linear In (Patch, Box)
         /**
           Reads data from a serial buffer, populating the patch associated with 
