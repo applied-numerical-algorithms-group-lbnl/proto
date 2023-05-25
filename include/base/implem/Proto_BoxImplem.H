@@ -375,8 +375,12 @@ Box Box::grow(Centering a_ctr) const
 {
     switch (a_ctr)
     {
-        case PR_CELL: return Box(*this);
-        case PR_NODE: return extrude(Point::Ones(), 1);
+        case PR_FACE:
+        case PR_EDGE:
+        case PR_CELL:
+            return Box(*this);
+        case PR_NODE:
+            return extrude(Point::Ones(), 1);
         default:
         {
             int c = (int)a_ctr;

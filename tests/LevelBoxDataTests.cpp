@@ -246,6 +246,42 @@ TEST(LevelBoxData, InitializeVariadic) {
     }
 }
 
+TEST(LevelBoxData, FaceCentering) {
+    int domainSize = 32;
+    double dx = 1.0/domainSize;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    Point ghost = Point::Zeros();
+    LevelBoxData<double, 1, HOST, PR_FACE> src(layout, ghost);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        src.setVal(dir+1.0, 0, dir);
+    }
+    for (auto iter : layout)
+    {
+        auto fluxes = src.fluxes(iter);
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Box b0 = fluxes[dir].box();
+            Box b1 = layout[iter].grow((Centering)dir).grow(ghost);
+#if PR_VERBOSE > 0
+            std::cout << b0 << " ==? " << b1 << std::endl;
+#endif
+            EXPECT_EQ(fluxes[dir].box(), layout[iter].grow((Centering)dir));
+            
+        }
+    }
+
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        auto absMax = src.absMax(0,dir);
+#if PR_VERBOSE > 0
+        std::cout << "absMax of flux " << dir << ": " << absMax << std::endl;
+#endif
+        EXPECT_EQ(absMax, dir+1);
+    }
+
+}
 
 TEST(LevelBoxData, LinearSize)
 {

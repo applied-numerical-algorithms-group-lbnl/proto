@@ -1400,6 +1400,53 @@ namespace Proto
         T*                      m_rawPtr; ///< Raw pointer to the data
     }; // end class BoxData
 
+    template<class T = double, unsigned int C=1,
+        MemType MEM=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
+    class FluxBoxData
+    {
+        public:
+            FluxBoxData(const Box& a_box, bool a_doExtrude = true)
+            {
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    Box Bd = a_box;
+                    if (a_doExtrude)
+                    {
+                        Bd = a_box.extrude(Point::Basis(dir));
+                    }
+                    m_data[dir] = std::make_shared<BoxData<T,C,MEM,D,E>>(Bd);
+                }
+            }
+            FluxBoxData(Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& a_data)
+            {
+                m_data = a_data;
+            }
+            FluxBoxData(std::vector<std::shared_ptr<BoxData<T,C,MEM,D,E>>>& a_data)
+            {
+                PROTO_ASSERT(a_data.size() == DIM,
+                        "FluxBoxData::constructor | Error: input vector must have DIM components");
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    m_data[ii] = a_data[ii];
+                }
+            }
+            BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index)
+            {
+                PROTO_ASSERT(a_index < DIM,
+                        "FluxBoxData::operator[] | Error: index out of bounds");
+                return *(m_data[a_index]);
+            }
+            const BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index) const
+            {
+                PROTO_ASSERT(a_index < DIM,
+                        "FluxBoxData::operator[] | Error: index out of bounds");
+                return *(m_data[a_index]);
+            }
+        private:
+            Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
+    };
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /** @name Alias and Slice Operators 
     The alias and slice operations facilitate BoxData operations while avoiding unnecessary copies.
