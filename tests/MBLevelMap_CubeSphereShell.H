@@ -31,6 +31,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
         double r1 = CUBE_SPHERE_SHELL_R1;
         forallInPlace_p(f_cubeSphereMap, a_X, a_J, dx, r0, r1, block);
 #else
+        
         BoxData<double, 1, MEM> radius(layout[a_index].grow(PR_NODE));
         forallInPlace_p(
             [] PROTO_LAMBDA (Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)

@@ -45,6 +45,8 @@ TEST(MBMapTests, CubeSphereShell) {
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(1);
 
+    MBLevelBoxData<double, DIM> data(layout, ghost);
+    
     // initialize map
     MBLevelMap_CubeSphereShell<HOST> map;
     map.define(layout, ghost);

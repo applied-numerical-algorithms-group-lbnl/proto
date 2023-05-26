@@ -184,7 +184,14 @@ using Proto::pout;
           {
             TIME_STEP = k;
             PLOT_NUM = 0;
-         
+#if 0
+            LevelData<double, 1> externalBCData;  // some LevelData you want to access in your BC
+            const auto& bc0 = armrk4.op(0).bc();  // get a reference to the boundary condition on level 0
+            bc0.setNumLevelData(1);               // tell BC how many levelData variables it should reference
+            bc0.setLevelData(0, externalBCData);  // update BC's reference to external data
+
+            bc0.getLevelData(0);
+#endif
             amrrk4.advance(dt);
             
             U.averageDown();
