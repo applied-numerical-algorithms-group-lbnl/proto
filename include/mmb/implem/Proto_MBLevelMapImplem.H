@@ -2,7 +2,6 @@ template<MemType MEM>
 MBLevelMap<MEM>::MBLevelMap(
         MBDisjointBoxLayout& a_layout,
         Array<Point, DIM+1>& a_ghost,
-        bool a_computeMetrics,
         int a_order)
 {
     define(a_layout, a_ghost, a_order);
@@ -12,21 +11,13 @@ template<MemType MEM>
 void MBLevelMap<MEM>::define(
         MBDisjointBoxLayout& a_layout,
         Array<Point, DIM+1>& a_ghost,
-        bool a_computeMetrics,
         int a_order)
 {
-    PROTO_ASSERT(!a_computeMetrics, 
-            "MBLevelMap::define | computing the metrics is not fully implemented.");
     m_order = a_order;
     m_ghost = a_ghost;
     m_c2c = Stencil<double>::CornersToCells(a_order);
     m_X.define(a_layout, a_ghost);
     m_J.define(a_layout, a_ghost);
-    if (a_computeMetrics)
-    {
-        m_NT.define(a_layout, a_ghost);
-    }
-    if (
     m_dx.resize(a_layout.numBlocks());
 
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
@@ -47,23 +38,32 @@ void MBLevelMap<MEM>::define(
         Box b_i = a_layout[iter];
         auto& X_i = m_X[iter];
         auto& J_i = m_J[iter];
-        if (m_computeMatrics)
-        {
-            auto& NT_i = m_NT.fluxes(iter);
-            apply(X_i, Ji, NT_i, iter);
-        } else {
-            apply(X_i, J_i, iter);
-        }
+        apply(X_i, J_i, iter);
     }
     m_X.fillBoundaries();
     m_X.exchange();
     m_J.fillBoundaries();
     m_J.exchange();
-    if (m_computeMetrics)
-    {
-        m_NT.fillBoundaries();
-        m_NT.exchange();
-    }
+}
+
+template<MemType MEM>
+void MBLevelMap<MEM>::apply(
+        BoxData<double, DIM, MEM>& a_X,
+        BoxData<double, 1, MEM>& a_J,
+        const MBIndex& a_index)
+{
+    FluxBoxData<double, DIM, MEM> NT(layout()[a_index]);
+    apply(a_X, a_J, NT, a_index);
+}
+
+template<MemType MEM>
+void MBLevelMap<MEM>::apply(
+        BoxData<double, DIM, MEM>& a_X,
+        BoxData<double, 1, MEM>& a_J,
+        FluxBoxData<double, DIM, MEM>& a_NT,
+        const MBIndex& a_index)
+{
+    apply(a_X, a_J, a_index);
 }
 
 template<MemType MEM>

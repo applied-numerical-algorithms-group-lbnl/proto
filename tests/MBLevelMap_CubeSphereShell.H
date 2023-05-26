@@ -20,6 +20,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
+            FluxBoxData<double, DIM, MEM>& a_NT,
             const MBIndex& a_index)
     {
         auto& layout = this->layout();
@@ -36,8 +37,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
             {
                 a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
             }, radius, dx);
-
-        Array<BoxData<double, DIM>, DIM> NT;
+        Array<BoxData<double,DIM,MEM>, DIM> NT;
         Operator::cubedSphereGeometry(a_X, NT, a_J, radius, layout[a_index].grow(Point::Ones()), dx[1], block);
 #endif
     }

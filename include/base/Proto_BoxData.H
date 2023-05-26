@@ -1442,6 +1442,8 @@ namespace Proto
                         "FluxBoxData::operator[] | Error: index out of bounds");
                 return *(m_data[a_index]);
             }
+            Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() {return m_data;}
+            const Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() const {return m_data;}
         private:
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
     };

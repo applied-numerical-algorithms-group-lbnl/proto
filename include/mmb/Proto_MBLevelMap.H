@@ -18,13 +18,11 @@ class MBLevelMap
     inline MBLevelMap(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
-            bool a_computeMetrics = false,
             int a_order = 4);
 
     inline void define(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
-            bool a_computeMetrics = false,
             int a_order = 4);
 
     /// Node Centered Map
@@ -47,7 +45,7 @@ class MBLevelMap
     inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            const MBIndex& a_index) {}
+            const MBIndex& a_index);
     
     /// Compute Map (With Metrics)
     /**
@@ -59,8 +57,8 @@ class MBLevelMap
     inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            Array<std::shared_ptr<BoxData<double, DIM, MEM>>>& a_NT,
-            const MBIndex& a_index) {}
+            FluxBoxData<double, DIM, MEM>& a_NT,
+            const MBIndex& a_index);
 
     /// Get Layout
     inline const MBDisjointBoxLayout& layout() const;
@@ -115,7 +113,7 @@ class MBLevelMap
         std::vector<Array<double, DIM>>             m_dx;
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
         MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;
-        MBLevelBoxData<double, DIM, MEM, PR_FACE>   m_NT;
+        //MBLevelBoxData<double, DIM, MEM, PR_FACE>   m_NT;
         Stencil<double>                             m_c2c;
 };
 
