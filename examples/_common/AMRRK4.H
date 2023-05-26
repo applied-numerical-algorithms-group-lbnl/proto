@@ -36,7 +36,7 @@ class AMRRK4
     inline void interpBoundaries(int a_level, int a_stage, T a_chi);
     inline void stageUpdate(int a_level, int a_stage, T a_dt);
     inline void regrid(int a_baseLevel);
-
+    inline LOP& op(int a_level) { return m_ops[a_level]; }
     Array<double, RKSTAGES>     m_stageWeights = {1./6.,1./3.,1./3.,1./6.};
     Array<double, RKSTAGES+1>   m_stageTimes = {0.,1./2.,1./2.,1.,1.};
     

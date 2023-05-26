@@ -42,6 +42,7 @@ void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<
 {
     m_layout = a_layout;
     m_dx = a_dx;
+    m_bc.define(a_layout);
     m_ops.clear();
     int index = 0;
     for (auto iter : a_layout)
@@ -148,6 +149,7 @@ template <template<typename, MemType> class OpType,
 void LevelOp<OpType, T, BCType, MEM>::setTime(T a_time)
 {
     m_time = a_time;
+    m_bc.setTime(a_time);
     for (auto iter : m_layout)
     {
         m_ops[iter].setTime(a_time);
