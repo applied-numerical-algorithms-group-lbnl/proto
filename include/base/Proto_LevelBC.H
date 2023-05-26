@@ -29,16 +29,16 @@ namespace Proto {
         
         // ... many useful things here ...
 
-        inline void setTime(double a_time);
-        inline double time() const { return m_time; }
+        inline void setTime(T a_time) const;
+        inline T time() const { return m_time; }
 
         // Scalar constant interface
         /// Set Number of Varying Constants
         inline void setNumConstants(int a_numConst) const;
         /// Set Specific Varying Constant
-        inline void setConstant(int a_index, double a_value) const;
+        inline void setConstant(int a_index, T a_value) const;
         /// Get Specific Varying Constant
-        inline double getConstant(int a_index) const;
+        inline T getConstant(int a_index) const;
 
         // Fixed data interface
         /// Set Number of Variable LevelData
@@ -59,9 +59,9 @@ namespace Proto {
 
         DisjointBoxLayout m_layout;
 
-        mutable double m_time;
+        mutable T m_time;
         mutable int m_rkStage;
-        mutable std::vector<double> m_constData;
+        mutable std::vector<T> m_constData;
         mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_fixedData;
         mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_rkStageData;
     };

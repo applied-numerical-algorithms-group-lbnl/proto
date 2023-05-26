@@ -13,6 +13,12 @@ void LevelBC<T,C,MEM,CTR>::define(DisjointBoxLayout& a_layout)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void LevelBC<T,C,MEM,CTR>::setTime(T a_time) const
+{
+    m_time = a_time;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBC<T,C,MEM,CTR>::setNumConstants(int a_numData) const
 {
     m_constData.clear();
@@ -20,7 +26,7 @@ void LevelBC<T,C,MEM,CTR>::setNumConstants(int a_numData) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBC<T,C,MEM,CTR>::setConstant(int a_index, double a_data) const
+void LevelBC<T,C,MEM,CTR>::setConstant(int a_index, T a_data) const
 {
     PROTO_ASSERT(a_index < m_constData.size(),
     "LevelBC::setConstant | Error: stage %i is out of bounds. Call setNumConstants first.");
@@ -29,7 +35,7 @@ void LevelBC<T,C,MEM,CTR>::setConstant(int a_index, double a_data) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-double LevelBC<T,C,MEM,CTR>::getConstant(int a_index) const
+T LevelBC<T,C,MEM,CTR>::getConstant(int a_index) const
 {
     PROTO_ASSERT(a_index < m_constData.size(),
     "LevelBC::getConstant | Error: stage %i is out of bounds. Call setNumConstants first.");
