@@ -211,17 +211,20 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     auto& crseLayout = operator[](a_level);
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
-   
+
+    LevelTagDataHost hostBufferedTags(a_bufferedTags.layout(), a_bufferedTags.ghost());
+    a_bufferedTags.copyTo(hostBufferedTags);
     Point patchRefRatio = (crseLayout.boxSize() / a_fineBoxSize) * m_refRatios[a_level];
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
     
     FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicity());
     Point tagRefRatio = crseLayout.boxSize() / patchRefRatio;
-    for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
+    for ( auto iter : a_bufferedTags)
     {
-        auto& patch = a_bufferedTags[*iter];
-        TagData tags(a_bufferedTags.layout()[*iter].coarsen(tagRefRatio));
+      //auto& patch = a_bufferedTags[iter];
+        auto& patch = hostBufferedTags[iter];
+        TagData tags(a_bufferedTags.layout()[iter].coarsen(tagRefRatio));
         tags |= Stencil<short>::Sum(tagRefRatio)(patch);
          
         for (auto biter : tags.box())
