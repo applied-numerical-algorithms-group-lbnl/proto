@@ -16,6 +16,7 @@ namespace Proto
     typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, PR_CELL> LevelTagData;
     typedef LevelBoxData<short, 1, MemType::HOST,   PR_CELL> LevelTagDataHost;
     typedef BoxData<short, 1, MEMTYPE_DEFAULT> TagData;
+    typedef BoxData<short, 1, MemType::HOST>   TagDataHost;
     
     /// AMR Grid
     /**
