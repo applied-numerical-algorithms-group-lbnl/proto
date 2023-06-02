@@ -224,11 +224,11 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         TagData tags(a_bufferedTags.layout()[*iter].coarsen(tagRefRatio));
         tags |= Stencil<short>::Sum(tagRefRatio)(patch);
          
-        for (auto biter = tags.box().begin(); biter.ok(); ++biter)
+        for (auto biter : tags.box())
         {
-            if (tags(*biter) != 0)
+            if (tags(biter) != 0)
             {
-                taggedPatches.add(*biter);
+                taggedPatches.add(biter);
             }
         }
     }
