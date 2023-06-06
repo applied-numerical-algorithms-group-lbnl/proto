@@ -160,7 +160,7 @@ namespace Proto
             Sets all values in all patches equal to zero. This function is mostly for 
             debugging purposes and should be used sparingly if at all in production code.
         */
-        inline void setToZero(int a_comp = -1, unsigned int a_flux = 0);
+        inline void setToZero(int a_comp = -1);
         
         /// Initialize as Constant
         /**
@@ -168,7 +168,7 @@ namespace Proto
         
             \param a_value  A constant value
         */
-        inline void setVal(T a_value, int a_comp = -1, unsigned int a_flux = 0);
+        inline void setVal(T a_value, int a_comp = -1);
 
         /// Set the Level Boundary Ghost Cells
         /**
@@ -176,7 +176,7 @@ namespace Proto
         
             \param a_value  A constant value
         */
-        inline void setBoundary(T a_value, int a_comp = -1, unsigned int a_flux = 0);
+        inline void setBoundary(T a_value, int a_comp = -1);
        
         inline void iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
 
@@ -243,6 +243,15 @@ namespace Proto
          */
         inline unsigned int patchSize() const;
         
+        /// Patch Box
+        /**
+            Returns the Box corresponding to the valid cells of the data at a given index.
+            This box does not include ghost cells, but does account for centering.
+            For cell centered data, this is the same as layout()[a_index], but will
+            in general be different for other types of centering.
+         */
+        inline Box patchBox(const DataIndex<BoxPartition>& a_index) const;
+
         /// Linear In (Patch, Box)
         /**
           Reads data from a serial buffer, populating the patch associated with 
@@ -336,31 +345,31 @@ namespace Proto
             Computes a reduction for a component over all valid cells (ghost region is ignored)
         */
         template<Proto::Operation OP>
-        inline double reduce(unsigned int a_comp = 0, unsigned int a_flux = 0) const;
+        inline double reduce(unsigned int a_comp = 0) const;
        
         /// Maximum Absolute Value
         /**
             Computes the maximum absolute value for a component over all valid cells (ghost region is ignored)
         */
-        inline double absMax(unsigned int a_comp = 0, unsigned int a_flux = 0) const;
+        inline double absMax(unsigned int a_comp = 0) const;
         
         /// Sum
         /**
             Computes the sum of a component over all valid cells (ghost region is ignored)
         */
-        inline double sum(unsigned int a_comp = 0, unsigned int a_flux = 0) const;
+        inline double sum(unsigned int a_comp = 0) const;
         
         /// Max
         /**
             Computes the max value of a component over all valid cells (ghost region is ignored)
         */
-        inline double max(unsigned int a_comp = 0, unsigned int a_flux = 0) const;
+        inline double max(unsigned int a_comp = 0) const;
         
         /// Min
         /**
             Computes the min value of a component over all valid cells (ghost region is ignored)
         */
-        inline double min(unsigned int a_comp = 0, unsigned int a_flux = 0) const;
+        inline double min(unsigned int a_comp = 0) const;
         
         /// Integral
         /**
@@ -369,10 +378,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrate(
-                double a_dx,
-                unsigned int a_comp = 0,
-                unsigned int a_flux = 0) const;
+        inline double integrate(double a_dx, unsigned int a_comp = 0) const;
         
         /// Integral (Anisotropic)
         /**
@@ -381,10 +387,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrate(
-                Array<double, DIM> a_dx,
-                unsigned int a_comp = 0,
-                unsigned int a_flux = 0) const;
+        inline double integrate(Array<double, DIM> a_dx, unsigned int a_comp = 0) const;
         
         /// Integral of Absolute Value
         /**
@@ -393,10 +396,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrateAbs(
-                double a_dx,
-                unsigned int a_comp = 0,
-                unsigned int a_flux = 0) const;
+        inline double integrateAbs(double a_dx, unsigned int a_comp = 0) const;
         
         /// Integral of Absolute Value (Anisotropic)
         /**
@@ -405,10 +405,7 @@ namespace Proto
             \param a_dx     Isotropic grid spacing
             \param a_comp   A component to integrate over
         */
-        inline double integrateAbs(
-                Array<double, DIM> a_dx,
-                unsigned int a_comp = 0,
-                unsigned int a_flux = 0) const;
+        inline double integrateAbs(Array<double, DIM> a_dx, unsigned int a_comp = 0) const;
       
         /// Query Layout Compatibility
         template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>
@@ -429,22 +426,10 @@ namespace Proto
         /// Get Const Patch
         inline const BoxData<T,C,MEM>& operator[](const DataIndex<BoxPartition>& a_index) const;
         /// Get Patch (Face / Edge Centering)
-        inline BoxData<T,C,MEM>& operator()(
-                const DataIndex<BoxPartition>& a_index,
-                unsigned int a_dir = 0);
+        inline BoxData<T,C,MEM>& operator()(const DataIndex<BoxPartition>& a_index, unsigned int a_dir = 0);
         /// Get Const Patch (Face / Edge Centering)
-        inline const BoxData<T,C,MEM>& operator()(
-                const DataIndex<BoxPartition>& a_index,
-                unsigned int a_dir = 0) const;
-        /// Get Number of Fluxes
-        inline unsigned int numFluxes() const;
-        /// Get All Patches (Face / Edge Centering)
-        inline FluxBoxData<T,C,MEM> fluxes(
-                const DataIndex<BoxPartition>& a_index);
-        /// Get All Const Patches (Face / Edge Centering)
-        inline const FluxBoxData<T,C,MEM> fluxes(
-                const DataIndex<BoxPartition>& a_index) const;
-       
+        inline const BoxData<T,C,MEM>& operator()(const DataIndex<BoxPartition>& a_index, unsigned int a_dir = 0) const;
+        
         /// Get Iterator
         inline DataIterator<BoxPartition> begin() const;
         inline DataIterator<BoxPartition> end() const;
@@ -454,7 +439,7 @@ namespace Proto
         
         private: 
 
-        std::vector<std::vector<shared_ptr<BoxData<T, C, MEM>>>> m_data;
+        std::vector<std::vector<shared_ptr<BoxData<T, C, MEM> > >> m_data;
         Point                                   m_ghost;
         DisjointBoxLayout                       m_layout;
         bool                                    m_isDefined;

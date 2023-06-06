@@ -25,10 +25,10 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
     {
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
-#if 0
+#if 1
         double r0 = CUBE_SPHERE_SHELL_R0;
         double r1 = CUBE_SPHERE_SHELL_R1;
-        forallInPlace_p(f_cubeSphereMap, a_X, a_J, dx, r0, r1, block);
+        forallInPlace_p(f_cubeSphereMap, a_X, a_J, dx, r0, r1, a_block);
 #else
         
         BoxData<double, 1, MEM> radius(a_X.box());

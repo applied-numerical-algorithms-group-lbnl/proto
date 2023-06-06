@@ -18,6 +18,8 @@ void MBLevelMap<MEM>::define(
     m_c2c = Stencil<double>::CornersToCells(a_order);
     m_X.define(a_layout, a_ghost);
     m_J.define(a_layout, a_ghost);
+    m_X.setVal(0);
+    m_J.setVal(0);
     m_dx.resize(a_layout.numBlocks());
 
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
