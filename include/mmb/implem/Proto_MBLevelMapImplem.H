@@ -50,10 +50,10 @@ template<MemType MEM>
 void MBLevelMap<MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
-        const MBIndex& a_index)
+        unsigned int a_block)
 {
-    FluxBoxData<double, DIM, MEM> NT(layout()[a_index]);
-    apply(a_X, a_J, NT, a_index);
+    FluxBoxData<double, DIM, MEM> NT(a_J.box());
+    apply(a_X, a_J, NT, a_block);
 }
 
 template<MemType MEM>
@@ -61,9 +61,33 @@ void MBLevelMap<MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
         FluxBoxData<double, DIM, MEM>& a_NT,
-        const MBIndex& a_index)
+        unsigned int a_block)
 {
-    apply(a_X, a_J, a_index);
+    apply(a_X, a_J, a_block);
+}
+
+template<MemType MEM>
+void MBLevelMap<MEM>::apply(
+        BoxData<double, DIM, MEM>& a_X,
+        BoxData<double, 1, MEM>& a_J,
+        unsigned int a_computeBlock,
+        unsigned int a_outBlock)
+{
+    if (a_computeBlock != a_outBlock)
+    {
+        auto& domain = layout().domain();
+        Box BX = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
+        Box BJ = domain.convert(a_J.box(), a_outBlock, a_computeBlock, PR_CELL);
+        BoxData<double, DIM, MEM>& X_tmp(BX);
+        BoxData<double, 1, MEM>& J_tmp(BJ);
+        apply(X_tmp, J_tmp, a_computeBlock);
+        Point conn = domain.graph().connectivity(a_computeBlock, a_outBlock);
+        auto R = domain.graph().rotation(a_computeBlock, conn, a_outBlock);
+        X_tmp.copyTo(a_X, R);
+        J_tmp.copyTo(a_J, R);
+    } else {
+        apply(a_X, a_J, a_computeBlock);
+    }
 }
 
 template<MemType MEM>

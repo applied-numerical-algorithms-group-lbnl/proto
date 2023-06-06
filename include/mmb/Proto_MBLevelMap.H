@@ -45,7 +45,7 @@ class MBLevelMap
     inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            const MBIndex& a_index);
+            unsigned int a_block);
     
     /// Compute Map (With Metrics)
     /**
@@ -58,8 +58,21 @@ class MBLevelMap
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT,
-            const MBIndex& a_index);
+            unsigned int a_block);
 
+    /// Compute Map With Rotation
+    /**
+     *  Used internally for the case where X and J are defined on domains in 
+     *  a different coordinate system from the block of the map computation (defined by a_index).
+     *  This function creates a temporary version of X and J with domains in the block associated
+     *  with a_index, computes X and J, and then copies the result with rotation into the outputs.
+     */
+    inline void apply(
+            BoxData<double, DIM, MEM>& a_X,
+            BoxData<double, 1, MEM>& a_J,
+            unsigned int a_computeBlock,
+            unsigned int a_outBlock);
+    
     /// Get Layout
     inline const MBDisjointBoxLayout& layout() const;
     /// Get Mapped Grid Spacing

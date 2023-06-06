@@ -4,7 +4,24 @@
 
 using namespace Proto;
 
-TEST(MBInterpOp, TEST) {
+TEST(MBInterpOp, ShearTest)
+{
+    int domainSize = 8;
+    int boxSize = 8;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+
+    // initialize map
+    MBLevelMap_Shear<HOST> map;
+    map.define(layout, ghost);
+
 }
 
 int main(int argc, char *argv[]) {

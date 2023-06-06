@@ -18,11 +18,10 @@ class MBLevelMap_Shear : public MBLevelMap<MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            const MBIndex& a_index)
+            unsigned int a_block)
     {
         auto& layout = this->layout();
-        int block = layout.block(a_index);
-        auto& dx = this->dx(block);
+        auto& dx = this->dx(a_block);
         auto X0 = this->X(a_X.box(), dx);
         forallInPlace(
             [] PROTO_LAMBDA (Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block)
@@ -56,7 +55,7 @@ class MBLevelMap_Shear : public MBLevelMap<MEM>
                         a_X(1) = Y + SHEAR_MAP_SLOPE*X;
                         break;
                 }
-            }, a_X, X0, block
+            }, a_X, X0, a_block
         );
         a_J.setVal(1.0);
     }
