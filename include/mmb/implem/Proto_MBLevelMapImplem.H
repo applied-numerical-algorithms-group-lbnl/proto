@@ -38,7 +38,7 @@ void MBLevelMap<MEM>::define(
         Box b_i = a_layout[iter];
         auto& X_i = m_X[iter];
         auto& J_i = m_J[iter];
-        apply(X_i, J_i, iter);
+        apply(X_i, J_i, block);
     }
     m_X.fillBoundaries();
     m_X.exchange();
