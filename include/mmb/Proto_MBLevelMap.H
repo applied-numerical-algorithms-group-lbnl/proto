@@ -15,11 +15,14 @@ class MBLevelMap
     public:
 
     inline MBLevelMap(){}
+    
+    /// Non-Trivial Constructor is explicitly removed
+    /*
     inline MBLevelMap(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
             int a_order = 4);
-
+    */
     inline void define(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
@@ -67,7 +70,7 @@ class MBLevelMap
      *  This function creates a temporary version of X and J with domains in the block associated
      *  with a_index, computes X and J, and then copies the result with rotation into the outputs.
      */
-    inline void apply(
+    inline void doApply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             unsigned int a_computeBlock,

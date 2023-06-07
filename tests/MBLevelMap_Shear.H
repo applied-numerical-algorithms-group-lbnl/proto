@@ -13,8 +13,6 @@ class MBLevelMap_Shear : public MBLevelMap<MEM>
 
     using MBLevelMap<MEM>::MBLevelMap;
 
-    private:
-
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,

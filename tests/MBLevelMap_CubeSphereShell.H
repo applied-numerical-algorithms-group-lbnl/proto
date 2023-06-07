@@ -15,8 +15,6 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
 
     using MBLevelMap<MEM>::MBLevelMap;
 
-    private:
-
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
@@ -28,7 +26,9 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
 #if 1
         double r0 = CUBE_SPHERE_SHELL_R0;
         double r1 = CUBE_SPHERE_SHELL_R1;
-        forallInPlace_p(f_cubeSphereMap, a_X, a_J, dx, r0, r1, a_block);
+        BoxData<double, 1, MEM> Jtmp(a_X.box());
+        forallInPlace_p(f_cubeSphereMap, a_X, Jtmp, dx, r0, r1, a_block);
+        Jtmp.copyTo(a_J);
 #else
         
         BoxData<double, 1, MEM> radius(a_X.box());

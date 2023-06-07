@@ -1,4 +1,5 @@
-template<MemType MEM>
+/*
+    template<MemType MEM>
 MBLevelMap<MEM>::MBLevelMap(
         MBDisjointBoxLayout& a_layout,
         Array<Point, DIM+1>& a_ghost,
@@ -6,7 +7,7 @@ MBLevelMap<MEM>::MBLevelMap(
 {
     define(a_layout, a_ghost, a_order);
 }
-
+*/
 template<MemType MEM>
 void MBLevelMap<MEM>::define(
         MBDisjointBoxLayout& a_layout,
@@ -69,7 +70,7 @@ void MBLevelMap<MEM>::apply(
 }
 
 template<MemType MEM>
-void MBLevelMap<MEM>::apply(
+void MBLevelMap<MEM>::doApply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_computeBlock,
@@ -77,11 +78,11 @@ void MBLevelMap<MEM>::apply(
 {
     if (a_computeBlock != a_outBlock)
     {
-        auto& domain = layout().domain();
+        const auto& domain = layout().domain();
         Box BX = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
         Box BJ = domain.convert(a_J.box(), a_outBlock, a_computeBlock, PR_CELL);
-        BoxData<double, DIM, MEM>& X_tmp(BX);
-        BoxData<double, 1, MEM>& J_tmp(BJ);
+        BoxData<double, DIM, MEM> X_tmp(BX);
+        BoxData<double, 1, MEM> J_tmp(BJ);
         apply(X_tmp, J_tmp, a_computeBlock);
         Point conn = domain.graph().connectivity(a_computeBlock, a_outBlock);
         auto R = domain.graph().rotation(a_computeBlock, conn, a_outBlock);
