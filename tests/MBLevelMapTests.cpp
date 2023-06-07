@@ -131,7 +131,7 @@ TEST(MBMapTests, InterBlockApply_CubeSphereShell) {
     map.define(layout, ghost);
 
     const auto& graph = layout.domain().graph();
-    for (unsigned int bi = 0; bi < 1; bi++)
+    for (unsigned int bi = 0; bi < 6; bi++)
     {
         for (auto dir_ij : Box::Kernel(1))
         {
