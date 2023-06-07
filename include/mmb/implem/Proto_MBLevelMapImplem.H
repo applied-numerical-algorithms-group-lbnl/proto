@@ -94,6 +94,52 @@ void MBLevelMap<MEM>::doApply(
 }
 
 template<MemType MEM>
+BoxData<double, DIM, MEM> MBLevelMap<MEM>::cellAveraged(
+        const Box&   a_box,
+        unsigned int a_computeBlock,
+        unsigned int a_outBlock)
+{
+    Box B0 = m_c2c.domain(a_box);
+    BoxData<double, DIM, MEM> X0(B0);
+    BoxData<double, 1, MEM> J0(B0.extrude(Point::Ones(), -1)); //unused
+    doApply(X0, J0, a_computeBlock, a_outBlock);
+    return m_c2c(X0);
+}
+
+template<MemType MEM>
+BoxData<double, DIM, MEM> MBLevelMap<MEM>::cellCentered(
+        const Box&   a_box,
+        unsigned int a_computeBlock,
+        unsigned int a_outBlock)
+{
+    auto X0 = cellAveraged(a_box.grow(1), a_computeBlock, a_outBlock);
+    return Operator::deconvolve(X0);
+}
+
+template<MemType MEM>
+Array<double, DIM> MBLevelMap<MEM>::cellAveraged(
+        const MBDataPoint&   a_point,
+        unsigned int a_computeBlock,
+        unsigned int a_outBlock)
+{
+    Box B0(a_point.point, a_point.point);
+    auto X = cellAveraged(B0, a_computeBlock, a_outBlock);
+    return X.array(a_point.point);
+}
+
+template<MemType MEM>
+Array<double, DIM> MBLevelMap<MEM>::cellCentered(
+        const MBDataPoint&   a_point,
+        unsigned int a_computeBlock,
+        unsigned int a_outBlock)
+{
+    Box B0(a_point.point, a_point.point);
+    auto X = cellCentered(B0, a_computeBlock, a_outBlock);
+    return X.array(a_point.point);
+}
+
+
+template<MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MEM>::layout() const { return m_X.layout(); }
     
 template<MemType MEM>

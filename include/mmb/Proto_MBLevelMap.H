@@ -76,53 +76,43 @@ class MBLevelMap
             unsigned int a_computeBlock,
             unsigned int a_outBlock);
     
+    inline BoxData<double, DIM, MEM> cellCentered(
+            const Box& a_box,
+            unsigned int a_computeBlock,
+            unsigned int a_outBlock);
+    
+    inline BoxData<double, DIM, MEM> cellAveraged(
+            const Box& a_box,
+            unsigned int a_computeBlock,
+            unsigned int a_outBlock);
+
+    inline Array<double, DIM> cellCentered(
+            const MBDataPoint& a_point,
+            unsigned int a_computeBlock,
+            unsigned int a_outBlock);
+    
+    inline Array<double, DIM> cellAveraged(
+            const MBDataPoint& a_point,
+            unsigned int a_computeBlock,
+            unsigned int a_outBlock);
+
     /// Get Layout
     inline const MBDisjointBoxLayout& layout() const;
+    
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx(int a_blockID) const;
+    
     /// Get Mapped Coordinate Values
-    /** 
-     *  /param 
+    /** Given a node-centered box and a grid spacing, generate the node centered mapped
+     *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
+     *  that the input box already accounts for node centering (e.g. Box::grow(PR_NODE) is 
+     *  assumed to already have been called.)
+     *
+     *  /param a_box     A box that already accounts for node centering
+     *  /param a_dx      Grid spacing
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
-    /// Compute Mapped Point From Array
-    /** a_X is an array in mapped space in the specified block
-     *  The returned array is in physical space
-     *
-     */
-    inline Array<double, DIM> operator()(
-            const Array<double, DIM> a_X,
-            unsigned int a_block) const;
-    
-    /// Compute Mapped Point From MBDataPoint
-    inline Array<double, DIM> operator()(
-            const MBDataPoint& a_pt,
-            Point a_bound = Point::Zeros()) const;
-    
-    /// Compute Mapped Point From Point
-    inline Array<double, DIM> operator()(
-            const Point& a_cell,
-            unsigned int a_block,
-            Centering a_ctr) const;
-
-    /// Compute Mapped Region
-    inline BoxData<double, DIM> operator()(
-            const Box& a_domain,
-            unsigned int a_computeBlock,
-            unsigned int a_domainBlock,
-            Centering a_ctr = PR_NODE) const;
-    
-    /// Compute Mapped Region (No Reference Block)
-    inline BoxData<double, DIM> operator()(
-            const Box& a_domain,
-            unsigned int a_block,
-            Centering a_ctr = PR_NODE) const;
-    
-    // Find Cell
-    inline bool contains(
-            const MBIndex& a_patch, const Point& a_cell, const Array<double, DIM>& a_X) const;
-    
     private:
         int                                         m_order;
         Array<Point, DIM+1>                         m_ghost;

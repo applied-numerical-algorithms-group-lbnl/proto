@@ -22,7 +22,6 @@ TEST(MBMapTests, ShearMap) {
     // initialize map
     MBLevelMap_Shear<HOST> map;
     map.define(layout, ghost);
-
     
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBMapTests_ShearMap_X");
@@ -84,12 +83,76 @@ TEST(MBMapTests, InterBlockApply_Shear) {
     }
 }
 
+TEST(MBMapTests, CellApply_Shear)
+{
+    int domainSize = 8;
+    int boxSize = 8;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+
+    // initialize map
+    MBLevelMap_Shear<HOST> map;
+    map.define(layout, ghost);
+
+    auto XAvg  = 0.5*Shift::Zeros() + 0.5*Shift::Basis(0);
+    auto YAvg0 = 0.5*Shift::Zeros() + 0.5*Shift::Basis(1);
+    auto YAvg1 = 1.0*Shift::Basis(1);
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        BoxData<double, DIM> X_cnr(layout[iter].grow(PR_NODE));
+        BoxData<double, 1> J(layout[iter]);
+        map.apply(X_cnr, J, block);
+        auto X_cnr_0 = slice(X_cnr, 0);
+        auto X_cnr_1 = slice(X_cnr, 1);
+        BoxData<double, 1> X_ctr_0 = XAvg(X_cnr_0);
+        BoxData<double, 1> X_ctr_1(layout[iter]);
+        switch (block)
+        {
+            case 0:
+            case 3:
+                X_ctr_1 |= YAvg0(X_cnr_1); break;
+            case 1:
+            case 2:
+                X_ctr_1 |= YAvg1(X_cnr_1); break;
+        }
+        auto Y_ctr = map.cellCentered(layout[iter], block, block);
+        auto Y_ctr_0 = slice(Y_ctr, 0);
+        auto Y_ctr_1 = slice(Y_ctr, 1);
+
+        EXPECT_EQ(Y_ctr.box(), layout[iter]);
+        Y_ctr_0 -= X_ctr_0;
+        Y_ctr_1 -= X_ctr_1;
+        EXPECT_LT(Y_ctr_0.absMax(), 1e-12);
+        EXPECT_LT(Y_ctr_1.absMax(), 1e-12);
+        for (auto pi : Y_ctr.box())
+        {
+            Array<double, DIM> X_ctr_i;
+            X_ctr_i[0] = X_ctr_0(pi, 0);
+            X_ctr_i[1] = X_ctr_1(pi, 0);
+
+            MBDataPoint dataPoint(iter, pi, layout);
+            auto Y_ctr_i = map.cellCentered(dataPoint, block, block);
+            Y_ctr_i -= X_ctr_i;
+            double err_i = max(abs(Y_ctr_i[0]), abs(Y_ctr_i[1])); //only checking first two dims
+            EXPECT_LT(err_i, 1e-12); 
+        }
+    }
+}
+
 #if DIM > 2
 TEST(MBMapTests, CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
-    int radialDir = 2;
+    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
     auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
@@ -114,7 +177,7 @@ TEST(MBMapTests, InterBlockApply_CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 8;
-    int radialDir = 0;
+    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
     auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
@@ -165,11 +228,6 @@ TEST(MBMapTests, InterBlockApply_CubeSphereShell) {
                 map.apply(Xj, Jj, NTj, bj); // normal compution in bi
                 map.doApply(Xij, Jij, bj, bi); // bj func in bi domain
                 map.doApply(Xji, Jji, bi, bj); // bi func in bj domain
-
-                Xi.printData();
-                Xj.printData();
-                Xij.printData();
-                Xji.printData();
 
                 Xji.copyTo(EXi, Rji);
                 Xij.copyTo(EXj, Rij);

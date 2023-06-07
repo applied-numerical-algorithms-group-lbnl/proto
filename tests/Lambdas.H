@@ -77,7 +77,7 @@ PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 template<MemType MEM>
 PROTO_KERNEL_START
 void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
-        Array<double, DIM> a_dx, double a_r0, double a_r1, int a_block = 0)
+        Array<double, DIM> a_dx, double a_r0, double a_r1, int a_block, int a_radialCoord)
 {
     // subscript 0 are at corners
     Array<double, DIM> x  = a_pt;
@@ -85,26 +85,33 @@ void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& 
     x *= a_dx;
     Array<double, DIM> x0 = x - (0.5*a_dx);
 
-    // Z Radial
-#if 0
-    double r0   = a_r0 + (a_r1-a_r0)*x0[2];
-    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
-    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
+    double r0, xi0, eta0, r, xi, eta;
+    switch (a_radialCoord)
+    {
+        case 0:
+        {
+            r0   = a_r0 + (a_r1-a_r0)*x0[0];
+            xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
+            eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
+
+            r   = a_r0 + (a_r1-a_r0)*x[0];
+            xi  = -M_PI/4.0 + M_PI/2.0*x[1];
+            eta = -M_PI/4.0 + M_PI/2.0*x[2];
+            break;
+        }
+        case 2:
+        {
+            r0   = a_r0 + (a_r1-a_r0)*x0[2];
+            xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
+            eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
+
+            r   = a_r0 + (a_r1-a_r0)*x[2];
+            xi  = -M_PI/4.0 + M_PI/2.0*x[0];
+            eta = -M_PI/4.0 + M_PI/2.0*x[1];
+            break;
+        }
+    }
     
-    double r   = a_r0 + (a_r1-a_r0)*x[2];
-    double xi  = -M_PI/4.0 + M_PI/2.0*x[0];
-    double eta = -M_PI/4.0 + M_PI/2.0*x[1];
-    
-#else
-    // X Radial
-    double r0   = a_r0 + (a_r1-a_r0)*x0[0];
-    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-    
-    double r   = a_r0 + (a_r1-a_r0)*x[0];
-    double xi  = -M_PI/4.0 + M_PI/2.0*x[1];
-    double eta = -M_PI/4.0 + M_PI/2.0*x[2];
-#endif
     double X0 = tan(xi0);
     double Y0 = tan(eta0);
     double d0 = sqrt(1+X0*X0+Y0*Y0);

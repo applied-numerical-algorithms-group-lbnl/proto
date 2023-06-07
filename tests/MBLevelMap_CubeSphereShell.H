@@ -5,6 +5,7 @@
 
 #define CUBE_SPHERE_SHELL_R0 1.0
 #define CUBE_SPHERE_SHELL_R1 1.1
+#define CUBE_SPHERE_SHELL_RADIAL_COORD 2
 
 using namespace Proto;
 
@@ -24,10 +25,11 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
 #if 1
+        int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
         double r0 = CUBE_SPHERE_SHELL_R0;
         double r1 = CUBE_SPHERE_SHELL_R1;
         BoxData<double, 1, MEM> Jtmp(a_X.box());
-        forallInPlace_p(f_cubeSphereMap, a_X, Jtmp, dx, r0, r1, a_block);
+        forallInPlace_p(f_cubeSphereMap, a_X, Jtmp, dx, r0, r1, a_block, r_dir);
         Jtmp.copyTo(a_J);
 #else
         
