@@ -11,8 +11,8 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
-    template<typename Func, MemType MEM>
-    class MBMap;
+    template<MemType MEM>
+    class MBLevelMap;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
     
@@ -144,8 +144,8 @@ namespace Proto
          *  p:    The point of evaluation
          *  d:    A data point in this
          *  b:    The block in which foo is being evaluated
-         *  ...:  Other arguments. These may be MBLevelBoxData, MBMap, or any kind of POD
-         *        If MBMap is used as an input, the argument will be converted to an
+         *  ...:  Other arguments. These may be MBLevelBoxData, MBLevelMap, or any kind of POD
+         *        If MBLevelMap is used as an input, the argument will be converted to an
          *        MBLevelBoxData containing the coordinate variables with the same centering
          *        as *this.
          */

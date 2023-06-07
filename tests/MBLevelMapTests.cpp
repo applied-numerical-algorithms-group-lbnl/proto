@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-TEST(MBMapTests, ShearMap) {
+TEST(MBLevelMapTests, ShearMap) {
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
@@ -24,11 +24,11 @@ TEST(MBMapTests, ShearMap) {
     map.define(layout, ghost);
     
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBMapTests_ShearMap_X");
+    h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_ShearMap_X");
 #endif
 }
 
-TEST(MBMapTests, InterBlockApply_Shear) {
+TEST(MBLevelMapTests, InterBlockApply_Shear) {
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
@@ -83,7 +83,7 @@ TEST(MBMapTests, InterBlockApply_Shear) {
     }
 }
 
-TEST(MBMapTests, CellApply_Shear)
+TEST(MBLevelMapTests, CellApply_Shear)
 {
     int domainSize = 8;
     int boxSize = 8;
@@ -139,7 +139,7 @@ TEST(MBMapTests, CellApply_Shear)
             X_ctr_i[1] = X_ctr_1(pi, 0);
 
             MBDataPoint dataPoint(iter, pi, layout);
-            auto Y_ctr_i = map.cellCentered(dataPoint, block, block);
+            auto Y_ctr_i = map.cellCentered(dataPoint);
             Y_ctr_i -= X_ctr_i;
             double err_i = max(abs(Y_ctr_i[0]), abs(Y_ctr_i[1])); //only checking first two dims
             EXPECT_LT(err_i, 1e-12); 
@@ -147,8 +147,60 @@ TEST(MBMapTests, CellApply_Shear)
     }
 }
 
+TEST(MBLevelMapTests, CellApplyBoundary_Shear)
+{
+    int domainSize = 8;
+    int boxSize = 8;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+
+    // initialize map
+    MBLevelMap_Shear<HOST> map;
+    map.define(layout, ghost);
+
+    MBLevelBoxData<double, 1, HOST> data(layout, ghost);
+
+    for (auto iter : layout)
+    {
+        auto locBlock = layout.block(iter);
+        for (auto dir : Box::Kernel(1))
+        {
+            auto bounds = data.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                Box boundBox = layout[iter].adjacent(ghost[0]*dir);
+                auto adjBlock = layout.block(bound.adjIndex);
+
+                auto XLoc = map.cellCentered(boundBox, locBlock, locBlock);
+                auto XAdj = map.cellCentered(boundBox, adjBlock, locBlock);
+                for (auto bi : boundBox)
+                {
+                    MBDataPoint bi_loc(iter, bi, layout);
+                    MBDataPoint bi_adj(iter, bi, layout, dir, adjBlock);
+                
+                    auto XLoc_i = map.cellCentered(bi_loc);
+                    auto XAdj_i = map.cellCentered(bi_adj);
+
+                    XLoc_i -= XLoc.array(bi);
+                    XAdj_i -= XAdj.array(bi);
+
+                    EXPECT_LT(XLoc_i.absMax(), 1e-12);
+                    EXPECT_LT(XAdj_i.absMax(), 1e-12);
+                }
+            }
+        }
+    }
+}
+
 #if DIM > 2
-TEST(MBMapTests, CubeSphereShell) {
+TEST(MBLevelMapTests, CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
@@ -169,11 +221,11 @@ TEST(MBMapTests, CubeSphereShell) {
     map.define(layout, ghost);
     
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBMapTests_CubeSphereMap_X");
+    h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_CubeSphereMap_X");
 #endif
 }
 
-TEST(MBMapTests, InterBlockApply_CubeSphereShell) {
+TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 8;

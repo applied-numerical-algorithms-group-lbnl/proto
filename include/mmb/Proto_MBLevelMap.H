@@ -86,15 +86,9 @@ class MBLevelMap
             unsigned int a_computeBlock,
             unsigned int a_outBlock);
 
-    inline Array<double, DIM> cellCentered(
-            const MBDataPoint& a_point,
-            unsigned int a_computeBlock,
-            unsigned int a_outBlock);
+    inline Array<double, DIM> cellCentered(const MBDataPoint& a_point);
     
-    inline Array<double, DIM> cellAveraged(
-            const MBDataPoint& a_point,
-            unsigned int a_computeBlock,
-            unsigned int a_outBlock);
+    inline Array<double, DIM> cellAveraged(const MBDataPoint& a_point);
 
     /// Get Layout
     inline const MBDisjointBoxLayout& layout() const;

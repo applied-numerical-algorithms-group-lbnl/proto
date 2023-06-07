@@ -117,24 +117,22 @@ BoxData<double, DIM, MEM> MBLevelMap<MEM>::cellCentered(
 }
 
 template<MemType MEM>
-Array<double, DIM> MBLevelMap<MEM>::cellAveraged(
-        const MBDataPoint&   a_point,
-        unsigned int a_computeBlock,
-        unsigned int a_outBlock)
+Array<double, DIM> MBLevelMap<MEM>::cellAveraged(const MBDataPoint& a_point)
 {
+    auto computeBlock = a_point.srcBlock();
+    auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
-    auto X = cellAveraged(B0, a_computeBlock, a_outBlock);
+    auto X = cellAveraged(B0, computeBlock, domainBlock);
     return X.array(a_point.point);
 }
 
 template<MemType MEM>
-Array<double, DIM> MBLevelMap<MEM>::cellCentered(
-        const MBDataPoint&   a_point,
-        unsigned int a_computeBlock,
-        unsigned int a_outBlock)
+Array<double, DIM> MBLevelMap<MEM>::cellCentered(const MBDataPoint& a_point)
 {
+    auto computeBlock = a_point.srcBlock();
+    auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
-    auto X = cellCentered(B0, a_computeBlock, a_outBlock);
+    auto X = cellCentered(B0, computeBlock, domainBlock);
     return X.array(a_point.point);
 }
 
