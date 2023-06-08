@@ -23,8 +23,19 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
+#if PR_VERBOSE > 1
+    pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
+#endif
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
+#if PR_VERBOSE > 1
+    pout() << "SRC_POINTS: " << std::endl;
+    for (auto si : m_srcs)
+    {
+        pout() << "\tpoint: " << si.point << " | block: " << si.srcBlock() << std::endl;
+    }
+    pout() << std::endl;
+#endif
 
     // References
     auto& layout = a_map.map().layout();
@@ -49,7 +60,15 @@ MBPointInterpOp::MBPointInterpOp(
             m_exponents.push_back(bi);
         }
     }
-
+#if PR_VERBOSE > 1
+    pout() << "SPAN_BOX: " << spanBox << std::endl;
+    pout() << "EXPONENTS: ";
+    for (auto ei : m_exponents)
+    {
+        pout() << ei << ", ";
+    }
+    pout() << std::endl;
+#endif
     int N = m_exponents.size();
     int M = m_srcs.size();
 
@@ -61,13 +80,23 @@ MBPointInterpOp::MBPointInterpOp(
     // Compute Rg
     double Rg = 0.0;
     auto xg = a_map.cellCentered(a_dst);
+#if PR_VERBOSE > 1
+    pout() << "Xg: " << xg << " | point: " << a_dst.point << std::endl;
+#endif
     for (int ii = 0; ii < M; ii++)
     {
         auto xj = a_map.cellCentered(m_srcs[ii]);
         auto dist = xj - xg;
+#if PR_VERBOSE > 1
+        pout() << "\tXj: " << xj << " | point: " << m_srcs[ii].point << " | dist: " << dist << std::endl;
+#endif
         Rg += dist.norm();
     }
     Rg /= M;
+    Rg = 1.0;
+#if PR_VERBOSE > 1
+    pout() << "Rg: " << Rg << std::endl;
+#endif
    
     // Cache Moment Data
     auto C2C = Stencil<double>::CornersToCells(a_order);
@@ -85,18 +114,41 @@ MBPointInterpOp::MBPointInterpOp(
             srcBoxes[bi] &= si.point;
         }
     }
+#if PR_VERBOSE > 1
+    pout() << "Cached Data Regions: " << std::endl;
+#endif
     for (auto& [block, box] : srcBoxes)
     {
+#if PR_VERBOSE > 1
+        pout() << "block: " << block << " | box: " << box << std::endl;
+#endif
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
         BoxData<double, 1, MEM> Ji(box.grow(1));
-        a_map.apply(Xi, Ji, block); 
+        a_map.doApply(Xi, Ji, block, dstBlock); 
+#if PR_VERBOSE > 1
+        pout() << "X: " << std::endl;
+        Xi.printData();
+        pout() << "J: " << std::endl;
+        Ji.printData();
+#endif
         Xi -= xg;
         Xi /= Rg;
+#if PR_VERBOSE > 1
+        pout() << "X (normalized): " << std::endl;
+        Xi.printData();
+#endif
         for (int jj = 0; jj < N; jj++)
         {
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             BoxData<double> Xi_p_avg = C2C(Xi_p);
             srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
+        
+#if PR_VERBOSE > 1
+            pout() << "moment " << m_exponents[jj] << std::endl;
+            Xi_p_avg.printData();
+            pout() << "moment " << m_exponents[jj] << " * J" << std::endl;
+            srcData[block][srcData[block].size()-1].printData();
+#endif
         }
     }
     
