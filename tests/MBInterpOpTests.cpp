@@ -11,7 +11,7 @@ TEST(MBInterpOp, ShearTest)
     int domainSize = 4;
     int boxSize = 4;
     Array<double, DIM> exp{4,4,0,0,0,0};
-    Array<double, DIM> offset{0,0,0,0,0,0};
+    Array<double, DIM> offset{0,0,0.3,0,0,0};
     HDF5Handler h5;
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -112,11 +112,11 @@ TEST(MBInterpOp, ShearTest)
 TEST(MBInterpOp, CubeSphereShellTest)
 {
     HDF5Handler h5;
-    int domainSize = 4;
-    int boxSize = 4;
+    int domainSize = 32;
+    int boxSize = 32;
     int thickness = 1;
     int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
-    Array<double, DIM> exp{0,0,0,0,0,0};
+    Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -152,13 +152,18 @@ TEST(MBInterpOp, CubeSphereShellTest)
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
 
+        auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
-            auto& src_i = hostSrc[iter];
-            auto& x_i = map.map()[iter];
             auto block = layout.block(iter);
+            auto& src_i = hostSrc[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(ghost[0]);
+            BoxData<double, DIM> x_i(b_i);
+            BoxData<double, 1> J_i(layout[iter]);
+            FluxBoxData<double, DIM> NT(layout[iter]);
+            map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            src_i |= Stencil<double>::CornersToCells(4)(x_pow);
+            src_i |= C2C(x_pow);
         }
 
         //hostSrc.initialize(f_polyM, map.map(), dx, exp, offset);
@@ -167,12 +172,12 @@ TEST(MBInterpOp, CubeSphereShellTest)
         hostDst.setVal(0);
         hostErr.setVal(0);
         
-
         auto blockDomainBox = Box::Cube(domainSize);
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
             Box patchBox = layout[iter];
+            hostSrc[iter].printData();
             for (auto dir : Box::Kernel(1))
             {
                 auto bounds = hostSrc.bounds(iter, dir);

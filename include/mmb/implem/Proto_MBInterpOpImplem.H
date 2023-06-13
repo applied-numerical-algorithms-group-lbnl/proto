@@ -93,7 +93,7 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    Rg = 1.0;
+    //Rg = 1.0;
 #if PR_VERBOSE > 1
     pout() << "Rg: " << Rg << std::endl;
 #endif
@@ -141,6 +141,7 @@ MBPointInterpOp::MBPointInterpOp(
         {
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             BoxData<double> Xi_p_avg = C2C(Xi_p);
+            Ji.setVal(1);
             srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
         
 #if PR_VERBOSE > 1
