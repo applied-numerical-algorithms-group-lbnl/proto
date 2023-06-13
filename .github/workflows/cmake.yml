@@ -38,7 +38,7 @@ jobs:
 
     - name: Test
       # Execute tests defined by the CMake configuration. 
-      run: cmake --build ${{github.workspace}}/basic --target test
+      #run: cmake --build ${{github.workspace}}/basic --target test
       run: ${{github.workspace}}/basic/bin/BoxOpTests
       
   full:
