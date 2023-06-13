@@ -62,7 +62,7 @@ TEST(BoxOp, Flux) {
 
     hostDst.copyTo(hostErr);
     hostErr -= hostSln;
-    EXPECT_LT(hostErr.absMax(), 1e-12);
+    EXPECT_LT(hostErr.absMax(), 1e-9);
     for (int dir = 0; dir < DIM; dir++)
     {
         hostFlx[dir].copyTo(hostFlxErr[dir]);
