@@ -220,7 +220,6 @@ TEST(InterpStencil, Quadratic) {
         EXPECT_GT(rate, 3 - 0.01);
     }
 }
-
 TEST(InterpStencil, FiniteVolume) {
     HDF5Handler h5;
 
