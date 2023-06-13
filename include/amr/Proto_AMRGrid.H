@@ -14,7 +14,9 @@ namespace Proto
     // NB: Tags are encoded using short instead of bool so that Stencils can be used to
     // manipulate them (e.g. for buffering). -CLG
     typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, PR_CELL> LevelTagData;
+    typedef LevelBoxData<short, 1, MemType::HOST,   PR_CELL> LevelTagDataHost;
     typedef BoxData<short, 1, MEMTYPE_DEFAULT> TagData;
+    typedef BoxData<short, 1, MemType::HOST>   TagDataHost;
     
     /// AMR Grid
     /**
