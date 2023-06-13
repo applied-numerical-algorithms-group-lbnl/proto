@@ -73,18 +73,6 @@ host_basic_execute:
     script:
       - cmake --build basic_host_build --target test
 
-host_basic_execute_boxoptests:
-    stage: test
-    extends:
-      - .ci-runner
-    needs: [configure_basic_host]
-    variables:
-      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
-    before_script:
-      - *label
-    script:
-      - basic_host_build/bin/BoxOpTests
-
 mpi_basic_execute:
     stage: test
     extends:
