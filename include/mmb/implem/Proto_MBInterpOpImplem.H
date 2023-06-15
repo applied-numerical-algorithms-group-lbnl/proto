@@ -48,6 +48,8 @@ MBPointInterpOp::MBPointInterpOp(
         spanBox &= si.point;
     }
     Point expBoxSize = Point::Ones(a_order);
+    // Cull exponents if the footprint is "flat" in a given direction
+    // This allows for sub-DIM dimensional operators
     for (int ii = 0; ii < DIM; ii++)
     {
         if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
@@ -73,11 +75,13 @@ MBPointInterpOp::MBPointInterpOp(
     int M = m_srcs.size();
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
-    // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
-    // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
-    // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]
+    // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
+    // Mp = <(x-xg)^p/Rg>_g   |  p = nomial
+    // Sj = sum_p(Mp*Cinv_pj) = m_coefs[j]
     
     // Compute Rg
+    // This is the approximate radius in physical space of the operator
+    // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
     auto xg = a_map.cellCentered(a_dst);
 #if PR_VERBOSE > 1
@@ -93,12 +97,13 @@ MBPointInterpOp::MBPointInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-    //Rg = 1.0;
+    Rg = 1.0; // debugging
 #if PR_VERBOSE > 1
     pout() << "Rg: " << Rg << std::endl;
 #endif
    
     // Cache Moment Data
+    // We cache < J * ((x-xg)/Rg)^p > for each exponent p
     auto C2C = Stencil<double>::CornersToCells(a_order);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
