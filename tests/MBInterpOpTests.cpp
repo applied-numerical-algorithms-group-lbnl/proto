@@ -90,7 +90,10 @@ TEST(MBInterpOp, ShearTest)
             }
         }
 #if PR_VERBOSE > 0
-        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        }
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Shear_Err_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_Shear_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_Shear_Dst_%i", nn);
@@ -204,8 +207,14 @@ TEST(MBInterpOp, CubeSphereShellTest)
                 }
             }
         }
+        Reduction<double, Max> rxn;
+        rxn.reduce(&err[nn], 1);
+        err[nn] = rxn.fetch();
 #if PR_VERBOSE > 0
-        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        }
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_CubeSphereShell_Err_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_Dst_%i", nn);
@@ -218,7 +227,10 @@ TEST(MBInterpOp, CubeSphereShellTest)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
 #if PR_VERBOSE > 0
-        std::cout << "Convergence Rate: " << rate << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "Convergence Rate: " << rate << std::endl;
+        }
 #endif
     }
 }
