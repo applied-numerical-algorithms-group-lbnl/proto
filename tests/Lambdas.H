@@ -94,9 +94,9 @@ void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& 
             xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
             eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
 
-            r   = a_r0 + (a_r1-a_r0)*x[0];
-            xi  = -M_PI/4.0 + M_PI/2.0*x[1];
-            eta = -M_PI/4.0 + M_PI/2.0*x[2];
+            //r   = a_r0 + (a_r1-a_r0)*x[0];
+            //xi  = -M_PI/4.0 + M_PI/2.0*x[1];
+            //eta = -M_PI/4.0 + M_PI/2.0*x[2];
             break;
         }
         case 2:
@@ -105,9 +105,9 @@ void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& 
             xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
             eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
 
-            r   = a_r0 + (a_r1-a_r0)*x[2];
-            xi  = -M_PI/4.0 + M_PI/2.0*x[0];
-            eta = -M_PI/4.0 + M_PI/2.0*x[1];
+            //r   = a_r0 + (a_r1-a_r0)*x[2];
+            //xi  = -M_PI/4.0 + M_PI/2.0*x[0];
+            //eta = -M_PI/4.0 + M_PI/2.0*x[1];
             break;
         }
     }
@@ -120,7 +120,7 @@ void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& 
     double Y = tan(eta);
     double d = sqrt(1+X*X+Y*Y);
 
-    a_J(0) = r*r*(1+X*X)*(1+Y*Y)/(d*d*d);
+    a_J(0) = r0*r0*(1+X0*X0)*(1+Y0*Y0)/(d0*d0*d0);
     switch (a_block)
     {
         case 0:
@@ -161,6 +161,77 @@ void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& 
     }
 }
 PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
+
+template<MemType MEM>
+PROTO_KERNEL_START
+void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R, Var<double,1,MEM>& a_J,
+        Var<double, DIM, MEM>& a_X, int a_block, int a_radialCoord)
+{
+    double x0 = a_X(0);
+    double y0 = a_X(1);
+    double z0 = a_X(2);
+
+    double x, y, z;
+    switch (a_block)
+    {
+        case 0:
+        {
+            x = -z0;
+            y = y0;
+            z = x0;
+            break;
+        }
+        case 1:
+        {
+            x = z0;
+            y = y0;
+            z = -x0;
+            break;
+        }
+        case 2:
+        {
+            x = -y0;
+            y = x0;
+            z = z0;
+            break;
+        }
+        case 3:
+        {
+            x = x0;
+            y = y0;
+            z = z0;
+            break;
+        }
+        case 4:
+        {
+            x = y0;
+            y = -x0;
+            z = z0;
+            break;
+        }
+        case 5:
+        {
+            x = -x0;
+            y = -y0;
+            z = z0;
+            break;
+        }
+    }
+
+    double R = sqrt(x*x + y*y + z*z);
+    double r = sqrt(x*x + y*y);
+    double phi = atan2(r,z);
+    double theta = atan2(y,x);
+    // note that this J is at corners
+    a_J(0) = r*r*sin(phi);
+    a_R(a_radialCoord) = R;
+    a_R((a_radialCoord + 1) % 3) = theta;
+    a_R((a_radialCoord + 2) % 3) = phi;
+    //a_R(0) = x;
+    //a_R(1) = y;
+    //a_R(2) = z;
+}
+PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
 
 PROTO_KERNEL_START
 void f_classicSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J,

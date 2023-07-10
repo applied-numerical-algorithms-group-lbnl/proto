@@ -10,7 +10,7 @@
 using namespace Proto;
 
 template<MemType MEM>
-class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
+class MBLevelMap_CubeSphereShellPolar : public MBLevelMap<MEM>
 {
     public:
 
@@ -25,16 +25,20 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
 #if 1
-        auto C2C = Stencil<double>::CornersToCells(4);
         int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
         double r0 = CUBE_SPHERE_SHELL_R0;
         double r1 = CUBE_SPHERE_SHELL_R1;
-        Box b = C2C.domain(a_X.box());
-        BoxData<double, DIM, MEM> X0(b);
-        BoxData<double, 1, MEM> J0(b);
+        BoxData<double, DIM, MEM> X0(a_X.box().grow(1));
+        BoxData<double, 1, MEM> J0(X0.box());
+        BoxData<double, DIM, MEM> X1(a_X.box().grow(1));
+        BoxData<double, 1, MEM> J1(X1.box());
         forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, a_block, r_dir);
-        X0.copyTo(a_X);
-        //a_J |= C2C(J0);
+        int refBlock = this->block();
+        forallInPlace_p(f_cartesianToSphericalMap, X1, J1, X0, refBlock, r_dir); 
+        
+        J0.copyTo(a_J);
+        a_J *= J1;
+        X1.copyTo(a_X);
 #else
         
         BoxData<double, 1, MEM> radius(a_X.box());

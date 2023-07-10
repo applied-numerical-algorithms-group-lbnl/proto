@@ -5,6 +5,7 @@
 #define NCOMP 1
 using namespace Proto;
 
+#if 0
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
     int boxSize = 16;
@@ -490,6 +491,53 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         EXPECT_EQ(soln[ii].point, mb_footprint[ii].point);
     }
 }
+#endif
+#if DIM == 3
+TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
+{
+    HDF5Handler h5;
+
+    int domainSize = 8;
+    int boxSize = 8;
+    int thickness = 1;
+    int radialDir = 2;
+    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    Point boxSizeVect = Point::Ones(boxSize);
+    boxSizeVect[radialDir] = thickness;
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+
+    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
+    hostData.initialize(f_MBPointID);
+    hostData.fillBoundaries();
+
+    // input footprint
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(2))
+    {
+        if (pi.sumAbs() <= 2)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    
+    // inputs
+    Point p0 = Point::Basis(0,domainSize);
+    Point patchID = Point::Zeros();
+    auto mbIndex = layout.find(patchID, 0);
+
+    auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
+    
+    std::cout << "dst point: " << p0 << std::endl;
+    for (auto src : mb_footprint)
+    {
+        std::cout << "point: " << src.point << " | rel point: " << src.point - p0 << " | block: " << src.srcBlock() << std::endl;
+    }
+}
+#endif
 #if 0
 TEST(MBLevelBoxData, MBDataPointOperator)
 {

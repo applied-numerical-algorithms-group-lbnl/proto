@@ -23,9 +23,11 @@ class MBLevelMap
             Array<Point, DIM+1>& a_ghost,
             int a_order = 4);
     */
+    
     inline void define(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
+            unsigned int a_block = 0,
             int a_order = 4);
 
     /// Node Centered Map
@@ -75,12 +77,14 @@ class MBLevelMap
             BoxData<double, 1, MEM>& a_J,
             unsigned int a_computeBlock,
             unsigned int a_outBlock);
-    
+   
+    /// Compute Cell Centered Coordinates
     inline BoxData<double, DIM, MEM> cellCentered(
             const Box& a_box,
             unsigned int a_computeBlock,
             unsigned int a_outBlock);
     
+    /// Compute Cell Averaged Coordinates
     inline BoxData<double, DIM, MEM> cellAveraged(
             const Box& a_box,
             unsigned int a_computeBlock,
@@ -107,8 +111,12 @@ class MBLevelMap
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
+    /// Get Block
+    inline unsigned int block() const { return m_block; }
+
     private:
         int                                         m_order;
+        unsigned int                                m_block;
         Array<Point, DIM+1>                         m_ghost;
         std::vector<Array<double, DIM>>             m_dx;
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
