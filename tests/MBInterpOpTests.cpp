@@ -113,11 +113,159 @@ TEST(MBInterpOp, ShearTest)
 }
 #endif
 #if DIM == 3
+#if 0
 TEST(MBInterpOp, CubeSphereShellTest)
 {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 8;
+    int thickness = 1;
+    bool cullRadialGhost = true;
+    bool use2DFootprint = true;
+    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    Array<double, DIM> exp{4,4,4,0,0,0};
+    Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+    if (cullRadialGhost) { ghost[0][radialDir] = 0;}
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(3))
+    {
+        if (pi.abs().sum() <= 2)
+        {
+            if (use2DFootprint && (pi[radialDir] != 0)) { continue; }
+            footprint.push_back(pi);
+        }
+    }
+    int N = 2;
+    double err[N];
+    double errL1[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        err[nn] = 0.0;
+        auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+        Point boxSizeVect = Point::Ones(boxSize);
+        boxSizeVect[radialDir] = thickness;
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        ghost[0] = Point::Ones(3);
+        if (cullRadialGhost) { ghost[0][radialDir] = 0; }
+        MBLevelMap_CubeSphereShell<HOST> map;
+        map.define(layout, ghost);
+        MBLevelMap_CubeSphereShellPolar<HOST> polarMaps[6];
+        for (int bi = 0; bi < 6; bi++)
+        {
+            polarMaps[bi].define(layout, ghost, bi);
+        }
+        for (auto iter : layout)
+        {
+            for (auto dir : Box::Kernel(1))
+            {
+                std::cout << "dir: " << dir << " | bounds: " << polarMaps[0].map().bounds(iter, dir).size() << std::endl;
+            }
+        }
+
+        ghost[0] = Point::Ones(1);
+        if (cullRadialGhost) { ghost[0][radialDir] = 0; }
+
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto& src_i = hostSrc[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(ghost[0]);
+            BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
+            BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost[0]));
+            FluxBoxData<double, DIM> NT(layout[iter]);
+            map.apply(x_i, J_i, NT, block);
+            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+            BoxData<double, 1> x_pow_avg = C2C(x_pow);
+            J_i.setVal(1.0);
+            Operator::cellProduct(src_i, J_i, x_pow_avg);
+        }
+
+        hostSrc.exchange();
+        hostSrc.fillBoundaries();
+        hostDst.setVal(0);
+        hostErr.setVal(0);
+        
+        auto blockDomainBox = Box::Cube(domainSize);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            Box patchBox = layout[iter];
+            for (auto dir : Box::Kernel(1))
+            {
+                auto bounds = hostSrc.bounds(iter, dir);
+                auto mapBounds = polarMaps[block].map().bounds(iter, dir);
+                EXPECT_EQ(bounds.size(), mapBounds.size());
+                for (auto bound : bounds)
+                {
+                    Box boundBox = patchBox.adjacent(ghost[0]*dir);
+                    if (blockDomainBox.contains(boundBox)) { continue; }
+                    for (auto bi : boundBox)
+                    {
+                        MBDataPoint dstDataPoint(iter, bi, layout);
+                        MBPointInterpOp op(
+                                dstDataPoint, ghost[0], polarMaps[block], footprint, 4);
+                        op.apply(hostDst, hostSrc);
+                        double interpValue = hostDst[dstDataPoint](0);
+                        double exactValue =  hostSrc[dstDataPoint](0);
+                        double errorValue = abs(interpValue - exactValue);
+                        err[nn] = max(errorValue, err[nn]);
+                        errL1[nn] += errorValue;
+                        hostErr[dstDataPoint](0) = errorValue;
+                    }
+                }
+            }
+        }
+        Reduction<double, Max> rxn;
+        rxn.reduce(&err[nn], 1);
+        err[nn] = rxn.fetch();
+        rxn.reset();
+        rxn.reduce(&errL1[nn], 1);
+        errL1[nn] = rxn.fetch() / domainSize;
+#if PR_VERBOSE > 0
+        if (procID() == 0)
+        {
+            std::cout << "Error (Max Norm): " << err[nn];
+            std::cout << " | Error (L1 Norm): " << errL1[nn] << std::endl;
+        }
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_CubeSphereShell_Err_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_Src_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_Dst_%i", nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+        double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
+        EXPECT_GT(rate, 3.5);
+        EXPECT_GT(rateL1, 3.5);
+#if PR_VERBOSE > 0
+        if (procID() == 0)
+        {
+            std::cout << "Convergence Rate (Max Norm): " << rate;
+            std::cout << " | (L1 Norm): " << rateL1 << std::endl;
+        }
+#endif
+    }
+}
+#endif
+#if 1
+TEST(MBInterpOp, CubeSphereShellTest_Full)
+{
+    HDF5Handler h5;
+    int domainSize = 16;
+    int boxSize = 16;
     int thickness = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
@@ -164,7 +312,6 @@ TEST(MBInterpOp, CubeSphereShellTest)
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
-
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
@@ -185,33 +332,28 @@ TEST(MBInterpOp, CubeSphereShellTest)
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
+    
+        MBInterpOp op(ghost[0], 4);
+        for (int bi = 0; bi < layout.numBlocks(); bi++)
+        {
+            op.define(polarMaps[bi], footprint, bi);
+        }
+        op.apply(hostDst, hostSrc);
+
         
-        auto blockDomainBox = Box::Cube(domainSize);
         for (auto iter : layout)
         {
-            auto block = layout.block(iter);
-            Box patchBox = layout[iter];
-            for (auto dir : Box::Kernel(1))
-            {
-                auto bounds = hostSrc.bounds(iter, dir);
-                for (auto bound : bounds)
-                {
-                    Box boundBox = patchBox.adjacent(ghost[0]*dir);
-                    if (blockDomainBox.contains(boundBox)) { continue; }
-                    for (auto bi : boundBox)
-                    {
-                        MBDataPoint dstDataPoint(iter, bi, layout);
-                        MBPointInterpOp op(dstDataPoint, ghost[0], polarMaps[block], footprint, 4);
-                        op.apply(hostDst, hostSrc);
-                        double interpValue = hostDst[dstDataPoint](0);
-                        double exactValue =  hostSrc[dstDataPoint](0);
-                        double errorValue = abs(interpValue - exactValue);
-                        err[nn] = max(errorValue, err[nn]);
-                        errL1[nn] += errorValue;
-                        hostErr[dstDataPoint](0) = errorValue;
-                    }
-                }
-            }
+            auto& err_i = hostErr[iter];
+            auto& dst_i = hostDst[iter];
+            auto& src_i = hostSrc[iter];
+
+            BoxData<double, 1> tmp(layout[iter]);
+            src_i.copyTo(tmp);
+            dst_i.copyTo(err_i);
+            err_i -= src_i;
+            err_i += tmp;
+            err[nn] = max(err_i.absMax(), err[nn]);
+            errL1[nn] += err_i.sum();
         }
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
@@ -219,6 +361,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
         rxn.reset();
         rxn.reduce(&errL1[nn], 1);
         errL1[nn] = rxn.fetch() / domainSize;
+
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {
@@ -231,9 +374,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
 #endif
         domainSize *= 2;
         boxSize *= 2;
-        //thickness *= 2;
     }
-
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
@@ -249,6 +390,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
 #endif
     }
 }
+#endif
 #endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

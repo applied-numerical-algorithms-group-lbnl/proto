@@ -120,6 +120,10 @@ namespace Proto
                 unsigned int a_srcBlock,
                 Point        a_dir) const;
 
+        inline bool isTriplePoint(
+                unsigned int a_srcBlock,
+                Point        a_dir) const;
+
         inline bool operator==(const MBGraph& a_rhs) const;
 
         inline bool isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const;

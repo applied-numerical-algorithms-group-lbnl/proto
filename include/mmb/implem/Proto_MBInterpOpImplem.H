@@ -26,17 +26,9 @@ MBPointInterpOp::MBPointInterpOp(
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
     
-    bool checkData = false; // = ((m_dst.point == Point(3,8,0) && m_dst.dstBlock() == 0)
-                  //|| (m_dst.point == Point(8,3,0) && m_dst.dstBlock() == 2)); 
-
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
-    if (checkData)
-    {
-        pout() << "\n-----------------------------------------------------------\n" << std::endl;
-        pout() << "Block: " << dstBlock << " | Point: " << m_dst.point << std::endl;
-    }
     
     // Compute Exponents
     Box spanBox;
@@ -96,11 +88,6 @@ MBPointInterpOp::MBPointInterpOp(
             srcBoxes[bi] &= si.point;
         }
     }
-    if (checkData)
-    {
-        pout() << "Cached Moment Data: " << std::endl;
-        pout() << "Rg: " << Rg << " | Xg: " << xg << std::endl;
-    }
     for (auto& [block, box] : srcBoxes)
     {
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
@@ -108,24 +95,12 @@ MBPointInterpOp::MBPointInterpOp(
         a_map.doApply(Xi, Ji, block, dstBlock); 
         Xi -= xg;
         Xi /= Rg;
-        if (checkData)
-        {
-            pout() << "block: " << block << " | box: " << box << std::endl;
-            pout() << "(X - Xg)/Rg" << std::endl;
-            Xi.printData();
-        }
         for (int jj = 0; jj < N; jj++)
         {
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             BoxData<double> Xi_p_avg = C2C(Xi_p);
             Ji.setVal(1.0);
             srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
-            
-            //if (m_dst.point == Point(-1,3,0))
-            //{
-            //    pout() << "moment: " << m_exponents[jj] << std::endl;
-            //    Xi_p.printData();
-            //}
         }
     }
    
@@ -154,12 +129,6 @@ MBPointInterpOp::MBPointInterpOp(
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = m_S(0,ii);
-    }
-    if (checkData)
-    {
-        m_C.print("%10.2f");
-        m_D.print("%10.2f");
-        m_S.print("%10.2f");
     }
 }
 
@@ -202,47 +171,76 @@ unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
 }
-/*
-template<MemType MEM>
-MBInterpOp::MBInterpOp(
-        MBLevelMap<MEM>& a_map,
-        const std::vector<Point>& a_footprint,
-        Point a_ghost,
-        unsigned int a_order)
+
+MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
-    m_footprint = a_footprint;
-    m_exponents.clear();
-    for (auto bi : Box::Cube(a_order))
-    {
-        if (bi.sum() < a_order - 1)
-        {
-            m_exponents.push_back(bi);
-        }
-    }
     m_order = a_order;
     m_ghost = a_ghost;
     m_ops.clear();
+}
+
+template<MemType MEM>
+void MBInterpOp::define(
+        MBLevelMap<MEM>&            a_map,
+        const std::vector<Point>&   a_footprint,
+        int                         a_block)
+{
     const auto& layout = a_map.map().layout();
-    const auto& domain = layout.domain();
-    const auto& graph = layout.domain().graph();
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
-        Box domainBox = layout.domain().blockDomain(block).box(); 
+        if ((a_block >= 0) && (block != a_block)) {continue; }
+        Box blockDomainBox = layout.domain().blockDomain(block).box(); 
+        Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
-           if (dir == Point::Zeros()) {continue;}
-           if (a_map.map().bounds(iter, dir).size() > 0)
-           {
-               Box patchBox = layout[iter];
-               Box ghostBox = patchBox.adjacent(dir*a_ghost);
-               for (auto gi : ghostBox)
-               {
-                   MBDataPoint p(iter, gi, layout);
-                   m_ops.push_back(MBPointInterpOp(p, a_ghost, a_map, a_footprint, a_order));
-               }
-           }
+            if (layout.domain().graph().isTriplePoint(block, dir))
+            {
+                std::set<Point> fset;
+                auto dirs = dir.split();
+                for (auto fi : a_footprint)
+                {
+                    fset.insert(fi);
+                    for (auto di : dirs)
+                    {
+                        fset.insert(fi-di);
+                    }
+                }
+                std::vector<Point> extFootprint(fset.begin(), fset.end());
+                Box boundBox = patchBox.adjacent(m_ghost*dir);
+                if (blockDomainBox.contains(boundBox))
+                {
+                    continue;
+                }
+                for (auto bi : boundBox)
+                {
+                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    m_ops.push_back(
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
+                    pout() << "Triple Point Stencil: dir = " << dir << std::endl;
+                    for (auto src : m_ops[m_ops.size()-1].sources())
+                    {
+                        pout() << src.point << " | " << src.srcBlock() << std::endl;
+                    }
+                }
+                continue;
+            }
+            auto bounds = a_map.map().bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                Box boundBox = patchBox.adjacent(m_ghost*dir);
+                if (blockDomainBox.contains(boundBox))
+                {
+                    continue;
+                }
+                for (auto bi : boundBox)
+                {
+                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    m_ops.push_back(
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, 4));
+                }
+            }
         }
     }
 }
@@ -275,7 +273,6 @@ void MBInterpOp::coefs(
         }
     }
 }
-*/
 
 
 

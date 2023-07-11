@@ -368,6 +368,24 @@ std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) c
     return bounds;
 }
 
+bool MBGraph::isTriplePoint(
+        unsigned int a_srcBlock,
+        Point a_dir) const
+{
+    if (a_dir.codim() != 2) {return false;}
+    auto dirs = a_dir.split();
+    auto b0 = adjacent(a_srcBlock, dirs[0]);
+    auto b1 = adjacent(a_srcBlock, dirs[1]);
+    if (b0 >= size() || b1 >= size()) { return false; }
+    auto R0 = rotation(a_srcBlock, dirs[0]);  
+    auto R1 = rotation(a_srcBlock, dirs[1]);
+    auto d01 = R0(dirs[1]);
+    auto d10 = R1(dirs[0]);
+    auto b01 = adjacent(b0, d01); 
+    auto b10 = adjacent(b1, d10); 
+    return (b01 == b1 && b10 == b0);
+}
+
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
     // TODO: Most applications won't need more than one graph

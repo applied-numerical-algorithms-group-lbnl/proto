@@ -53,17 +53,18 @@ namespace Proto
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
     };
-    /*
+
     class MBInterpOp
     {
         public:
         
+        inline MBInterpOp(Point a_ghost, unsigned int a_order);
+        
         template<MemType MEM>
-        inline MBInterpOp(
-            MBLevelMap<MEM>&                a_map,
-            const std::vector<Point>&   a_footprint,
-            Point                       a_ghost,
-            unsigned int                a_order);
+        inline void define(
+                MBLevelMap<MEM>&            a_map,
+                const std::vector<Point>&   a_footprint,
+                int block = -1);
 
         template<typename T, unsigned int C, MemType MEM>
         inline void apply(
@@ -76,7 +77,6 @@ namespace Proto
                 MBLevelBoxData<T, C, MEM>& a_src,
                 int a_srcComponent = 0);
 
-        inline std::vector<Point> exponents() const {return m_exponents; }
         inline MBPointInterpOp& operator()(MBDataPoint& a_target)
         {
             for (auto& op : m_ops)
@@ -87,13 +87,10 @@ namespace Proto
         }
         private:
        
-        std::vector<Point> m_exponents;
         Point m_ghost;
         int m_order;
-        std::vector<Point> m_footprint;
         std::vector<MBPointInterpOp> m_ops;
     };
-    */
 #include "implem/Proto_MBInterpOpImplem.H"
 } //end namespace Proto
 #endif // end include guard
