@@ -796,6 +796,23 @@ cofactor(
 {
     MayDay<void>::Abort("Operator::cofactor | Error: Not implemented.");
 }
+template <class T, MemType MEM>
+BoxData<T,DIM,MEM>
+cofactor(
+        const BoxData<T,DIM,MEM>& a_X,
+        int a_dir,
+        Array<T,DIM> a_dx)
+{
+    auto N = cofactor(a_X, a_dir);
+    T area = 1.0;
+    for (int d = 0; d < DIM; d++)
+    {
+        if (d == a_dir) {continue; }
+        area *= a_dx[d];
+    }
+    N /= area;
+    return N;
+}
 
 template <class T, MemType MEM>
 BoxData<T,DIM,MEM>
@@ -1317,6 +1334,25 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                 },a_J,rtop,a_radius);
   a_J*= 1.0/(a_h*a_h);
 }
+
+template<class T, MemType MEM>
+BoxData<T,DIM,MEM,DIM>
+cofactorMatrix(
+               const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+               int a_dirNorm,
+               Array<T,DIM> a_dx)                         
+{
+    auto N = cofactorMatrix(a_NTFaces, a_dirNorm);
+    T area = 1.0;
+    for (int d = 0; d < DIM; d++)
+    {
+        if (d == a_dirNorm) {continue; }
+        area *= a_dx[d];
+    }
+    N /= area;
+    return N;
+}
+
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 cofactorMatrix(
@@ -1390,6 +1426,18 @@ jacobian(
     MayDay<void>::Abort("Operator::jacobian | Error: Not implemented.");
 }
 
+template <class T, MemType MEM>
+BoxData<T,1,MEM>
+jacobian(
+        const BoxData<T,DIM,MEM>& a_X,
+        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT,
+        Array<T,DIM> a_dx)
+{
+    T volume = a_dx.dot(Array<T,DIM>::Ones());
+    auto J = jacobian(a_X, a_NT);
+    J /= volume;
+    return J;
+}
 template <class T, MemType MEM>
 BoxData<T,1,MEM>
 jacobian(

@@ -1,20 +1,19 @@
 template<template<typename, MemType> class OPType,
-    typename T, typename MAP, MemType MEM>
-MBLevelOp<OPType, T, MAP, MEM>::MBLevelOp()
+    typename T,  MemType MEM>
+MBLevelOp<OPType, T,  MEM>::MBLevelOp()
 {
-    m_defined = false;
 }
 
 template<template<typename, MemType> class OPType,
-    typename T, typename MAP, MemType MEM>
-MBLevelOp<OPType, T, MAP, MEM>::MBLevelOp(MBMap<MAP, MEM>& a_map)
+    typename T,  MemType MEM>
+MBLevelOp<OPType, T,  MEM>::MBLevelOp(MBLevelMap< MEM>& a_map)
 {
     define(a_map);
 }
 
 template<template<typename, MemType> class OPType,
-    typename T, typename MAP, MemType MEM>
-void MBLevelOp<OPType, T, MAP, MEM>::define(MBMap<MAP, MEM>& a_map)
+    typename T,  MemType MEM>
+void MBLevelOp<OPType, T,  MEM>::define(MBLevelMap< MEM>& a_map)
 {
     auto& layout = a_map.map().layout();
     m_map = &a_map;
@@ -24,14 +23,14 @@ void MBLevelOp<OPType, T, MAP, MEM>::define(MBMap<MAP, MEM>& a_map)
     {
         auto& x = a_map.map()[index];
         auto& J = a_map.jacobian()[index];
-        m_ops[index].define(layout[index], x,J);
+        auto block = layout.block(index);
+        m_ops[index].define(layout[index], a_map.dx(block), x,J);
     }
-    m_defined = true;
 }
 
 template<template<typename, MemType> class OPType,
-    typename T, typename MAP, MemType MEM>
-void MBLevelOp<OPType, T, MAP, MEM>::operator()(
+    typename T,  MemType MEM>
+void MBLevelOp<OPType, T,  MEM>::operator()(
         LevelStateData&         a_output,
         const LevelStateData&   a_state,
         T                       a_scale)
@@ -51,8 +50,8 @@ void MBLevelOp<OPType, T, MAP, MEM>::operator()(
 }
 
 template<template<typename, MemType> class OPType,
-    typename T, typename MAP, MemType MEM>
-void MBLevelOp<OPType, T, MAP, MEM>::operator()(
+    typename T,  MemType MEM>
+void MBLevelOp<OPType, T,  MEM>::operator()(
         LevelStateData&         a_output,
         const LevelStateData&   a_state,
         const LevelAuxData&     a_aux,
@@ -72,6 +71,54 @@ void MBLevelOp<OPType, T, MAP, MEM>::operator()(
         auto& output = a_output[index];
         auto& aux = a_aux[index];
         op(output, state, aux, a_scale);
+    }
+}
+
+template <template<typename, MemType> class OpType,
+         typename T,
+         MemType MEM>
+void MBLevelOp<OpType, T, MEM>::setDiagScale(T a_value)
+{
+    m_diagScale = a_value;
+    for (auto iter : m_map->layout())
+    {
+        m_ops[iter].setDiagScale(a_value);
+    }
+}
+
+template <template<typename, MemType> class OpType,
+         typename T,
+         MemType MEM>
+void MBLevelOp<OpType, T, MEM>::setFluxScale(T a_value)
+{
+    m_fluxScale = a_value;
+    for (auto iter : m_map->layout())
+    {
+        m_ops[iter].setFluxScale(a_value);
+    }
+}
+
+template <template<typename, MemType> class OpType,
+         typename T,
+         MemType MEM>
+void MBLevelOp<OpType, T, MEM>::setTime(T a_time)
+{
+    m_time = a_time;
+    for (auto iter : m_map->layout())
+    {
+        m_ops[iter].setTime(a_time);
+    }
+}
+
+template <template<typename, MemType> class OpType,
+         typename T,
+         MemType MEM>
+void MBLevelOp<OpType, T, MEM>::setRKStage(unsigned int a_stage)
+{
+    m_rkStage = a_stage;
+    for (auto iter : m_map->layout())
+    {
+        m_ops[iter].setRKStage(a_stage);
     }
 }
 

@@ -762,7 +762,15 @@ namespace Operator {
             BoxData<T,DIM,MEM>&       a_N,
             const BoxData<T,DIM,MEM>& a_X,
             int a_dir);
-
+    
+    // Divided Difference overload
+    template <class T, MemType MEM>
+    inline BoxData<T,DIM,MEM>
+    cofactor(
+            const BoxData<T,DIM,MEM>& a_X,
+            int             a_dir,
+            Array<T, DIM>   a_dx);
+    
     //==========================================================================================
     /// Compute Matrix of Cofactors
     template<class T, MemType MEM>

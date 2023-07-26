@@ -8,6 +8,13 @@ Array<T,N> Array<T,N>::Zeros()
 
 template<typename T, size_t N>
 ACCEL_DECORATION
+Array<T,N> Array<T,N>::Ones(T a_scale)
+{
+    return Array(a_scale);
+}
+
+template<typename T, size_t N>
+ACCEL_DECORATION
 Array<T,N>::Array() {}
 
 template<typename T, size_t N>

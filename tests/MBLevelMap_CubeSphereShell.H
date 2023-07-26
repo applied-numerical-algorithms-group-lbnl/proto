@@ -34,7 +34,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
         BoxData<double, 1, MEM> J0(b);
         forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, a_block, r_dir);
         X0.copyTo(a_X);
-        //a_J |= C2C(J0);
+        a_J |= C2C(J0);
 #else
         
         BoxData<double, 1, MEM> radius(a_X.box());
