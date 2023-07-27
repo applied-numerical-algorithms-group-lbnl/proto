@@ -280,15 +280,15 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize)
+MBProblemDomain buildXPoint(int a_domainSize, int a_numBlocks)
 {
-    MBProblemDomain domain(XPOINT_SIZE);
+    MBProblemDomain domain(a_numBlocks);
     auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    for (int ii = 0; ii < a_numBlocks; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % a_numBlocks, 0, Side::Hi, CCW);
     }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    for (int bi = 0; bi < a_numBlocks; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }

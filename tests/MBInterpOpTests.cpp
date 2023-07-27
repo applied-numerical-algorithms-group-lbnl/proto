@@ -2,6 +2,7 @@
 #include "Proto.H"
 #include "Lambdas.H"
 #include "MBLevelMap_Shear.H"
+#include "MBLevelMap_XPointRigid.H"
 #include "MBLevelMap_CubeSphereShell.H"
 #include "MBLevelMap_CubeSphereShellPolar.H"
 
@@ -9,14 +10,20 @@ using namespace Proto;
 #if DIM == 2
 TEST(MBInterpOp, ShearTest)
 {
-    int domainSize = 4;
-    int boxSize = 4;
+    HDF5Handler h5;
+    
+    // interplating function parameters
     Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0.3,0,0,0};
-    HDF5Handler h5;
+    
+    // grid parameters
+    int domainSize = 16;
+    int boxSize = 16;
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(1);
+    
+    // interpolation stencil generation kernel
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(3))
     {
@@ -43,6 +50,8 @@ TEST(MBInterpOp, ShearTest)
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
 
+        // initialize data. f(x) = (x - offset)^(exp)
+        // see Lambdas.H:f_polyM for details
         for (auto iter : layout)
         {
             auto& src_i = hostSrc[iter];
@@ -52,13 +61,12 @@ TEST(MBInterpOp, ShearTest)
             src_i |= Stencil<double>::CornersToCells(4)(x_pow);
         }
 
-        //hostSrc.initialize(f_polyM, map.map(), dx, exp, offset);
         hostSrc.exchange();
         hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
-        
-
+      
+        // compute interpolation one point at a time
         auto blockDomainBox = Box::Cube(domainSize);
         for (auto iter : layout)
         {
@@ -98,6 +106,113 @@ TEST(MBInterpOp, ShearTest)
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Shear_Err_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_Shear_Src_%i", nn);
         h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_Shear_Dst_%i", nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+#if PR_VERBOSE > 0
+        std::cout << "Convergence Rate: " << rate << std::endl;
+#endif
+    }
+}
+#endif
+#if 1
+TEST(MBInterpOp, XPointTest)
+{
+    int domainSize = 16;
+    int boxSize = 16;
+    int numBlocks = 5;
+    Array<double, DIM> exp{4,4,0,0,0,0};
+    Array<double, DIM> offset{0,0,0.3,0,0,0};
+    HDF5Handler h5;
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(3))
+    {
+        if (pi.abs().sum() <= 2)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    int N = 3;
+    double err[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        err[nn] = 0.0;
+        auto domain = buildXPoint(domainSize, numBlocks);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        ghost[0] = Point::Ones(2);
+        MBLevelMap_XPointRigid<HOST> map;
+        map.setNumBlocks(numBlocks); //note this added line
+        map.define(layout, ghost);
+
+        ghost[0] = Point::Ones(1);
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
+
+        for (auto iter : layout)
+        {
+            auto& src_i = hostSrc[iter];
+            auto& x_i = map.map()[iter];
+            auto block = layout.block(iter);
+            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+            src_i |= Stencil<double>::CornersToCells(4)(x_pow);
+        }
+
+        hostSrc.exchange();
+        hostSrc.fillBoundaries();
+        hostDst.setVal(0);
+        hostErr.setVal(0);
+        
+        auto blockDomainBox = Box::Cube(domainSize);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            Box patchBox = layout[iter];
+            for (auto dir : Box::Kernel(1))
+            {
+                auto bounds = hostSrc.bounds(iter, dir);
+                for (auto bound : bounds)
+                {
+                    Box boundBox = patchBox.adjacent(ghost[0]*dir);
+                    if (blockDomainBox.contains(boundBox)) { continue; }
+                    for (auto bi : boundBox)
+                    {
+                        MBDataPoint dstDataPoint(iter, bi, layout);
+                        MBPointInterpOp op(dstDataPoint, ghost[0], map, footprint, 4);
+                        op.apply(hostDst, hostSrc);
+#if PR_VERBOSE > 1
+                        pout() << "Coefs at point " << bi << std::endl;
+                        auto coefs = op.coefs(hostSrc);
+                        coefs.print("%10.2e");
+#endif
+                        double interpValue = hostDst[dstDataPoint](0);
+                        double exactValue =  hostSrc[dstDataPoint](0);
+                        double errorValue = interpValue - exactValue;
+                        err[nn] = max(abs(errorValue), err[nn]);
+                        hostErr[dstDataPoint](0) = std::abs(errorValue);
+                    }
+                }
+            }
+        }
+
+#if PR_VERBOSE > 0
+        if (procID() == 0)
+        {
+            std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        }
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_XPoint_Src_%i", nn);
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_XPoint_Dst_%i", nn);
 #endif
         domainSize *= 2;
         boxSize *= 2;
@@ -298,8 +413,13 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
 
         ghost[0] = Point::Ones(3);
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
+
+        // cube sphere -> cartesian map
         MBLevelMap_CubeSphereShell<HOST> map;
         map.define(layout, ghost);
+
+        // cube sphere -> spherical-polar maps
+        // each of these maps rotates the azimuthal singularity away from the focused block
         MBLevelMap_CubeSphereShellPolar<HOST> polarMaps[6];
         for (int bi = 0; bi < 6; bi++)
         {
@@ -309,6 +429,7 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
         ghost[0] = Point::Ones(1);
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
+        // initialize data
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
@@ -319,13 +440,15 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
             auto& src_i = hostSrc[iter];
             Box b_i = C2C.domain(layout[iter]).grow(ghost[0]);
             BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
+            // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost[0]));
             FluxBoxData<double, DIM> NT(layout[iter]);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            BoxData<double, 1> x_pow_avg = C2C(x_pow);
-            J_i.setVal(1.0);
-            Operator::cellProduct(src_i, J_i, x_pow_avg);
+            src_i |= C2C(x_pow);
+            //BoxData<double, 1> x_pow_avg = C2C(x_pow);
+            //J_i.setVal(1.0);
+            //Operator::cellProduct(src_i, J_i, x_pow_avg);
         }
 
         hostSrc.exchange();
@@ -333,14 +456,17 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
         hostDst.setVal(0);
         hostErr.setVal(0);
     
+        // Define the interpolation operator
         MBInterpOp op(ghost[0], 4);
         for (int bi = 0; bi < layout.numBlocks(); bi++)
         {
+            // each block uses a different map to define the interpolation operators
             op.define(polarMaps[bi], footprint, bi);
         }
+
+        // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
 
-        
         for (auto iter : layout)
         {
             auto& err_i = hostErr[iter];

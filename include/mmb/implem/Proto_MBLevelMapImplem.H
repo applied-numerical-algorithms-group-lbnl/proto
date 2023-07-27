@@ -1,3 +1,5 @@
+/// TODO: MBLevelMap explicitly doesn't define a non-trivial constructor
+//  This is important for it's implementation.
 /*
     template<MemType MEM>
 MBLevelMap<MEM>::MBLevelMap(

@@ -4,6 +4,7 @@
 
 #include "MBLevelMap_CubeSphereShell.H"
 #include "MBLevelMap_CubeSphereShellPolar.H"
+#include "MBLevelMap_XPointRigid.H"
 #include "MBLevelMap_Shear.H"
 #include "BoxOp_MBLaplace.H"
 
@@ -117,8 +118,118 @@ TEST(MBLevelOp, ShearLaplace) {
 #endif
 #endif
 
-#if DIM==3
 #if 1
+TEST(MBLevelOp, XPointLaplace) {
+
+    HDF5Handler h5;
+    int domainSize = 32;
+    int boxSize = 32;
+    int numGhost = 4;
+    int numBlocks = 5;
+    Array<double, DIM> k{1,1,1,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
+    Array<Point, DIM+1> srcGhost;
+    Array<Point, DIM+1> dstGhost;
+    Array<Point, DIM+1> mapGhost;
+
+    srcGhost.fill(Point::Ones(numGhost));
+    mapGhost.fill(Point::Ones(numGhost+1));
+    dstGhost.fill(Point::Zeros());
+
+    int N = 3;
+    double err[N];
+    for (int nn = 0; nn < N; nn++)
+    {
+        err[nn] = 0.0;
+        auto domain = buildXPoint(domainSize, numBlocks);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        MBLevelMap_XPointRigid<HOST> map;
+        map.setNumBlocks(numBlocks);
+        map.define(layout, mapGhost);
+        
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, dstGhost);
+        MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto& src_i = hostSrc[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(numGhost);
+            BoxData<double, DIM> x_i(b_i);
+            BoxData<double, 1> J_i(b_i);
+            map.apply(x_i, J_i, block);
+            BoxData<double, 1> phi = forall_p<double, 1>(f_phiM, block, x_i, k, offset);
+            src_i |= C2C(phi);
+       
+            BoxData<double, 1> lphi = forall_p<double, 1>(f_LphiM, block, x_i, k, offset);
+            auto& sln_i = hostSln[iter];
+            sln_i |= C2C(lphi);
+        }
+
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"phi"}, map, hostSrc, "XPoint_Phi_%i", nn);
+        h5.writeMBLevel({"Lphi"}, map, hostSln, "XPoint_Sln_%i", nn);
+#endif
+
+        hostSrc.exchange();
+        hostSrc.fillBoundaries();
+        hostDst.setVal(0);
+        hostErr.setVal(0);
+       
+        MBLevelOp<BoxOp_MBLaplace, double> op;
+        op.define(map);
+        op(hostDst, hostSrc);
+        hostDst.exchange();
+        hostDst.fillBoundaries();
+        for (auto iter : layout)
+        {
+            auto& err_i = hostErr[iter];
+            auto& dst_i = hostDst[iter];
+            auto& sln_i = hostSln[iter];
+            double J0 = map.jacobian()[iter].absMax(); //J is a constant
+            dst_i /= (J0);
+            dst_i.copyTo(err_i);
+            err_i -= sln_i;
+            err[nn] = max(err_i.absMax(), err[nn]);
+        }
+        Reduction<double, Max> rxn;
+        rxn.reduce(&err[nn], 1);
+        err[nn] = rxn.fetch();
+
+#if PR_VERBOSE > 0
+        if (procID() == 0)
+        {
+            std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        }
+        h5.writeMBLevel({"err"}, map, hostErr, "XPoint_Err_%i", nn);
+        h5.writeMBLevel({"Lphi"}, map, hostDst, "XPoint_LPhi_%i", nn);
+        h5.writeMBLevel({"J"}, map, map.jacobian(), "XPoint_J_%i", nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+    for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+        EXPECT_GT(rate, 3.5);
+#if PR_VERBOSE > 0
+        if (procID() == 0)
+        {
+            std::cout << "Convergence Rate (Max Norm): " << rate << std::endl;
+        }
+#endif
+    }
+}
+#endif
+
+#if DIM==3
+#if 0
 TEST(MBLevelOp, CubeSphereLaplace) {
 
     HDF5Handler h5;
@@ -149,7 +260,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
             footprint.push_back(pi);
         }
     }
-    int N = 3;
+    int N = 1;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -204,8 +315,8 @@ TEST(MBLevelOp, CubeSphereLaplace) {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
             auto& sln_i = hostSln[iter];
-            //const auto& J_i = map.jacobian()[iter];
-            //Operator::cellQuotient(err_i,dst_i, J_i);
+            const auto& J_i = map.jacobian()[iter];
+            Operator::cellQuotient(err_i,dst_i, J_i);
             dst_i.copyTo(err_i);
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);

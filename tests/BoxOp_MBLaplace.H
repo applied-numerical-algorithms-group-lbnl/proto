@@ -29,11 +29,12 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
             const BoxData<T, 1>& a_state,
             int a_dir) const
     {
-        // Lphi = (1/J)*div(grad(J*phi))
-        // faceGrad = grad(J*phi)
+        // Lphi = (1/<J>)*div(<NT>_d*<grad(phi)>_d)
+        // faceGrad = <grad(phi)>_d
         auto faceGrad =  Operator::_faceGradxPhi(
                 a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
                 m_Jf[a_dir], m_Jf[a_dir], a_dir);
+        // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
         a_flux = Operator::_faceMatrixProductAB(
                 faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
     }
@@ -45,10 +46,12 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
         m_NTMatrix.clear();
         m_Jf.clear();
         Array<BoxData<T,DIM>, DIM> NT;
+        this->jacobian().printData();
         for (int dir = 0; dir < DIM; dir++)
         {
             m_NT.push_back(Operator::cofactor(this->x(),dir, this->dx()));
             m_Jf.push_back(Stencil<double>::CellToFace(dir)(this->jacobian()));
+            m_Jf[m_Jf.size()-1].printData();            
             NT[dir].define(m_NT[dir].box());
             m_NT[dir].copyTo(NT[dir]);
         }
