@@ -125,7 +125,7 @@ TEST(MBLevelOp, XPointLaplace) {
     int domainSize = 32;
     int boxSize = 32;
     int numGhost = 4;
-    int numBlocks = 5;
+    int numBlocks = 8;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;

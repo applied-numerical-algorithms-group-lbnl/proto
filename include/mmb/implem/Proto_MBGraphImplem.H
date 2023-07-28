@@ -14,22 +14,7 @@ std::vector<Point> codimDirs(unsigned int a_codim)
     return dirs;
 }
 
-std::vector<Point> getBasisVectors(const Point& a_pt)
-{
-    std::vector<Point> basis;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        if (a_pt[dir] != 0)
-        {
-            basis.push_back(Point::Basis(dir)*a_pt[dir]);
-        }
-    }
-    PROTO_ASSERT(a_pt.codim() == basis.size(),
-            "getBasisVector | Error: Data corruption.");
-    return basis;
-}
-
-//=================================================================================================
+//=============================================================================================
 // BLOCK GRAPH NODE
 
 MBGraphNode::MBGraphNode(unsigned int a_index)
@@ -40,12 +25,19 @@ MBGraphNode::MBGraphNode(unsigned int a_index)
 void MBGraphNode::addArc(unsigned int a_block,
     Point a_toDst, Point a_fromDst)
 {
+    // ignore self-arcs
     if (a_block == index) { return; }
+    
+    // create the arc
     MBGraphArc arc(index, a_block, a_toDst, a_fromDst); 
+    
+    // check for redundancies
     for (auto arc : arcs[a_toDst])
     {
-        if (arc.dstBlock == a_block) {return; } //redundant arc
+        if (arc.dstBlock == a_block) {return; }
     }
+
+    // add the arc to the map
     arcs[a_toDst].push_back(arc);
 }
 
@@ -312,7 +304,6 @@ inline CoordPermutation& MBGraph::rotation(unsigned int a_block, Point a_dir) co
     return m_blocks[a_block]->arcs[a_dir][0].R;
 }
 
-/// START HERE
 inline CoordPermutation& MBGraph::rotation(
         unsigned int a_srcBlock,
         Point a_dir,
