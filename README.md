@@ -30,7 +30,7 @@ Proto is a middleware layer that allows performance portability in scientific co
    After doing this, the `.gitmodules` file will show the path and URL of the submodule.
 
 ### Configuring
-* The simplest command assumes you are at the top directory of the repo and is `cmake -B build`. More generically, the command is `cmake -S <source-dir> -B <build-dir>`. The argument to `-S` is the source directory containing the top-level `CMakeLists.txt` file: if not provided, it is assumed to be the current directory. The argument to `-B` is the directory where the binaries should be built, and does not need to exist when the `cmake` command is invoked. Additionally, there are various options which can be set during this step, each preceded by the `-D` flag. Valid choices are listed in brackets, with defaults in italics. They are:
+* If using CMake, the simplest command assumes you are at the top directory of the repo and is `cmake -B build`. More generically, the command is `cmake -S <source-dir> -B <build-dir>`. The argument to `-S` is the source directory containing the top-level `CMakeLists.txt` file: if not provided, it is assumed to be the current directory. The argument to `-B` is the directory where the binaries should be built, and does not need to exist when the `cmake` command is invoked. Additionally, there are various options which can be set during this step, each preceded by the `-D` flag. Valid choices are listed in brackets, with defaults in italics. They are:
    - ENABLE_CUDA=[ON, *OFF*]
    - ENABLE_HIP=[ON, *OFF*]
    - ENABLE_MPI=[ON, *OFF*]
@@ -46,6 +46,18 @@ Proto is a middleware layer that allows performance portability in scientific co
    - Turn on timers: TIMERS=[*ON*, OFF]
    - Turn on code that checks if copying/aliasing is working correctly: MEMCHECK=[ON, *OFF*]
    - Print the amount of data allocated per protoMalloc: MEMTRACK=[ON, *OFF*]
+
+* The `proto_make` Python script offers ease-of-use configuring for those unfamiliar with CMake. 
+Using Python to invoke the script will display all targets within the Proto project -- 
+some of these are examples while others are tests written for CI purposes. A target
+for the script to compile can be specified using the `-t` flag. Special targets are `ALL` and `TEST`.
+The former will build all targets within the project while the latter will take the additional step
+of running all CI tests. If specific targets are provided (even if they are CI tests) they are only
+compiled, not run. However, they have a symlink created for their executable in the root source directory
+with an `.exe` suffix.
+
+The full set of options available during CMake configuration are available when using `proto_make` too, 
+but without any `ENABLE_` prefixes.
    
 ### Building
 * To build all of the CMake targets in this project in parallel, run `cmake --build <build-dir> --parallel`. An integer can be provided at the end of this command to set the level of parallelization. The `<build-dir>` is NOT the name of the source directory containing the targets you want built (such as `examples`), but rather the name of the directory provided to the `-B` flag in the configuration command.
