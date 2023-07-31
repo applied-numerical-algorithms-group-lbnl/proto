@@ -47,6 +47,7 @@ Proto is a middleware layer that allows performance portability in scientific co
    - Turn on code that checks if copying/aliasing is working correctly: MEMCHECK=[ON, *OFF*]
    - Print the amount of data allocated per protoMalloc: MEMTRACK=[ON, *OFF*]
 
+#### `proto_make`
 * The `proto_make` Python script offers ease-of-use configuring for those unfamiliar with CMake. 
 Using Python to invoke the script will display all targets within the Proto project -- 
 some of these are examples while others are tests written for CI purposes. A target
