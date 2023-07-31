@@ -95,3 +95,8 @@ The following modules are needed when compiling on OLCF's Crusher machine:
     - rocm
     - PrgEnv-amd
     - craype-accel-amd-gfx90a
+
+### Cleanup
+The script `cleanup.sh` can be run to remove output files in the root source generated when running the project's targets.
+To remove output files from the build directory run `cmake -B <build-dir> -t dataclean`.
+To remove executables from the build directory run `mckae -B <build-dir> -t clean`.
