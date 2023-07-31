@@ -257,7 +257,7 @@ foreach (_variableName ${_variableNames})
 endforeach()
 
 add_custom_target(dataclean COMMAND cd "${CMAKE_BINARY_DIR}/bin" 
-&& rm -rf pout* *.hdf5 *.curve visitlog.py *.table doxygen.warn)
+&& rm -rf *.vtk pout* *.hdf5 *.curve visitlog.py *.table doxygen.warn)
 
 # setup Proto config
 add_subdirectory(include)
