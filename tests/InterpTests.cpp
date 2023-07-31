@@ -111,7 +111,9 @@ TEST(InterpStencil, Constant) {
     
 }
 TEST(InterpStencil, Linear) {
-    HDF5Handler h5;
+#ifdef PR_HDF5
+	HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
@@ -164,7 +166,9 @@ TEST(InterpStencil, Linear) {
 }
 
 TEST(InterpStencil, Quadratic) {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
@@ -221,7 +225,9 @@ TEST(InterpStencil, Quadratic) {
     }
 }
 TEST(InterpStencil, FiniteVolume) {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
