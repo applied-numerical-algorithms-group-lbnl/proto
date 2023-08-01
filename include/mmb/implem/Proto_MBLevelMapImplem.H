@@ -13,14 +13,9 @@ MBLevelMap<MEM>::MBLevelMap(
 template<MemType MEM>
 void MBLevelMap<MEM>::define(
         MBDisjointBoxLayout& a_layout,
-        Array<Point, DIM+1>& a_ghost,
-        unsigned int a_block,
-        int a_order)
+        Array<Point, DIM+1>& a_ghost)
 {
-    m_block = a_block;
-    m_order = a_order;
-    m_ghost = a_ghost;
-    m_c2c = Stencil<double>::CornersToCells(a_order);
+    m_c2c = Stencil<double>::CornersToCells(4);
     m_X.define(a_layout, a_ghost);
     m_J.define(a_layout, a_ghost);
     m_X.setVal(0);

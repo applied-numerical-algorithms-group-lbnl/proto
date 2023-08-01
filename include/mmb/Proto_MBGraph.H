@@ -125,6 +125,14 @@ namespace Proto
         /// Get Number of Boundaries
         /** If the specified boundary is codimension-1, the output will be at most 1. */
         inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
+        
+        /// Get Boundary Arcs
+        /** Get a list of MBGraphArc objects associated with a boundary. If the boundary
+         *  does not exist, an empty vector is returned. Not intended for public use.
+         */
+        inline std::vector<MBGraphArc> boundaries(
+                unsigned int a_srcBlock,
+                Point        a_dir) const;
 
         /// Full Connectivity
         /** Returns the full list of directions of all codimensionalities that define a
@@ -170,6 +178,15 @@ namespace Proto
                 unsigned int a_srcBlock,
                 Point a_dir,
                 unsigned int a_dstBlock) const;
+        
+        /// Get Rotation
+        /** Obtain the coordinate rotation from a specified block to an adjacent block which is
+         *  connected by a codimension-1 boundary. If the specified direction is not
+         *  not codimension-1, this function will yield an error.
+         */
+        inline CoordPermutation& rotation(
+                unsigned int a_block,
+                Point a_dir) const;
 
         /// Get Adjacent Block
         /** Obtain the block adjacent to a specified block in a specified codimension-1
@@ -178,6 +195,14 @@ namespace Proto
                 unsigned int    a_srcBlock,
                 unsigned int    a_dir,
                 Side::LoHiSide  a_side) const;
+        
+        /// Get Adjacent Block (Overload)
+        /** This function is the same as the other version of adjacent. This function will fail
+         *  if a codimension-2+ point is supplied. */
+        inline unsigned int adjacent(
+                unsigned int    a_srcBlock,
+                Point           a_dir) const;
+        
 
         /// Equality Operator
         inline bool operator==(const MBGraph& a_rhs) const;
@@ -207,29 +232,6 @@ namespace Proto
         bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;
         
-        /// Get Adjacent Block (Overload)
-        /** This function is the same as the other version of adjacent. This function will fail
-         *  if a codimension-2+ point is supplied. */
-        inline unsigned int adjacent(
-                unsigned int    a_srcBlock,
-                Point           a_dir) const;
-        
-        /// Get Boundary Arcs
-        /** Get a list of MBGraphArc objects associated with a boundary. If the boundary
-         *  does not exist, an empty vector is returned. Not intended for public use.
-         */
-        inline std::vector<MBGraphArc> boundaries(
-                unsigned int a_srcBlock,
-                Point        a_dir) const;
-        
-        /// Get Rotation
-        /** Obtain the coordinate rotation from a specified block to an adjacent block which is
-         *  connected by a codimension-1 boundary. If the specified direction is not
-         *  not codimension-1, this function will yield an error.
-         */
-        inline CoordPermutation& rotation(
-                unsigned int a_block,
-                Point a_dir) const;
         
     };
 #include "implem/Proto_MBGraphImplem.H"
