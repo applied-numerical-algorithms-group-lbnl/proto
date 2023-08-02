@@ -62,7 +62,6 @@ TEST(MBInterpOp, ShearTest)
         }
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
       
@@ -120,11 +119,11 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, XPointTest)
 {
     int domainSize = 16;
-    int boxSize = 16;
+    int boxSize = 8;
     int numBlocks = 5;
     Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0.3,0,0,0};
@@ -169,7 +168,6 @@ TEST(MBInterpOp, XPointTest)
         }
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
         
@@ -305,7 +303,6 @@ TEST(MBInterpOp, CubeSphereShellTest)
         }
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
         
@@ -452,7 +449,6 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
         }
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
     

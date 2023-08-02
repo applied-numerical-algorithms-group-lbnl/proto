@@ -11,7 +11,15 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     Point               a_boundGhost)
 {
     Array<Point, DIM + 1> ghost;
-    ghost.fill(a_ghost);
+    if (a_ghost == Point::Zeros())
+    {
+        ghost.fill(Point::Zeros());
+
+    } else {
+        // Assuming 4th order block boundary interpolation is desired
+        ghost.fill(a_ghost + Point::Ones(2));
+        ghost[0] = a_ghost;
+    }
     define(a_layout, ghost, a_boundGhost);
 }
 
@@ -19,7 +27,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     const MBDisjointBoxLayout&    a_layout,
     const Array<Point, DIM+1>&    a_ghost,
-    Point                   a_boundGhost)
+    Point                         a_boundGhost)
 {
     define(a_layout, a_ghost, a_boundGhost);
 }
@@ -232,32 +240,20 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
     {
         data->setVal(a_value);
     }
-    fillBoundaries();
-}
-
-template <typename T, unsigned int C, MemType MEM, Centering CTR>
-void MBLevelBoxData<T, C, MEM, CTR>::fillBoundaries()
-{
-    PR_TIME("MBLevelBoxData::fillBoundaries");
-#ifdef PR_MPI
-    {
-        PR_TIME("MBLevelBoxData::fillBoundaries (MPI barrier)");
-        barrier();
-    }
-#endif
-    m_exchangeCopier.execute();
-}
-
-template <typename T, unsigned int C, MemType MEM, Centering CTR>
-void MBLevelBoxData<T, C, MEM, CTR>::interpolate()
-{
+    exchange();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::exchange()
 {
-    fillBoundaries();
-    interpolate();
+    PR_TIME("MBLevelBoxData::exchange");
+#ifdef PR_MPI
+    {
+        PR_TIME("MBLevelBoxData::exchange (MPI barrier)");
+        barrier();
+    }
+#endif
+    m_exchangeCopier.execute();
 }
 
 // TODO: This may be too much overhead in which case MBLevelBoxData
@@ -267,14 +263,8 @@ template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
 {
     PR_TIME("MBLevelBoxData::copyTo");
-    PROTO_ASSERT(a_rhs.layout().domain().graph() == layout().domain().graph(),
+    PROTO_ASSERT(a_rhs.layout().compatible(layout()),
                  "MBLevelBoxData::copyTo | Error: Incompatible datasets");
-    /*
-    for (int bi = 0; bi < numBlocks(); bi++)
-    {
-        (*this)[bi].copyTo(a_rhs[bi]);
-    }
-    */
     if (SRC_MEM == DST_MEM)
     {
         auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);
@@ -286,10 +276,6 @@ void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CT
     else
     {
         MayDay<void>::Abort("MBLevelBoxData::copyTo is not implemented for SRC_MEM != DST_MEM");
-        // MBLevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
-        // this->copyToSimple(tmpSrc);
-        // protoThreadSynchronize();
-        // tmpSrc.copyTo(a_dest);
     }
 }
 
@@ -606,16 +592,6 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     if (domainBoundaryDirs.size() > 0 )
     {
         nearBoundary = true;
-#if PR_VERBOSE == 5
-
-        pout() << "Processing a point near the domain boundary: " << a_center << std::endl;
-        pout() << "Initial footprint: " << std::endl;
-        for (auto pi : a_footprint)
-        {
-            pout() << pi << ", ";
-        }
-        pout() << std::endl;
-#endif
     } 
     for (auto dir : domainBoundaryDirs)
     {
@@ -631,12 +607,6 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         {
             extendDomain = extendDomain.shift(-dir);
         }
-#if PR_VERBOSE == 5
-        pout() << "boundary dir: " << dir << std::endl;
-        pout() << "contract dirs: " << contractDirs << std::endl;
-        pout() << "span box: " << spanBox << std::endl;
-        pout() << "extend domain: " << extendDomain << std::endl;
-#endif
         for (auto fi : a_footprint)
         {
             if (extendDomain.contains(contractDirs*fi))
@@ -675,17 +645,6 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     }
 
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
-#if PR_VERBOSE == 5
-    if (nearBoundary)
-    {
-        pout() << "Final footprint: " << std::endl;
-        for (auto fi : footprint_v)
-        {
-            pout() << fi.point - a_center << ", ";
-        }
-        pout() << std::endl;
-    }
-#endif
     return footprint_v;
 }
 

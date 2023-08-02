@@ -202,13 +202,6 @@ LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) c
         B = layout()[a_index].extrude(Point::Basis(ctr,1));
     }
     return B;
-    /*
-    switch (CTR)
-    {
-        case PR_NODE: return layout()[a_index].extrude(Point::Ones()); break;
-        default: return layout()[a_index]; break;
-    }
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -220,7 +213,8 @@ LevelBoxData<T, C, MEM, CTR>::patchSize() const
     switch (CTR)
     {
         case PR_NODE: boxSize += Point::Ones(); break;
-        default: break;
+        case PR_CELL: break;
+        default: MayDay<void>::Abort("LevelBoxData::patchSize | Specified centering not implemented");
     }
     for (int ii = 0; ii < DIM; ii++)
     {

@@ -52,10 +52,12 @@ class MBLevelMap
      *  \param a_ghost      An array of ghost data sizes. This ghost array is used
      *                      To define how much ghost data should be allocated for
      *                      cached arrays of the coordinates and Jacobian.
+     *  \param a_block      The block id associated with this map. Often unused.
      */
     inline void define(
             MBDisjointBoxLayout& a_layout,
-            Array<Point, DIM+1>& a_ghost);
+            Array<Point, DIM+1>& a_ghost,
+            unsigned int         a_block = 0);
 
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
@@ -169,7 +171,10 @@ class MBLevelMap
     
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx(int a_blockID) const;
-    
+
+    /// Get Block
+    inline unsigned int block() const { return m_block; }
+
     /// Get Mapped Coordinate Values
     /** Given a node-centered box and grid spacing, generate the node centered mapped
      *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
@@ -182,10 +187,11 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
-        std::vector<Array<double, DIM>>             m_dx; ///< Grid spacing in mapped space
-        MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;  ///< Cached coodinate values
-        MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;  ///< Cached Jacobian values
-        Stencil<double>                             m_c2c;///< Cached corners-to-cells Stencil
+        std::vector<Array<double, DIM>>             m_dx;   ///< Grid spacing in mapped space
+        MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;    ///< Cached coodinate values
+        MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;    ///< Cached Jacobian values
+        Stencil<double>                             m_c2c;  ///< Cached corners-to-cells Stencil
+        unsigned int                                m_block;///< Block associated with this map (often unused)
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

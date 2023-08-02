@@ -69,7 +69,6 @@ TEST(MBLevelOp, ShearLaplace) {
 #endif
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
        
@@ -77,7 +76,6 @@ TEST(MBLevelOp, ShearLaplace) {
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
-        hostDst.fillBoundaries();
         for (auto iter : layout)
         {
             auto& err_i = hostErr[iter];
@@ -178,7 +176,6 @@ TEST(MBLevelOp, XPointLaplace) {
 #endif
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
        
@@ -186,7 +183,6 @@ TEST(MBLevelOp, XPointLaplace) {
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
-        hostDst.fillBoundaries();
         for (auto iter : layout)
         {
             auto& err_i = hostErr[iter];
@@ -303,7 +299,6 @@ TEST(MBLevelOp, CubeSphereLaplace) {
         }
 
         hostSrc.exchange();
-        hostSrc.fillBoundaries();
         hostDst.setVal(0);
         hostErr.setVal(0);
        

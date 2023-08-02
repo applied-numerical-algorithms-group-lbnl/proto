@@ -147,7 +147,7 @@ TEST(MBLevelBoxData, FillBoundaries) {
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     Box dirs = Box::Kernel(1);
 
@@ -284,7 +284,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     // input footprint
     std::vector<Point> footprint;
@@ -361,7 +361,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     // input footprint
     std::vector<Point> footprint;
@@ -432,7 +432,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     // input footprint
     std::vector<Point> footprint;
@@ -512,7 +512,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     // input footprint
     std::vector<Point> footprint;
@@ -555,7 +555,7 @@ TEST(MBLevelBoxData, MBDataPointOperator)
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost, Point::Ones());
     hostData.initialize(f_MBPointID);
-    hostData.fillBoundaries();
+    hostData.exchange();
 
     for (auto iter : layout)
     {
