@@ -24,7 +24,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
     {
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
-#if 0
+#if 1
         auto C2C = Stencil<double>::CornersToCells(4);
         int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
         double r0 = CUBE_SPHERE_SHELL_R0;
@@ -36,7 +36,6 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
         X0.copyTo(a_X);
         a_J |= C2C(J0);
 #else
-        
         BoxData<double, 1, MEM> radius(a_X.box());
         forallInPlace_p(
             [] PROTO_LAMBDA (Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
