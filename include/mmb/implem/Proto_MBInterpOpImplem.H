@@ -218,11 +218,6 @@ void MBInterpOp::define(
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
-                    pout() << "Triple Point Stencil: dir = " << dir << std::endl;
-                    for (auto src : m_ops[m_ops.size()-1].sources())
-                    {
-                        pout() << src.point << " | " << src.srcBlock() << std::endl;
-                    }
                 }
                 continue;
             }

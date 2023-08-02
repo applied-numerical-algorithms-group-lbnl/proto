@@ -377,7 +377,7 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
 {
     HDF5Handler h5;
     int domainSize = 16;
-    int boxSize = 16;
+    int boxSize = 8;
     int thickness = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
@@ -462,9 +462,12 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
 
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
-
+        hostDst.exchange();
         for (auto iter : layout)
         {
+            auto block = layout.block(iter);
+            Box blockDomain = layout.domain().blockDomain(block).box();
+
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
             auto& src_i = hostSrc[iter];
@@ -474,8 +477,18 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
             dst_i.copyTo(err_i);
             err_i -= src_i;
             err_i += tmp;
-            err[nn] = max(err_i.absMax(), err[nn]);
-            errL1[nn] += err_i.sum();
+            
+            for (auto dir : Box::Kernel(1).grow(-Point::Basis(radialDir)))
+            {
+                if (dir == Point::Zeros()) {continue; }
+                Box bi = blockDomain.adjacent(dir*ghost[0]);
+                BoxData<double> ei(bi);
+                ei.setVal(0);
+                err_i.copyTo(ei);
+                ei.printData();
+                err[nn] = max(ei.absMax(), err[nn]);
+                errL1[nn] += ei.sum();
+            }
         }
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
