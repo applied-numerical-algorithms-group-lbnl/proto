@@ -881,7 +881,8 @@ template<class T, MemType MEM>
 void
 cofactorMatrix(
         BoxData<T,DIM,MEM,DIM>& a_NTMatrix,
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        const FluxBoxData<T,DIM,MEM>& a_NTFaces,
+        //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
         int a_dirNorm)                         
 {
     MayDay<void>::Abort("Operator::cofactorMatrix | Error: Function not implemented.");
@@ -1165,51 +1166,52 @@ cubedSphereDetAFlux2(
 template<class T, MemType MEM>
 void
 cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
-                    Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                    FluxBoxData<T,DIM,MEM>& a_NT,
                     BoxData<T,1,MEM>& a_J,
                     BoxData<T, 1, MEM>& a_radius,
                     const Box& a_bx,
                     T a_h,
                     int a_block)
 {
-  Array<BoxData<T, DIM, MEM>, DIM> NT3;
-  BoxData<T, DIM, MEM> X3;
-  cubedSphereGeometry(X3,NT3,a_J,a_radius,a_bx,a_h); 
-  a_X.define(X3.box());
-  // Shuffle data to get correct orientation.
-  Array<Array<unsigned int,DIM>, 6>
-    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM> , 6>
-    Xsigns = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
-  //Array<Array<unsigned int,DIM>, 6>
-  //   permuteT = {{2,0,1},{2,0,1},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  //Array<Array<int,DIM> , 6>
-  //  XsignsT = {{-1,1,-1},{1,1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
-  forallInPlace([]PROTO_LAMBDA(
-                               Var<T,DIM,MEM>& a_XTrans,                      
-                               Var<T,DIM,MEM>& a_X3,
-                               Array<unsigned int,DIM> a_permute,
-                               Array<int,DIM> a_signs)         
-         {       
-           for (int dir = 0; dir < DIM ; dir++)
-             {
-               a_XTrans(dir) = a_signs[dir]*a_X3(a_permute[dir]);
-             }
-         },a_X,X3,permute[a_block],Xsigns[a_block]);
-  for (int dir = 0; dir < DIM; dir++)
+    //Array<BoxData<T, DIM, MEM>, DIM> NT3;
+    FluxBoxData<T,DIM,MEM> NT3;
+    BoxData<T, DIM, MEM> X3;
+    cubedSphereGeometry(X3,NT3,a_J,a_radius,a_bx,a_h); 
+    a_X.define(X3.box());
+    // Shuffle data to get correct orientation.
+    Array<Array<unsigned int,DIM>, 6>
+        permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    Array<Array<int,DIM> , 6>
+        Xsigns = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+    //Array<Array<unsigned int,DIM>, 6>
+    //   permuteT = {{2,0,1},{2,0,1},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    //Array<Array<int,DIM> , 6>
+    //  XsignsT = {{-1,1,-1},{1,1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
+    forallInPlace([]PROTO_LAMBDA(
+                Var<T,DIM,MEM>& a_XTrans,                      
+                Var<T,DIM,MEM>& a_X3,
+                Array<unsigned int,DIM> a_permute,
+                Array<int,DIM> a_signs)         
+    {       
+        for (int dir = 0; dir < DIM ; dir++)
+        {
+            a_XTrans(dir) = a_signs[dir]*a_X3(a_permute[dir]);
+        }
+    },a_X,X3,permute[a_block],Xsigns[a_block]);
+    a_NT.define(NT3.box());
+    for (int dir = 0; dir < DIM; dir++)
     {
-      a_NT[dir].define(NT3[dir].box());
-      forallInPlace([]PROTO_LAMBDA(
-                                   Var<T,DIM,MEM>& a_ntface,                      
-                                   Var<T,DIM,MEM>& a_ntface3,
-                                   Array<unsigned int,DIM> a_permute,
-                                   Array<int,DIM> a_signs)         
-                    {       
-                      for (int dir = 0; dir < DIM; dir++)
-                        {
-                          a_ntface(dir) = a_signs[dir]*a_ntface3(a_permute[dir]);
-                        }
-                    },a_NT[dir],NT3[dir],permute[a_block],Xsigns[a_block]);
+        forallInPlace([]PROTO_LAMBDA(
+                    Var<T,DIM,MEM>& a_ntface,                      
+                    Var<T,DIM,MEM>& a_ntface3,
+                    Array<unsigned int,DIM> a_permute,
+                    Array<int,DIM> a_signs)         
+        {       
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                a_ntface(dir) = a_signs[dir]*a_ntface3(a_permute[dir]);
+            }
+        },a_NT[dir],NT3[dir],permute[a_block],Xsigns[a_block]);
     }
 }
 
@@ -1217,14 +1219,13 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
 template<class T, MemType MEM>
 void
 cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
-                    Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                    FluxBoxData<T,DIM,MEM>& a_NT,
                     BoxData<T,1,MEM>& a_J,
                     BoxData<T, 1, MEM>& a_radius,
                     const Box& a_bx,
                     T a_h)
 {
   PR_TIMERS("cubedSphereGeometry");
-  //HDF5Handler  h5;
   a_X.define(a_bx.extrude(Point::Ones()));
   cubedSphere_nSphere(a_X,a_h);
   forallInPlace([]PROTO_LAMBDA(
@@ -1237,16 +1238,11 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                   a_x(2) *= a_r(0);
                 },a_X,a_radius);
 
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      a_NT[dir].define(a_bx.extrude(Point::Basis(dir)));
-    }
+  a_NT.define(a_bx);
   BoxData<T,DIM,MEM> d1n_cross_n(a_bx.extrude(Point::Ones() - Point::Basis(1)));
   BoxData<T,DIM,MEM> n_cross_d2n(a_bx.extrude(Point::Ones() - Point::Basis(2)));
   cubedSphere_edge1(d1n_cross_n,a_h);
-  //h5.writePatch(a_h,d1n_cross_n,"d1n_x_n_" + to_string(a_bx.high()[0]+1));
   cubedSphere_edge2(n_cross_d2n,a_h);
-  //h5.writePatch(a_h,n_cross_d2n,"n_x_d2n_" + to_string(a_bx.high()[0]+1));
   // Cofactors.
 
   Stencil<T> div1 = (1.0)*(Shift(Point::Basis(1)))+ (-1.0)*(Shift(Point::Zeros()));
@@ -1257,14 +1253,14 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
   a_NT[0] += div1(n_cross_d2n,.5/a_h);
   
   forallInPlace([]PROTO_LAMBDA(
-                               Var<T,DIM,MEM>& a_NT0,
-                               const Var<T,1,MEM>& a_r)
-                {
-                  T rsq = a_r(0)*a_r(0);
-                  a_NT0(0) *= rsq;
-                  a_NT0(1) *= rsq;
-                  a_NT0(2) *= rsq;  
-                },a_NT[0],a_radius);
+              Var<T,DIM,MEM>& a_NT0,
+              const Var<T,1,MEM>& a_r)
+      {
+          T rsq = a_r(0)*a_r(0);
+          a_NT0(0) *= rsq;
+          a_NT0(1) *= rsq;
+          a_NT0(2) *= rsq;  
+      },a_NT[0],a_radius);
                 
   n_cross_d2n.copyTo(a_NT[1]);
   d1n_cross_n.copyTo(a_NT[2]);
@@ -1274,27 +1270,27 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
   {
     const BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0,-1));
     forallInPlace([]PROTO_LAMBDA(
-                                 Var<T,DIM,MEM>& a_nttan1,  
-                                 const Var<T,1,MEM>& a_rtop,
-                                 const Var<T,1,MEM>& a_r)
-                {
-                  T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
-                  for (int dir = 0; dir < DIM ; dir++)
-                    {
-                      a_nttan1(dir) *= drsq;              
-                    }
-                },a_NT[1],rtop,a_radius);
+                Var<T,DIM,MEM>& a_nttan1,  
+                const Var<T,1,MEM>& a_rtop,
+                const Var<T,1,MEM>& a_r)
+        {
+            T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
+            for (int dir = 0; dir < DIM ; dir++)
+            {
+                a_nttan1(dir) *= drsq;              
+            }
+        },a_NT[1],rtop,a_radius);
     forallInPlace([]PROTO_LAMBDA(
-                                 Var<T,DIM,MEM>& a_nttan2,
-                                 const Var<T,1,MEM>& a_rtop,
-                                 const Var<T,1,MEM>& a_r)
-                {
-                  T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
-                  for (int dir = 0; dir < DIM ; dir++)
-                    {
-                      a_nttan2(dir) *= drsq;
-                    }
-                },a_NT[2],rtop,a_radius);
+            Var<T,DIM,MEM>& a_nttan2,
+            const Var<T,1,MEM>& a_rtop,
+            const Var<T,1,MEM>& a_r)
+    {
+        T drsq = (a_rtop(0)*a_rtop(0) - a_r(0)*a_r(0))/2;
+        for (int dir = 0; dir < DIM ; dir++)
+        {
+            a_nttan2(dir) *= drsq;
+        }
+    },a_NT[2],rtop,a_radius);
   }
    //Jacobian.
   a_J.define(a_bx);
@@ -1303,19 +1299,10 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
   BoxData<T,MEM> detAFlux2(a_bx.extrude(Point::Basis(2)));
   cubedSphereDetAFlux1(detAFlux1,a_h);
   cubedSphereDetAFlux2(detAFlux2,a_h);
-  //cout << "J calculation" << endl;
 
   a_J += div1(detAFlux1,.5);
   a_J += div2(detAFlux2,.5);
-  //h5.writePatch(a_h,detAFlux2,"AFlux2" + to_string(a_bx.high()[0]+1));
-  //foo.print();
-  //h5.writePatch(a_h,a_J,"JNoDr" + to_string(a_bx.high()[0]+1));
-  //a_J.print();
-  //cout << "drtest" << endl;
   const BoxData<T,1,MEM> rtop = alias(a_radius,Point::Basis(0,-1));
-  /* BoxData<T,1,MEM> drtest = ((1.0)*Shift(Point::Basis(0)))(rtop,-1.0);
-     drtest += a_radius;
-     drtest.print();*/
   forallInPlace([]PROTO_LAMBDA(
                                Var<T,1,MEM>& a_j,
                                const Var<T,1,MEM>& a_rtop,
@@ -1323,13 +1310,6 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
                 {
                   T factor = (a_rtop(0)*a_rtop(0)*a_rtop(0)
                               - a_r(0)*a_r(0)*a_r(0))/3;
-                  if (factor < 0.)
-                    {
-                      //cout << endl << a_j(0) << endl;
-                      //cout << factor << endl;
-                      //cout << a_rtop(0) << endl;
-                      //cout << a_r(0) << endl << endl;
-                    }
                   a_j(0) *= factor;
                 },a_J,rtop,a_radius);
   a_J*= 1.0/(a_h*a_h);
@@ -1338,9 +1318,10 @@ cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 cofactorMatrix(
-               const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-               int a_dirNorm,
-               Array<T,DIM> a_dx)                         
+        //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        const FluxBoxData<T,DIM,MEM>& a_NTFaces,
+        int a_dirNorm,
+        Array<T,DIM> a_dx)                         
 {
     auto N = cofactorMatrix(a_NTFaces, a_dirNorm);
     T area = 1.0;
@@ -1356,18 +1337,18 @@ cofactorMatrix(
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 cofactorMatrix(
-               const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-               int a_dirNorm)                         
+        //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        const FluxBoxData<T,DIM,MEM>& a_NTFaces,
+        int a_dirNorm)                         
 {
     PR_TIME("Operator::cofactorMatrix");
     Array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
     for (int dir = 0; dir < DIM; dir++)
     {
+        auto S = Stencil<T>::faceToCell(dir,4)*Stencil<T>::CellToFace(a_dirNorm);
         if (dir != a_dirNorm)
         {
-            NTAveToFace[dir] =
-                (Stencil<T>::faceToCell(dir,4)*
-                 Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
+            NTAveToFace[dir] = S(a_NTFaces[dir]);
         }
     }
 
@@ -1421,7 +1402,8 @@ void
 jacobian(
         BoxData<T,1,MEM>&         a_J,
         const BoxData<T,DIM,MEM>& a_X,
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
+        const FluxBoxData<T,DIM,MEM>& a_NT)
+        //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
     MayDay<void>::Abort("Operator::jacobian | Error: Not implemented.");
 }
@@ -1430,7 +1412,7 @@ template <class T, MemType MEM>
 BoxData<T,1,MEM>
 jacobian(
         const BoxData<T,DIM,MEM>& a_X,
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT,
+        const FluxBoxData<T,DIM,MEM>& a_NT,
         Array<T,DIM> a_dx)
 {
     T volume = a_dx.dot(Array<T,DIM>::Ones());
@@ -1442,7 +1424,8 @@ template <class T, MemType MEM>
 BoxData<T,1,MEM>
 jacobian(
         const BoxData<T,DIM,MEM>& a_X,
-        const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
+        const FluxBoxData<T,DIM,MEM>& a_NT)
+        //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
     PR_TIME("Operator::jacobian");
     Array<BoxData<T,1,MEM>,DIM> dfdx;

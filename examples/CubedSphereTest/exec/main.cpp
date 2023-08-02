@@ -16,6 +16,9 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
 }
 int main(int argc, char* argv[])
 {
+#ifdef PR_MPI
+    MPI_Init(&argc,&argv);
+#endif
     // Setting up simple example of Poisson solver where the
     // input and output data is allocated by the user.
   PROTO_ASSERT(DIM==3,"cubed-sphere works only for DIM=3");
@@ -43,7 +46,8 @@ int main(int argc, char* argv[])
             BoxData<double,DIM> X;
             BoxData<double> divNonNorm;
             BoxData<double> divF;
-            Array<BoxData<double,DIM>,DIM> NT;
+            //Array<BoxData<double,DIM>,DIM> NT;
+            FluxBoxData<double, DIM> NT;
             Box bx(Point::Zeros(),Point::Ones(nx-1));
             bx = bx.grow(nGhost);
             BoxData<double>& J = JRefs[ref];

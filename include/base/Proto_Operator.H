@@ -776,14 +776,16 @@ namespace Operator {
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     cofactorMatrix(
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            const FluxBoxData<T,DIM,MEM>& a_NTFaces,
             int a_dirNorm);
     
     template<class T, MemType MEM>
     inline void
     cofactorMatrix(
             BoxData<T,DIM,MEM,DIM>&               a_NTMatrix,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            const FluxBoxData<T,DIM,MEM>& a_NTFaces,
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
             int a_dirNorm);
 
     //==========================================================================================
@@ -791,14 +793,16 @@ namespace Operator {
     inline BoxData<T,1,MEM>
     jacobian(
             const BoxData<T,DIM,MEM>& a_X,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+            const FluxBoxData<T,DIM,MEM>& a_NT);
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
     
     template <class T, MemType MEM>
     inline void
     jacobian(
             BoxData<T,1,MEM>&         a_J,
             const BoxData<T,DIM,MEM>& a_X,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+            const FluxBoxData<T,DIM,MEM>& a_NT);
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
 
     //==========================================================================================
     template<class T, MemType MEM>
@@ -1054,7 +1058,7 @@ For more details, see ref[].
   template<class T, MemType MEM>
   inline void
   cubedSphereGeometry(BoxData<T,DIM,MEM>& a_X,
-                      Array<BoxData<T,DIM,MEM>, DIM>& a_NT,
+                      FluxBoxData<T,DIM,MEM>& a_NT,
                       BoxData<T,1,MEM>& a_J,
                       BoxData<T,1,MEM>& a_radius,
                       const Box& a_bx,
@@ -1074,7 +1078,7 @@ For more details, see ref[].
   template<class T, MemType MEM>
   inline void
   cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
-                      Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                      FluxBoxData<T,DIM,MEM>& a_NT,
                       BoxData<T, 1,   MEM>& a_J,
                       BoxData<T, 1,   MEM>& a_radius,
                       const Box& a_bx,

@@ -24,7 +24,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
     {
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
-#if 1
+#if 0
         auto C2C = Stencil<double>::CornersToCells(4);
         int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
         double r0 = CUBE_SPHERE_SHELL_R0;
@@ -43,8 +43,7 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
             {
                 a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
             }, radius, dx);
-        Array<BoxData<double,DIM,MEM>, DIM> NT;
-        Operator::cubedSphereGeometry(a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
+        Operator::cubedSphereGeometry(a_X, a_NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
 #endif
     }
 };
