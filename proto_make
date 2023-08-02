@@ -107,13 +107,9 @@ os.system(CMAKE_COMMAND)
 
 # Build Targets
 if ['ALL', 'TEST'].count(args.TARGET) > 0:
-    os.chdir(home_dir + '/build')
-    os.system('make')
+    os.system('cmake -B build --parallel')
     if args.TARGET == 'TEST':
-        os.system('make test')
-    os.chdir(home_dir)
+        os.system('cmake -B build --parallel --target test')
 else:
-    os.chdir(home_dir + '/build')
-    os.system('make ' + args.TARGET)
-    os.chdir(home_dir)
-    os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
+	os.system('cmake -B build --parallel --target ' + args.TARGET)
+	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
