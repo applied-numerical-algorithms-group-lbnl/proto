@@ -34,7 +34,7 @@ namespace Proto
             \param grid     An AMR Grid. Data is allocated only for existing levels
             \param ghost    Specifies the number of ghost cells to allocate
         */
-        AMRData(AMRGrid& a_grid, Point a_ghost) { define (a_grid, a_ghost); }
+        AMRData(AMRGrid a_grid, Point a_ghost) { define (a_grid, a_ghost); }
 
         /// Single Level Constructor
         /**
@@ -70,12 +70,18 @@ namespace Proto
        */
         inline void
         regrid(AMRGrid& a_newgrid, int a_lbase, int a_order);
+
+		/// Grid Access (Const)
+		inline const AMRGrid& grid() const {return m_grid; }
       
-        /// Grid Access (Const)
-        inline const AMRGrid& grid() const {return m_grid; }
-        
         /// Grid Access (Non-Const)
         inline AMRGrid& grid() { return m_grid;}
+      
+        /// Ghost Access (Non-Const)
+        inline Point ghost() const { return m_ghost;}
+
+		/// Data Access (Non-Const)
+        inline std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> data() const { return m_data; }
         
         /// Level Data Access (Const)
         inline const LevelBoxData<T, C, MEM, CTR>&

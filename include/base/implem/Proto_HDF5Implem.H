@@ -371,11 +371,32 @@ void HDF5Handler::writeAMRData(
     writeAMRData(varnames, a_dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename T, unsigned int C, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
         Array<double, DIM> a_dx,
-        const AMRData<T, C, MEM, CTR>& a_data,
+        const AMRData<T, C, DEVICE, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    AMRData<T, C, HOST, CTR> tmp(a_data.grid(), a_data.ghost());
+    // the loop is here because we don't want the automatic ghost cell
+    // exchanging that LevelBoxData::copyTo does
+    for (int ii=0; ii < a_data.data().size(); ii++)
+    {
+        auto& data_i = a_data.data()[ii];
+        auto& temp_i = tmp.data()[ii];
+        data_i->copyTo(*temp_i);
+    }
+    //a_data.copyTo(tmp);
+    writeAMRData(a_varNames, a_dx, tmp, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, Centering CTR, typename... Args>
+void HDF5Handler::writeAMRData(
+        std::vector<std::string> a_varNames,
+        Array<double, DIM> a_dx,
+        const AMRData<T, C, HOST, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
