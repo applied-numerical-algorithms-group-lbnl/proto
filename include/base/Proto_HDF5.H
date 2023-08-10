@@ -217,11 +217,20 @@ namespace Proto
                         Args... a_params);
 #ifdef PR_AMR 
         /// Write AMR Hierarchy 
-        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        template<typename T, unsigned int C, Centering CTR, typename... Args>
         inline void writeAMRData(
                         std::vector<std::string> a_varnames,
                         Array<double, DIM> a_dx,
-                        const AMRData<T, C, MEM, CTR>& a_data,
+                        const AMRData<T, C, DEVICE, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write AMR Hierarchy 
+        template<typename T, unsigned int C, Centering CTR, typename... Args>
+        inline void writeAMRData(
+                        std::vector<std::string> a_varnames,
+                        Array<double, DIM> a_dx,
+                        const AMRData<T, C, HOST, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         

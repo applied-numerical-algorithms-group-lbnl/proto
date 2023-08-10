@@ -66,7 +66,10 @@ void LevelBoxData<T, C, MEM, CTR>::define(
 {
     m_isDefined = true;
     m_ghost = a_ghost;
-    m_layout = a_layout;
+    if (MEM==DEVICE)
+        m_layout = DisjointBoxLayout{a_layout,true};
+    else
+        m_layout = a_layout;
     m_data.resize(m_layout.localSize());
     for (auto iter : a_layout)
     {
