@@ -102,7 +102,7 @@ namespace Proto
 
           \param a_layout   Another DisjointBoxLayout
         */
-        inline DisjointBoxLayout(const DisjointBoxLayout& a_layout);
+        inline DisjointBoxLayout(const DisjointBoxLayout& a_layout, const bool dev=false);
 
         /// Define (Full Domain)
         /**

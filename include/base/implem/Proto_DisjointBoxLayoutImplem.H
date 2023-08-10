@@ -40,11 +40,16 @@ void DisjointBoxLayout::define(
 }
 
 // Copy Constructor
-DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
+DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input, const bool dev)
 {
-    m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
+    if (dev) {
+        BoxPartition* ptr = (BoxPartition*)proto_malloc<DEVICE>(sizeof(BoxPartition));
+        m_partition = std::shared_ptr<BoxPartition>{ptr};
+        proto_memcpy<HOST,DEVICE>(a_input.m_partition.get(),m_partition.get(),sizeof(BoxPartition));
+    } else
+        m_partition = a_input.m_partition;
     //m_end = a_input.m_end;
 }
 
