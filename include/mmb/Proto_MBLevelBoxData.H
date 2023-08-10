@@ -121,9 +121,9 @@ namespace Proto
     
     /// Multiblock Level Box Data
     /** This class is the analog of LevelBoxData in the context of mapped multiblock applications.
-     *  The most critical differences between this object and the single block version are the presence
-     *  of additional data buffers allocated at block boundaries which are utilized for block boundary
-     *  interpolation.
+     *  The most critical differences between this object and the single block version are the
+     *  presence of additional data buffers allocated at block boundaries which are utilized for
+     *  block boundary interpolation.
      */
     template<typename T, unsigned int C, MemType MEM, Centering CTR=PR_CELL>
     class MBLevelBoxData
@@ -135,22 +135,24 @@ namespace Proto
         inline MBLevelBoxData();
 
         /// Main Constructor
-        /** Creates and allocates data for an MBLevelBoxData defined on a specified layout and allocating
-         *  a specified number of ghost cells.
+        /** Creates and allocates data for an MBLevelBoxData defined on a specified layout and
+         *  allocating a specified number of ghost cells.
          *
          *  The ghost input has different semantics from the non-
-         *  multiblock context. Here, ghost[0] refers to the number of ghost cells that each patch will
-         *  allocate - this is the same as the ghost input used for LevelBoxData. The additional inputs
-         *  ghost[n] for n > 0 define the size of the block boundary data buffers that will be allocated for
-         *  a block boundary of codimension-n. For 4th order interpolation at block boundaries, it is recommended
-         *  that ghost[n] for n>0 be greater than ghost[0] by at least 2 units in each direction. This recommendation
-         *  holds even for cases where ghost[0] is equal to zero in one or more coordinate directions.
+         *  multiblock context. Here, ghost[0] refers to the number of ghost cells that each patch
+         *  will allocate - this is the same as the ghost input used for LevelBoxData.
+         *  The additional inputs ghost[n] for n > 0 define the size of the block boundary data
+         *  buffers that will be allocated for a block boundary of codimension-n. For 4th order
+         *  interpolation at block boundaries, it is recommended that ghost[n] for n>0 be greater
+         *  than ghost[0] by at least 2 units in each direction. This recommendation holds even for
+         *  cases where ghost[0] is equal to zero in one or more coordinate directions.
          *
          *  \param a_layout     A mapped multiblock layout
          *  \param a_ghost      An array of ghost sizes. See the description above.
-         *  \param a_boundGhost Additional allocation for block boundary buffers. Use this if there is a need for
-         *                      block boundary buffers to overlap with the domain interior. This should remain
-         *                      defaulted unless you really know what you are doing.
+         *  \param a_boundGhost Additional allocation for block boundary buffers.
+         *                      Use this if there is a need for block boundary buffers to overlap
+         *                      with the domain interior. This should remain defaulted unless you
+         *                      really know what you are doing.
          */
         inline MBLevelBoxData(
                 const MBDisjointBoxLayout& a_layout,
