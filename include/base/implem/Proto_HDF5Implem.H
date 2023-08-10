@@ -283,7 +283,6 @@ void HDF5Handler::writeLevel(
         auto& temp_i = tmp[iter];
         data_i.copyTo(temp_i);
     }
-    //a_data.copyTo(tmp);
     writeLevel(a_varNames, a_dx, tmp, a_filename, a_params...);
 }
 
@@ -370,6 +369,7 @@ void HDF5Handler::writeAMRData(
     }
     writeAMRData(varnames, a_dx, a_data, a_filename, a_params...);
 }
+
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
@@ -624,9 +624,28 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
 #endif
 #endif
 
-    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
-        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        const LevelBoxData<T, C, DEVICE, CTR>& a_data,
+        Array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
+        Point a_refRatio,
+        int a_level)
+{
+    LevelBoxData<T, C, HOST, CTR> tmp(a_data.layout(), a_data.ghost());
+    // the loop is here because we don't want the automatic ghost cell
+    // exchanging that LevelBoxData::copyTo does
+    for (auto iter : a_data.layout())
+    {
+        auto& data_i = a_data[iter];
+        auto& temp_i = tmp[iter];
+        data_i.copyTo(temp_i);
+    }
+    addLevel(a_file, tmp, a_dx0, a_refRatio, a_level);
+}
+
+template<typename T, unsigned int C, Centering CTR>
+void HDF5Handler::addLevel(hid_t* a_file,
+        const LevelBoxData<T, C, HOST, CTR>& a_data,
         Array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         Point a_refRatio,
         int a_level)

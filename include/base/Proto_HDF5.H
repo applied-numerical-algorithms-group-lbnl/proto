@@ -322,9 +322,16 @@ namespace Proto
         double m_time = 0.0;
         double m_dt = 1.0;
 
-        template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        template<typename T, unsigned int C, Centering CTR>
         inline void addLevel(hid_t* a_file,
-            const LevelBoxData<T, C, MEM, CTR>& a_data,
+            const LevelBoxData<T, C, DEVICE, CTR>& a_data,
+            Array<double, DIM>& a_dx0,
+            Point a_refRatio,
+            int a_level);
+        
+        template<typename T, unsigned int C, Centering CTR>
+        inline void addLevel(hid_t* a_file,
+            const LevelBoxData<T, C, HOST, CTR>& a_data,
             Array<double, DIM>& a_dx0,
             Point a_refRatio,
             int a_level);
