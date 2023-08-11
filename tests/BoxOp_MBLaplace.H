@@ -55,6 +55,11 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
         {
             m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            m_NT[dir].printData();
+            m_Jf[dir].printData();
+        }
     }
 
     private:

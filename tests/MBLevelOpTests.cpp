@@ -15,8 +15,8 @@ using namespace Proto;
 TEST(MBLevelOp, ShearLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 32;
-    int boxSize = 32;
+    int domainSize = 8;
+    int boxSize = 8;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
