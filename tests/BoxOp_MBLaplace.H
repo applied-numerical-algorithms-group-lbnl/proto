@@ -42,28 +42,24 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
     // Cache metric terms and Jacobian
     inline void init()
     {
-        m_NT.clear();
+        m_NT.define(this->x().box());
         m_NTMatrix.clear();
         m_Jf.clear();
-        Array<BoxData<T,DIM>, DIM> NT;
-        this->jacobian().printData();
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NT.push_back(Operator::cofactor(this->x(),dir, this->dx()));
-            m_Jf.push_back(Stencil<double>::CellToFace(dir)(this->jacobian()));
-            m_Jf[m_Jf.size()-1].printData();            
-            NT[dir].define(m_NT[dir].box());
-            m_NT[dir].copyTo(NT[dir]);
+            auto C2F = Stencil<double>::CellToFace(dir);
+            m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
+            m_Jf.push_back(C2F(this->jacobian()));
         }
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NTMatrix.push_back(Operator::cofactorMatrix(NT, dir, this->dx()));
+            m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
     }
 
     private:
 
-    std::vector<BoxData<T, DIM>> m_NT;
+    FluxBoxData<T,DIM> m_NT;
     std::vector<BoxData<T,DIM,MEM,DIM>> m_NTMatrix;
     std::vector<BoxData<T,1,MEM>> m_Jf;
 };

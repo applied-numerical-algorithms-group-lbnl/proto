@@ -776,7 +776,6 @@ namespace Operator {
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     cofactorMatrix(
-            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
             const FluxBoxData<T,DIM,MEM>& a_NTFaces,
             int a_dirNorm);
     
@@ -785,7 +784,6 @@ namespace Operator {
     cofactorMatrix(
             BoxData<T,DIM,MEM,DIM>&               a_NTMatrix,
             const FluxBoxData<T,DIM,MEM>& a_NTFaces,
-            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
             int a_dirNorm);
 
     //==========================================================================================
