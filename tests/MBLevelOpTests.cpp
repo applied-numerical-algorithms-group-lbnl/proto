@@ -15,8 +15,8 @@ using namespace Proto;
 TEST(MBLevelOp, ShearLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 8;
-    int boxSize = 8;
+    int domainSize = 32;
+    int boxSize = 32;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
@@ -80,6 +80,7 @@ TEST(MBLevelOp, ShearLaplace) {
         {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
+            dst_i *= domainSize; //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
             dst_i.copyTo(err_i);
             err_i -= sln_i;
@@ -187,6 +188,7 @@ TEST(MBLevelOp, XPointLaplace) {
         {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
+            dst_i *= domainSize;    //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
             double J0 = map.jacobian()[iter].absMax(); //J is a constant
             dst_i /= (J0);

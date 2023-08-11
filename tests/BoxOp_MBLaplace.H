@@ -57,8 +57,7 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
         }
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NT[dir].printData();
-            m_Jf[dir].printData();
+            m_NTMatrix[dir].printData();
         }
     }
 
