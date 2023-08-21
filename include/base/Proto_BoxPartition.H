@@ -202,11 +202,9 @@ namespace Proto
                 int                 a_proc,
                 unsigned int        a_num);
 
-        ProblemDomain m_patchDomain; ///< Domain in patch space
+        ProblemDomain m_patchDomain; ///< Domain in patch space (one point per patch)
         std::unordered_map<uint64_t, int> m_indexMap; ///< Maps Morton index to global index
         std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>>      m_procMap; ///< Maps processor number to global index
-        //std::vector<unsigned int> m_procIndices; ///< Maps processor number to global index space
-        //unsigned int m_startProc; ///< The first proc on which this partition has data
         std::vector<std::pair<Point, unsigned int>> m_partition; ///< Maps each patch to a proc
     };
 

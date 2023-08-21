@@ -38,6 +38,10 @@ namespace Proto
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
 
+        inline void define(
+                std::shared_ptr<MBBoxPartition> a_partition,
+                const std::vector<Point>& a_boxSizes);
+
         inline MBProblemDomain domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;

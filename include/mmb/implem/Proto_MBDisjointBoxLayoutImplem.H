@@ -60,6 +60,20 @@ void MBDisjointBoxLayout::define(
     }
 }
 
+void MBDisjointBoxLayout::define(
+        std::shared_ptr<MBBoxPartition> a_partition,
+        const std::vector<Point>& a_boxSizes)
+{
+    m_partition = a_partition;
+    m_domain = a_partition->domain().refine(a_boxSizes);
+    m_layouts.clear();
+    m_layouts.resize(m_domain.size());
+    for (int bi = 0; bi < m_domain.size(); bi++)
+    {
+        m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
+    }
+}
+
 MBProblemDomain MBDisjointBoxLayout::domain() const
 {
     return m_domain;

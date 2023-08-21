@@ -76,8 +76,9 @@ namespace Proto
                 Centering a_ctr = PR_CELL) const;
 
         inline MBProblemDomain coarsen(Point a_refRatio) const;
-        inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;
+        inline MBProblemDomain coarsen(const std::vector<Point>& a_refRatios) const;
         inline MBProblemDomain refine(Point a_refRatio) const;
+        inline MBProblemDomain refine(const std::vector<Point>& a_refRatios) const;
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;

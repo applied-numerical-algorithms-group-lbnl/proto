@@ -175,8 +175,10 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::coarsen(std::vector<Point> a_refRatios) const
+MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
     MBProblemDomain coarsened(size());
     for (int ii = 0; ii < size(); ii++)
     {
@@ -195,6 +197,20 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
     for (int ii = 0; ii < size(); ii++)
     {
         refined.m_domains[ii] = m_domains[ii].refine(a_refRatio);
+        refined.m_domainsDefined[ii] = true;
+    }
+    refined.m_graph = m_graph;
+    return refined;
+}
+
+MBProblemDomain MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
+{
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::refine | Error: Wrong number of refinement ratios");
+    MBProblemDomain refined(size());
+    for (int ii = 0; ii < size(); ii++)
+    {
+        refined.m_domains[ii] = m_domains[ii].refine(a_refRatios[ii]);
         refined.m_domainsDefined[ii] = true;
     }
     refined.m_graph = m_graph;
