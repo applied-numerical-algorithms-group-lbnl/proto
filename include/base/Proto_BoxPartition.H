@@ -35,6 +35,9 @@ namespace Proto
                 const ProblemDomain& a_patchDomain,
                 const std::vector<Point>& a_patches);
         
+        /// Constructor (Empty)
+        inline BoxPartition(const ProblemDomain& a_patchDomain);
+        
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches

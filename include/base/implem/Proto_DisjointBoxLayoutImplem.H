@@ -36,7 +36,6 @@ void DisjointBoxLayout::define(
     m_partition = a_partition;
     m_problemDomain = a_partition->domain().refine(a_boxSize);
     m_boxSize = a_boxSize;
-    //m_end = LevelIndex(m_partition, a_partition->numBoxes());
 }
 
 // Copy Constructor
@@ -45,7 +44,6 @@ DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
     m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
-    //m_end = a_input.m_end;
 }
 
 // Define (Simple)

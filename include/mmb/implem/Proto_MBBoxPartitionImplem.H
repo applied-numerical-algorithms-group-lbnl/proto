@@ -1,4 +1,12 @@
 MBBoxPartition::MBBoxPartition(
+        const MBProblemDomain& a_patchDomain)
+{
+    std::vector<MBPatchID_t> patches;
+    // creates the BoxPartition with no patches in it
+    define(a_patchDomain, patches);
+}
+
+MBBoxPartition::MBBoxPartition(
         const MBProblemDomain& a_patchDomain,
         const std::vector<MBPatchID_t>& a_patches)
 {
@@ -10,18 +18,27 @@ void MBBoxPartition::define(
         const std::vector<MBPatchID_t>& a_patches)
 {
     m_patchDomain = a_patchDomain;
+    m_blockPartitions.clear();
+    for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+    {
+        m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+    }
+    define(a_patches);
+}
+
+void MBBoxPartition::define(
+        const std::vector<MBPatchID_t>& a_patches)
+{
     std::vector<std::vector<Point>> blockPatches;
-    blockPatches.resize(a_patchDomain.numBlocks());
+    blockPatches.resize(m_patchDomain.numBlocks());
     for (auto pi : a_patches)
     {
         blockPatches[pi.second].push_back(pi.first);
     }
     
-    m_blockPartitions.clear();
-    for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+    for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
     {
-        auto partition = std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi), blockPatches[bi]);
-        m_blockPartitions.push_back(partition);
+        m_blockPartitions[bi]->define(m_patchDomain.blockDomain(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
 }

@@ -2,7 +2,6 @@
 #ifndef _PROTO_MB_BOX_PARTITION_
 #define _PROTO_MB_BOX_PARTITION_
 
-#include "Proto.H"
 #include "Proto_MBProblemDomain.H"
 #include <unordered_map>
 namespace Proto
@@ -14,10 +13,14 @@ namespace Proto
         public:
 
         inline MBBoxPartition(
+                const MBProblemDomain& a_domain);
+        inline MBBoxPartition(
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
         inline void define(
                 const MBProblemDomain& a_domain,
+                const std::vector<MBPatchID_t>& a_patches);
+        inline void define(
                 const std::vector<MBPatchID_t>& a_patches);
         inline void loadBalance();
         inline bool compatible(const MBBoxPartition& a_rhs);
