@@ -771,7 +771,7 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
     PROTO_ASSERT(srcBlock != dstBlock,
                  "MBLevelExchangeCopier::localCopy | Error: \
             source and destination blocks are the same.");
-    bool linearizationTest = true;
+    bool linearizationTest = false;
     if (!linearizationTest)
     {
         PR_TIMERS("MBLevelCopierOp::localCopy");
