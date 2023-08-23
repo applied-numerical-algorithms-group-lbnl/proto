@@ -82,6 +82,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                              "MBLevelBoxData::define | Error: Data corruption");
                 auto bounds = a_layout.domain().boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
+                
                 for (auto bound : bounds)
                 {
                     PROTO_ASSERT(bound.srcToDst == di,
@@ -105,13 +106,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // that are linearly independent from the boundary surface
                             // to get this right, we rotate the in-plane coordinates and
                             // use the reverse arc for the out of plane coordinates
-
+                            
                             Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
 
                             // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
                             Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
-                            //Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj, ghostSize);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             PROTO_ASSERT(adjIter != *a_layout.end(),
@@ -256,8 +256,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
-// TODO: This may be too much overhead in which case MBLevelBoxData
-//   will likely require it's own custom Copier for copyTo
 template <typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
 template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
@@ -748,8 +746,8 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
                 auto &boundData = *bound.localData;
                 Box adjBox = bound.adjData->box();
                 Box localBox = bound.localData->box();
-                auto &R = bound.adjToLocal;
-                R.rotateBuffer((T *)a_buffer, boundData.data(), adjBox, localBox);
+                CoordPermutation &R = bound.adjToLocal;
+                R.rotateBuffer<T,C>((T *)a_buffer, boundData.data(), adjBox, localBox);
                 return;
             }
         }
@@ -807,9 +805,9 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
     else
     {
         PR_TIMERS("MBLevelExchangeCopierOp::localCopy (linearization test)");
-        int sizeSrc = linearSize(domain, srcIndex);
-        int sizeDst = linearSize(range, dstIndex);
-
+        size_t sizeSrc = linearSize(domain, srcIndex);
+        size_t sizeDst = linearSize(range, dstIndex);
+        
         if (sizeSrc != sizeDst)
         {
             MayDay<void>::Abort(
