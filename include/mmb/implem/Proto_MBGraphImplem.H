@@ -78,6 +78,7 @@ void MBGraph::defineBoundary(
 
 void MBGraph::fixRotations()
 {
+    pout() << "FIX ROTATIONS" << std::endl;
     PROTO_ASSERT(!m_closed,
         "MBGraph::fixRotations | Error: Graph definition has been completed and is locked");
     for (unsigned int b0 = 0; b0 < size(); b0++)
