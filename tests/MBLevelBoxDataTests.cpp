@@ -173,16 +173,6 @@ TEST(MBLevelBoxData, FillBoundaries) {
                 error -= localSoln;
                 double errNorm = error.absMax();
                 EXPECT_LT(errNorm, 1e-12);
-                if (errNorm > 1e-12)
-                {
-                    pout() << "\n=======================================================" << std::endl;
-                    pout() << "Error detected in block " << block << std::endl;
-                    pout() << "block: " << block << " | dir: " << dir << std::endl;
-                    pout() << "Solution: " << std::endl;
-                    localSoln.printData();
-                    pout() << "Output: " << std::endl;
-                    localData.printData();
-                }
             }
         }
     }
@@ -563,17 +553,12 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         auto mbIndex = layout.find(patchID, 0);
 
         auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
-
-        std::cout << "dst point: " << p0 << std::endl;
-        for (auto src : mb_footprint)
-        {
-            std::cout << "point: " << src.point << " | rel point: " << src.point - p0 << " | block: " << src.srcBlock() << std::endl;
-        }
     }
 }
 #endif
 TEST(MBLevelBoxData, MBDataPointOperator)
 {
+    // TODO: Finish implementing this test
     HDF5Handler h5;
 
     int domainSize = 32;
