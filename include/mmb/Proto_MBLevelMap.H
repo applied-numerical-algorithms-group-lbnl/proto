@@ -55,8 +55,8 @@ class MBLevelMap
      *  \param a_block      The block id associated with this map. Often unused.
      */
     inline void define(
-            MBDisjointBoxLayout& a_layout,
-            Array<Point, DIM+1>& a_ghost,
+            const MBDisjointBoxLayout& a_layout,
+            const Array<Point, DIM+1>& a_ghost,
             unsigned int         a_block = 0);
 
     /// Access Cached Coordinate Values

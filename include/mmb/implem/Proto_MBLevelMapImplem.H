@@ -12,8 +12,8 @@ MBLevelMap<MEM>::MBLevelMap(
 */
 template<MemType MEM>
 void MBLevelMap<MEM>::define(
-        MBDisjointBoxLayout& a_layout,
-        Array<Point, DIM+1>& a_ghost,
+        const MBDisjointBoxLayout& a_layout,
+        const Array<Point, DIM+1>& a_ghost,
         unsigned int         a_block)
 {
     m_block = a_block;
