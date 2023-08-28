@@ -527,7 +527,6 @@ TEST(MBInterpOp, CubeSphereShellTest)
                 BoxData<double> ei(bi);
                 ei.setVal(0);
                 err_i.copyTo(ei);
-                ei.printData();
                 err[nn] = max(ei.absMax(), err[nn]);
                 errL1[nn] += ei.sum();
             }

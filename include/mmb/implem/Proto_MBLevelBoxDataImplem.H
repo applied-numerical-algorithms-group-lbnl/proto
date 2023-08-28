@@ -127,7 +127,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
-    m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
+    if (a_ghost[0] != Point::Zeros())
+    {
+        m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
+    }
 }
 
 // HELPER FUNCTION FOR INITIALIZE
@@ -246,6 +249,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::exchange()
 {
+    if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
     PR_TIME("MBLevelBoxData::exchange");
 #ifdef PR_MPI
     {

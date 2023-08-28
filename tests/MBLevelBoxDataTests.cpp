@@ -4,7 +4,7 @@
 
 #define NCOMP 1
 using namespace Proto;
-
+#if 1
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 32;
     int boxSize = 16;
@@ -107,6 +107,8 @@ TEST(MBLevelBoxData, Construction) {
         }
     }
 }
+#endif
+#if 1
 TEST(MBLevelBoxData, Initialization) {
     int domainSize = 64;
     int boxSize = 16;
@@ -136,11 +138,12 @@ TEST(MBLevelBoxData, Initialization) {
         }
     }
 }
-
+#endif
+#if 1
 TEST(MBLevelBoxData, FillBoundaries) {
-    int domainSize = 4;
-    int boxSize = 4;
-    int ghostSize = 2;
+    int domainSize = 32;
+    int boxSize = 32;
+    int ghostSize = 4;
     int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
@@ -177,6 +180,7 @@ TEST(MBLevelBoxData, FillBoundaries) {
         }
     }
 }
+#endif
 TEST(MBLevelBoxData, CopyTo) {
     HDF5Handler h5;
     int domainSize = 32;
@@ -211,7 +215,6 @@ TEST(MBLevelBoxData, CopyTo) {
         EXPECT_LT(err.absMax(), 1e-12);
     }
 }
-
 TEST(MBLevelBoxData, OnDomainBoundary)
 {
     HDF5Handler h5;
@@ -572,7 +575,7 @@ TEST(MBLevelBoxData, MBDataPointOperator)
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(2);
 
-    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost, Point::Ones());
+    MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost, Point::Ones());
     hostData.initialize(f_MBPointID);
     hostData.exchange();
 
@@ -588,7 +591,12 @@ TEST(MBLevelBoxData, MBDataPointOperator)
                 for (auto bi : layout[iter].adjacent(dir*ghost[0]).grow(1))
                 {
                     MBDataPoint pi(iter, bi, layout, dir, adjBlock);
-                    pout() << "\tValue at point " << bi << ": " << hostData[pi](0) << std::endl;
+                    for (int ii = 0; ii < DIM; ii++)
+                    {
+                        //pout() << "\tValue at point " << bi << ": " << hostData[pi](ii) << std::endl;
+                        double soln = bound.localData->operator()(bi, ii);
+                        EXPECT_EQ(soln, hostData[pi](ii));
+                    }
                 }
             }
         }
