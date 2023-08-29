@@ -38,13 +38,13 @@ TEST(MBLevelOp, ShearLaplace) {
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        MBLevelMap_Shear<HOST> map;
-        map.define(layout, mapGhost);
-        
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
+        
+        MBLevelMap_Shear<HOST> map;
+        map.define(layout, mapGhost);
 
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
@@ -124,7 +124,7 @@ TEST(MBLevelOp, XPointLaplace) {
     int domainSize = 32;
     int boxSize = 32;
     int numGhost = 4;
-    int numBlocks = 8;
+    int numBlocks = 5;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
@@ -227,7 +227,7 @@ TEST(MBLevelOp, XPointLaplace) {
 #endif
 
 #if DIM==3
-#if 0
+#if 1
 TEST(MBLevelOp, CubeSphereLaplace) {
 
     HDF5Handler h5;

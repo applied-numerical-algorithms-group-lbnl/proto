@@ -269,6 +269,34 @@ void MBInterpOp::coefs(
     }
 }
 
+template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order)
+{
+    Map<MEM> map;
+    map.define(a_data.layout(), a_data.ghost());
+    interpBoundaries<Map, T, C, MEM, CTR>(a_data, map, a_order);
+}
+
+template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        Map<MEM>& a_map,
+        unsigned int a_order)
+{
+    std::vector<Point> footprint;
+    Box K = Box::Kernel(2);
+    for (auto pi : K)
+    {
+        if (pi.abs().sum() <= 2)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    MBInterpOp op(a_data.ghost()[0], a_order);
+    op.define(a_map, footprint);
+    op.apply(a_data, a_data);
+}
+
 
 
 

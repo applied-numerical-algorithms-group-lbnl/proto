@@ -58,3 +58,4 @@ class MBLevelMap_Shear : public MBLevelMap<MEM>
         a_J.setVal(1.0);
     }
 };
+

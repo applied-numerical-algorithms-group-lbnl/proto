@@ -5,7 +5,7 @@
 
 #define CUBE_SPHERE_SHELL_R0 1.0
 #define CUBE_SPHERE_SHELL_R1 1.1
-#define CUBE_SPHERE_SHELL_RADIAL_COORD 2
+#define CUBE_SPHERE_SHELL_RADIAL_COORD 0
 
 using namespace Proto;
 
@@ -46,3 +46,73 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
 #endif
     }
 };
+
+template<MemType MEM>
+class MBLevelMap_CubeSphereShellPolar : public MBLevelMap<MEM>
+{
+    public:
+
+    using MBLevelMap<MEM>::MBLevelMap;
+
+    inline void apply(
+            BoxData<double, DIM, MEM>& a_X,
+            BoxData<double, 1, MEM>& a_J,
+            FluxBoxData<double, DIM, MEM>& a_NT,
+            unsigned int a_block)
+    {
+        auto& layout = this->layout();
+        auto& dx = this->dx(a_block);
+#if 1
+        int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+        double r0 = CUBE_SPHERE_SHELL_R0;
+        double r1 = CUBE_SPHERE_SHELL_R1;
+        BoxData<double, DIM, MEM> X0(a_X.box().grow(1));
+        BoxData<double, 1, MEM> J0(X0.box());
+        BoxData<double, DIM, MEM> X1(a_X.box().grow(1));
+        BoxData<double, 1, MEM> J1(X1.box());
+        forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, a_block, r_dir);
+        int refBlock = this->block();
+        forallInPlace_p(f_cartesianToSphericalMap, X1, J1, X0, refBlock, r_dir); 
+        
+        J0.copyTo(a_J);
+        a_J *= J1;
+        X1.copyTo(a_X);
+#else
+        
+        BoxData<double, 1, MEM> radius(a_X.box());
+        forallInPlace_p(
+            [] PROTO_LAMBDA (Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
+            {
+                a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
+            }, radius, dx);
+        Array<BoxData<double,DIM,MEM>, DIM> NT;
+        Operator::cubedSphereGeometry(a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
+#endif
+    }
+};
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries_CubeSphereShell(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        unsigned int a_order = 4)
+{
+    std::vector<Point> footprint;
+    Box K = Box::Kernel(2);
+    for (auto pi : K)
+    {
+        // Assumes radial coordinate is the first
+        if (pi.abs().sum() <= 2 && pi[CUBE_SPHERE_SHELL_RADIAL_COORD] == 0)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    MBLevelMap_CubeSphereShellPolar<MEM> polarMaps[6];
+    MBInterpOp op(a_data.ghost()[0], a_order);
+    for (int bi = 0; bi < 6; bi++)
+    {
+        polarMaps[bi].define(a_data.layout(), a_data.ghost(), bi);
+        op.define(polarMaps[bi], footprint, bi); 
+    }
+    op.apply(a_data, a_data);
+}
+

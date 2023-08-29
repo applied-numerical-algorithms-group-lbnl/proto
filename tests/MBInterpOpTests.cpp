@@ -4,7 +4,6 @@
 #include "MBLevelMap_Shear.H"
 #include "MBLevelMap_XPointRigid.H"
 #include "MBLevelMap_CubeSphereShell.H"
-#include "MBLevelMap_CubeSphereShellPolar.H"
 
 using namespace Proto;
 #if DIM == 2
@@ -97,6 +96,7 @@ TEST(MBInterpOp, ShearTest)
                 }
             }
         }
+
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {
@@ -118,8 +118,50 @@ TEST(MBInterpOp, ShearTest)
 #endif
     }
 }
+TEST(MBInterpOp, ShearTestStandalone)
+{
+    HDF5Handler h5;
+    
+    // interplating function parameters
+    Array<double, DIM> exp{4,4,0,0,0,0};
+    Array<double, DIM> offset{0,0,0.3,0,0,0};
+    
+    // grid parameters
+    int domainSize = 16;
+    int boxSize = 16;
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+  
+    // initialize data
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
+    
+    ghost[0] = Point::Ones(2);
+    MBLevelMap_Shear<HOST> map;
+    map.define(layout, ghost);
+    
+    for (auto iter : layout)
+    {
+        auto& src_i = hostSrc[iter];
+        auto& x_i = map.map()[iter];
+        auto block = layout.block(iter);
+        BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+        src_i |= Stencil<double>::CornersToCells(4)(x_pow);
+    }
+
+    // interpolate
+    hostSrc.exchange();
+    interpBoundaries<MBLevelMap_Shear>(hostSrc);
+
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_ShearStandalone");
 #endif
-#if 0
+}
+#endif
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
     int domainSize = 16;
@@ -373,7 +415,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
 }
 #endif
 #if 1
-TEST(MBInterpOp, CubeSphereShellTest_Full)
+TEST(MBInterpOp, CubeSphereShellTest)
 {
     HDF5Handler h5;
     int domainSize = 16;
@@ -485,7 +527,6 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
                 BoxData<double> ei(bi);
                 ei.setVal(0);
                 err_i.copyTo(ei);
-                ei.printData();
                 err[nn] = max(ei.absMax(), err[nn]);
                 errL1[nn] += ei.sum();
             }
@@ -524,6 +565,56 @@ TEST(MBInterpOp, CubeSphereShellTest_Full)
         }
 #endif
     }
+}
+#endif
+#if 1
+TEST(MBInterpOp, CubeSphereShellStandalone)
+{
+    HDF5Handler h5;
+    int domainSize = 16;
+    int boxSize = 8;
+    int thickness = 1;
+    bool cullRadialGhost = true;
+    bool use2DFootprint = true;
+    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    Array<double, DIM> exp{4,4,4,0,0,0};
+    Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(1);
+    ghost[0][radialDir] = 0;
+        
+    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    Point boxSizeVect = Point::Ones(boxSize);
+    boxSizeVect[radialDir] = thickness;
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    // initialize data and map
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
+    MBLevelMap_CubeSphereShell<HOST> map;
+    map.define(layout, ghost);
+    
+    auto C2C = Stencil<double>::CornersToCells(4);
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        auto& src_i = hostSrc[iter];
+        Box b_i = C2C.domain(layout[iter]).grow(ghost[0]);
+        BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
+        // Jacobian and NT are computed but not used
+        BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost[0]));
+        FluxBoxData<double, DIM> NT(layout[iter]);
+        map.apply(x_i, J_i, NT, block);
+        BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+        src_i |= C2C(x_pow);
+    }
+   
+    hostSrc.exchange(); // fill boundary data
+    interpBoundaries_CubeSphereShell(hostSrc);
+
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShellStandalone");
+#endif
 }
 #endif
 #endif
