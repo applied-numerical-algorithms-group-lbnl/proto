@@ -12,11 +12,11 @@ namespace Proto
         public:
 
         inline MBAMRBoxPartition(
-                const MBProblemDomain& a_coarseDomain,
-                std::vector<Point>&    a_refRatios);
+                const MBProblemDomain&      a_coarseDomain,
+                const std::vector<Point>&   a_refRatios);
         inline void define(
-                const MBProblemDomain& a_coarseDomain,
-                std::vector<Point>&    a_refRatios);
+                const MBProblemDomain&      a_coarseDomain,
+                const std::vector<Point>&   a_refRatios);
         inline void loadBalance();
         inline bool compatible(const MBAMRBoxPartition& a_rhs) const;
         inline std::shared_ptr<BoxPartition> blockPartition(
@@ -24,7 +24,7 @@ namespace Proto
                 unsigned int a_block) const;
         inline std::shared_ptr<MBBoxPartition> levelPartition(
                 unsigned int a_level) const;
-        inline unsigned int numLevels() { return m_levelPartitions.size(); }
+        inline unsigned int numLevels() const { return m_levelPartitions.size(); }
         inline void print();
 
         private:

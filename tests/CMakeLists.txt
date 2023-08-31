@@ -115,4 +115,10 @@ if(ENABLE_ALL_TESTS)
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelOpTests COMMAND MBLevelOpTests)
     endif()
+    if (MMB AND AMR)
+        blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp
+            DEPENDS_ON Headers_MMB Headers_AMR ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+      blt_add_test(NAME MBAMRGridTests COMMAND MBAMRGridTests)
+    endif()
 endif()

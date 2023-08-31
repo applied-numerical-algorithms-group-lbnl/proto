@@ -17,4 +17,9 @@
 #ifdef PR_OPS 
 #include "mmb/Proto_MBInterpOp.H"
 #endif
+#ifdef PR_AMR
+#include "ProtoAMR.H"
+#include "mmb/Proto_MBAMRBoxPartition.H"
+#include "mmb/Proto_MBAMRGrid.H"
+#endif
 #endif

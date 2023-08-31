@@ -1,18 +1,17 @@
 MBAMRBoxPartition::MBAMRBoxPartition(
-        const MBProblemDomain& a_coarseDomain,
-        std::vector<Point>&    a_refRatios)
+        const MBProblemDomain&      a_coarseDomain,
+        const std::vector<Point>&   a_refRatios)
 {
     define(a_coarseDomain, a_refRatios);
 }
 
 void MBAMRBoxPartition::define(
-        const MBProblemDomain& a_coarseDomain,
-        std::vector<Point>&    a_refRatios)
+        const MBProblemDomain&      a_coarseDomain,
+        const std::vector<Point>&   a_refRatios)
 {
-    m_numLevels.clear();
     int maxLevels = a_refRatios.size()+1;
     MBProblemDomain domain = a_coarseDomain;
-    for (int ii = 0; ii < a_maxLevels; ii++)
+    for (int ii = 0; ii < maxLevels; ii++)
     {
         if (ii > 0)
         {
@@ -35,7 +34,7 @@ bool MBAMRBoxPartition::compatible(const MBAMRBoxPartition& a_rhs) const
 {
     for (int li = 0; li < numLevels(); li++)
     {
-        if (!m_levelPartitions[li].compatible(*a_rhs.levelPartition(li))) {return false;}
+        if (!m_levelPartitions[li]->compatible(*a_rhs.levelPartition(li))) {return false;}
     }
     return true;
 }
@@ -56,6 +55,6 @@ void MBAMRBoxPartition::print()
 {
     for (int ii = 0; ii < numLevels(); ii++)
     {
-        m_levelPartitions[li]->print();
+        m_levelPartitions[ii]->print();
     }
 }
