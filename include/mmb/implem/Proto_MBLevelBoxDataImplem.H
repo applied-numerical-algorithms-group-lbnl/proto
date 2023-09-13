@@ -247,6 +247,16 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
+{
+    for (auto data : m_data)
+    {
+        data->setRandom(a_low, a_high);
+    }
+    exchange();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::exchange()
 {
     if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells

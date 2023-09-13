@@ -24,6 +24,7 @@
 #include <cstdlib>  // for size_t
 #include <cmath>    // floating point abs
 #include <map>
+#include <random>   // random initialization
 #include <unordered_map>
 
 
@@ -965,6 +966,9 @@ namespace Proto
                 int a_c,
                 int a_d = 0,
                 int a_e = 0);
+
+        /// Set Random Noise
+        inline void setRandom(T a_low, T a_high);
 
         /// Generic Reduction (Global)
         /**

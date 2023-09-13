@@ -294,6 +294,18 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void   
+LevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
+{
+    for (auto iter : m_layout)
+    {
+        auto& patch = (*this)[iter];
+        patch.setRandom(a_low, a_high);
+    }
+    exchange();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::exchange()
 {
