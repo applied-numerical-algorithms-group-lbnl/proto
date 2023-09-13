@@ -200,6 +200,11 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
         refined.m_domainsDefined[ii] = true;
     }
     refined.m_graph = m_graph;
+    std::cout << "MBProblemDomain::refine: " << std::endl;
+    for (int bi = 0; bi < size(); bi++)
+    {
+        //std::cout << "
+    }
     return refined;
 }
 
@@ -279,4 +284,33 @@ void MBProblemDomain::close()
         }
     }
     m_closed = true;
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(int a_boxSize) const
+{
+    return patches(Point::Ones(a_boxSize));
+}
+std::vector<MBPatchID_t> MBProblemDomain::patches(Point a_boxSize) const
+{
+    std::vector<Point> boxSizes(numBlocks(), a_boxSize);
+    return patches(boxSizes);
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+{
+    PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
+            "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
+    std::vector<MBPatchID_t> patchVect;
+
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        PROTO_ASSERT(coarsenable(bi, a_boxSizes[bi]),
+                "MBProblemDomain::patches | Error: Domain is not coarsenable by box size");
+        Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
+        for (auto pi : patchDomain)
+        {
+            patchVect.push_back(MBPatchID_t(pi, bi));
+        }
+    }
+    return patchVect;
 }

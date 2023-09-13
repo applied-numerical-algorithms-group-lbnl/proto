@@ -41,8 +41,69 @@ void MBAMRGrid::define(
         const std::vector<Point>&       a_refRatios)
 {
     m_refRatios = a_refRatios;
-    
+    m_layouts.clear();
+    std::vector<Point> boxSizes = a_coarseBoxSizes;
+    std::vector<std::vector<DisjointBoxLayout>> gridLayouts;
+    gridLayouts.resize(a_coarseDomain.numBlocks());
+    for (int li = 0; li <= a_refRatios.size(); li++)
+    {
+        MBDisjointBoxLayout layout(m_partition.getLevel(li), boxSizes);
+        m_layouts.push_back(layout);
+        for (int bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
+        {
+            gridLayouts[bi].push_back(layout.blockLayout(bi));
+        }
+        if (li == a_refRatios.size()) { continue; }
+        for (auto& si : boxSizes)
+        {
+            si *= a_refRatios[li];
+        }
+    }
+    m_grids.clear();
+    for (int bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
+    {
+        AMRGrid grid(gridLayouts[bi], a_refRatios, a_refRatios.size()+1);
+        m_grids.push_back(grid);
+    }
+    setPatches(a_coarsePatches);
+    m_partition.loadBalance();
+
 }
+
+void MBAMRGrid::setPatches(
+        const std::vector<MBPatchID_t>& a_patches)
+{
+    std::vector<MBPatchID_t> patches = a_patches;
+    std::vector<MBPatchID_t> finePatches;
+    for (int li = 0; li < numLevels(); li++)
+    {
+        setPatches(li, patches);
+        if (li < m_refRatios.size())
+        {
+            finePatches.clear();
+            for (auto pi : patches)
+            {
+                Box b(pi.first, pi.first);
+                b = b.refine(m_refRatios[li]);
+                for (auto pj : b)
+                {
+                    finePatches.push_back(MBPatchID_t(pj, pi.second));
+                }
+            }
+            patches = finePatches;
+        }
+    }
+}
+
+void MBAMRGrid::setPatches(
+        unsigned int a_level,
+        const std::vector<MBPatchID_t>& a_patches)
+{
+    auto part = m_partition.getLevel(a_level);
+    part->define(a_patches);
+    part->loadBalance();
+}
+
 
 const AMRGrid& MBAMRGrid::getBlock(unsigned int a_block) const
 {

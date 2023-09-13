@@ -103,16 +103,16 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
 }
 
 AMRGrid::AMRGrid(
-    std::vector<DisjointBoxLayout>& a_layouts,
-    std::vector<Point>& a_refRatios,
+    const std::vector<DisjointBoxLayout>& a_layouts,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     define(a_layouts, a_refRatios, a_maxLevels);
 }
 
 AMRGrid::AMRGrid(
-    DisjointBoxLayout& a_layout,
-    std::vector<Point>& a_refRatios,
+    const DisjointBoxLayout& a_layout,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     define(a_layout, a_refRatios, a_maxLevels);
@@ -120,8 +120,8 @@ AMRGrid::AMRGrid(
 
 void
 AMRGrid::define(
-    std::vector<DisjointBoxLayout>& a_layouts,
-    std::vector<Point>& a_refRatios,
+    const std::vector<DisjointBoxLayout>& a_layouts,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     PROTO_ASSERT(a_maxLevels > 0,
@@ -159,8 +159,8 @@ AMRGrid::define(
 
 void
 AMRGrid::define(
-    DisjointBoxLayout& a_layout,
-    std::vector<Point>& a_refRatios,
+    const DisjointBoxLayout& a_layout,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     std::vector<DisjointBoxLayout> layouts;

@@ -6,7 +6,6 @@
 #include <unordered_map>
 namespace Proto
 {
-    typedef std::pair<Point, unsigned int> MBPatchID_t;
     
     class MBBoxPartition
     {

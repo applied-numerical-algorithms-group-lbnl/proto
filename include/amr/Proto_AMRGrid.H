@@ -82,8 +82,8 @@ namespace Proto
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline AMRGrid(
-            std::vector<DisjointBoxLayout>& a_layouts,
-            std::vector<Point>& a_refRatios,
+            const std::vector<DisjointBoxLayout>& a_layouts,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);
         
         /// Single-Level Constructor
@@ -95,8 +95,8 @@ namespace Proto
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline AMRGrid(
-            DisjointBoxLayout& a_layout,
-            std::vector<Point>& a_refRatios,
+            const DisjointBoxLayout& a_layout,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);
         
         /// Multi-Level Define
@@ -109,8 +109,8 @@ namespace Proto
         */
         inline void
         define(
-            std::vector<DisjointBoxLayout>& a_layouts,
-            std::vector<Point>& a_refRatios,
+            const std::vector<DisjointBoxLayout>& a_layouts,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);        
         
         /// Single-Level Define
@@ -123,8 +123,8 @@ namespace Proto
         */
         inline void
         define(
-            DisjointBoxLayout& a_layout,
-            std::vector<Point>& a_refRatios,
+            const DisjointBoxLayout& a_layout,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);        
         
         /// Layout Access (Const)

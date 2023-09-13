@@ -34,22 +34,24 @@ bool MBAMRBoxPartition::compatible(const MBAMRBoxPartition& a_rhs) const
 {
     for (int li = 0; li < numLevels(); li++)
     {
-        if (!m_levelPartitions[li]->compatible(*a_rhs.levelPartition(li))) {return false;}
+        if (!m_levelPartitions[li]->compatible(*a_rhs.getLevel(li))) {return false;}
     }
     return true;
 }
 
-std::shared_ptr<BoxPartition> MBAMRBoxPartition::blockPartition(
+std::shared_ptr<BoxPartition> MBAMRBoxPartition::getBlock(
         unsigned int a_level,
         unsigned int a_block) const
 {
     return m_levelPartitions[a_level]->blockPartition(a_block);
 }
-std::shared_ptr<MBBoxPartition> MBAMRBoxPartition::levelPartition(
+
+std::shared_ptr<MBBoxPartition> MBAMRBoxPartition::getLevel(
         unsigned int a_level) const
 {
     return m_levelPartitions[a_level];
 }
+
 
 void MBAMRBoxPartition::print()
 {

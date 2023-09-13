@@ -21,6 +21,13 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
     define(a_domain, a_patches, a_boxSizes);
 }
 
+MBDisjointBoxLayout::MBDisjointBoxLayout(
+        std::shared_ptr<MBBoxPartition> a_partition,
+        const std::vector<Point>& a_boxSizes)
+{
+    define(a_partition, a_boxSizes);
+}
+
 void MBDisjointBoxLayout::define(
         MBProblemDomain& a_domain, 
         const std::vector<Point>& a_boxSizes)

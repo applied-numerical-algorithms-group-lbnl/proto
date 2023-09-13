@@ -14,13 +14,27 @@ TEST(MBAMRGrid, Construction) {
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(2));
 
-    MBAMRGrid grid(domain, boxSizeVect, refRatios);
-    
+    auto coarsePatches = domain.patches(Point::Ones(boxSize));
+    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
     for (int li = 0; li < numLevels; li++)
     {
         auto& layout = grid.getLevel(li);
         std::cout << "====================================================" << std::endl;
-        std::cout << "Level: " << li << std::endl;
+        std::cout << "Level: " << li << " | Detected " << layout.numBoxes() << " boxes" << std::endl;
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto box = layout[iter];
+            std::cout << "\tblock: " << block << " | box: " << box << std::endl;
+        }
+    }
+    coarsePatches.clear();
+    grid.setPatches(coarsePatches);
+    for (int li = 0; li < numLevels; li++)
+    {
+        auto& layout = grid.getLevel(li);
+        std::cout << "====================================================" << std::endl;
+        std::cout << "Level: " << li << " | Detected " << layout.numBoxes() << " boxes" << std::endl;
         for (auto iter : layout)
         {
             auto block = layout.block(iter);

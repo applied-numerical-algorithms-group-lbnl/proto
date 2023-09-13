@@ -34,6 +34,13 @@ namespace Proto
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
 
+        inline void setPatches(
+            const std::vector<MBPatchID_t>& a_coarsePatches);
+        
+        inline void setPatches(
+            unsigned int a_level,
+            const std::vector<MBPatchID_t>& a_coarsePatches);
+        
         inline const AMRGrid& getBlock(unsigned int a_block) const;
         inline const MBDisjointBoxLayout& getLevel(unsigned int a_level) const;
         inline const unsigned int numLevels() const { return m_layouts.size(); }

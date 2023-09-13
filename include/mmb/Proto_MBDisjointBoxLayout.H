@@ -29,6 +29,10 @@ namespace Proto
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
         
+        inline MBDisjointBoxLayout(
+                std::shared_ptr<MBBoxPartition> a_partition,
+                const std::vector<Point>& a_boxSizes);
+        
         inline void define(
                 MBProblemDomain& a_domain,
                 const std::vector<Point>& a_boxSizes);
