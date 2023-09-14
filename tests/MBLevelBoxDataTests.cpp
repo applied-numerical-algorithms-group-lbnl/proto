@@ -51,7 +51,7 @@ TEST(MBLevelBoxData, Construction) {
         auto blockID = layout.block(iter);
         unsigned int xBlock = (blockID+1) % numBlocks;
         unsigned int yBlock = (blockID-1+numBlocks) % numBlocks;
-        auto blockLayout = layout.blockLayout(blockID);
+        auto blockLayout = layout.getBlock(blockID);
         Box patchBox = layout[iter]; 
         for (auto dir : K)
         {

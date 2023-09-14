@@ -51,7 +51,7 @@ void MBAMRGrid::define(
         m_layouts.push_back(layout);
         for (int bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
         {
-            gridLayouts[bi].push_back(layout.blockLayout(bi));
+            gridLayouts[bi].push_back(layout.getBlock(bi));
         }
         if (li == a_refRatios.size()) { continue; }
     }

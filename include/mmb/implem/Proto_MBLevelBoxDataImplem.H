@@ -47,13 +47,13 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
-            a_layout.blockLayout(bi), a_ghost[0]);
+            a_layout.getBlock(bi), a_ghost[0]);
     }
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.blockLayout(block);
+        auto localLayout = a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -89,7 +89,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                  "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.blockLayout(adjBlock);
+                    auto adjLocalLayout = a_layout.getBlock(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
                     auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
@@ -538,7 +538,7 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
             Point is not contained in the patch or it's ghost region");
     
     auto block = layout().block(a_index);
-    Box blockDomain = layout().blockLayout(block).domain().box();
+    Box blockDomain = layout().getBlock(block).domain().box();
 
     std::vector<Point> domainBoundaryDirs;
     for (auto dir : Box::Kernel(1))
@@ -570,7 +570,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
             Invalid center Point");
     
     auto block = layout().block(a_index);
-    Box blockDomain = layout().blockLayout(block).domain().box();
+    Box blockDomain = layout().getBlock(block).domain().box();
 
     std::set<Point> extendedFootprint;
     Box spanBox;
@@ -996,8 +996,8 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     for (auto diter : dstLayout)
     {
         unsigned int block = dstLayout.block(diter);
-        auto srcBlockLayout = srcLayout.blockLayout(block);
-        auto dstBlockLayout = dstLayout.blockLayout(block);
+        auto srcBlockLayout = srcLayout.getBlock(block);
+        auto dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
         auto dstBlockDomain = dstBlockLayout.domain();
         auto srcBoxSize = srcBlockLayout.boxSize();
@@ -1051,8 +1051,8 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     for (auto siter : srcLayout)
     {
         unsigned int block = srcLayout.block(siter);
-        auto srcBlockLayout = srcLayout.blockLayout(block);
-        auto dstBlockLayout = dstLayout.blockLayout(block);
+        auto srcBlockLayout = srcLayout.getBlock(block);
+        auto dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
         auto dstBlockDomain = dstBlockLayout.domain();
         auto srcBoxSize = srcBlockLayout.boxSize();

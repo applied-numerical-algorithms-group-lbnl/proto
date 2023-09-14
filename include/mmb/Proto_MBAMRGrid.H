@@ -2,7 +2,7 @@
 #ifndef _PROTO_MB_AMR_GRID_
 #define _PROTO_MB_AMR_GRID_
 
-#include "Proto_AMRGrid.H"
+#include "Proto_MBAMRBoxPartition.H"
 #include "Proto_MBDisjointBoxLayout.H"
 
 namespace Proto
