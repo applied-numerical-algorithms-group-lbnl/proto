@@ -177,7 +177,10 @@ namespace Proto
             \param a_value  A constant value
         */
         inline void setBoundary(T a_value, int a_comp = -1);
-       
+      
+        /// Set data to random noise between two values
+        inline void setRandom(T a_low, T a_high); 
+
         inline void iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
 
         /// Function Initialization

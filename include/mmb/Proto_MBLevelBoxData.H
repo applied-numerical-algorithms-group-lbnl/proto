@@ -195,6 +195,9 @@ namespace Proto
         /// Constant Initialization
         inline void setVal(T a_value);
 
+        /// Initialize with Random Noise
+        inline void setRandom(T a_low, T a_high); 
+
         /// FIXME (NOT CURRENTLY WORKING)
         template<typename Func, typename... Srcs>
         inline void initConvolve(Func& a_func, Srcs&... a_srcs);

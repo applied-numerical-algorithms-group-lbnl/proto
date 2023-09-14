@@ -118,6 +118,7 @@ TEST(MBLevelOp, ShearLaplace) {
 #endif
 
 #if 1
+#if DIM==2
 TEST(MBLevelOp, XPointLaplace) {
 
     HDF5Handler h5;
@@ -225,6 +226,7 @@ TEST(MBLevelOp, XPointLaplace) {
     }
 }
 #endif
+#endif
 
 #if DIM==3
 #if 1
@@ -258,7 +260,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
             footprint.push_back(pi);
         }
     }
-    int N = 1;
+    int N = 2;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -282,6 +284,10 @@ TEST(MBLevelOp, CubeSphereLaplace) {
         MBLevelBoxData<double, 1, HOST> hostDst(layout, dataGhost);
         MBLevelBoxData<double, 1, HOST> hostSln(layout, errGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, errGhost);
+
+        hostSrc.setRandom(0,1);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "CubeSphereShell_Phi_Random_%i", nn);
+
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {

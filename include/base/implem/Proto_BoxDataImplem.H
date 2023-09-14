@@ -1166,7 +1166,7 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
 }
 
 
-//=================================================================================================
+//=============================================================================================
 // Utility Functions ||
 //===================++
 
@@ -1184,24 +1184,7 @@ void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
                         for (int cc = 0; cc < C; cc++)
                           a_out(cc,dd,ee) = a_in;
                   },*this,a_val);
-    /*
-    unsigned int nsize = size();
-    int blockSize = 512;
-    int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsyncT<MEM, opKernel<T,BoxDataOp::Assign>>(
-        nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize
-    );
-    */
 }
-/*
-template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-void BoxData<T,C,MEM,D,E>::clampVal(const T& a_min, const T& a_max)
-{
-    PR_TIME("BoxData::clampVal");
-    this->operatorT<BoxDataOp::ThresholdMax>(a_max);
-    this->operatorT<BoxDataOp::ThresholdMin>(a_min);
-}
-*/
 // Set To Zero
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::setToZero()
@@ -1209,7 +1192,31 @@ void BoxData<T,C,MEM,D,E>::setToZero()
     setVal(0);
 }
 
-// Helper function for BoxData::setVal with a Box argument
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void BoxData<T,C,MEM,D,E>::setRandom(T a_low, T a_high)
+{
+    std::random_device rd;  // A random seed generator
+    std::mt19937 gen(rd()); // Mersenne Twister PRNG engine
+    std::uniform_real_distribution<T> dis(a_low, a_high); // Uniform dist between 0 and 1
+  
+    if (MEM == HOST)
+    {
+        for (int ii = 0; ii < size(); ii++)
+        {
+            m_rawPtr[ii] = dis(gen);
+        }
+    } else {
+        T* buffer = (T*)proto_malloc<HOST>(linearSize());
+        for (int ii = 0; ii < size(); ii++)
+        {
+            buffer[ii] = dis(gen);
+        }
+        proto_memcpy<HOST,MEM>(buffer, m_rawPtr, linearSize());
+        proto_free<HOST>(buffer);
+    }
+}
+
+    // Helper function for BoxData::setVal with a Box argument
 template <class T, MemType MEM, class B>
 inline void setBoxDataVal(BoxData<T,1,MEM,1,1>& a_data, const B& a_box, T a_val)
 {
