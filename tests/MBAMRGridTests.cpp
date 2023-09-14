@@ -20,12 +20,19 @@ TEST(MBAMRGrid, Construction) {
     int numBoxes = domainSize / boxSize * numBlocks;
     for (int li = 0; li < numLevels; li++)
     {
-        auto& layout = grid.getLevel(li);
-        EXPECT_EQ(layout.numBoxes(), numBoxes);
-        for (auto iter : layout)
+        auto& levelLayout = grid.getLevel(li);
+        EXPECT_EQ(levelLayout.numBoxes(), numBoxes);
+        for (int bi = 0; bi < numBlocks; bi++)
         {
-            auto block = layout.block(iter);
-            auto box = layout[iter];
+            auto& blockGrid = grid.getBlock(bi); 
+            EXPECT_TRUE(levelLayout.getBlock(bi) == blockGrid[li]);
+            EXPECT_EQ(&levelLayout.getBlock(bi).partition(), &blockGrid[li].partition());
+        }
+
+        for (auto iter : levelLayout)
+        {
+            auto block = levelLayout.block(iter);
+            auto box = levelLayout[iter];
             EXPECT_EQ(box.sizes(), boxSizeVect[block]);
         }
         numBoxes *= pow(refRatio, DIM);

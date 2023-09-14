@@ -291,6 +291,7 @@ namespace Proto
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
 
+        inline const BoxPartition& partition() const { return *m_partition; }
         /// Find Index
         /**
           Given a patch Point, return the DataIndex of the associated Box if
