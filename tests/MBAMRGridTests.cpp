@@ -6,41 +6,29 @@ using namespace Proto;
 
 #if 1
 TEST(MBAMRGrid, Construction) {
-    int domainSize = 64;
+    int domainSize = 16;
     int boxSize = 16;
     int numBlocks = 5;
     int numLevels = 3;
+    int refRatio = 2;
     auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
-    std::vector<Point> refRatios(numLevels-1, Point::Ones(2));
+    std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 
     auto coarsePatches = domain.patches(Point::Ones(boxSize));
     MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    int numBoxes = domainSize / boxSize * numBlocks;
     for (int li = 0; li < numLevels; li++)
     {
         auto& layout = grid.getLevel(li);
-        std::cout << "====================================================" << std::endl;
-        std::cout << "Level: " << li << " | Detected " << layout.numBoxes() << " boxes" << std::endl;
+        EXPECT_EQ(layout.numBoxes(), numBoxes);
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
             auto box = layout[iter];
-            std::cout << "\tblock: " << block << " | box: " << box << std::endl;
+            EXPECT_EQ(box.sizes(), boxSizeVect[block]);
         }
-    }
-    coarsePatches.clear();
-    grid.setPatches(coarsePatches);
-    for (int li = 0; li < numLevels; li++)
-    {
-        auto& layout = grid.getLevel(li);
-        std::cout << "====================================================" << std::endl;
-        std::cout << "Level: " << li << " | Detected " << layout.numBoxes() << " boxes" << std::endl;
-        for (auto iter : layout)
-        {
-            auto block = layout.block(iter);
-            auto box = layout[iter];
-            std::cout << "\tblock: " << block << " | box: " << box << std::endl;
-        }
+        numBoxes *= pow(refRatio, DIM);
     }
 }
 #endif

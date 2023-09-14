@@ -2,7 +2,7 @@ MBAMRGrid::MBAMRGrid(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
-    : m_partition(a_coarseDomain, a_refRatios)
+    : m_partition(a_coarseDomain.coarsen(a_coarseBoxSizes), a_refRatios)
 {
     define(a_coarseDomain, a_coarseBoxSizes, a_refRatios);
 }
@@ -12,7 +12,7 @@ MBAMRGrid::MBAMRGrid(
         const std::vector<MBPatchID_t>& a_coarsePatches,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
-    : m_partition(a_coarseDomain, a_refRatios)
+    : m_partition(a_coarseDomain.coarsen(a_coarseBoxSizes), a_refRatios)
 {
     define(a_coarseDomain, a_coarsePatches, a_coarseBoxSizes, a_refRatios);
 }
@@ -54,10 +54,6 @@ void MBAMRGrid::define(
             gridLayouts[bi].push_back(layout.blockLayout(bi));
         }
         if (li == a_refRatios.size()) { continue; }
-        for (auto& si : boxSizes)
-        {
-            si *= a_refRatios[li];
-        }
     }
     m_grids.clear();
     for (int bi = 0; bi < a_coarseDomain.numBlocks(); bi++)

@@ -200,11 +200,6 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
         refined.m_domainsDefined[ii] = true;
     }
     refined.m_graph = m_graph;
-    std::cout << "MBProblemDomain::refine: " << std::endl;
-    for (int bi = 0; bi < size(); bi++)
-    {
-        //std::cout << "
-    }
     return refined;
 }
 
