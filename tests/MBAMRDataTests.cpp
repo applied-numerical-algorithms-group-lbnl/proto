@@ -6,6 +6,7 @@ using namespace Proto;
 
 #if 1
 TEST(MBAMRData, Construction) {
+    HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
     int numBlocks = 5;
@@ -13,7 +14,7 @@ TEST(MBAMRData, Construction) {
     int refRatio = 2;
     int numGhost = 1;
     Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Ones(numGhost+2));
+    ghost.fill(Point::Ones(numGhost));
     ghost[0] = Point::Ones(numGhost);
 
     auto domain = buildXPoint(domainSize, numBlocks);
@@ -23,6 +24,11 @@ TEST(MBAMRData, Construction) {
     auto coarsePatches = domain.patches(Point::Ones(boxSize));
     MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
     MBAMRData<double, 1, HOST> data(grid, ghost);
+    data.setRandom(0,1);
+#if PR_VERBOSE > 0
+    h5.writeMBAMRData({"data"}, data, "DATA");
+#endif
+
     int numBoxes = domainSize / boxSize * numBlocks;
     for (int li = 0; li < numLevels; li++)
     {

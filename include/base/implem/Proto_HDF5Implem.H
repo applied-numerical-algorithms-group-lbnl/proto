@@ -428,6 +428,7 @@ void HDF5Handler::writeAMRData(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addMBLevel(hid_t* a_file,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        Array<double, DIM> a_dx0,
         Point a_refRatio,
         int a_level)
 {
@@ -452,7 +453,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     }
     for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
     {
-        const auto& blockLayout = a_data.layout().blockLayout(bi);
+        const auto& blockLayout = a_data.layout().getBlock(bi);
         const auto& blockData = a_data.blockData(bi);
         numData += blockLayout.size()*blockData.patchSize();
     }
@@ -463,7 +464,8 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     {
         for (int dir = 0; dir < DIM; dir++)
         {
-            domainSize[dir] = max(domainSize[dir], a_data.blockData(bi).layout().domain().box().high()[dir]);
+            domainSize[dir] =
+                max(domainSize[dir], a_data.blockData(bi).layout().domain().box().high()[dir]);
         }
     }
     domainSize += Point::Ones();
@@ -472,20 +474,26 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     Box domainBox(domainSize);
     // CREATE GROUP
     std::string g_level_name = "/level_" + to_string(a_level);
-    auto g_level = H5Gcreate(*a_file, g_level_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto g_level =
+        H5Gcreate(*a_file, g_level_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     // CREATE ATTRIBUTES
-    auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX(),  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+    auto att_dt   =
+        H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_time =
+        H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_dx   =
+        H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ref_ratio   =
+        H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_prob_domain =
+        H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX(),s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
     double dx[DIM];
     int refRatio[DIM];
     for (int dir = 0; dir < DIM; dir++)
     {
-        dx[dir] = 1;
+        dx[dir] = a_dx0[dir];
         refRatio[dir] = a_refRatio[dir];
     }
 
@@ -519,14 +527,18 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto s_data_local  = H5Screate_simple(1, dataDims_local, NULL);
 
     // CREATE DATASETS
-    auto ds_processors = H5Dcreate2(*a_file, (g_level_name + "/processors").c_str(),     H5T_NATIVE_INT, s_processors,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX(), s_boxes,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_processors = H5Dcreate2(
+            *a_file, (g_level_name + "/processors").c_str(), H5T_NATIVE_INT,
+            s_processors, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_offsets = H5Dcreate2(
+            *a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG,
+            s_offsets, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_boxes = H5Dcreate2(
+            *a_file, (g_level_name + "/boxes").c_str(), H5T_PROTO_BOX(), s_boxes, 
+            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_data = H5Dcreate2(
+            *a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
+            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     
     // GET RAW DATA
     long int* offsetData = (long int*)malloc((numPatches+1)*sizeof(long int));
@@ -554,7 +566,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
 
     // WRITE DATA
     // FIXME: write processor data
-    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG,H5S_ALL,H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
     #ifdef PR_MPI
     hsize_t boxStart[] = {a_data.layout().offset(procID())};
     hsize_t dataStart[] = {a_data.offset(procID())};
@@ -1172,8 +1184,10 @@ void HDF5Handler::writeMBLevel(
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
+    Array<double,DIM> dx;
+    dx.fill(1.0);
     writeHeader<C,CTR>(&file, 1, a_varNames);
-    addMBLevel(&file, a_data, Point::Ones(), 0);
+    addMBLevel(&file, a_data, dx, Point::Ones(), 0);
     assert(H5Fclose(file) >= 0);
 
 }
@@ -1213,6 +1227,61 @@ void HDF5Handler::writeMBLevelBounds(
         }
     }
 }
+#endif
+
+#ifdef PR_MMB
+#ifdef PR_AMR
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBAMRData(
+        std::vector<std::string> a_varNames,
+        const MBAMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeMBLevel");
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+   
+    // CREATE THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+#endif
+    writeHeader<C,CTR>(&file, a_data.numLevels(), a_varNames);
+    
+    Array<double, DIM> dx;
+    dx.fill(1.0);
+    for (int li = 0; li < a_data.numLevels(); li++)
+    {
+        Point refRatio = Point::Ones();
+        if (li < a_data.numLevels()-1)
+        {
+            refRatio = a_data.grid().refRatios()[li];
+        }
+        addMBLevel(&file, a_data.getLevel(li), dx, refRatio, li);
+        Array<double, DIM> r = refRatio;
+        dx /= r;
+    }
+    assert(H5Fclose(file) >= 0);
+
+}
+#endif
 #endif
 
 template<>

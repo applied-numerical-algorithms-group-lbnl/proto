@@ -22,6 +22,10 @@ namespace Proto
     class MBLevelMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
+#ifdef PR_AMR
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBAMRData;
+#endif
 #endif
 
 #ifdef PR_HDF5
@@ -302,8 +306,27 @@ namespace Proto
         inline void addMBLevel(
                 hid_t* a_file,
                 const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                Array<double, DIM> a_dx,
                 Point a_refRatio,
                 int a_level);
+
+#ifdef PR_AMR
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const MBLevelMap<MEM>& a_map,
+                const MBAMRData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const MBAMRData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
+#endif
 #endif
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }

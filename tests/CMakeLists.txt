@@ -117,11 +117,11 @@ if(ENABLE_ALL_TESTS)
     endif()
     if (MMB AND AMR)
         blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp
-            DEPENDS_ON Headers_MMB Headers_AMR ${LIB_DEP} gtest
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRGridTests COMMAND MBAMRGridTests)
         blt_add_executable(NAME MBAMRDataTests SOURCES MBAMRDataTests.cpp
-            DEPENDS_ON Headers_MMB Headers_AMR ${LIB_DEP} gtest
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRDataTests COMMAND MBAMRDataTests)
     endif()

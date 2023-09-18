@@ -43,9 +43,10 @@ namespace Proto
         
         inline const AMRGrid& getBlock(unsigned int a_block) const;
         inline const MBDisjointBoxLayout& getLevel(unsigned int a_level) const;
-        inline const unsigned int numLevels() const { return m_layouts.size(); }
-        inline const unsigned int maxLevels() const { return numLevels(); }
-        inline const unsigned int numBlocks() const { return m_grids.size(); }
+        inline unsigned int numLevels() const { return m_layouts.size(); }
+        inline unsigned int maxLevels() const { return numLevels(); }
+        inline unsigned int numBlocks() const { return m_grids.size(); }
+        inline std::vector<Point> refRatios() const { return m_refRatios; } 
         private:
         
         std::vector<Point>   m_refRatios;
