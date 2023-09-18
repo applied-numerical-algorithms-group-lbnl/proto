@@ -21,5 +21,6 @@
 #include "ProtoAMR.H"
 #include "mmb/Proto_MBAMRBoxPartition.H"
 #include "mmb/Proto_MBAMRGrid.H"
+#include "mmb/Proto_MBAMRData.H"
 #endif
 #endif

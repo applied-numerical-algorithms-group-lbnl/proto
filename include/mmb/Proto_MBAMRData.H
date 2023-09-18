@@ -28,13 +28,13 @@ namespace Proto
         inline void setRandom(T a_low, T a_high);
         inline void exchange();
         inline Array<Point, DIM+1> ghost() const { return m_ghost; }
+        inline const MBAMRGrid& grid() const {return *m_grid; }
         inline MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level);
         inline const MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level) const;
         inline AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block);
         inline const AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block) const;
-        inline const MBAMRGrid& grid() const { return m_grid; } 
-        inline int numLevels() const {return m_grid.numLevels(); }
-        inline int numBlocks() const {return m_grid.numBlocks(); }
+        inline int numLevels() const {return m_grid->numLevels(); }
+        inline int numBlocks() const {return m_grid->numBlocks(); }
 
         // Operators
         inline void averageDown();        
