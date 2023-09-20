@@ -156,12 +156,12 @@ parse_mb_level_arg(
 }
 
 // HELPER FUNCTION FOR INITIALIZE
-template<typename Func, MemType MEM>
+template<typename Func, template<MemType> typename MAP, MemType MEM>
 const BoxData<double,DIM,MEM>
 parse_mb_level_arg(
         MBIndex& a_index, 
         Centering C,
-        const MBLevelMap<MEM>& a_arg)
+        const MBLevelMap<MAP,MEM>& a_arg)
 {
     auto& layout = a_arg.map().layout();
     Box B0 = layout[a_index];

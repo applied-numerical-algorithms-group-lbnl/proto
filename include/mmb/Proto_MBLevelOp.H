@@ -17,6 +17,7 @@ namespace Proto {
     \tparam MEM     Proto::MemType of the data holder
 */
 template<template<typename, MemType> class OPType,
+    template<MemType> typename MAP,
     typename T,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelOp
@@ -37,11 +38,11 @@ class MBLevelOp
     inline T spectralRadius() const {return m_ops[0].spectralRadius(); }
     
     inline MBLevelOp();
-    inline MBLevelOp(MBLevelMap<MEM>& a_map);
-    inline MBLevelOp(MBLevelOp<OPType, T, MEM>&& a_op) = default;
-    inline MBLevelOp<OPType, T, MEM>&
-        operator=(MBLevelOp<OPType, T, MEM>&& a_op) = default;
-    inline void define(MBLevelMap<MEM>& a_map);
+    inline MBLevelOp(MBLevelMap<MAP,MEM>& a_map);
+    inline MBLevelOp(MBLevelOp<OPType, MAP, T, MEM>&& a_op) = default;
+    inline MBLevelOp<OPType, MAP, T, MEM>&
+        operator=(MBLevelOp<OPType, MAP, T, MEM>&& a_op) = default;
+    inline void define(MBLevelMap<MAP,MEM>& a_map);
     
     inline void operator()(
         LevelStateData&         a_output,
@@ -70,7 +71,7 @@ class MBLevelOp
     T m_time;
     unsigned int m_rkStage;
     
-    MBLevelMap<MEM>* m_map;
+    MBLevelMap<MAP,MEM>* m_map;
     std::vector<OP> m_ops;
 };
 

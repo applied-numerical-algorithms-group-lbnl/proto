@@ -6,20 +6,19 @@
 
 using namespace Proto;
 
-class MBMap_Shear : public MBMapOp
+template<MemType MEM>
+class MBMap_Shear : public MBMapOp<MEM>
 {
     public:
 
-    using MBMapOp::MBMapOp;
+    using MBMapOp<MEM>::MBMapOp;
 
-    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             unsigned int a_block)
     {
-        auto& layout = this->layout();
-        auto& dx = this->dx(a_block);
+        auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         forallInPlace(
             [] PROTO_LAMBDA (Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block)

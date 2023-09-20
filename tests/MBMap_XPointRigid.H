@@ -4,15 +4,15 @@
 
 using namespace Proto;
 
-class MBMap_XPointRigid : public MBMapOp
+template<MemType MEM>
+class MBMap_XPointRigid : public MBMapOp<MEM>
 {
     public:
 
-    using MBMapOp::MBMapOp;
+    using MBMapOp<MEM>::MBMapOp;
 
     inline void setNumBlocks(unsigned int N) {m_numBlocks = N;}
 
-    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,

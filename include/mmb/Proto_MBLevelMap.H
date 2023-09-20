@@ -1,4 +1,4 @@
-pragma once
+#pragma once
 #ifndef _PROTO_MB_LEVEL_MAP_
 #define _PROTO_MB_LEVEL_MAP_
 
@@ -29,7 +29,7 @@ namespace Proto
  *  data such as operators, stencils, or metrics in order to prevent computing these
  *  quantities each time apply is called.
  */
-template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
+template<template<MemType> typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelMap
 {
     public:
@@ -55,7 +55,7 @@ class MBLevelMap
      */
     inline void define(
             const MBDisjointBoxLayout& a_layout,
-            const Array<Point, DIM+1>& a_ghost)
+            const Array<Point, DIM+1>& a_ghost);
 
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
@@ -164,9 +164,6 @@ class MBLevelMap
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx(int a_block) const;
 
-    /// Get Block
-    inline unsigned int block() const { return m_block; }
-
     /// Get Mapped Coordinate Values
     /** Given a node-centered box and grid spacing, generate the node centered mapped
      *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
@@ -179,7 +176,9 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
-        std::vector<MAP>                            m_ops;  ///< Map operators
+        Stencil<double>                             m_c2c;
+        std::vector<MAP<MEM>>                       m_ops;  ///< Map operators
+        std::vector<Array<double, DIM>>             m_dx;
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;    ///< Cached coodinate values
         MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;    ///< Cached Jacobian values
 };

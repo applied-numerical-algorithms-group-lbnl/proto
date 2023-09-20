@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
 #include "Lambdas.H"
-#include "MBLevelMap_Shear.H"
-#include "MBLevelMap_CubeSphereShell.H"
+#include "MBMap_Shear.H"
+#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
@@ -20,7 +20,7 @@ TEST(MBLevelMapTests, ShearMap) {
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap_Shear<HOST> map;
+    MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
     
 #if PR_VERBOSE > 0
@@ -42,7 +42,7 @@ TEST(MBLevelMapTests, InterBlockApply_Shear) {
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap_Shear<HOST> map;
+    MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
 
     for (unsigned int bi = 0; bi < 4; bi++)
@@ -98,7 +98,7 @@ TEST(MBLevelMapTests, CellApply_Shear)
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap_Shear<HOST> map;
+    MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
 
     auto XAvg  = 0.5*Shift::Zeros() + 0.5*Shift::Basis(0);
@@ -162,7 +162,7 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap_Shear<HOST> map;
+    MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
 
     MBLevelBoxData<double, 1, HOST> data(layout, ghost);

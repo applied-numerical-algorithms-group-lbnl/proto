@@ -14,11 +14,11 @@ void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, DIM, MEM>& a_x, Poin
 }
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
 
-template<MemType MEM>
+template<template<MemType> typename MAP, MemType MEM>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
-        MBLevelMap<MEM>& a_map,
+        MBLevelMap<MAP, MEM>& a_map,
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
@@ -180,9 +180,9 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
     m_ops.clear();
 }
 
-template<MemType MEM>
+template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
-        MBLevelMap<MEM>&            a_map,
+        MBLevelMap<MAP,MEM>&            a_map,
         const std::vector<Point>&   a_footprint,
         int                         a_block)
 {

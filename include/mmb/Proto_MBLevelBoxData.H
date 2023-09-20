@@ -11,7 +11,7 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
-    template<MemType MEM>
+    template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;

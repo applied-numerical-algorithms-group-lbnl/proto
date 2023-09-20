@@ -9,13 +9,13 @@
 
 using namespace Proto;
 
-class MBMap_CubeSphereShell : public MBMapOp
+template<MemType MEM>
+class MBMap_CubeSphereShell : public MBMapOp<MEM>
 {
     public:
 
-    using MBMapOp::MBMapOp;
+    using MBMapOp<MEM>::MBMapOp;
 
-    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
@@ -47,13 +47,13 @@ class MBMap_CubeSphereShell : public MBMapOp
     }
 };
 
-class MBMap_CubeSphereShellPolar : public MBMapOp
+template<MemType MEM>
+class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
 {
     public:
 
-    using MBMapOp::MBMapOp;
+    using MBMapOp<MEM>::MBMapOp;
 
-    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
@@ -91,6 +91,7 @@ class MBMap_CubeSphereShellPolar : public MBMapOp
     }
 };
 
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries_CubeSphereShell(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -106,7 +107,7 @@ void interpBoundaries_CubeSphereShell(
             footprint.push_back(pi);
         }
     }
-    MBLevelMap_CubeSphereShellPolar<MEM> polarMaps[6];
+    MBMap_CubeSphereShellPolar<MEM> polarMaps[6];
     MBInterpOp op(a_data.ghost()[0], a_order);
     for (int bi = 0; bi < 6; bi++)
     {
@@ -115,4 +116,4 @@ void interpBoundaries_CubeSphereShell(
     }
     op.apply(a_data, a_data);
 }
-
+*/

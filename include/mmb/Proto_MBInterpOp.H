@@ -29,11 +29,11 @@ namespace Proto
          *
          *  TODO: order can probably be inferred from the footprint or vice versa
          */
-        template<MemType MEM>
+        template<template<MemType> typename MAP, MemType MEM>
         inline MBPointInterpOp(
             MBDataPoint                 a_dst,
             Point                       a_ghost,
-            MBLevelMap<MEM>&            a_map,
+            MBLevelMap<MAP, MEM>&       a_map,
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
         
@@ -122,9 +122,9 @@ namespace Proto
          *  with (see constructor). This function only defines the operators used to interpolate
          *  into the specified block. A user may choose to specify a different version of
          *  physical space when building the operators for each block */
-        template<MemType MEM>
+        template<template<MemType> typename MAP, MemType MEM>
         inline void define(
-                MBLevelMap<MEM>&            a_map,
+                MBLevelMap<MAP, MEM>&       a_map,
                 const std::vector<Point>&   a_footprint,
                 int block = -1);
         
