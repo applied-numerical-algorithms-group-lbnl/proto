@@ -9,13 +9,13 @@
 
 using namespace Proto;
 
-template<MemType MEM>
-class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
+class MBMap_CubeSphereShell : public MBMapOp
 {
     public:
 
-    using MBLevelMap<MEM>::MBLevelMap;
+    using MBMapOp::MBMapOp;
 
+    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
@@ -47,13 +47,13 @@ class MBLevelMap_CubeSphereShell : public MBLevelMap<MEM>
     }
 };
 
-template<MemType MEM>
-class MBLevelMap_CubeSphereShellPolar : public MBLevelMap<MEM>
+class MBMap_CubeSphereShellPolar : public MBMapOp
 {
     public:
 
-    using MBLevelMap<MEM>::MBLevelMap;
+    using MBMapOp::MBMapOp;
 
+    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,

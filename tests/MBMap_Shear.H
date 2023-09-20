@@ -6,13 +6,13 @@
 
 using namespace Proto;
 
-template<MemType MEM>
-class MBLevelMap_Shear : public MBLevelMap<MEM>
+class MBMap_Shear : public MBMapOp
 {
     public:
 
-    using MBLevelMap<MEM>::MBLevelMap;
+    using MBMapOp::MBMapOp;
 
+    template<MemType MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
