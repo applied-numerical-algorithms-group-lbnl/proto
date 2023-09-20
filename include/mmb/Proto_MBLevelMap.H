@@ -4,6 +4,7 @@ pragma once
 
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
+#include "Proto_MBMapOp.H"
 #include "Proto_Operator.H"
 
 namespace Proto
@@ -28,7 +29,7 @@ namespace Proto
  *  data such as operators, stencils, or metrics in order to prevent computing these
  *  quantities each time apply is called.
  */
-template<MemType MEM = MEMTYPE_DEFAULT>
+template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelMap
 {
     public:
@@ -37,11 +38,9 @@ class MBLevelMap
     inline MBLevelMap(){}
     
     /// Non-Trivial Constructor is explicitly removed
-    /*
     inline MBLevelMap(
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost);
-    */
     
     /// Define
     /** Delayed construction. Define must be explicitly called by the user on an
@@ -56,8 +55,7 @@ class MBLevelMap
      */
     inline void define(
             const MBDisjointBoxLayout& a_layout,
-            const Array<Point, DIM+1>& a_ghost,
-            unsigned int         a_block = 0);
+            const Array<Point, DIM+1>& a_ghost)
 
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
@@ -77,12 +75,6 @@ class MBLevelMap
     /// Jacobian Access (Const Overload)
     inline const MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian() const;
 
-    /// User Defined Initialization
-    /** Users should override this function with any code they would like to run
-     *  when the map is constructed.
-     */
-    inline virtual void init() {}
-
     /// Compute Map
     /** Users should override this function when defining their map if they do not want
      *  to explicitly define the metric tensor (NT). The domains of the coordinate and
@@ -95,7 +87,7 @@ class MBLevelMap
      *  \param a_J:     Cell averaged jacobian [input/output]
      *  \param a_index: MBIndex corresponding to the patch where the operator is being applied
      */
-    inline virtual void apply(
+    inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             unsigned int a_block);
@@ -113,7 +105,7 @@ class MBLevelMap
      *  \param a_NT:    Face averaged metric terms in each coordinate direction [output]
      *  \param a_index: MBIndex corresponding to the patch where the operator is being applied
      */
-    inline virtual void apply(
+    inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT,
@@ -170,7 +162,7 @@ class MBLevelMap
     inline const MBDisjointBoxLayout& layout() const;
     
     /// Get Mapped Grid Spacing
-    inline const Array<double, DIM>& dx(int a_blockID) const;
+    inline const Array<double, DIM>& dx(int a_block) const;
 
     /// Get Block
     inline unsigned int block() const { return m_block; }
@@ -187,11 +179,9 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
-        std::vector<Array<double, DIM>>             m_dx;   ///< Grid spacing in mapped space
+        std::vector<MAP>                            m_ops;  ///< Map operators
         MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;    ///< Cached coodinate values
         MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;    ///< Cached Jacobian values
-        Stencil<double>                             m_c2c;  ///< Cached corners-to-cells Stencil
-        unsigned int                                m_block;///< Block associated with this map (often unused)
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

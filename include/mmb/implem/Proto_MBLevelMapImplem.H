@@ -1,29 +1,22 @@
-/// TODO: MBLevelMap explicitly doesn't define a non-trivial constructor
-//  This is important for it's implementation.
-/*
     template<MemType MEM>
 MBLevelMap<MEM>::MBLevelMap(
         MBDisjointBoxLayout& a_layout,
-        Array<Point, DIM+1>& a_ghost,
-        int a_order)
+        Array<Point, DIM+1>& a_ghost)
 {
-    define(a_layout, a_ghost, a_order);
+    define(a_layout, a_ghost);
 }
-*/
+
 template<MemType MEM>
 void MBLevelMap<MEM>::define(
         const MBDisjointBoxLayout& a_layout,
-        const Array<Point, DIM+1>& a_ghost,
-        unsigned int         a_block)
+        const Array<Point, DIM+1>& a_ghost)
 {
-    m_block = a_block;
-    m_c2c = Stencil<double>::CornersToCells(4);
     m_X.define(a_layout, a_ghost);
     m_J.define(a_layout, a_ghost);
     m_X.setVal(0);
     m_J.setVal(0);
     m_dx.resize(a_layout.numBlocks());
-
+    m_ops.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().blockDomain(bi).box();
@@ -31,10 +24,8 @@ void MBLevelMap<MEM>::define(
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);
         }
+        m_ops[bi].define(m_dx[bi], bi);
     }
-
-    // user defined initialization
-    init();
 
     for (auto iter : a_layout)
     {
@@ -54,8 +45,7 @@ void MBLevelMap<MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_block)
 {
-    FluxBoxData<double, DIM, MEM> NT(a_J.box());
-    apply(a_X, a_J, NT, a_block);
+    m_ops[a_block].apply(a_X, a_J);
 }
 
 template<MemType MEM>
@@ -65,7 +55,7 @@ void MBLevelMap<MEM>::apply(
         FluxBoxData<double, DIM, MEM>& a_NT,
         unsigned int a_block)
 {
-    apply(a_X, a_J, a_block);
+    m_ops[a_block].apply(a_X, a_J, a_NT);
 }
 
 template<MemType MEM>
@@ -75,6 +65,8 @@ void MBLevelMap<MEM>::doApply(
         unsigned int a_computeBlock,
         unsigned int a_outBlock)
 {
+    m_ops[a_computeBlock].doApply(a_X, a_J, a_computeBlock, a_outBlock);
+    /*
     if (a_computeBlock != a_outBlock)
     {
         const auto& domain = layout().domain();
@@ -90,6 +82,7 @@ void MBLevelMap<MEM>::doApply(
     } else {
         apply(a_X, a_J, a_computeBlock);
     }
+    */
 }
 
 template<MemType MEM>
@@ -98,11 +91,14 @@ BoxData<double, DIM, MEM> MBLevelMap<MEM>::cellAveraged(
         unsigned int a_computeBlock,
         unsigned int a_outBlock)
 {
+    return m_ops[a_computeBlock].cellAveraged(a_box, a_computeBlock, a_outBlock);
+    /*
     Box B0 = m_c2c.domain(a_box);
     BoxData<double, DIM, MEM> X0(B0);
     BoxData<double, 1, MEM> J0(B0.extrude(Point::Ones(), -1)); //unused
     doApply(X0, J0, a_computeBlock, a_outBlock);
     return m_c2c(X0);
+    */
 }
 
 template<MemType MEM>
@@ -111,28 +107,35 @@ BoxData<double, DIM, MEM> MBLevelMap<MEM>::cellCentered(
         unsigned int a_computeBlock,
         unsigned int a_outBlock)
 {
-    auto X0 = cellAveraged(a_box.grow(1), a_computeBlock, a_outBlock);
-    return Operator::deconvolve(X0);
+    return m_ops[a_computeBlock].cellCentered(a_box, a_computeBlock, a_outBlock);
+    //auto X0 = cellAveraged(a_box.grow(1), a_computeBlock, a_outBlock);
+    //return Operator::deconvolve(X0);
 }
 
 template<MemType MEM>
 Array<double, DIM> MBLevelMap<MEM>::cellAveraged(const MBDataPoint& a_point)
 {
+    return m_ops[a_point.srcBlock()].cellAveraged(a_point);
+    /*
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
     auto X = cellAveraged(B0, computeBlock, domainBlock);
     return X.array(a_point.point);
-}
+    */
+    }
 
 template<MemType MEM>
 Array<double, DIM> MBLevelMap<MEM>::cellCentered(const MBDataPoint& a_point)
 {
+    return m_ops[a_point.srcBlock()].cellCentered(a_point);
+    /*
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
     auto X = cellCentered(B0, computeBlock, domainBlock);
     return X.array(a_point.point);
+    */
 }
 
 
@@ -182,46 +185,3 @@ const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MEM>::jacobian() const
 {
     return m_J;
 }
-/*
-template<MemType MEM>
-Array<double, DIM> MBLevelMap<MEM>::operator()(
-        const Point& a_cell,
-        unsigned int a_block,
-        Centering a_ctr)
-{
-    Box domainBox(a_cell, a_cell);
-    auto index = layout().find(a_cell, a_block);
-    PROTO_ASSERT(index != layout().end(),
-            "MBLevelMap::operator() | Error: Point not found in block %u" << a_block);
-    switch (a_ctr)
-    {
-        case PR_CELL:
-            domainBox = m_c2c.domain(domainBox).grow(1); // c2c + convolve
-            BoxData<double, DIM, MEM> X0(domainBox);
-            BoxData<double, 1, MEM> J0(domainBox); // unused
-            this->apply(X0, J0, index);
-            BoxData<double, DIM, MEM> Xavg = m_c2c(X0);
-            auto Xctr = Operator::deconvolve(Xavg);
-            PROTO_ASSERT(Xctr.box().contains(a_cell),
-                    "MBLevelMap::operator() | Error: Interpolated coordinates don't contain the requested cell");
-            return Xctr(a_cell);
-        case PR_NODE:
-            BoxData<double, DIM, MEM> X0(domainBox);
-            BoxData<double, 1, MEM> J0(domainBox); // unused
-            this->apply(X0, J0, index);
-            PROTO_ASSERT(X0.box().contains(a_cell),
-                    "MBLevelMap::operator() | Error: Interpolated coordinates don't contain the requested cell");
-            return X0(a_cell);
-        default:
-            MayDay<void>::Abort("MBLevelMap::operator() | Error: Case not implemented.");
-    }
-}
-
-template<MemType MEM>
-BoxData<double, DIM,MEM> MBLevelMap<MEM>::operator()(
-        const Box& a_domain,
-        unsigned int a_computeBlock,
-        unsigned int a_domainBlock,
-        Centering a_ctr)
-{
-*/
