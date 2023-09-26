@@ -7,7 +7,23 @@ Proto is a middleware layer that allows performance portability in scientific co
 * Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
 * Proto includes data structures which support embedded boundary (EB) calculations.  Embedded boundary calculations done properly require data to live on a more complex graph structure than simple arrays can support. 
 
-## Build instructions:
+## Including Proto:
+Proto is a header-only library and hence does not need to be built to use in external projects. To use Proto, add proto/include to the build path and #include Proto.H. No other headers need be included. 
+### Compiler Flags
+Compile time constants used by Proto are summarized below:
+* DIM - The default number of spatial dimensions
+* PR_AMR - If defined, will include AMR tools along with the base library of proto
+* PR_MMB - If defined, will include MMB tools along with the base library of proto
+* PR_OPS - If defined, will include Proto's matrix interface through LAPACK
+* PR_BLIS - If defined along with PR_OPS, Proto's matrix interface will be built using the BLIS submodule (experimental)
+* PR_MPI - If defined, Proto will use MPI
+* PR_HDF5 - If defined, Proto will use HDF5 and the HDF5 Proto tools will be included
+* PROTO_CUDA - If defined, Proto will use Cuda GPU backend (doesn't work with HIP)
+* PROTO_HIP - If defined, Proto will use the HIP GPU backend (doesn't work with CUDA)
+
+
+## Build Tests and Examples:
+
 ### CMake version
 * The minumum required CMake version is 3.20. If an older version is the default on your platform, load a `cmake` module with a sufficiently new version. Configuration has been tested through CMake 3.21.
 ### Cori Modules
