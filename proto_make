@@ -1,0 +1,117 @@
+#!/usr/bin/python
+from argparse import *
+import os
+import glob
+import platform
+import subprocess
+import shutil
+import sys
+
+home_dir = os.getcwd();
+dash = '-' *100
+
+# Parse Arguments
+parser = ArgumentParser()
+parser.add_argument('--DIM',  type=int, help="Dimensionality [2]", default='2')
+parser.add_argument('--MPI',  help="Use MPI [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--AMR',  help="Use AMR library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--CUDA', help="Compile for Cuda acceleration [ON]", choices=['ON', 'OFF'], default='OFF')
+parser.add_argument('--HIP',  help="Compile for HIP acceleration [ON]", choices=['ON', 'OFF'], default='OFF')
+parser.add_argument('--MMB',  help="Use MMB library [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--HDF5', help="Enable HDF5 data processing [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
+        choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
+parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
+args = parser.parse_args()
+
+# Retrieve Targets
+test_files = glob.glob('./tests/*Tests.cpp')
+example_dirs = os.listdir('./examples')
+tests = []
+examples = []
+targets = ['ALL (build everything)', 'TEST (build everything and run all tests)']
+if (args.OPS == 'ON'):
+    for e in example_dirs:
+        if (e[0] == '_'): continue
+        if (e == 'CMakeLists.txt'): continue
+        if (e.startswith('AMR') and args.AMR == 'OFF'): continue
+        if (e.startswith('MMB') and args.MMB == 'OFF'): continue
+        examples.append(e)
+for f in test_files:
+    tests.append(f.split('/')[-1].split('.')[0])
+
+# Print targets if TARGET == LIST
+print_width = 3
+if (args.TARGET == 'LIST'):
+    print(dash)
+    parser.print_usage()
+    print(dash)
+    print ('\nSpecial Targets:')
+    ii = 0
+    print(dash)
+    for t in targets:
+        print('{:<30}'.format(t),)
+        ii += 1
+        if ii % print_width == 0:
+            print('')
+            ii = 0
+    if (ii > 0): print('')
+    print(dash)
+    print('\nExample Targets:')
+    ii = 0
+    print(dash)
+    for e in examples:
+        print('{:<30}'.format(e),)
+        ii += 1
+        if ii % print_width == 0:
+            print('')
+            ii = 0
+    if (ii > 0): print('')
+    print(dash)
+    print('\nTest Targets:')
+    ii = 0
+    print(dash)
+    for t in tests:
+        print('{:<30}'.format(t),)
+        ii += 1
+        if ii % print_width == 0:
+            print('')
+            ii = 0
+    if (ii > 0): print('')
+    print(dash)
+    sys.exit()
+
+# Remove existing build directory
+for exe in glob.iglob(os.path.join(home_dir, '*.exe')):
+    os.remove(exe)
+if (os.path.exists('./build')):
+    shutil.rmtree('./build')
+
+# Configure CMake
+CMAKE_FLAGS = ""
+CMAKE_FLAGS += "-D DIM=" + str(args.DIM) + " "
+CMAKE_FLAGS += "-D ENABLE_MPI=" + args.MPI + " "
+CMAKE_FLAGS += "-D AMR=" + args.AMR + " "
+CMAKE_FLAGS += "-D MMB=" + args.MMB + " "
+CMAKE_FLAGS += "-D ENABLE_CUDA=" + args.CUDA + " "
+CMAKE_FLAGS += "-D ENABLE_HIP=" + args.HIP + " "
+CMAKE_FLAGS += "-D ENABLE_HDF5=" + args.HDF5 + " "
+CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
+CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
+CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
+CMAKE_FLAGS += "-D ENABLE_ALL_TESTS=ON"
+
+CMAKE_COMMAND = "cmake -B build " + CMAKE_FLAGS
+print(CMAKE_COMMAND)
+os.system(CMAKE_COMMAND)
+
+# Build Targets
+if ['ALL', 'TEST'].count(args.TARGET) > 0:
+    os.system('cmake --build build/')
+    if args.TARGET == 'TEST':
+        os.system('cmake --build build/ --target test')
+else:
+	os.system('cmake --build build/ --target ' + args.TARGET)
+	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
