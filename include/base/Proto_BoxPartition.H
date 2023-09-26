@@ -66,6 +66,18 @@ namespace Proto
                 const std::vector<Point>& a_patches,
                 unsigned int a_startProc,
                 unsigned int a_endProc);
+
+        /// Define
+        /**
+         *  Create a BoxPartition from a set of patches that have already been assigned
+         *  to processors. Use this function if load balancing is executed externally.
+         *
+         *  \param a_patchDomain        A ProblemDomain where each Point corresponds to a Box
+         *  \param a_assignedPatches    A vector of patch-processor pairs
+         */
+        inline void define(
+                const ProblemDomain& a_patchDomain,
+                std::vector<std::pair<Point,int>>& a_assignedPatches);
         
         /// Load Balance
         /**
@@ -124,7 +136,8 @@ namespace Proto
         */
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment);
-        
+       
+
         /// Compatibility Query
         /**
          * Determine if this has the same layout structure as another BoxPartition.

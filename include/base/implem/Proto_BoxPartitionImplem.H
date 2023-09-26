@@ -33,6 +33,23 @@ void BoxPartition::define(
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
 
+void BoxPartition::define(
+        const ProblemDomain& a_patchDomain,
+        const std::vector<std::pair<Point, unsigned int>>& a_patches)
+{
+    m_patchDomain = a_patchDomain;
+    m_partition.clear();
+    m_partition = a_patches;
+    m_indexMap.clear();
+    for (int global = 0; global < a_patches.size(); global++)
+    {
+        auto patch = a_patches[global].first;
+        uint64_t mortonIndex = Morton::index(first);
+        m_indexMap.insert(std::pair<uint64_t, int>(mortonIndex, global));
+
+    }
+}
+
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,
