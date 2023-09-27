@@ -15,12 +15,12 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
 
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
-            BoxData<double, 1, MEM>& a_J,
-            unsigned int a_block)
+            BoxData<double, 1, MEM>& a_J)
     {
         auto& layout = this->layout();
         auto& dx = this->dx(a_block);
         auto X0 = this->X(a_X.box(), dx);
+        auto block = this->block();
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -45,7 +45,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
 #if DIM == 3
                 a_X(2) = Z;
 #endif
-            }, a_X, X0, a_block, m_numBlocks
+            }, a_X, X0, block, m_numBlocks
         );
         a_J.setVal(sin(2.0*M_PI/m_numBlocks));
     }

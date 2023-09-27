@@ -1,16 +1,19 @@
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
         MBDisjointBoxLayout& a_layout,
-        Array<Point, DIM+1>& a_ghost)
+        Array<Point, DIM+1>& a_ghost,
+        unsigned int         a_focalBlock)
 {
-    define(a_layout, a_ghost);
+    define(a_layout, a_ghost, a_focalBlock);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
         const MBDisjointBoxLayout& a_layout,
-        const Array<Point, DIM+1>& a_ghost)
+        const Array<Point, DIM+1>& a_ghost,
+        unsigned int               a_focalBlock)
 {
+    m_focalBlock = a_focalBlock;
     m_c2c = Stencil<double>::CornersToCells(4);
     m_X.define(a_layout, a_ghost);
     m_J.define(a_layout, a_ghost);
@@ -25,7 +28,7 @@ void MBLevelMap<MAP,MEM>::define(
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);
         }
-        m_ops[bi].define(m_dx[bi], bi);
+        m_ops[bi].define(m_dx[bi], bi, a_focalBlock);
     }
 
     for (auto iter : a_layout)
@@ -46,7 +49,7 @@ void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_block)
 {
-    m_ops[a_block].apply(a_X, a_J, a_block);
+    m_ops[a_block].apply(a_X, a_J);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -56,7 +59,7 @@ void MBLevelMap<MAP,MEM>::apply(
         FluxBoxData<double, DIM, MEM>& a_NT,
         unsigned int a_block)
 {
-    m_ops[a_block].apply(a_X, a_J, a_NT, a_block);
+    m_ops[a_block].apply(a_X, a_J, a_NT);
 }
 
 template<template<MemType> typename MAP, MemType MEM>

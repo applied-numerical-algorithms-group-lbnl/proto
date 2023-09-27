@@ -1,37 +1,48 @@
 
 template<MemType MEM>
-MBMapOp<MEM>::MBMapOp(Array<double, DIM> a_dx, unsigned int a_block)
+MBMapOp<MEM>::MBMapOp(
+        Array<double, DIM> a_dx,
+        unsigned int a_block,
+        unsigned int a_focalBlock)
 {
-    define(a_dx, a_block);
+    define(a_dx, a_block, a_focalBlock);
 }
 
 template<MemType MEM>
-void MBMapOp<MEM>::define(Array<double, DIM> a_dx, unsigned int a_block)
+void MBMapOp<MEM>::define(
+        Array<double, DIM> a_dx,
+        unsigned int a_block,
+        unsigned int a_focalBlock)
 {
     m_dx = a_dx;
     m_block = a_block;
+    m_focalBlock = a_focalBlock;
     m_c2c = Stencil<double>::CornersToCells(4);
     this->init();
 }
 
+//NB: these two functions don't form a loop because the user must define one of them
+// in the derived class, hence breaking the loop and allowing the undefined version
+// to funnel into the defined one. 
 template<MemType MEM>
 void MBMapOp<MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
-        BoxData<double, 1, MEM>& a_J,
-        unsigned int a_block)
+        BoxData<double, 1, MEM>& a_J)
 {
     FluxBoxData<double, DIM, MEM> NT(a_J.box());
-    apply(a_X, a_J, NT, a_block);
+    apply(a_X, a_J, NT);
 }
 
+//NB: these two functions don't form a loop because the user must define one of them
+// in the derived class, hence breaking the loop and allowing the undefined version
+// to funnel into the defined one. 
 template<MemType MEM>
 void MBMapOp<MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
-        FluxBoxData<double, DIM, MEM>& a_NT,
-        unsigned int a_block)
+        FluxBoxData<double, DIM, MEM>& a_NT)
 {
-    apply(a_X, a_J, a_block);
+    apply(a_X, a_J);
 }
 
 template<MemType MEM>

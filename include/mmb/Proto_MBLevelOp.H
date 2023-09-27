@@ -64,6 +64,7 @@ class MBLevelOp
     inline unsigned int RKStage() const {return m_rkStage; }
     inline const MBDisjointBoxLayout& layout() const {return m_map->map().layout(); }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
+    
     private:
     
     T m_diagScale;

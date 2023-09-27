@@ -19,11 +19,11 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            FluxBoxData<double, DIM, MEM>& a_NT,
-            unsigned int a_block)
+            FluxBoxData<double, DIM, MEM>& a_NT)
     {
         auto& layout = this->layout();
-        auto& dx = this->dx(a_block);
+        auto& dx = this->dx();
+        auto block = this->block();
 #if 1
         auto C2C = Stencil<double>::CornersToCells(4);
         int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
@@ -32,7 +32,7 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
         Box b = C2C.domain(a_X.box());
         BoxData<double, DIM, MEM> X0(b);
         BoxData<double, 1, MEM> J0(b);
-        forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, a_block, r_dir);
+        forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, block, r_dir);
         X0.copyTo(a_X);
         a_J |= C2C(J0);
 #else
@@ -42,7 +42,7 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
             {
                 a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
             }, radius, dx);
-        Operator::cubedSphereGeometry(a_X, a_NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
+        Operator::cubedSphereGeometry(a_X, a_NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], block);
 #endif
     }
 };
@@ -57,11 +57,11 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            FluxBoxData<double, DIM, MEM>& a_NT,
-            unsigned int a_block)
+            FluxBoxData<double, DIM, MEM>& a_NT)
     {
         auto& layout = this->layout();
-        auto& dx = this->dx(a_block);
+        auto& dx = this->dx();
+        auto block = this->block();
 #if 1
         int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
         double r0 = CUBE_SPHERE_SHELL_R0;
@@ -70,9 +70,9 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
         BoxData<double, 1, MEM> J0(X0.box());
         BoxData<double, DIM, MEM> X1(a_X.box().grow(1));
         BoxData<double, 1, MEM> J1(X1.box());
-        forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, a_block, r_dir);
-        int refBlock = this->block();
-        forallInPlace_p(f_cartesianToSphericalMap, X1, J1, X0, refBlock, r_dir); 
+        forallInPlace_p(f_cubeSphereMap, X0, J0, dx, r0, r1, block, r_dir);
+        int focalBlock = this->focalBlock();
+        forallInPlace_p(f_cartesianToSphericalMap, X1, J1, X0, focalBlock, r_dir); 
         
         J0.copyTo(a_J);
         a_J *= J1;
@@ -91,7 +91,6 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
     }
 };
 
-/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries_CubeSphereShell(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -116,4 +115,3 @@ void interpBoundaries_CubeSphereShell(
     }
     op.apply(a_data, a_data);
 }
-*/

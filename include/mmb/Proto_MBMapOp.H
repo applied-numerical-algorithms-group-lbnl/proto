@@ -18,10 +18,16 @@ class MBMapOp
     inline MBMapOp(){}
 
     /// Constructor
-    inline MBMapOp(Array<double, DIM> a_dx, unsigned int a_block = 0);
+    inline MBMapOp(
+            Array<double, DIM>  a_dx,
+            unsigned int        a_block,
+            unsigned int        a_focalBlock = 0);
 
     /// Lazy Constructor
-    inline void define(Array<double, DIM> a_dx, unsigned int a_block = 0);
+    inline void define(
+            Array<double, DIM>  a_dx,
+            unsigned int        a_block,
+            unsigned int        a_focalBlock = 0);
 
     /// User Defined Initialization
     /** Users should override this function with any code they would like to run
@@ -39,12 +45,10 @@ class MBMapOp
      *
      *  \param a_X:     Coordinates at nodes [input/output]
      *  \param a_J:     Cell averaged jacobian [input/output]
-     *  \param a_index: MBIndex corresponding to the patch where the operator is being applied
      */
     inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
-            BoxData<double, 1, MEM>& a_J,
-            unsigned int a_block);
+            BoxData<double, 1, MEM>& a_J);
     
     /// Compute Map (With Metrics)
     /** Users should override this function when defining their map if they want
@@ -57,13 +61,11 @@ class MBMapOp
      *  \param a_X:     Coordinates at nodes [input/output]
      *  \param a_J:     Cell averaged jacobian [input/output]
      *  \param a_NT:    Face averaged metric terms in each coordinate direction [output]
-     *  \param a_index: MBIndex corresponding to the patch where the operator is being applied
      */
     inline virtual void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            FluxBoxData<double, DIM, MEM>& a_NT,
-            unsigned int a_block);
+            FluxBoxData<double, DIM, MEM>& a_NT);
     
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx() const;
@@ -82,11 +84,17 @@ class MBMapOp
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
     
+    ///
+    inline void setFocalBlock(unsigned int a_block) { m_focalBlock = a_block; this->init(); }
+
+    ///
+    inline unsigned int focalBlock() const { return m_focalBlock; }
     private:
     
-    Array<double, DIM> m_dx;   ///< Grid spacing in mapped space
-    Stencil<double>    m_c2c;  ///< Cached corners-to-cells Stencil
-    unsigned int       m_block;///< Block associated with this map (often unused)
+    Array<double, DIM> m_dx;            ///< Grid spacing in mapped space
+    Stencil<double>    m_c2c;           ///< Cached corners-to-cells Stencil
+    unsigned int       m_block;         ///< Block in which this map is applied
+    unsigned int       m_focalBlock;    ///< Block on which this map is focused (often unused)
 };
 #include "implem/Proto_MBMapOpImplem.H"
 } //end Proto namespace

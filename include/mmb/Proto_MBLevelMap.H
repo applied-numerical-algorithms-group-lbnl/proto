@@ -40,7 +40,8 @@ class MBLevelMap
     /// Non-Trivial Constructor is explicitly removed
     inline MBLevelMap(
             MBDisjointBoxLayout& a_layout,
-            Array<Point, DIM+1>& a_ghost);
+            Array<Point, DIM+1>& a_ghost,
+            unsigned int         a_focalBlock = 0);
     
     /// Define
     /** Delayed construction. Define must be explicitly called by the user on an
@@ -51,11 +52,12 @@ class MBLevelMap
      *  \param a_ghost      An array of ghost data sizes. This ghost array is used
      *                      To define how much ghost data should be allocated for
      *                      cached arrays of the coordinates and Jacobian.
-     *  \param a_block      The block id associated with this map. Often unused.
+     *  \param a_focalBlock The "focus" block id associated with this map. Often unused.
      */
     inline void define(
             const MBDisjointBoxLayout& a_layout,
-            const Array<Point, DIM+1>& a_ghost);
+            const Array<Point, DIM+1>& a_ghost,
+            unsigned int               a_focalBlock = 0);
 
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
@@ -176,11 +178,12 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
-        Stencil<double>                             m_c2c;
-        std::vector<MAP<MEM>>                       m_ops;  ///< Map operators
-        std::vector<Array<double, DIM>>             m_dx;
-        MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;    ///< Cached coodinate values
-        MBLevelBoxData<double, 1, MEM, PR_CELL>     m_J;    ///< Cached Jacobian values
+        unsigned int                    m_focalBlock;
+        Stencil<double>                 m_c2c;
+        std::vector<MAP<MEM>>           m_ops;  ///< Map operators
+        std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
+        MBLevelBoxData<double, DIM, MEM, PR_NODE>  m_X;    ///< Cached coodinate values
+        MBLevelBoxData<double, 1, MEM, PR_CELL>    m_J;    ///< Cached Jacobian values
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"
