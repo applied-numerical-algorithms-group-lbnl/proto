@@ -32,7 +32,7 @@
      fprintf(stderr,"Assertion `" #stmt "` failed.\n\t") && \
      fprintf(stderr,args) && \
      fprintf(stderr,"\n"))); \
-  if (!(stmt)){std::abort();}
+  if (!(stmt)){::std::abort();}
 
 /**
 #define PR_assert(stmt) \

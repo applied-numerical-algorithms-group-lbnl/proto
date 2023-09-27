@@ -1,3 +1,5 @@
+#include <limits>
+#include "../Proto_accel.H"
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array() {}
@@ -11,7 +13,7 @@ Array<T,N>::Array(T val) {
 
 template<typename T, size_t N>
 ACCEL_DECORATION
-Array<T,N>::Array(std::initializer_list<T> list) {
+Array<T,N>::Array(::std::initializer_list<T> list) {
     size_t i=0;
     for (auto &elt : list)
         m_data[i++] = elt;
@@ -35,7 +37,7 @@ Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
 }
 
 template<typename T, size_t N>
-Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
+Array<T,N>& Array<T,N>::operator=(const ::std::array<T,N> &arr) {
     size_t i=0;
     for (auto &elt : *this)
         elt = arr[i++];
@@ -43,7 +45,7 @@ Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
 }
 
 template<typename T, size_t N>
-Array<T,N>::Array(const std::array<T,N> &arr) {
+Array<T,N>::Array(const ::std::array<T,N> &arr) {
     size_t i=0;
     for (auto &elt : *this)
         elt = arr[i++];
@@ -51,7 +53,7 @@ Array<T,N>::Array(const std::array<T,N> &arr) {
 
 template<typename T, size_t N>
 Array<T,N>::Array(const Point &a_pt) {
-    for (int i=0; i<std::min(DIM,(int)N); i++)
+  for (int i=0; i< ::std::min(DIM,(int)N); i++)
     {
         m_data[i] = (T)a_pt[i];
     }
@@ -71,7 +73,7 @@ template<size_t M>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator+(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<std::min(N,M); i++)
+    for (size_t i=0; i< ::std::min(N,M); i++)
         ret[i] += a_rhs[i];
     return ret;
 }
@@ -89,7 +91,7 @@ template<typename T, size_t N>
 template<size_t M>
 ACCEL_DECORATION
 inline void Array<T,N>::operator+=(const Array<T,M> &a_rhs) {
-    for (size_t i=0; i<std::min(N,M); i++)
+  for (size_t i=0; i< ::std::min(N,M); i++)
         m_data[i] += a_rhs[i];
 }
 
@@ -105,7 +107,7 @@ template<size_t M>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator-(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<std::min(N,M); i++)
+    for (size_t i=0; i< ::std::min(N,M); i++)
         ret[i] -= a_rhs[i];
     return ret;
 }
@@ -123,7 +125,7 @@ template<typename T, size_t N>
 template<size_t M>
 ACCEL_DECORATION
 inline void Array<T,N>::operator-=(const Array<T,M> &a_rhs) {
-    for (size_t i=0; i<std::min(N,M); i++)
+    for (size_t i=0; i<::std::min(N,M); i++)
         m_data[i] -= a_rhs[i];
 }
 
@@ -139,7 +141,7 @@ template<size_t M>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator*(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<std::min(N,M); i++)
+    for (size_t i=0; i<::std::min(N,M); i++)
         ret[i] *= a_rhs[i];
     return ret;
 }
@@ -157,7 +159,7 @@ template<typename T, size_t N>
 template<size_t M>
 ACCEL_DECORATION
 inline void Array<T,N>::operator*=(const Array<T,M> &a_rhs) {
-    for (size_t i=0; i<std::min(M,N); i++)
+    for (size_t i=0; i<::std::min(M,N); i++)
         m_data[i] *= a_rhs[i];
 }
 
@@ -174,7 +176,7 @@ template<size_t M>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator/(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<std::min(M,N); i++) {
+    for (size_t i=0; i<::std::min(M,N); i++) {
         PR_assert(a_rhs[i]!=0)
         ret[i] /= a_rhs[i];
     }
@@ -196,7 +198,7 @@ template<typename T, size_t N>
 template<size_t M>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(const Array<T,M> &a_rhs) {
-    for (size_t i=0; i<std::min(M,N); i++) {
+    for (size_t i=0; i<::std::min(M,N); i++) {
         PR_assert(a_rhs[i]!=0)
         m_data[i] /= a_rhs[i];
     }
@@ -250,7 +252,7 @@ inline T Array<T,N>::sum() const {
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::norm() const {
-    return std::sqrt(this->dot(*this));
+    return ::std::sqrt(this->dot(*this));
 }
 
 template<typename T, size_t N>
@@ -268,7 +270,7 @@ inline void Array<T,N>::reset() { this->fill(0); }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline void Array<T,N>::fill(T value) { std::fill_n(m_data,N,value); }
+inline void Array<T,N>::fill(T value) { ::std::fill_n(m_data,N,value); }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
@@ -304,10 +306,10 @@ inline const T* Array<T,N>::cend() const { return this->data()+N; }
 
 template<typename T, size_t N>
 inline void Array<T,N>::print() const {
-    std::cout << "( ";
+    ::std::cout << "( ";
     for (auto &elt : *this)
-        std::cout << elt << ' ';
-    std::cout << ')' << std::endl;
+        ::std::cout << elt << ' ';
+    ::std::cout << ')' << ::std::endl;
 }
 
 // Premultiplication by a scalar
@@ -342,7 +344,7 @@ inline Array<T,N>& operator-(Array<T,N>& a_array) {
 
 // Stream Operator
 template<typename T, size_t N>
-inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array)
+inline ::std::ostream& operator<<(::std::ostream& a_os, const Array<T,N>& a_array)
 {
     a_os << "[";
     for (int n = 0; n < N; n++)

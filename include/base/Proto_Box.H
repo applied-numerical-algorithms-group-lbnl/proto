@@ -190,7 +190,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline std::size_t size(unsigned char a_dim) const;
+        inline ::std::size_t size(unsigned char a_dim) const;
 
         /// Volumetric Size
         /**
@@ -206,7 +206,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline std::size_t size() const; 
+        inline ::std::size_t size() const; 
         
         /// All Sizes
         /**
@@ -924,21 +924,22 @@ namespace Proto
 
         inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
 
-        Point m_low; ///< Point object containing the lower bounds of the Box.
-        Point m_high;  ///< Point object containing the upper bounds of the Box.
-        int m_size; ///< "Volume" of the box.
+    public: //hdf5 stuff is using it in the open.   --- dtg
+      Point m_low; ///< Point object containing the lower bounds of the Box.
+      Point m_high;  ///< Point object containing the upper bounds of the Box.
+      int m_size; ///< "Volume" of the box.
 
     }; //end class Box
 
      /// OStream Operator 
-    inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
+    inline ::std::ostream& operator<<(::std::ostream& a_os, const Box& a_box)
     {
         a_os << "[" << a_box.low() << "," << a_box.high() << "]";
         return a_os;
     }
 
      /// OStream Operator 
-  inline std::istream& operator>>(std::istream& a_is, Box& a_box)
+  inline ::std::istream& operator>>(::std::istream& a_is, Box& a_box)
     {
 
       Point low, high;

@@ -14,19 +14,19 @@ CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matri
 */
 
 CoordPermutation::CoordPermutation(
-        std::vector<std::array<int, 3>>& a_mapping)
+  ::std::vector<::std::array<int, 3>>& a_mapping)
 {
     define(a_mapping);
 }
 
 CoordPermutation::CoordPermutation(
-        std::initializer_list<std::array<int, 3>> a_mapping)
+  ::std::initializer_list<::std::array<int, 3>> a_mapping)
 {
-    std::vector<std::array<int, 3>> v(a_mapping);
+    ::std::vector<::std::array<int, 3>> v(a_mapping);
     define(v);
 }
 
-void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
+void CoordPermutation::define(::std::vector<::std::array<int, 3>>& a_mapping)
 {
     for (auto map : a_mapping)
     {
@@ -54,7 +54,7 @@ void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
             "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
 }
 
-void CoordPermutation::defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix)
+void CoordPermutation::defineMatrix(::std::array<::std::array<int, DIM>, DIM> a_matrix)
 {
     m_matrix = a_matrix;
     PROTO_ASSERT(this->isValid(),
@@ -127,7 +127,7 @@ Point CoordPermutation::operator()(Point a_pt) const
 
 CoordPermutation CoordPermutation::inverse() const
 {
-    std::array<std::array<int, DIM>, DIM> invMatrix;
+    ::std::array<::std::array<int, DIM>, DIM> invMatrix;
     for (int jj = 0; jj < DIM; jj++)
     {
         for (int ii = 0; ii < DIM; ii++)
@@ -155,7 +155,7 @@ Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Bo
         s[d] = max(0,b[d]);
     }
     Point r = (*this)(a_point - src0) + s + dst0;
-    //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
+    //::std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << ::std::endl;
     return r;
 }
 
@@ -174,7 +174,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
         s[d] = max(0,b[d]);
     }
     Point r = (*this)(a_point - src0) + s + dst0;
-    //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
+    //::std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << ::std::endl;
     return r;
 }
 
@@ -239,7 +239,7 @@ void CoordPermutation::print() const
             if (m_matrix[jj][ii] != 0)
             {
                 pout() << ii << " --> " << jj;
-                pout() << " (" << m_matrix[jj][ii] << ")" << std::endl;
+                pout() << " (" << m_matrix[jj][ii] << ")" << ::std::endl;
             }
         }
     }
@@ -254,7 +254,7 @@ void CoordPermutation::printMatrix() const
         {
             pout() << val << ", ";
         }
-        pout() << std::endl;
+        pout() << ::std::endl;
     }
 }
 
@@ -296,7 +296,7 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
 {
     auto A = a_A.matrix();
     auto B = a_B.matrix();
-    std::array<std::array<int, DIM>, DIM> M;
+    ::std::array<::std::array<int, DIM>, DIM> M;
     for (int ii = 0; ii < DIM; ii++)
     {
         for (int jj = 0; jj < DIM; jj++)
