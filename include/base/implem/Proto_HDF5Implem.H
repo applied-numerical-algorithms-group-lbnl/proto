@@ -452,7 +452,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     }
     for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
     {
-        const auto& blockLayout = a_data.layout().blockLayout(bi);
+        const auto& blockLayout = a_data.layout().getBlock(bi);
         const auto& blockData = a_data.blockData(bi);
         numData += blockLayout.size()*blockData.patchSize();
     }
