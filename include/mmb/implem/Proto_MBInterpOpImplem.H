@@ -269,18 +269,17 @@ void MBInterpOp::coefs(
     }
 }
 
-template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order)
 {
-    Map<MEM> map;
-    map.define(a_data.layout(), a_data.ghost());
-    interpBoundaries<Map, T, C, MEM, CTR>(a_data, map, a_order);
+    MBLevelMap<MAP, MEM> map(a_data.layout(), a_data.ghost());
+    interpBoundaries<MAP, T, C, MEM, CTR>(a_data, map, a_order);
 }
 
-template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,
-        Map<MEM>& a_map,
+        MBLevelMap<MAP, MEM>& a_map,
         unsigned int a_order)
 {
     std::vector<Point> footprint;

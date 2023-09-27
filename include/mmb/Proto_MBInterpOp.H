@@ -163,13 +163,13 @@ namespace Proto
         std::vector<MBPointInterpOp> m_ops;
     };
 
-    template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+    template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
     
-    template<template<MemType> typename Map, typename T, unsigned int C, MemType MEM, Centering CTR>
+    template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(
             MBLevelBoxData<T, C, MEM, CTR>& a_data,
-            Map<MEM>& a_map,
+            MBLevelMap<MAP, MEM>& a_map,
             unsigned int a_order = 4);
     
 #include "implem/Proto_MBInterpOpImplem.H"

@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
 #include "Lambdas.H"
-#include "MBLevelMap_Shear.H"
-#include "MBLevelMap_XPointRigid.H"
-#include "MBLevelMap_CubeSphereShell.H"
+#include "MBMap_Shear.H"
+#include "MBMap_XPointRigid.H"
+#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 #if DIM == 2
@@ -41,7 +41,7 @@ TEST(MBInterpOp, ShearTest)
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         ghost[0] = Point::Ones(2);
-        MBLevelMap_Shear<HOST> map;
+        MBLevelMap<MBMap_Shear, HOST> map;
         map.define(layout, ghost);
 
         ghost[0] = Point::Ones(1);
@@ -140,7 +140,7 @@ TEST(MBInterpOp, ShearTestStandalone)
     MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
     
     ghost[0] = Point::Ones(2);
-    MBLevelMap_Shear<HOST> map;
+    MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
     
     for (auto iter : layout)
@@ -154,7 +154,7 @@ TEST(MBInterpOp, ShearTestStandalone)
 
     // interpolate
     hostSrc.exchange();
-    interpBoundaries<MBLevelMap_Shear>(hostSrc);
+    interpBoundaries<MBMap_Shear>(hostSrc);
 
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_ShearStandalone");
@@ -191,8 +191,7 @@ TEST(MBInterpOp, XPointTest)
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         ghost[0] = Point::Ones(2);
-        MBLevelMap_XPointRigid<HOST> map;
-        map.setNumBlocks(numBlocks); //note this added line
+        MBLevelMap<MBMap_XPointRigid, HOST> map;
         map.define(layout, ghost);
 
         ghost[0] = Point::Ones(1);
@@ -454,12 +453,12 @@ TEST(MBInterpOp, CubeSphereShellTest)
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
         // cube sphere -> cartesian map
-        MBLevelMap_CubeSphereShell<HOST> map;
+        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
         map.define(layout, ghost);
 
         // cube sphere -> spherical-polar maps
         // each of these maps rotates the azimuthal singularity away from the focused block
-        MBLevelMap_CubeSphereShellPolar<HOST> polarMaps[6];
+        MBLevelMap<MBMap_CubeSphereShellPolar, HOST> polarMaps[6];
         for (int bi = 0; bi < 6; bi++)
         {
             polarMaps[bi].define(layout, ghost, bi);
@@ -591,7 +590,7 @@ TEST(MBInterpOp, CubeSphereShellStandalone)
 
     // initialize data and map
     MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
-    MBLevelMap_CubeSphereShell<HOST> map;
+    MBLevelMap<MBMap_CubeSphereShell, HOST> map;
     map.define(layout, ghost);
     
     auto C2C = Stencil<double>::CornersToCells(4);

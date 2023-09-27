@@ -2,6 +2,8 @@
 
 #include "Proto.H"
 
+#define XPOINT_NUM_BLOCKS 5
+
 using namespace Proto;
 
 template<MemType MEM>
@@ -11,16 +13,16 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
 
     using MBMapOp<MEM>::MBMapOp;
 
-    inline void setNumBlocks(unsigned int N) {m_numBlocks = N;}
+    //inline void setNumBlocks(unsigned int N) {m_numBlocks = N;}
 
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J)
     {
-        auto& layout = this->layout();
-        auto& dx = this->dx(a_block);
+        auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
+        int numBlocks = XPOINT_NUM_BLOCKS;
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -45,12 +47,10 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
 #if DIM == 3
                 a_X(2) = Z;
 #endif
-            }, a_X, X0, block, m_numBlocks
+            }, a_X, X0, block, numBlocks
         );
-        a_J.setVal(sin(2.0*M_PI/m_numBlocks));
+        a_J.setVal(sin(2.0*M_PI/numBlocks));
     }
 
     private:
-
-    unsigned int m_numBlocks;
 };

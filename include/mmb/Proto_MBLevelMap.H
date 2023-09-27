@@ -39,8 +39,8 @@ class MBLevelMap
     
     /// Non-Trivial Constructor is explicitly removed
     inline MBLevelMap(
-            MBDisjointBoxLayout& a_layout,
-            Array<Point, DIM+1>& a_ghost,
+            const MBDisjointBoxLayout& a_layout,
+            const Array<Point, DIM+1>& a_ghost,
             unsigned int         a_focalBlock = 0);
     
     /// Define

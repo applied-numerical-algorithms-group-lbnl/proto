@@ -1,8 +1,8 @@
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
-        MBDisjointBoxLayout& a_layout,
-        Array<Point, DIM+1>& a_ghost,
-        unsigned int         a_focalBlock)
+        const MBDisjointBoxLayout&  a_layout,
+        const Array<Point, DIM+1>&  a_ghost,
+        unsigned int                a_focalBlock)
 {
     define(a_layout, a_ghost, a_focalBlock);
 }
