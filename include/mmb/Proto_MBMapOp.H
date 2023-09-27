@@ -66,6 +66,23 @@ class MBMapOp
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT);
+   
+    // Used internally to fix inheritance of virtual functions
+    inline void _apply(
+            BoxData<double, DIM, MEM>& a_X,
+            BoxData<double, 1, MEM>& a_J)
+    {
+        apply(a_X, a_J);
+    }
+    
+    // Used internally to fix inheritance of virtual functions
+    inline void _apply(
+            BoxData<double, DIM, MEM>& a_X,
+            BoxData<double, 1, MEM>& a_J,
+            FluxBoxData<double, DIM, MEM>& a_NT)
+    {
+        apply(a_X, a_J, a_NT);
+    }
     
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx() const;
@@ -90,7 +107,9 @@ class MBMapOp
     ///
     inline unsigned int focalBlock() const { return m_focalBlock; }
     private:
-    
+   
+
+
     Array<double, DIM> m_dx;            ///< Grid spacing in mapped space
     Stencil<double>    m_c2c;           ///< Cached corners-to-cells Stencil
     unsigned int       m_block;         ///< Block in which this map is applied

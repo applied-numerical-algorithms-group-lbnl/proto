@@ -21,7 +21,6 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT)
     {
-        auto& layout = this->layout();
         auto& dx = this->dx();
         auto block = this->block();
 #if 1
@@ -59,7 +58,6 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT)
     {
-        auto& layout = this->layout();
         auto& dx = this->dx();
         auto block = this->block();
 #if 1
@@ -106,7 +104,7 @@ void interpBoundaries_CubeSphereShell(
             footprint.push_back(pi);
         }
     }
-    MBMap_CubeSphereShellPolar<MEM> polarMaps[6];
+    MBLevelMap<MBMap_CubeSphereShellPolar, MEM> polarMaps[6];
     MBInterpOp op(a_data.ghost()[0], a_order);
     for (int bi = 0; bi < 6; bi++)
     {

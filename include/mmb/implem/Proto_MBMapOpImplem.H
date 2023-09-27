@@ -30,7 +30,7 @@ void MBMapOp<MEM>::apply(
         BoxData<double, 1, MEM>& a_J)
 {
     FluxBoxData<double, DIM, MEM> NT(a_J.box());
-    apply(a_X, a_J, NT);
+    this->apply(a_X, a_J, NT);
 }
 
 //NB: these two functions don't form a loop because the user must define one of them
@@ -42,7 +42,7 @@ void MBMapOp<MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         FluxBoxData<double, DIM, MEM>& a_NT)
 {
-    apply(a_X, a_J);
+    this->apply(a_X, a_J);
 }
 
 template<MemType MEM>

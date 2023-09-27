@@ -49,7 +49,7 @@ void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_block)
 {
-    m_ops[a_block].apply(a_X, a_J);
+    m_ops[a_block]._apply(a_X, a_J);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -59,7 +59,7 @@ void MBLevelMap<MAP,MEM>::apply(
         FluxBoxData<double, DIM, MEM>& a_NT,
         unsigned int a_block)
 {
-    m_ops[a_block].apply(a_X, a_J, a_NT);
+    m_ops[a_block]._apply(a_X, a_J, a_NT);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
