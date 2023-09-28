@@ -2,10 +2,9 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
-#include "MBLevelMap_CubeSphereShell.H"
-#include "MBLevelMap_CubeSphereShellPolar.H"
-#include "MBLevelMap_XPointRigid.H"
-#include "MBLevelMap_Shear.H"
+#include "MBMap_CubeSphereShell.H"
+#include "MBMap_XPointRigid.H"
+#include "MBMap_Shear.H"
 #include "BoxOp_MBLaplace.H"
 
 using namespace Proto;
@@ -43,7 +42,7 @@ TEST(MBLevelOp, ShearLaplace) {
         MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
         
-        MBLevelMap_Shear<HOST> map;
+        MBLevelMap<MBMap_Shear, HOST> map;
         map.define(layout, mapGhost);
 
         auto C2C = Stencil<double>::CornersToCells(4);
@@ -72,7 +71,7 @@ TEST(MBLevelOp, ShearLaplace) {
         hostDst.setVal(0);
         hostErr.setVal(0);
        
-        MBLevelOp<BoxOp_MBLaplace, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_Shear, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
@@ -146,8 +145,7 @@ TEST(MBLevelOp, XPointLaplace) {
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        MBLevelMap_XPointRigid<HOST> map;
-        map.setNumBlocks(numBlocks);
+        MBLevelMap<MBMap_XPointRigid, HOST> map;
         map.define(layout, mapGhost);
         
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
@@ -181,7 +179,7 @@ TEST(MBLevelOp, XPointLaplace) {
         hostDst.setVal(0);
         hostErr.setVal(0);
        
-        MBLevelOp<BoxOp_MBLaplace, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
@@ -272,9 +270,9 @@ TEST(MBLevelOp, CubeSphereLaplace) {
         boxSizeVect[radialDir] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        MBLevelMap_CubeSphereShell<HOST> map;
+        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
         map.define(layout, dataGhost);
-        MBLevelMap_CubeSphereShellPolar<HOST> polarMaps[6];
+        MBLevelMap<MBMap_CubeSphereShellPolar, HOST> polarMaps[6];
         for (int bi = 0; bi < 6; bi++)
         {
             polarMaps[bi].define(layout, dataGhost, bi);
@@ -310,7 +308,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
         hostDst.setVal(0);
         hostErr.setVal(0);
        
-        MBLevelOp<BoxOp_MBLaplace, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_CubeSphereShell, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         for (auto iter : layout)
