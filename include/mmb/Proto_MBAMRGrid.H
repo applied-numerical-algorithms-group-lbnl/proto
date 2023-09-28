@@ -42,7 +42,11 @@ namespace Proto
             const std::vector<MBPatchID_t>& a_coarsePatches);
         
         inline const AMRGrid& getBlock(unsigned int a_block) const;
+        inline AMRGrid& getBlock(unsigned int a_block);
         inline const MBDisjointBoxLayout& getLevel(unsigned int a_level) const;
+        inline MBDisjointBoxLayout& getLevel(unsigned int a_level);
+        inline const MBDisjointBoxLayout& operator[](unsigned int a_level) const {return getLevel(a_level); }
+        inline MBDisjointBoxLayout& operator[](unsigned int a_level) {return getLevel(a_level); }
         inline unsigned int numLevels() const { return m_layouts.size(); }
         inline unsigned int maxLevels() const { return numLevels(); }
         inline unsigned int numBlocks() const { return m_grids.size(); }

@@ -107,7 +107,20 @@ const AMRGrid& MBAMRGrid::getBlock(unsigned int a_block) const
         "MBAMRGrid::getBlock | Error: block index out of bounds");
     return m_grids[a_block];
 }
+AMRGrid& MBAMRGrid::getBlock(unsigned int a_block)
+{
+    PROTO_ASSERT(a_block < numBlocks(),
+        "MBAMRGrid::getBlock | Error: block index out of bounds");
+    return m_grids[a_block];
+}
 const MBDisjointBoxLayout& MBAMRGrid::getLevel(unsigned int a_level) const
+{
+    PROTO_ASSERT(a_level < numLevels(),
+        "MBAMRGrid::getLevel | Error: level index out of bounds");
+    return m_layouts[a_level];
+}
+
+MBDisjointBoxLayout& MBAMRGrid::getLevel(unsigned int a_level)
 {
     PROTO_ASSERT(a_level < numLevels(),
         "MBAMRGrid::getLevel | Error: level index out of bounds");

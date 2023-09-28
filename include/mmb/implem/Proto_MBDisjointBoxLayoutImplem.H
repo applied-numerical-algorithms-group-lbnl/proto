@@ -84,7 +84,7 @@ void MBDisjointBoxLayout::define(
     }
 }
 
-MBProblemDomain MBDisjointBoxLayout::domain() const
+const MBProblemDomain& MBDisjointBoxLayout::domain() const
 {
     return m_domain;
 }

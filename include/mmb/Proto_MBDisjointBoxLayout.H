@@ -46,7 +46,7 @@ namespace Proto
                 std::shared_ptr<MBBoxPartition> a_partition,
                 const std::vector<Point>& a_boxSizes);
 
-        inline MBProblemDomain domain() const; 
+        inline const MBProblemDomain& domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
         inline unsigned int numBoxes() const;
