@@ -11,13 +11,21 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBAMRData<T,C,MEM,CTR>::MBAMRData(
+        const MBAMRGrid& a_grid,
+        std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData)
+{
+    define(a_grid, a_levelData);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::define(
         const MBAMRGrid& a_grid,
         Array<Point, DIM+1> a_ghost,
         Point a_boundGhost)
 {
     m_ghost = a_ghost;
-    m_grid = &a_grid;
+    m_grid =  &a_grid;
     m_levelData.clear();
     m_amrData.clear();
     for (int li = 0; li < a_grid.numLevels(); li++)
@@ -26,7 +34,22 @@ void MBAMRData<T,C,MEM,CTR>::define(
         m_levelData.push_back(
                 std::make_shared<MBLevelBoxData<T,C,MEM,CTR>>(layout, a_ghost, a_boundGhost));
     }
-    //TODO: Create AMRData
+    //TODO: Create AMRData (?)
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBAMRData<T,C,MEM,CTR>::define(
+        const MBAMRGrid& a_grid,
+        std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData)
+{
+    PROTO_ASSERT(a_grid.numLevels() > 0,
+            "MBAMRData::define (alias) | Error: Grid has zero levels");
+    PROTO_ASSERT(a_levelData.size() == a_grid.numLevels(),
+            "MBAMRData::define (alias) | Error: incorrect number of levels");
+    m_ghost = a_levelData[0]->ghost();
+    m_grid = &a_grid;
+    m_levelData = a_levelData;
+    //TODO: Create AMRData (?)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

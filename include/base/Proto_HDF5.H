@@ -23,6 +23,8 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
 #ifdef PR_AMR
+    template<template<MemType> typename MAP, MemType MEM>
+    class MBAMRMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBAMRData;
 #endif
@@ -316,7 +318,7 @@ namespace Proto
             MemType MEM, Centering CTR, typename... Args>
         inline void writeMBAMRData(
                 std::vector<std::string> a_varNames,
-                const MBLevelMap<MAP, MEM>& a_map,
+                const MBAMRMap<MAP, MEM>& a_map,
                 const MBAMRData<T, C, MEM, CTR>& a_data,
                 std::string a_filename,
                 Args... a_params);

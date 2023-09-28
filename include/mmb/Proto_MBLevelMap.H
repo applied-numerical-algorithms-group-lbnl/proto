@@ -37,7 +37,7 @@ class MBLevelMap
     /// Trivial Constructor
     inline MBLevelMap(){}
     
-    /// Non-Trivial Constructor is explicitly removed
+    /// Non-Trivial Constructor
     inline MBLevelMap(
             const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1>& a_ghost,
@@ -64,7 +64,9 @@ class MBLevelMap
      *  The returned data has NODE centering.
      */
     inline MBLevelBoxData<double, DIM, MEM, PR_NODE>& map();
-    
+
+    inline std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>> mapData() {return m_X; }
+
     /// Access Cached Coordinate Values (Const Overload)
     inline const MBLevelBoxData<double, DIM, MEM, PR_NODE>& map() const;
     
@@ -74,6 +76,7 @@ class MBLevelMap
      */
     inline MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian();
     
+    inline std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>> jacobianData() {return m_J; }
     /// Jacobian Access (Const Overload)
     inline const MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian() const;
 
@@ -182,8 +185,8 @@ class MBLevelMap
         Stencil<double>                 m_c2c;
         std::vector<MAP<MEM>>           m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
-        MBLevelBoxData<double, DIM, MEM, PR_NODE>  m_X;    ///< Cached coodinate values
-        MBLevelBoxData<double, 1, MEM, PR_CELL>    m_J;    ///< Cached Jacobian values
+        std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
+        std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

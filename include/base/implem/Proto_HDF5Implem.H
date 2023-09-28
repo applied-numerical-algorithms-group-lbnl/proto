@@ -1281,6 +1281,37 @@ void HDF5Handler::writeMBAMRData(
     assert(H5Fclose(file) >= 0);
 
 }
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBAMRData(
+        std::vector<std::string> a_varNames,
+        const MBAMRMap<MAP, MEM>& a_map,
+        const MBAMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+
+    std::vector<std::string> a_mapVarNames;
+#if DIM > 0
+    a_mapVarNames.push_back("x");
+#endif
+#if DIM > 1
+    a_mapVarNames.push_back("y");
+#endif
+#if DIM > 2
+    a_mapVarNames.push_back("z");
+#endif
+    MBAMRData<T, DIM, MEM, PR_NODE> tmpMap(a_data.grid(), a_data.ghost());
+    for (int li = 0; li < a_data.grid().numLevels(); li++)
+    {
+        for (auto iter : a_data.grid().getLevel(li))
+        {
+            a_map.map()[li][iter].copyTo(tmpMap[li][iter]);
+        }
+    }
+    writeMBAMRData(a_mapVarNames, tmpMap, a_filename + std::string(".map"), a_params...);
+    writeMBAMRData(a_varNames, a_data, a_filename, a_params...);
+}
 #endif
 #endif
 

@@ -18,11 +18,19 @@ namespace Proto
                 const MBAMRGrid& a_grid,
                 Array<Point, DIM+1> a_ghost,
                 Point a_boundGhost = Point::Zeros());
-        
+       
+        inline MBAMRData(
+                const MBAMRGrid& a_grid,
+                std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
+
         inline void define(
                 const MBAMRGrid& a_grid,
                 Array<Point, DIM+1> a_ghost,
                 Point a_boundGhost = Point::Zeros());
+       
+        inline void define(
+                const MBAMRGrid& a_grid,
+                std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
         
         inline void setVal(T a_value);
         inline void setRandom(T a_low, T a_high);
@@ -31,6 +39,8 @@ namespace Proto
         inline const MBAMRGrid& grid() const {return *m_grid; }
         inline MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level);
         inline const MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level) const;
+        inline MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level) {return getLevel(a_level);}
+        inline const MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level) const {return getLevel(a_level); }
         inline AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block);
         inline const AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block) const;
         inline int numLevels() const {return m_grid->numLevels(); }
@@ -50,8 +60,8 @@ namespace Proto
         
         private:
         
-        Array<Point, DIM+1> m_ghost;
-        const MBAMRGrid*    m_grid;
+        Array<Point, DIM+1>         m_ghost;
+        const MBAMRGrid*  m_grid;
         std::vector<std::shared_ptr<MBLevelBoxData<T, C, MEM, CTR>>>    m_levelData;
         std::vector<std::shared_ptr<AMRData<T, C, MEM, CTR>>>           m_amrData;
     };

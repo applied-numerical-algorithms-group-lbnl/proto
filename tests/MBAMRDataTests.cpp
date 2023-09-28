@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
 #include "Lambdas.H"
+#include "MBMap_XPointRigid.H"
 
 using namespace Proto;
 
@@ -23,10 +24,11 @@ TEST(MBAMRData, Construction) {
 
     auto coarsePatches = domain.patches(Point::Ones(boxSize));
     MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
     data.setRandom(0,1);
 #if PR_VERBOSE > 0
-    h5.writeMBAMRData({"data"}, data, "DATA");
+    h5.writeMBAMRData({"data"}, map, data, "DATA");
 #endif
 
     int numBoxes = domainSize / boxSize * numBlocks;
