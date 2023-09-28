@@ -11,6 +11,7 @@ namespace Proto
     {
         public:
 
+        inline MBBoxPartition(){}
         inline MBBoxPartition(
                 const MBProblemDomain& a_domain);
         inline MBBoxPartition(

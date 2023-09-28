@@ -2,6 +2,7 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
         MBProblemDomain& a_domain,
         Point a_boxSize)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     std::vector<Point> boxSizes(a_domain.numBlocks(), a_boxSize);
     define(a_domain, boxSizes);
 }
@@ -10,6 +11,7 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
         MBProblemDomain& a_domain,
         const std::vector<Point>& a_boxSizes)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_boxSizes);
 }
 
@@ -18,6 +20,7 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
         const std::vector<MBPatchID_t>& a_patches,
         const std::vector<Point>& a_boxSizes)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_patches, a_boxSizes);
 }
 
@@ -57,7 +60,7 @@ void MBDisjointBoxLayout::define(
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 
     m_domain = a_domain;
-    m_partition = std::make_shared<MBBoxPartition>(a_domain.coarsen(a_boxSizes), a_patches);
+    m_partition->define(a_domain.coarsen(a_boxSizes), a_patches);
     m_layouts.clear();
     m_layouts.resize(a_domain.numBlocks());
     

@@ -18,10 +18,12 @@ void MBBoxPartition::define(
         const std::vector<MBPatchID_t>& a_patches)
 {
     m_patchDomain = a_patchDomain;
-    m_blockPartitions.clear();
-    for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+    if (m_blockPartitions.size() != a_patchDomain.size())
     {
-        m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+        for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+        {
+            m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+        }
     }
     define(a_patches);
 }
