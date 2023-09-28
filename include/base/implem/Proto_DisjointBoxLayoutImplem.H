@@ -3,12 +3,14 @@ using std::shared_ptr;
 // Default Constructor
 DisjointBoxLayout::DisjointBoxLayout()
 {
+    m_partition = std::make_shared<BoxPartition>(); 
 }
 
 // Simple Constructor
 DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                                      const Point           & a_boxSize)
 {
+    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_boxSize);
 }
 
@@ -17,6 +19,7 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                                      const vector<Point>   & a_coarsenedPatches,
                                      const Point           & a_boxSize)
 {
+    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_coarsenedPatches, a_boxSize);
 }
 
@@ -25,6 +28,7 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                                      const Box             & a_region,
                                      const Point           & a_boxSize)
 {
+    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_region, a_boxSize);
 }
 
@@ -52,11 +56,10 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Point           & a_boxSize)
 {
     Box bxCoarse = a_problemDomain.box().coarsen(a_boxSize);
-    BoxIterator bxit(bxCoarse);
     vector<Point> allPoints;
-    for (bxit.begin();bxit.ok();++bxit)
+    for (auto pi : bxCoarse)
     {
-        allPoints.push_back(*bxit);
+        allPoints.push_back(pi);
     }
     define(a_problemDomain,allPoints,a_boxSize);
 }
@@ -88,9 +91,8 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
         "DisjointBoxLayout::define | Error: Sub-region cannot be tiled by input box size.");    
     auto patchDomain = a_problemDomain.coarsen(a_boxSize);
     m_problemDomain = a_problemDomain;
-    m_partition = std::make_shared<BoxPartition>(patchDomain, a_patches);
+    m_partition->define(patchDomain, a_patches,0,numProc());
     m_boxSize = a_boxSize;
-    //m_end = LevelIndex(m_partition, a_patches.size());
 }
 
 void

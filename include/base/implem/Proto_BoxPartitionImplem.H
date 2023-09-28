@@ -1,3 +1,4 @@
+
 BoxPartition::BoxPartition(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches)
