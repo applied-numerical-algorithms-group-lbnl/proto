@@ -141,15 +141,27 @@ TEST(MBLevelBoxData, Initialization) {
 #endif
 #if 1
 TEST(MBLevelBoxData, FillBoundaries) {
+    HDF5Handler h5;
     int domainSize = 32;
-    int boxSize = 32;
+    int boxSize = 16;
     int ghostSize = 4;
     int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-
+    std::vector<MBPatchID_t> patches;
+    std::vector<Point> boxSizes(numBlocks, boxSizeVect);
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        patches.push_back(MBPatchID_t(Point::Ones(), bi));
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+    
     MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
+    
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"data"}, hostData, "MBLevelBoxData_FillBoundaries"); 
+#endif
+
     hostData.initialize(f_MBPointID);
     hostData.exchange();
 

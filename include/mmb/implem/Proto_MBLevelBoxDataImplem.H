@@ -114,9 +114,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
-                            PROTO_ASSERT(adjIter != *a_layout.end(),
-                                         "MBLevelBoxData::define | Error: Attempting to create \
-                                    BoundaryData with nonexistent patch");
+                            if (adjIter == *a_layout.end()) { continue; } //patch was not found
                             MBBoundaryData<T, C, MEM> boundData(
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
