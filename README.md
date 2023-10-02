@@ -7,9 +7,23 @@ Proto is a middleware layer that allows performance portability in scientific co
 * Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
 * Proto includes data structures which support embedded boundary (EB) calculations.  Embedded boundary calculations done properly require data to live on a more complex graph structure than simple arrays can support. 
 
+## Including Proto
+Proto requires very little effort to include in an external project. Proto consists entirely of header files, so there is no "build" at all. The only requirements are to #include "Proto.H" in the top level application, link the proto/include directory in the external application's build, and define any relevant compile time variables (see below). Do not #include any other headers from Proto other than Proto.H as doing so will often lead to linking issues.
+ ### Compile Time Constants
+ * DIM - Maximum number of spatial dimensions
+ * PR_MPI - If defined, MPI code will be toggled on. Compatible with either of the following GPU backend options
+ * PROTO_CUDA - If defined, the cuda GPU compatible backend will be toggled on. Not compatible with PROTO_HIP
+ * PROTO_HIP - If defined, the HIP GPU compatible backend will be toggled on. Not compatible with PROTO_CUDA
+ * PR_HDF5 - If defined, HDF5 I/O tools will be included.
+ * PR_AMR - If defined, adaptive mesh refinement tools will be included
+ * PR_MMB - If defined, mapped multiblock tools will be included. Requires PR_OPS
+ * PR_OPS - If defined, built in linear algebra tools will be included. Requires LAPACK.
+ * PR_BLIS - If defined, uses the third party BLIS library to handle linear algebra instead of LAPACK. Requires PR_OPS. (Interface is experimental)
+
 ## Build instructions:
+The following instructions pertain to building applications Proto's native examples and test files. External applications using Proto as a third party library should follow the instructions in the previous section. 
 ### CMake version
-* The minumum required CMake version is 3.20. If an older version is the default on your platform, load a `cmake` module with a sufficiently new version. Configuration has been tested through CMake 3.21.
+* The minumum required CMake version is 3.20. If an older version is the default on your platform, load a `cmake` module with a sufficiently new version. Configuration has been tested through CMake 3.21. Users who are not comfortable with using CMake are invited to use the provided proto_make wrapper script to call CMake using a GNUMake style interface (see the proto_make section below).
 ### Cori Modules
 * If doing a CUDA build, load the `cudatoolkit` module
 * If doing an MPI build, load the `openmpi` module
