@@ -30,8 +30,6 @@ TEST(MBAMRData, Construction) {
         std::vector<MBPatchID_t> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
         Point patch = patchDomain.high();
-        std::cout << "patchDomain on level " << li << ": " << patchDomain << std::endl;
-        std::cout << "Adding patch: " << patch << std::endl;
         for (int bi = 0; bi < domain.size(); bi++)
         {
             patches.push_back(MBPatchID_t(patch, bi));
@@ -43,7 +41,7 @@ TEST(MBAMRData, Construction) {
     MBAMRData<double, 1, HOST> data(grid, ghost);
     data.setRandom(0,1);
 #if PR_VERBOSE > 0
-    h5.writeMBAMRData({"data"}, map, data, "DATA");
+    h5.writeMBAMRData({"data"}, map, data, "MBAMRData_Construction");
 #endif
 
     int numBoxes = domainSize / boxSize * numBlocks;
@@ -55,6 +53,18 @@ TEST(MBAMRData, Construction) {
         {
             auto& patch = level[iter];
             EXPECT_EQ(patch.box(), layout[iter].grow(numGhost));
+        }
+    }
+
+    for (int li = 0; li < numLevels; li++)
+    {
+        auto& levelData = data.getLevel(li);
+        for (int bi = 0; bi < numBlocks; bi++)
+        {
+            auto& blockData = data.getBlock(bi);
+            auto levelBlockAddress = &(levelData.getBlock(bi));
+            auto blockLevelAddress = &(blockData[li]);
+            EXPECT_EQ(levelBlockAddress, blockLevelAddress);
         }
     }
 }

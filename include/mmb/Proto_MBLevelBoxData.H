@@ -8,6 +8,10 @@
 
 namespace Proto
 {
+#ifdef PR_AMR
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBAMRData;
+#endif
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
@@ -132,6 +136,10 @@ namespace Proto
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
 
+        // Friends
+        template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>
+            friend class MBAMRData;
+
         inline MBLevelBoxData();
 
         /// Main Constructor
@@ -229,14 +237,14 @@ namespace Proto
 
         /// Get Block Data
         /** Returns the normal LevelBoxData associated with a specified block */
-        inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
+        inline LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block);
         
         /// Get Block Data (Const Overload)
-        inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
-        
+        inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
+       
         /// Get Layout
         inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
-        
+     
         /// Get Patch Box
         /** multiblock analog of LevelBoxData::patchBox. Returns the Box which defines the domain
          *  of a specified patch index, correcting for centering */

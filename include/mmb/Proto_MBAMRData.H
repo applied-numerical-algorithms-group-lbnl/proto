@@ -60,6 +60,8 @@ namespace Proto
         
         private:
         
+        void defineAMRData();
+        
         Array<Point, DIM+1>         m_ghost;
         const MBAMRGrid*  m_grid;
         std::vector<std::shared_ptr<MBLevelBoxData<T, C, MEM, CTR>>>    m_levelData;

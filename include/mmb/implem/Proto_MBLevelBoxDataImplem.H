@@ -210,7 +210,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs&... a_srcs)
     /*
     for (int bi = 0; bi < numBlocks(); bi++)
     {
-        auto &data = blockData(bi);
+        auto &data = getBlock(bi);
         data.initialize(a_func, bi, a_srcs...);
     }
     */
@@ -316,14 +316,14 @@ MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block)
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block) const
 {
     return *m_data[a_block];
 }
@@ -332,7 +332,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
 {
-    return blockData(a_block).patchSize();
+    return getBlock(a_block).patchSize();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -340,7 +340,7 @@ Box MBLevelBoxData<T, C, MEM, CTR>::patchBox(const MBIndex &a_index) const
 {
     unsigned int block = layout().block(a_index);
     auto blockIndex = layout().blockIndex(a_index);
-    return blockData(block).patchBox(blockIndex);
+    return getBlock(block).patchBox(blockIndex);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -410,7 +410,7 @@ MBLevelBoxData<T, C, MEM, CTR>::offset(unsigned int a_proc) const
             if (pdata.second == proc)
             {
                 auto block = pdata.first.second;
-                ret += blockData(block).patchSize();
+                ret += getBlock(block).patchSize();
             }
         }
         proc++;

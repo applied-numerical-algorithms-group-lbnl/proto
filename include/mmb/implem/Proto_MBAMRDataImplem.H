@@ -27,14 +27,14 @@ void MBAMRData<T,C,MEM,CTR>::define(
     m_ghost = a_ghost;
     m_grid =  &a_grid;
     m_levelData.clear();
-    m_amrData.clear();
     for (int li = 0; li < a_grid.numLevels(); li++)
     {
         auto& layout = a_grid.getLevel(li);
-        m_levelData.push_back(
-                std::make_shared<MBLevelBoxData<T,C,MEM,CTR>>(layout, a_ghost, a_boundGhost));
+        auto levelData = std::make_shared<MBLevelBoxData<T,C,MEM,CTR>>(
+                layout, a_ghost, a_boundGhost);
+        m_levelData.push_back(levelData);
     }
-    //TODO: Create AMRData (?)
+    defineAMRData();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -49,7 +49,27 @@ void MBAMRData<T,C,MEM,CTR>::define(
     m_ghost = a_levelData[0]->ghost();
     m_grid = &a_grid;
     m_levelData = a_levelData;
-    //TODO: Create AMRData (?)
+    defineAMRData();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBAMRData<T,C,MEM,CTR>::defineAMRData()
+{
+    std::vector<std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>>> amrData;
+    amrData.resize(numBlocks());
+    for (int li = 0; li < numLevels(); li++)
+    {
+        for (int bi = 0; bi < numBlocks(); bi++)
+        {
+            amrData[bi].push_back(m_levelData[li]->m_data[bi]);
+        }
+    }
+    m_amrData.clear();
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        m_amrData.push_back(
+                std::make_shared<AMRData<T,C,MEM,CTR>>(amrData[bi]));
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -84,7 +104,7 @@ MBLevelBoxData<T,C,MEM,CTR>&
 MBAMRData<T,C,MEM,CTR>::getLevel(unsigned int a_level)
 {
     PROTO_ASSERT(a_level < numLevels(),
-            "MBAMRData::getLevel | Error: level %u is out of bounds", a_level);
+            "MBAMRData::level | Error: level %u is out of bounds", a_level);
     return *(m_levelData[a_level]);
 }
 
@@ -93,7 +113,7 @@ const MBLevelBoxData<T,C,MEM,CTR>&
 MBAMRData<T,C,MEM,CTR>::getLevel(unsigned int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
-            "MBAMRData::getLevel | Error: level %u is out of bounds", a_level);
+            "MBAMRData::level | Error: level %u is out of bounds", a_level);
     return *(m_levelData[a_level]);
 }
 
@@ -102,7 +122,7 @@ AMRData<T,C,MEM,CTR>&
 MBAMRData<T,C,MEM,CTR>::getBlock(unsigned int a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
-            "MBAMRData::getBLock | Error: block %u is out of bounds", a_block);
+            "MBAMRData::block | Error: block %u is out of bounds", a_block);
     return *(m_amrData[a_block]);
 }
 
@@ -111,7 +131,7 @@ const AMRData<T,C,MEM,CTR>&
 MBAMRData<T,C,MEM,CTR>::getBlock(unsigned int a_block) const
 {
     PROTO_ASSERT(a_block < numBlocks(),
-            "MBAMRData::getBLock | Error: block %u is out of bounds", a_block);
+            "MBAMRData::block | Error: block %u is out of bounds", a_block);
     return *(m_amrData[a_block]);
 }
 

@@ -49,7 +49,8 @@ namespace Proto
         /**
             Computes tags with an isotropic buffer radius. 
         */
-        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
+        template<typename T, unsigned int C=1,
+            MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
         inline static void computeTags(
             LevelTagData&                 a_tags, 
             LevelBoxData<T, C, MEM, CTR>& a_data,
