@@ -25,4 +25,7 @@
 #include "mmb/Proto_MBAMRData.H"
 #include "mmb/Proto_MBAMRMap.H"
 #endif
+#if DIM == 3
+#include "utils/Proto_CubedSphereShell.H"
+#endif
 #endif

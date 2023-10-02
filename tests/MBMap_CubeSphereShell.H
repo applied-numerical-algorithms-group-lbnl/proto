@@ -3,9 +3,9 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
-#define CUBE_SPHERE_SHELL_R0 1.0
-#define CUBE_SPHERE_SHELL_R1 1.1
-#define CUBE_SPHERE_SHELL_RADIAL_COORD 0
+#define CUBED_SPHERE_SHELL_R0 1.0
+#define CUBED_SPHERE_SHELL_R1 1.1
+#define CUBED_SPHERE_SHELL_RADIAL_COORD 0
 
 using namespace Proto;
 
@@ -25,9 +25,9 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
         auto block = this->block();
 #if 1
         auto C2C = Stencil<double>::CornersToCells(4);
-        int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
-        double r0 = CUBE_SPHERE_SHELL_R0;
-        double r1 = CUBE_SPHERE_SHELL_R1;
+        int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        double r0 = CUBED_SPHERE_SHELL_R0;
+        double r1 = CUBED_SPHERE_SHELL_R1;
         Box b = C2C.domain(a_X.box());
         BoxData<double, DIM, MEM> X0(b);
         BoxData<double, 1, MEM> J0(b);
@@ -39,7 +39,7 @@ class MBMap_CubeSphereShell : public MBMapOp<MEM>
         forallInPlace_p(
             [] PROTO_LAMBDA (Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
             {
-                a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
+                a_R(0) = a_pt[0]*a_dx[0] + CUBED_SPHERE_SHELL_R0;
             }, radius, dx);
         Operator::cubedSphereGeometry(a_X, a_NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], block);
 #endif
@@ -61,9 +61,9 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
         auto& dx = this->dx();
         auto block = this->block();
 #if 1
-        int r_dir = CUBE_SPHERE_SHELL_RADIAL_COORD;
-        double r0 = CUBE_SPHERE_SHELL_R0;
-        double r1 = CUBE_SPHERE_SHELL_R1;
+        int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        double r0 = CUBED_SPHERE_SHELL_R0;
+        double r1 = CUBED_SPHERE_SHELL_R1;
         BoxData<double, DIM, MEM> X0(a_X.box().grow(1));
         BoxData<double, 1, MEM> J0(X0.box());
         BoxData<double, DIM, MEM> X1(a_X.box().grow(1));
@@ -81,7 +81,7 @@ class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
         forallInPlace_p(
             [] PROTO_LAMBDA (Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
             {
-                a_R(0) = a_pt[0]*a_dx[0] + CUBE_SPHERE_SHELL_R0;
+                a_R(0) = a_pt[0]*a_dx[0] + CUBED_SPHERE_SHELL_R0;
             }, radius, dx);
         Array<BoxData<double,DIM,MEM>, DIM> NT;
         Operator::cubedSphereGeometry(a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
@@ -99,7 +99,7 @@ void interpBoundaries_CubeSphereShell(
     for (auto pi : K)
     {
         // Assumes radial coordinate is the first
-        if (pi.abs().sum() <= 2 && pi[CUBE_SPHERE_SHELL_RADIAL_COORD] == 0)
+        if (pi.abs().sum() <= 2 && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
         {
             footprint.push_back(pi);
         }

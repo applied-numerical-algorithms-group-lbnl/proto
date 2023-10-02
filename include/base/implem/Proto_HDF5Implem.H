@@ -454,7 +454,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
     {
         const auto& blockLayout = a_data.layout().getBlock(bi);
-        const auto& blockData = a_data.blockData(bi);
+        const auto& blockData = a_data.getBlock(bi);
         numData += blockLayout.size()*blockData.patchSize();
     }
 
@@ -465,7 +465,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
         for (int dir = 0; dir < DIM; dir++)
         {
             domainSize[dir] =
-                max(domainSize[dir], a_data.blockData(bi).layout().domain().box().high()[dir]);
+                max(domainSize[dir], a_data.getBlock(bi).layout().domain().box().high()[dir]);
         }
     }
     domainSize += Point::Ones();
@@ -556,7 +556,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
 
         ii++;
         // this being after the increment is not a bug
-        offset += a_data.blockData(block).patchSize();
+        offset += a_data.getBlock(block).patchSize();
         offsetData[ii] = offset;
     }
     

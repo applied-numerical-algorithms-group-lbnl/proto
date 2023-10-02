@@ -5,8 +5,6 @@
 
 #define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
-#define CUBED_SPHERE_R0 1.0
-#define CUBED_SPHERE_R1 1.1
 #define SHEAR_SLOPE 1.0
 using namespace Proto;
 
@@ -72,166 +70,6 @@ void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
     }
 }
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
-
-#ifdef DIM == 3
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
-        Array<double, DIM> a_dx, double a_r0, double a_r1, int a_block, int a_radialCoord)
-{
-    // subscript 0 are at corners
-    Array<double, DIM> x  = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-
-    double r0, xi0, eta0, r, xi, eta;
-    switch (a_radialCoord)
-    {
-        case 0:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[0];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-
-            //r   = a_r0 + (a_r1-a_r0)*x[0];
-            //xi  = -M_PI/4.0 + M_PI/2.0*x[1];
-            //eta = -M_PI/4.0 + M_PI/2.0*x[2];
-            break;
-        }
-        case 2:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[2];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
-
-            //r   = a_r0 + (a_r1-a_r0)*x[2];
-            //xi  = -M_PI/4.0 + M_PI/2.0*x[0];
-            //eta = -M_PI/4.0 + M_PI/2.0*x[1];
-            break;
-        }
-    }
-    
-    double X0 = tan(xi0);
-    double Y0 = tan(eta0);
-    double d0 = sqrt(1+X0*X0+Y0*Y0);
-    
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = sqrt(1+X*X+Y*Y);
-
-    a_J(0) = r0*r0*(1+X0*X0)*(1+Y0*Y0)/(d0*d0*d0);
-    switch (a_block)
-    {
-        case 0:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0*Y0/d0;
-            a_X(2) = -r0/d0;
-            break;
-        case 1:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = r0*Y0/d0;
-            a_X(2) = r0/d0;
-            break;
-        case 2:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 3:
-            a_X(0) = r0/d0;
-            a_X(1) = r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 4:
-            a_X(0) = -r0*X0/d0;
-            a_X(1) = r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 5:
-            a_X(0) = -r0/d0;
-            a_X(1) = -r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        default:
-            a_X(0) = 0;
-            a_X(1) = 0;
-            a_X(2) = 0;
-            break;
-    }
-}
-PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R, Var<double,1,MEM>& a_J,
-        Var<double, DIM, MEM>& a_X, int a_block, int a_radialCoord)
-{
-    double x0 = a_X(0);
-    double y0 = a_X(1);
-    double z0 = a_X(2);
-
-    double x, y, z;
-    switch (a_block)
-    {
-        case 0:
-        {
-            x = -z0;
-            y = y0;
-            z = x0;
-            break;
-        }
-        case 1:
-        {
-            x = z0;
-            y = y0;
-            z = -x0;
-            break;
-        }
-        case 2:
-        {
-            x = -y0;
-            y = x0;
-            z = z0;
-            break;
-        }
-        case 3:
-        {
-            x = x0;
-            y = y0;
-            z = z0;
-            break;
-        }
-        case 4:
-        {
-            x = y0;
-            y = -x0;
-            z = z0;
-            break;
-        }
-        case 5:
-        {
-            x = -x0;
-            y = -y0;
-            z = z0;
-            break;
-        }
-    }
-
-    double R = sqrt(x*x + y*y + z*z);
-    double r = sqrt(x*x + y*y);
-    double phi = atan2(r,z);
-    double theta = atan2(y,x);
-    // note that this J is at corners
-    a_J(0) = r*r*sin(phi);
-    a_R(a_radialCoord) = R;
-    a_R((a_radialCoord + 1) % 3) = theta;
-    a_R((a_radialCoord + 2) % 3) = phi;
-    //a_R(0) = x;
-    //a_R(1) = y;
-    //a_R(2) = z;
-}
-PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
 
 PROTO_KERNEL_START
 void f_classicSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J,
@@ -312,6 +150,7 @@ MBProblemDomain buildShear(int a_domainSize)
 }
 #endif
 
+#if DIM > 2
 MBProblemDomain buildRing(Point a_domainSize)
 {
     MBProblemDomain domain(4);
@@ -324,76 +163,6 @@ MBProblemDomain buildRing(Point a_domainSize)
     for (int bi = 0; bi < 4; bi++)
     {
         domain.defineDomain(bi, a_domainSize);
-    }
-    return domain;
-}
-
-#if DIM > 2
-MBProblemDomain buildCubeSphere(int a_domainSize)
-{
-    MBProblemDomain domain(6);
-    auto R_theta = CoordPermutation::ccw(1);
-    auto R_north = CoordPermutation::cw(0);
-    auto R_south = CoordPermutation::ccw(0);
-    CoordPermutation R_I;
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
-        domain.defineBoundary(srcBlock, 1, y, R_north);
-        domain.defineBoundary(srcBlock, 0, -y, R_south);
-        R_north = R_north*R_theta;
-        R_south = R_south*R_theta;
-    }
-    domain.graph().fixRotations();
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-MBProblemDomain buildCubeSphereShell(int a_domainSize, int a_thickness, int a_radialDir = 0)
-{
-    MBProblemDomain domain(6);
-    auto CCW = CoordPermutation::ccw(a_radialDir);
-    auto CW = CoordPermutation::cw(a_radialDir);
-    CoordPermutation RNorth, RSouth, RI;
-    Point x = Point::X();
-    Point y = Point::Y();
-    Point z = Point::Z();
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        switch (a_radialDir)
-        {
-            case 0:
-                domain.defineBoundary(srcBlock, dstBlock, y, RI);
-                domain.defineBoundary(srcBlock, 1, z, RNorth);
-                domain.defineBoundary(srcBlock, 0, -z, RSouth);
-                break;
-            case 2:
-                domain.defineBoundary(srcBlock, dstBlock, x, RI);
-                domain.defineBoundary(srcBlock, 1, y, RNorth);
-                domain.defineBoundary(srcBlock, 0, -y, RSouth);
-                break;
-            default:
-                MayDay<void>::Abort("NOT IMPLEMENTED");
-        }
-        RNorth = RNorth*CW;
-        RSouth = RSouth*CCW;
-    }
-    domain.graph().fixRotations();
-    Point domainSize = Point::Ones(a_domainSize);
-    domainSize[a_radialDir] = a_thickness;
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, domainSize);
     }
     return domain;
 }
@@ -434,12 +203,13 @@ void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, 
 }
 PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 
+#if DIM > 2
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSize)
 {
-    double r0 = CUBED_SPHERE_R0 - 0.1;
-    double r1 = CUBED_SPHERE_R0 + 0.1;
+    double r0 = CUBED_SPHERE_SHELL_R0 - 0.1;
+    double r1 = CUBED_SPHERE_SHELL_R0 + 0.1;
 
     double L = -M_PI/4;
     double H = M_PI/4;

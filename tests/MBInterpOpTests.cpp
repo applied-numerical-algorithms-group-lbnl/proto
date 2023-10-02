@@ -3,7 +3,7 @@
 #include "Lambdas.H"
 #include "MBMap_Shear.H"
 #include "MBMap_XPointRigid.H"
-#include "MBMap_CubeSphereShell.H"
+//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 #if DIM == 2
@@ -276,7 +276,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
     int thickness = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{4,4,4,0,0,0};
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Array<Point, DIM+1> ghost;
@@ -422,7 +422,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
     int thickness = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{4,4,4,0,0,0};
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Array<Point, DIM+1> ghost;
@@ -444,7 +444,8 @@ TEST(MBInterpOp, CubeSphereShellTest)
     for (int nn = 0; nn < N; nn++)
     {
         err[nn] = 0.0;
-        auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+        //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+        auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
         boxSizeVect[radialDir] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -453,9 +454,9 @@ TEST(MBInterpOp, CubeSphereShellTest)
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
         // cube sphere -> cartesian map
-        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
-        map.define(layout, ghost);
-
+        //MBLevelMap<MBMap_CubeSphereShell, HOST> map;
+        //map.define(layout, ghost);
+        auto map = CubedSphereShell::Map<HOST>(layout, ghost);
         // cube sphere -> spherical-polar maps
         // each of these maps rotates the azimuthal singularity away from the focused block
         MBLevelMap<MBMap_CubeSphereShellPolar, HOST> polarMaps[6];
@@ -575,7 +576,7 @@ TEST(MBInterpOp, CubeSphereShellStandalone)
     int thickness = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{4,4,4,0,0,0};
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Array<Point, DIM+1> ghost;
@@ -583,7 +584,8 @@ TEST(MBInterpOp, CubeSphereShellStandalone)
     ghost[0] = Point::Ones(1);
     ghost[0][radialDir] = 0;
         
-    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
