@@ -157,7 +157,7 @@ void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R, Var<doubl
 PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
 
 template<MemType MEM>
-class MBMap_CubeSphereShell : public MBMapOp<MEM>
+class MBMap_CubedSphereShell : public MBMapOp<MEM>
 {
 public:
 
@@ -196,7 +196,7 @@ public:
 };
 
 template<MemType MEM>
-    class MBMap_CubeSphereShellPolar : public MBMapOp<MEM>
+    class MBMap_CubedSphereShellPolar : public MBMapOp<MEM>
 {
 public:
 
@@ -298,11 +298,11 @@ class CubedSphereShell
      *  \param a_ghost
      */
     template<MemType MEM = MEMTYPE_DEFAULT>
-    static MBLevelMap<MBMap_CubeSphereShell, MEM> Map(
+    static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
             const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1> a_ghost)
     {
-        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
+        MBLevelMap<MBMap_CubedSphereShell, HOST> map;
         map.define(a_layout, a_ghost);
         return map;
     }
@@ -312,10 +312,10 @@ class CubedSphereShell
      *  \param a_data
      */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    static MBLevelMap<MBMap_CubeSphereShell, MEM> Map(
+    static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
             const MBLevelBoxData<T,C,MEM,CTR>& a_data)
     {
-        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
+        MBLevelMap<MBMap_CubedSphereShell, HOST> map;
         map.define(a_data.layout(), a_data.ghost());
         return map;
     }
@@ -327,10 +327,10 @@ class CubedSphereShell
     template<template<typename, MemType> class OpType,
         typename T,
         MemType MEM = MEMTYPE_DEFAULT>
-    static MBLevelOp<OpType, MBMap_CubeSphereShell, T>
-    Operator(MBLevelMap<MBMap_CubeSphereShell, MEM>& a_map)
+    static MBLevelOp<OpType, MBMap_CubedSphereShell, T>
+    Operator(MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map)
     {
-        MBLevelOp<OpType, MBMap_CubeSphereShell, T> op;
+        MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
         op.define(a_map);
         return op;
     }
@@ -357,7 +357,7 @@ class CubedSphereShell
         MBInterpOp op(a_ghost[0], a_order);
         for (int bi = 0; bi < 6; bi++)
         {
-            MBLevelMap<MBMap_CubeSphereShellPolar, MEM> polarMap;
+            MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
             polarMap.define(a_layout, a_ghost, bi);
             op.define(polarMap, footprint, bi); 
         }

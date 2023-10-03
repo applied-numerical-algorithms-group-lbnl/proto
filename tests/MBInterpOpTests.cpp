@@ -268,7 +268,7 @@ TEST(MBInterpOp, XPointTest)
 #endif
 #if DIM == 3
 #if 0
-TEST(MBInterpOp, CubeSphereShellTest)
+TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
     int domainSize = 16;
@@ -414,7 +414,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
 }
 #endif
 #if 1
-TEST(MBInterpOp, CubeSphereShellTest)
+TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
     int domainSize = 16;
@@ -566,7 +566,7 @@ TEST(MBInterpOp, CubeSphereShellTest)
 }
 #endif
 #if 1
-TEST(MBInterpOp, CubeSphereShellStandalone)
+TEST(MBInterpOp, CubedSphereShellStandalone)
 {
     HDF5Handler h5;
     int domainSize = 16;
@@ -590,7 +590,7 @@ TEST(MBInterpOp, CubeSphereShellStandalone)
 
     // initialize data and map
     MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
-    MBLevelMap<MBMap_CubeSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(layout, ghost);
     
     auto C2C = Stencil<double>::CornersToCells(4);

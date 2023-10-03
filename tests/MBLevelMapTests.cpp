@@ -2,7 +2,7 @@
 #include "Proto.H"
 #include "Lambdas.H"
 #include "MBMap_Shear.H"
-#include "MBMap_CubeSphereShell.H"
+//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
@@ -204,10 +204,11 @@ TEST(MBLevelMapTests, CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
-    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -217,7 +218,7 @@ TEST(MBLevelMapTests, CubeSphereShell) {
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap_CubeSphereShell<HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(layout, ghost);
     
 #if PR_VERBOSE > 0
@@ -229,10 +230,11 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 8;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
-    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -242,7 +244,7 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
     ghost[0] = Point::Ones(0);
 
     // initialize map
-    MBLevelMap_CubeSphereShell<HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(layout, ghost);
 
     const auto& graph = layout.domain().graph();
