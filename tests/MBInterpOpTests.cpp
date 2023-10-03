@@ -154,8 +154,8 @@ TEST(MBInterpOp, ShearTestStandalone)
 
     // interpolate
     hostSrc.exchange();
-    interpBoundaries<MBMap_Shear>(hostSrc);
-
+    //interpBoundaries<MBMap_Shear>(hostSrc);
+    CubedSphereShell::InterpBoundaries(hostSrc);
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_ShearStandalone");
 #endif
@@ -454,17 +454,16 @@ TEST(MBInterpOp, CubeSphereShellTest)
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
         // cube sphere -> cartesian map
-        //MBLevelMap<MBMap_CubeSphereShell, HOST> map;
-        //map.define(layout, ghost);
         auto map = CubedSphereShell::Map<HOST>(layout, ghost);
         // cube sphere -> spherical-polar maps
         // each of these maps rotates the azimuthal singularity away from the focused block
+        /*
         MBLevelMap<MBMap_CubeSphereShellPolar, HOST> polarMaps[6];
         for (int bi = 0; bi < 6; bi++)
         {
             polarMaps[bi].define(layout, ghost, bi);
         }
-
+        */
         ghost[0] = Point::Ones(1);
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
@@ -485,9 +484,6 @@ TEST(MBInterpOp, CubeSphereShellTest)
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
             src_i |= C2C(x_pow);
-            //BoxData<double, 1> x_pow_avg = C2C(x_pow);
-            //J_i.setVal(1.0);
-            //Operator::cellProduct(src_i, J_i, x_pow_avg);
         }
 
         hostSrc.exchange();
@@ -495,13 +491,15 @@ TEST(MBInterpOp, CubeSphereShellTest)
         hostErr.setVal(0);
     
         // Define the interpolation operator
+        /*
         MBInterpOp op(ghost[0], 4);
         for (int bi = 0; bi < layout.numBlocks(); bi++)
         {
             // each block uses a different map to define the interpolation operators
             op.define(polarMaps[bi], footprint, bi);
         }
-
+        */
+        MBInterpOp op = CubedSphereShell::InterpOp(hostDst);
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
@@ -611,7 +609,8 @@ TEST(MBInterpOp, CubeSphereShellStandalone)
     }
    
     hostSrc.exchange(); // fill boundary data
-    interpBoundaries_CubeSphereShell(hostSrc);
+    CubedSphereShell::InterpBoundaries(hostSrc);
+    //interpBoundaries_CubeSphereShell(hostSrc);
 
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShellStandalone");

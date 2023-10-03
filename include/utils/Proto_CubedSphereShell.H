@@ -240,36 +240,16 @@ public:
     }
 };
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void interpBoundaries_CubeSphereShell(
-        MBLevelBoxData<T, C, MEM, CTR>& a_data,
-        unsigned int a_order = 4)
-{
-    std::vector<Point> footprint;
-    Box K = Box::Kernel(2);
-    for (auto pi : K)
-    {
-        // Assumes radial coordinate is the first
-        if (pi.abs().sum() <= 2 && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
-        {
-            footprint.push_back(pi);
-        }
-    }
-    MBLevelMap<MBMap_CubeSphereShellPolar, MEM> polarMaps[6];
-    MBInterpOp op(a_data.ghost()[0], a_order);
-    for (int bi = 0; bi < 6; bi++)
-    {
-        polarMaps[bi].define(a_data.layout(), a_data.ghost(), bi);
-        op.define(polarMaps[bi], footprint, bi); 
-    }
-    op.apply(a_data, a_data);
-}
-
-
 class CubedSphereShell 
 {
     public:
 
+    /// Get Problem Domain
+    /**
+     *  \param a_domainSize - Size of each block in the angular directions
+     *  \param a_thickness  - Size of each block in the radial direction
+     *  \param a_radialDir  - Which coordinate corresponds to the radial direction (0 or 2)
+     */
     static MBProblemDomain Domain(int a_domainSize, int a_thickness, int a_radialDir = 0)
     {
         MBProblemDomain domain(6);
@@ -311,7 +291,12 @@ class CubedSphereShell
         }
         return domain;
     }
-
+    
+    /// Get Map
+    /**
+     *  \param a_layout
+     *  \param a_ghost
+     */
     template<MemType MEM = MEMTYPE_DEFAULT>
     static MBLevelMap<MBMap_CubeSphereShell, MEM> Map(
             const MBDisjointBoxLayout& a_layout,
@@ -322,6 +307,10 @@ class CubedSphereShell
         return map;
     }
     
+    /// Get Map (Convenient Overload)
+    /**
+     *  \param a_data
+     */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static MBLevelMap<MBMap_CubeSphereShell, MEM> Map(
             const MBLevelBoxData<T,C,MEM,CTR>& a_data)
@@ -330,10 +319,29 @@ class CubedSphereShell
         map.define(a_data.layout(), a_data.ghost());
         return map;
     }
-
-    template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    static void InterpBoundaries(
-            MBLevelBoxData<T,C,MEM,CTR>& a_data,
+    
+    /// Get MB Level Operator
+    /** 
+     *  \param a_map - The map object produced by one of the Map functions above
+     */
+    template<template<typename, MemType> class OpType,
+        typename T,
+        MemType MEM = MEMTYPE_DEFAULT>
+    static MBLevelOp<OpType, MBMap_CubeSphereShell, T>
+    Operator(MBLevelMap<MBMap_CubeSphereShell, MEM>& a_map)
+    {
+        MBLevelOp<OpType, MBMap_CubeSphereShell, T> op;
+        op.define(a_map);
+        return op;
+    }
+    
+    /// Get MB Interpolation Operator
+    /** 
+     */
+    template<MemType MEM>
+    static MBInterpOp InterpOp(
+            const MBDisjointBoxLayout& a_layout,
+            const Array<Point, DIM+1>& a_ghost,
             unsigned int a_order = 4)
     {
         std::vector<Point> footprint;
@@ -346,13 +354,37 @@ class CubedSphereShell
                 footprint.push_back(pi);
             }
         }
-        MBLevelMap<MBMap_CubeSphereShellPolar, MEM> polarMaps[6];
-        MBInterpOp op(a_data.ghost()[0], a_order);
+        MBInterpOp op(a_ghost[0], a_order);
         for (int bi = 0; bi < 6; bi++)
         {
-            polarMaps[bi].define(a_data.layout(), a_data.ghost(), bi);
-            op.define(polarMaps[bi], footprint, bi); 
+            MBLevelMap<MBMap_CubeSphereShellPolar, MEM> polarMap;
+            polarMap.define(a_layout, a_ghost, bi);
+            op.define(polarMap, footprint, bi); 
         }
+        return op; 
+    }
+    
+    /// Get MB Interpolation Operator
+    /** 
+     */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static MBInterpOp InterpOp(
+            MBLevelBoxData<T,C,MEM,CTR>& a_data,
+            unsigned int a_order = 4)
+    {
+        return InterpOp<MEM>(a_data.layout(), a_data.ghost(), a_order);
+    }
+    
+    /// Interpolate Block Boundary Ghost Cells
+    /** Creates and throws away an MBInterpOp. This operator is expensive to build,
+     *  so it's usually better to build the operator using InterpOp and keeping it cached.
+     */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static void InterpBoundaries(
+            MBLevelBoxData<T,C,MEM,CTR>& a_data,
+            unsigned int a_order = 4)
+    {
+        auto op = InterpOp(a_data, a_order);
         op.apply(a_data, a_data);
     }
 };

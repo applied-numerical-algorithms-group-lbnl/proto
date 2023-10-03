@@ -2,7 +2,6 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
-#include "MBMap_CubeSphereShell.H"
 #include "MBMap_XPointRigid.H"
 #include "MBMap_Shear.H"
 #include "BoxOp_MBLaplace.H"
@@ -237,7 +236,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
     bool cullRadialGhost = false;
     bool use2DFootprint = true;
     int numGhost = 5;
-    int radialDir = CUBE_SPHERE_SHELL_RADIAL_COORD;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     //offset += 0.1;
@@ -265,27 +264,21 @@ TEST(MBLevelOp, CubeSphereLaplace) {
     {
         err[nn] = 0.0;
         errL1[nn] = 0.0;
-        auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+        auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
         boxSizeVect[radialDir] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
-
-        MBLevelMap<MBMap_CubeSphereShell, HOST> map;
-        map.define(layout, dataGhost);
-        MBLevelMap<MBMap_CubeSphereShellPolar, HOST> polarMaps[6];
-        for (int bi = 0; bi < 6; bi++)
-        {
-            polarMaps[bi].define(layout, dataGhost, bi);
-        }
 
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, dataGhost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, dataGhost);
         MBLevelBoxData<double, 1, HOST> hostSln(layout, errGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, errGhost);
+        
+        auto map = CubedSphereShell::Map(hostSrc); 
 
         hostSrc.setRandom(0,1);
         h5.writeMBLevel({"phi"}, map, hostSrc, "CubeSphereShell_Phi_Random_%i", nn);
-
+        
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
@@ -308,8 +301,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
         hostDst.setVal(0);
         hostErr.setVal(0);
        
-        MBLevelOp<BoxOp_MBLaplace, MBMap_CubeSphereShell, double> op;
-        op.define(map);
+        auto op = CubedSphereShell::Operator<BoxOp_MBLaplace, double, HOST>(map);
         op(hostDst, hostSrc);
         for (auto iter : layout)
         {
