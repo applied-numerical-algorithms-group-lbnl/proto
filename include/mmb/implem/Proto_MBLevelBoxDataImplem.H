@@ -99,7 +99,8 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                         Point neighbor = patch + ki;
                         if (boundaryPatches.contains(neighbor))
                         {
-                            auto adjPatch = R.rotateCell(neighbor, boundaryPatches, adjBoundaryPatches);
+                            auto adjPatch = R.rotateCell(
+                                    neighbor, boundaryPatches, adjBoundaryPatches);
                             auto adjIndex = adjLocalLayout.find(adjPatch);
 
                             // for codim > 1, the rotation isn't defined in the directions
@@ -440,6 +441,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     MBIndex a_index, Point a_dir, unsigned int a_block)
 {
+    return layout().isBlockBoundary(a_index, a_dir, a_block);
+    /*
     auto &boundaries = bounds(a_index, a_dir);
     for (auto b : boundaries)
     {
@@ -449,6 +452,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
         }
     }
     return false;
+    */
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>

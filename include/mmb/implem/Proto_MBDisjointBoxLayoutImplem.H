@@ -210,6 +210,31 @@ bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
     return m_partition->compatible(*a_rhs.m_partition);
 }
 
+bool MBDisjointBoxLayout::isBlockBoundary(
+        MBIndex         a_index,
+        Point           a_dir,
+        unsigned int    a_block) const
+{
+    unsigned int thisBlock = block(a_index);
+    Point thisPatch = point(a_index);
+    
+    Point conn = domain().graph().connectivity(thisBlock, a_block);
+    if (conn == Point::Zeros()) {return false;}
+    Point invConn = domain().graph().reverseDir(thisBlock, a_block, conn);
+    auto R = domain().graph().rotation(thisBlock, conn, a_block);
+
+    Box localBoundPatches = getBlock(thisBlock).patchDomain().box().adjacent(conn);
+    Box adjBoundPatches = getBlock(a_block).patchDomain().box().edge(invConn);
+    Point neighbor = thisPatch + a_dir;
+
+    Point adjPatch = R.rotateCell(
+            neighbor, localBoundPatches, adjBoundPatches);
+
+    auto adjIndex = find(adjPatch, a_block);
+    if (adjIndex == end()){return false;}
+    return true;
+}
+
 unsigned int MBDisjointBoxLayout::size() const
 {
     return m_partition->numBoxes();

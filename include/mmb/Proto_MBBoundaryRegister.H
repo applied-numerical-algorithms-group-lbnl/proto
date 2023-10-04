@@ -8,7 +8,53 @@
 
 namespace Proto
 {
-    template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT>
+    typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
+    
+    /// Copier Operator
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBBoundaryCopierOp
+    {
+        public:
+        MBLevelBoxData<T, C, MEM, CTR>* m_data;
+        
+        inline MBBoundaryCopierOp(){};
+        
+        inline MBBoundaryCopierOp(
+                MBLevelBoxData<T, C, MEM, CTR>& a_src);
+        
+        inline uint64_t linearSize(
+                const Box&          a_bx,
+                const MBIndex&      a_index) const;
+        
+        inline void linearOut(
+                void*               a_buffer,
+                const MBMotionItem& a_info) const;
+        
+        inline void linearIn(
+                void*               a_buffer,
+                const MBMotionItem& a_info) const;
+        
+        inline void localCopy(
+                const MBMotionItem& a_info) const;
+    };
+    
+    /// Copier
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBBoundaryCopier
+    : public Copier<MBBoundaryCopierOp<T, C, MEM, CTR>,
+        MBBoxPartition, MBBoxPartition, MEM, MEM>
+    {
+        public:
+        inline MBBoundaryCopier(){};
+
+        inline void buildMotionPlans(
+                MBBoundaryCopierOp<T, C, MEM, CTR>& a_op);
+    };
+    
+    /// Boundary Register
+    /** A specialized data holder that contains data in the vicinity of block boundaries
+     */
+    template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
     class MBBoundaryRegister
     {
         public:
@@ -38,7 +84,7 @@ namespace Proto
                 Side::LoHiSide  a_side);
         
         // Get All Boundary Data
-        inline std::vector<MBBoundaryData<T,C,MEM>>>& bounds(
+        inline std::vector<MBBoundaryData<T,C,MEM>>& bounds(
                 MBIndex a_index,
                 Point   a_dir);
 
@@ -66,12 +112,6 @@ namespace Proto
                 Point           a_dir,
                 unsigned int    a_adjBlock);
         
-        // Get Adjacent Data
-        inline BoxData<T,C,MEM>& adjacent(
-                MBIndex         a_index,
-                unsigned int    a_dir,
-                Side::LoHiSide  a_side);
-
         // Get Rotation
         inline CoordPermutation toLocal(
                 MBIndex         a_index,
@@ -87,6 +127,12 @@ namespace Proto
         // Set all data to zero
         inline void clear();
 
+        // Set local data to zero
+        inline void clearLocal();
+        
+        // Set adjacent data to zero
+        inline void clearAdjacent();
+
         // Exchange and fill adjacent data
         /** Local data is maintained
          */
@@ -99,8 +145,9 @@ namespace Proto
 
         private:
 
-        MBDisjointBoxLayout m_layout;
+        const MBDisjointBoxLayout* m_layout;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
-    }
+    };
+#include "implem/Proto_MBBoundaryRegisterImplem.H"
 } // end namespace Proto
 #endif // end include guard
