@@ -71,49 +71,58 @@ TEST(MBBoundaryRegister, Construction) {
             auto bounds = ghostRegister.bounds(iter, dir);
             auto bounds2 = fluxRegister.bounds(iter, dir);
             
-            if (bounds2.size() > 0)
-            {
-                std::cout << "Boundaries of block: " << blockID << " | patch: " << patchID << " | dir: " << dir << std::endl;
-            }
-            for (auto b : bounds2)
-            {
-                std::cout << "\tlocal: " << b.localData->box() << " | adj: " << b.adjData->box() << std::endl;
-            }
-
             if (patchDomain.contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 0);
+                EXPECT_EQ(bounds2.size(), 0);
             } else if (patchDomain.adjacent(nx,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
+                EXPECT_EQ(bounds2.size(), 1);
                 EXPECT_TRUE(layout.isBlockBoundary(iter, dir, xBlock));
-                Box patchBoundary = patchBox.adjacent(dir, 1);
+                Box patchBoundary  = patchBox.adjacent(dir, 1);
+                Box patchBoundary2 = patchBox.edge(dir, 1);
                 Point adjDir = -CCW(dir);
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
+                Box adjPatchBoundary  = adjPatchBox.edge(adjDir, 1);
+                Box adjPatchBoundary2 = adjPatchBox.adjacent(adjDir, 1);
 
-                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(ghost));
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(ghost));
+                EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
+                EXPECT_EQ(layout.block(bounds2[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex),  xBlock);
+                EXPECT_EQ(layout.block(bounds2[0].adjIndex), xBlock);
+                EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
+                EXPECT_EQ(bounds2[0].localData->box(), patchBoundary2.grow(ghost));
+                EXPECT_EQ(bounds[0].adjData->box(),  adjPatchBoundary.grow(ghost));
+                EXPECT_EQ(bounds2[0].adjData->box(), adjPatchBoundary2.grow(ghost));
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
             {
                 if (neighbor == Point::Y()*(domainSize/boxSize)){continue;} //we manually removed this patch. 
-                EXPECT_EQ(bounds.size(), 1);
+                EXPECT_EQ(bounds.size(),  1);
+                EXPECT_EQ(bounds2.size(), 1);
                 EXPECT_TRUE(layout.isBlockBoundary(iter, dir, yBlock));
-                Box patchBoundary = patchBox.adjacent(dir, 1);
+                Box patchBoundary   = patchBox.adjacent(dir, 1);
+                Box patchBoundary2  = patchBox.edge(dir, 1);
                 Point adjDir = -CW(dir); 
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
-                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(ghost));
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(ghost));
+                Box adjPatchBoundary    = adjPatchBox.edge(adjDir, 1);
+                Box adjPatchBoundary2   = adjPatchBox.adjacent(adjDir, 1);
+                EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
+                EXPECT_EQ(layout.block(bounds2[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex),  yBlock);
+                EXPECT_EQ(layout.block(bounds2[0].adjIndex), yBlock);
+                EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
+                EXPECT_EQ(bounds2[0].localData->box(), patchBoundary2.grow(ghost));
+                EXPECT_EQ(bounds[0].adjData->box(),  adjPatchBoundary.grow(ghost));
+                EXPECT_EQ(bounds2[0].adjData->box(), adjPatchBoundary2.grow(ghost));
             } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), numBlocks-3);
+                EXPECT_EQ(bounds2.size(), numBlocks-3);
                 Box patchBoundary = patchBox.adjacent(dir,1);
+                Box patchBoundary2 = patchBox.edge(dir,1);
                 Point adjDir = -dir;
                 adjDir[0] = dir[0]; adjDir[1] = dir[1];
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
+                Box adjPatchBoundary2 = adjPatchBox.adjacent(adjDir, 1);
                 for (auto bound : bounds)
                 {
                     EXPECT_EQ(layout.block(bound.localIndex), blockID);
@@ -123,8 +132,18 @@ TEST(MBBoundaryRegister, Construction) {
                     EXPECT_EQ(bound.localData->box(), patchBoundary.grow(ghost));
                     EXPECT_EQ(bound.adjData->box(), adjPatchBoundary.grow(ghost));
                 }
+                for (auto bound : bounds2)
+                {
+                    EXPECT_EQ(layout.block(bound.localIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), yBlock);
+                    EXPECT_NE(layout.block(bound.adjIndex), xBlock);
+                    EXPECT_EQ(bound.localData->box(), patchBoundary2.grow(ghost));
+                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary2.grow(ghost));
+                }
             } else {
                 EXPECT_EQ(bounds.size(), 0);
+                EXPECT_EQ(bounds2.size(), 0);
             }
         }
     }
