@@ -238,8 +238,8 @@ void CoordPermutation::print() const
         {
             if (m_matrix[jj][ii] != 0)
             {
-                pout() << ii << " --> " << jj;
-                pout() << " (" << m_matrix[jj][ii] << ")" << ::std::endl;
+              //pout() << ii << " --> " << jj;
+              //pout() << " (" << m_matrix[jj][ii] << ")" << ::std::endl;
             }
         }
     }
@@ -252,14 +252,14 @@ void CoordPermutation::printMatrix() const
     {
         for (auto val : row)
         {
-            pout() << val << ", ";
+            //pout() << val << ", ";
         }
-        pout() << ::std::endl;
+        //pout() << ::std::endl;
     }
 }
 
 bool CoordPermutation::isIdentity() const
-{
+{ 
     for (int ii = 0; ii < DIM; ii++)
     {
         for (int jj = 0; jj < DIM; jj++)
