@@ -507,7 +507,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex &a_index)
         auto boundData = bounds(a_index, dir);
         for (auto bi : boundData)
         {
-            pout() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
+            pr_out() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
             bi.localData->printData();
         }
     }

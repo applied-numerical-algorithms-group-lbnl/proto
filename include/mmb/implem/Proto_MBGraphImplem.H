@@ -234,8 +234,8 @@ void MBGraph::closeCircuit(
     int iter = 0;
     while (currBlock != a_dstBlock)
     {
-        pout() << "Current Block: " << currBlock << std::endl;
-        pout() << "Current permutation: " << std::endl;
+        pr_out() << "Current Block: " << currBlock << std::endl;
+        pr_out() << "Current permutation: " << std::endl;
         circuitRotation.print();
         // get the dir corresponding to the codim-2 boundary in currBlock coords
         Point edgeDir;
@@ -259,7 +259,7 @@ void MBGraph::closeCircuit(
             if (adjBlock != prevBlock)
             {
                 auto adjRot = m_blocks[currBlock]->rotations[adjDir];
-                pout() << "adjactent rotation: " << std::endl;
+                pr_out() << "adjactent rotation: " << std::endl;
                 adjRot.print();
                 circuitRotation = circuitRotation*adjRot;
                 prevBlock = currBlock;
@@ -494,14 +494,14 @@ void MBGraph::print() const
 {
     for (auto block : m_blocks)
     {
-        pout() << "Block " << block->index << std::endl;
+        pr_out() << "Block " << block->index << std::endl;
         Box K = Box::Kernel(1);
         for (auto dir : K)
         {
-            pout() << "\tDir: " << dir << " (codim = " << codim(dir) << ")" << std::endl;
+            pr_out() << "\tDir: " << dir << " (codim = " << codim(dir) << ")" << std::endl;
             for (auto arc : block->boundaries[dir])
             {
-                pout() << "\t\tBound: Block " << arc.first->index << " | Local Dir: " << arc.second << std::endl;
+                pr_out() << "\t\tBound: Block " << arc.first->index << " | Local Dir: " << arc.second << std::endl;
             }
         }
     }

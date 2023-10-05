@@ -917,15 +917,15 @@ Matrix<T>::checkConditionNumber() const
     double reallysmall = 1.0e-15;
     if(inverse < reallysmall)
     {
-        pout() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
+        pr_out() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
     }
     else if(inverse < small)
     {
-        pout() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
+        pr_out() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
     }
     else
     {
-        pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        pr_out() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 

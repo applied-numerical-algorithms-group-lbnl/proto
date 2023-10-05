@@ -461,28 +461,28 @@ template<class OP, typename P_SRC, typename P_DST, MemType SRC_MEM, MemType DST_
 void
 Copier<OP, P_SRC, P_DST, SRC_MEM, DST_MEM>::print() const
 {
-    using Proto::pout;
-    pout() << std::endl << "-----------------------------------------------------------------------" << std::endl;
-    pout() << "Local Copies: " << std::endl;
+    using Proto::pr_out;
+    pr_out() << std::endl << "-----------------------------------------------------------------------" << std::endl;
+    pr_out() << "Local Copies: " << std::endl;
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {
         auto item = *iter;
-        pout() << item.fromRegion << " @ " << item.fromIndex.global();
-        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
+        pr_out() << item.fromRegion << " @ " << item.fromIndex.global();
+        pr_out() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
-    pout() << "Outgoing Data: " << std::endl;
+    pr_out() << "Outgoing Data: " << std::endl;
     for (auto iter = m_fromMotionPlan.begin(); iter != m_fromMotionPlan.end(); ++iter)
     {
         auto item = *iter;
-        pout() << item.fromRegion << " @ " << item.fromIndex.global();
-        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
+        pr_out() << item.fromRegion << " @ " << item.fromIndex.global();
+        pr_out() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
-    pout() << "Incoming Data: " << std::endl;
+    pr_out() << "Incoming Data: " << std::endl;
     for (auto iter = m_toMotionPlan.begin(); iter != m_toMotionPlan.end(); ++iter)
     {
         auto item = *iter;
-        pout() << item.fromRegion << " @ " << item.fromIndex.global();
-        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
+        pr_out() << item.fromRegion << " @ " << item.fromIndex.global();
+        pr_out() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
 }
 //========================================================================

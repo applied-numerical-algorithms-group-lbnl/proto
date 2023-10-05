@@ -728,11 +728,11 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     } // end src loop
     this->sort();
     /*
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing LevelCopier" << std::endl;
-    pout() << "Source Layout" << std::endl;
+    pr_out() << std::endl << "=======================================================================" << std::endl;
+    pr_out() << "Printing LevelCopier" << std::endl;
+    pr_out() << "Source Layout" << std::endl;
     srclayout.print();
-    pout() << "Dest Layout" << std::endl;
+    pr_out() << "Dest Layout" << std::endl;
     destlayout.print();
     this->print();
     */
@@ -792,11 +792,11 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     } // end patch loop
     this->sort();
     /*
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing ExchangeCopier" << std::endl;
-    pout() << "Layout" << std::endl;
+    pr_out() << std::endl << "=======================================================================" << std::endl;
+    pr_out() << "Printing ExchangeCopier" << std::endl;
+    pr_out() << "Layout" << std::endl;
     layout.print();
-    pout() << "Copier" << std::endl;
+    pr_out() << "Copier" << std::endl;
     this->print();
     */
 }
