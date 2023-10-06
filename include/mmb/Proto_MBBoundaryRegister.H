@@ -67,13 +67,13 @@ namespace Proto
         inline MBBoundaryRegister(
                 const MBDisjointBoxLayout&  a_layout,   // layout
                 int                         a_depth,    // distance from boundary
-                Point                       a_ghost);   // additional storage in all directions
-
+                Point                       a_ghost,    // additional storage in all directions
+                bool                        a_bothSides = true);
         inline void define(
                 const MBDisjointBoxLayout&  a_layout,   // layout
                 int                         a_depth,    // distance from boundary
-                Point                       a_ghost);   // additional storage in all directions
-     
+                Point                       a_ghost,    // additional storage in all directions
+                bool                        a_bothSides = true);
         // Get Boundary Data
         inline MBBoundaryData<T,C,MEM>& bound(
                 MBIndex         a_index,

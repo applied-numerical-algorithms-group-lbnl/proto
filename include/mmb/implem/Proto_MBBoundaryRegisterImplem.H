@@ -3,9 +3,10 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryRegister<T,C,MEM,CTR>::MBBoundaryRegister(
         const MBDisjointBoxLayout&  a_layout,   // layout
         int                         a_depth,    // distance from boundary
-        Point                       a_ghost)   // additional storage in all directions
+        Point                       a_ghost,    
+        bool                        a_bothSides)
 {
-    define(a_layout, a_depth, a_ghost);
+    define(a_layout, a_depth, a_ghost, a_bothSides);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -13,7 +14,8 @@ void
 MBBoundaryRegister<T,C,MEM,CTR>::define(
         const MBDisjointBoxLayout&  a_layout,   // layout
         int                         a_depth,    // distance from boundary
-        Point                       a_ghost)   // additional storage in all directions
+        Point                       a_ghost,    // additional space around each register
+        bool                        a_bothSides)// allocate space on both "sides" of the boundary
 {
     m_layout = &a_layout;
     m_bounds.clear();
@@ -70,14 +72,16 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     {
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
+                        // found a valid potential neighbor (if it exists)
                         if (boundaryPatches.contains(neighbor))
                         {
                             auto adjPatch = R.rotateCell(
                                     neighbor, boundaryPatches, adjBoundaryPatches);
                             auto adjIndex = adjLocalLayout.find(adjPatch);
+
                             // check if the adjacent layout contains the desired patch
                             if (adjIndex == adjLocalLayout.end()) { continue; }
-
+                            Box adjPatchBox = adjLocalLayout[adjIndex];
                             // for codim > 1, the rotation isn't defined in the directions
                             // that are linearly independent from the boundary surface
                             // to get this right, we rotate the in-plane coordinates and
@@ -85,14 +89,28 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(
                                     block, adjBlock, ki);
-
+                            //std::cout << "localBlock: " << block << " | adjBlock: " << adjBlock << " | dir: " << ki << std::endl;
                             // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, a_depth);
-                            Box adjPatchBoundary = a_layout.domain().convert(
-                                    patchBoundary, block, adjBlock, CTR);
+                            Box adjPatchBoundary;
+                            if (a_bothSides)
+                            {
+                                int sign = a_depth / abs(a_depth);
+                                patchBoundary = patchBoundary.extrude(ki*(-sign),abs(a_depth)); 
+                                adjPatchBoundary = patchBoundary; 
+                                //adjPatchBoundary = a_layout.domain().convert(
+                                //    patchBoundary, block, adjBlock, CTR);
+                            } else {
+                                adjPatchBoundary = patchBox.edge(ki, a_depth);
+                            }
+                            //std::cout << "localBoundary: " << patchBoundary << " | adjBoundary: " << adjPatchBoundary << std::endl;
+
+                            PROTO_ASSERT(patchBoundary.size() == adjPatchBoundary.size(), 
+                                    "MBBoundaryRegister::define | Error: data corruption.");
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
-                            // check if the adjacent layout contains the desired patch
+                            
+                            // redundant check if the adjacent layout contains the desired patch
                             if (adjIter == *a_layout.end()) { continue; }
                             MBBoundaryData<T, C, MEM> boundData(
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
