@@ -8,7 +8,7 @@ TEST(MBBoundaryRegister, Construction) {
     int domainSize = 32;
     int boxSize = 16;
     int numBlocks = 5;
-    int ghostSize = 1;
+    int ghostSize = 0;
     int depth = 1;
     auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect;
@@ -70,7 +70,20 @@ TEST(MBBoundaryRegister, Construction) {
             Box adjPatchBox = Box(adjPatch, adjPatch).refine(boxSize);
             auto bounds = ghostRegister.bounds(iter, dir);
             auto bounds2 = fluxRegister.bounds(iter, dir);
-            
+        
+            if (numProc() == 1)
+            {
+                for (auto bound : bounds)
+                {
+                    EXPECT_EQ(
+                            ghostRegister.local(iter, bound.adjIndex).box(),
+                            ghostRegister.adjacent(bound.adjIndex, iter).box());
+                    EXPECT_EQ(
+                            ghostRegister.adjacent(iter, bound.adjIndex).box(),
+                            ghostRegister.local(bound.adjIndex, iter).box());
+                }
+            }
+
             if (patchDomain.contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 0);

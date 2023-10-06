@@ -9,18 +9,21 @@
 namespace Proto
 {
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
+
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBBoundaryRegister;
     
     /// Copier Operator
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBBoundaryCopierOp
     {
         public:
-        MBLevelBoxData<T, C, MEM, CTR>* m_data;
+        MBBoundaryRegister<T,C,MEM,CTR>* m_data;
         
         inline MBBoundaryCopierOp(){};
         
         inline MBBoundaryCopierOp(
-                MBLevelBoxData<T, C, MEM, CTR>& a_src);
+                MBBoundaryRegister<T, C, MEM, CTR>& a_src);
         
         inline uint64_t linearSize(
                 const Box&          a_bx,
@@ -45,7 +48,7 @@ namespace Proto
         MBBoxPartition, MBBoxPartition, MEM, MEM>
     {
         public:
-        inline MBBoundaryCopier(){};
+        inline MBBoundaryCopier();
 
         inline void buildMotionPlans(
                 MBBoundaryCopierOp<T, C, MEM, CTR>& a_op);
@@ -99,7 +102,12 @@ namespace Proto
                 MBIndex         a_index,
                 unsigned int    a_dir,
                 Side::LoHiSide  a_side);
-         
+        
+        // Get Local Data
+        inline BoxData<T,C,MEM>& local(
+                MBIndex         a_localIndex,
+                MBIndex         a_adjIndex);
+
         // Get Adjacent Data
         inline BoxData<T,C,MEM>& adjacent(
                 MBIndex         a_index,
@@ -111,6 +119,11 @@ namespace Proto
                 MBIndex         a_index,
                 Point           a_dir,
                 unsigned int    a_adjBlock);
+        
+        // Get Adjacent Data
+        inline BoxData<T,C,MEM>& adjacent(
+                MBIndex         a_localIndex,
+                MBIndex         a_adjIndex);
         
         // Get Rotation
         inline CoordPermutation toLocal(
@@ -143,8 +156,12 @@ namespace Proto
          */
         inline void exchangeToLocal();
 
+        inline const MBDisjointBoxLayout& layout() {return *m_layout; }
+        inline Point ghost() {return m_ghost; }
+
         private:
 
+        Point m_ghost;
         const MBDisjointBoxLayout* m_layout;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };

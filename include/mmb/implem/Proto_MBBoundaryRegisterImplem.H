@@ -169,6 +169,26 @@ BoxData<T,C,MEM>& MBBoundaryRegister<T,C,MEM,CTR>::local(
     return *(bound(a_index, a_dir, a_adjBlock).localData);
 }
 
+// Get Local Data
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& MBBoundaryRegister<T,C,MEM,CTR>::local(
+        MBIndex         a_localIndex,
+        MBIndex         a_adjIndex)
+{
+    Box dirs = Box::Kernel(1);
+    for (auto dir : dirs)
+    {
+        for (auto bound : bounds(a_localIndex, dir))
+        {
+            if (bound.adjIndex == a_adjIndex)
+            {
+                return *(bound.localData);
+            }
+        }
+    }
+    MayDay<void>::Error("MBBoundaryRegister::local | Error: no boundary between patches.");
+}
+
 // Get Adjacent Data
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& MBBoundaryRegister<T,C,MEM,CTR>::adjacent(
@@ -187,6 +207,26 @@ BoxData<T,C,MEM>& MBBoundaryRegister<T,C,MEM,CTR>::adjacent(
         unsigned int    a_adjBlock)
 {
     return *(bound(a_index, a_dir, a_adjBlock).adjData);
+}
+
+// Get Adjacent
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& MBBoundaryRegister<T,C,MEM,CTR>::adjacent(
+        MBIndex         a_localIndex,
+        MBIndex         a_adjIndex)
+{
+    Box dirs = Box::Kernel(1);
+    for (auto dir : dirs)
+    {
+        for (auto bound : bounds(a_localIndex, dir))
+        {
+            if (bound.adjIndex == a_adjIndex)
+            {
+                return *(bound.adjData);
+            }
+        }
+    }
+    MayDay<void>::Error("MBBoundaryRegister::adjacent | Error: no boundary between patches.");
 }
 
 // Get Rotation
@@ -259,5 +299,156 @@ void MBBoundaryRegister<T,C,MEM,CTR>::exchange(){}
 */
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBBoundaryRegister<T,C,MEM,CTR>::exchangeToLocal(){}
+
+//=======================================================================================
+// COPIER
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBBoundaryCopier<T,C,MEM,CTR>::MBBoundaryCopier(){}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
+        MBBoundaryCopierOp<T, C, MEM, CTR>& a_op)
+{
+    auto  layout = a_op.m_data->layout();
+    auto  ghost = a_op.m_data->ghost();
+    auto& graph = layout.domain().graph();
+    Box dirs = Box::Kernel(1);
+    int localRank = procID();
+
+    for (auto iter : layout)
+    {
+        auto localBlock = layout.block(iter);
+        for (auto dir : dirs)
+        {
+            auto bounds = a_op->bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
+                        "MBBoundaryCopier::buildMotionPlans | Error: Data corruption.");
+                int adjRank = layout.procID(bound.adjIndex);
+                auto adjBlock = layout.block(bound.adjIndex);
+                Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
+                
+                // this copier doesn't do the rotation
+                Box adjBox_to = bound.localData->box();
+                Box localBox_to = bound.localData->box();
+
+                MBMotionItem toMotionItem(
+                        bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
+                if (localRank == adjRank)
+                {
+                    this->m_localMotionPlan.push_back(toMotionItem);
+                } else {
+                    toMotionItem.procID = adjRank;
+                    this->m_toMotionPlan.push_back(toMotionItem);
+                    
+                    // again, no rotation
+                    Box adjBox_from = adjBox_to;
+                    Box localBox_from = localBox_to;
+                    MBMotionItem fromMotionItem(
+                            bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
+                    fromMotionItem.procID = adjRank;
+                    this->m_fromMotionPlan.push_back(fromMotionItem);
+                }
+            }
+        }
+    }
+    this->sort();
+}
+
+//=======================================================================================
+// COPIER OP
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBBoundaryCopierOp<T,C,MEM,CTR>::MBBoundaryCopierOp(
+        MBBoundaryRegister<T, C, MEM, CTR>& a_data)
+{
+    m_data = &a_data;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+uint64_t
+MBBoundaryCopierOp<T,C,MEM,CTR>::linearSize(
+        const Box&          a_box,
+        const MBIndex&      a_index) const
+{
+    return C * a_box.size() * sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBBoundaryCopierOp<T,C,MEM,CTR>::linearOut(
+        void*               a_buffer,
+        const MBMotionItem& a_info) const
+{
+    MemType mem = pointerMemType(a_buffer);
+    PROTO_ASSERT(mem == MEM,
+        "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. %i != %i", mem, MEM);
+    const auto& srcIndex = a_info.fromIndex;
+    const auto& dstIndex = a_info.toIndex;
+    auto& patch = m_data->local(srcIndex, dstIndex); 
+    CInterval cint(0, C - 1);
+    patch.linearOut(a_buffer, a_info.fromRegion, cint);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBBoundaryCopierOp<T,C,MEM,CTR>::linearIn(
+        void*               a_buffer,
+        const MBMotionItem& a_info) const
+{
+    MemType mem = pointerMemType(a_buffer);
+    PROTO_ASSERT(mem == MEM,
+        "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. %i != %i", mem, MEM);
+    const auto& srcIndex = a_info.fromIndex;
+    const auto& dstIndex = a_info.toIndex;
+    auto& patch = m_data->adjacent(dstIndex, srcIndex); 
+    CInterval cint(0, C - 1);
+    patch.linearIn(a_buffer, a_info.toRegion, cint);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBBoundaryCopierOp<T,C,MEM,CTR>::localCopy(
+        const MBMotionItem& a_info) const
+{
+    const auto &domain = a_info.fromRegion;
+    const auto &srcIndex = a_info.fromIndex;
+    const auto &range = a_info.toRegion;
+    const auto &dstIndex = a_info.toIndex;
+    
+    bool linearizationTest = false;
+    if (linearizationTest)
+    {
+        PR_TIMERS("MBBoundaryCopierOp::localCopy (linearization test)");
+        size_t sizeSrc = linearSize(domain, srcIndex);
+        size_t sizeDst = linearSize(range,  dstIndex);
+        if (sizeSrc != sizeDst)
+        {
+            MayDay<void>::Abort(
+                    "Linearization test failure. dst and src have different sizes");
+        }
+        void *srcBuffer = proto_malloc<MEM>(sizeSrc);
+        void *dstBuffer = proto_malloc<MEM>(sizeDst);
+        {
+            linearOut(srcBuffer, a_info);
+            proto_memcpy<MEM, MEM>(srcBuffer, dstBuffer, sizeSrc);
+            linearIn(dstBuffer, a_info);
+        }
+        proto_free<MEM>(dstBuffer);
+        proto_free<MEM>(srcBuffer);
+
+    } else {
+        PR_TIMERS("MBBoundaryCopierOp::localCopy");
+        m_data->local(srcIndex, dstIndex).copyTo(m_data->adjacent(dstIndex, srcIndex));
+    }
+}
+
+
+
+
+
 
 

@@ -731,8 +731,7 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
-                 "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
-                 mem, MEM);
+    "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. %i != %i", mem, MEM);
     auto &patch = (*m_data)[a_info.fromIndex];
     CInterval cint(0, C - 1);
     patch.linearOut(a_buffer, a_info.fromRegion, cint);
@@ -861,7 +860,7 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
             for (auto bound : bounds)
             {
                 PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
-                             "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
                 int adjRank = layout.procID(bound.adjIndex);
                 auto adjBlock = layout.block(bound.adjIndex);
                 auto boundCodim = graph.connectivity(localBlock, adjBlock).codim();
@@ -870,7 +869,8 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();
-                MBMotionItem toMotionItem(bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
+                MBMotionItem toMotionItem(
+                        bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
                 {
                     this->m_localMotionPlan.push_back(toMotionItem);
@@ -882,7 +882,8 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
 
                     Box adjBox_from = adjBox_to.shift(adjDir * ghost);
                     Box localBox_from = localBox_to.shift(-dir * ghost);
-                    MBMotionItem fromMotionItem(bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
+                    MBMotionItem fromMotionItem(
+                            bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
                     this->m_fromMotionPlan.push_back(fromMotionItem);
                 }
