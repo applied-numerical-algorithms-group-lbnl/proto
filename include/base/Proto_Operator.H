@@ -1035,9 +1035,9 @@ namespace Operator {
                 int a_dir);
 
   /// Spreads a slice.
-  template<class T,unsigned int C,MemType MEM>
+   template<class T,unsigned int C,MemType MEM,unsigned char D, unsigned char E>
   inline void
-  spreadSlice(BoxData<T,C,MEM>& a_bd);
+  spreadSlice(BoxData<T,C,MEM,D,E>& a_bd);
   
   /// Calculation of equiangular cubed-sphere finite-volume metric terms using a semi-analytic approach.
    /** 
