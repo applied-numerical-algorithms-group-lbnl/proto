@@ -203,6 +203,45 @@ TEST(MBBoundaryRegister, Construction) {
     }
 }
 
+TEST(MBBoundaryRegister, Exchange) {
+    int domainSize = 32;
+    int boxSize = 16;
+    int numBlocks = 5;
+    int ghostSize = 0;
+    int depth = 1;
+    bool bothSides = true;
+    auto domain = buildXPoint(domainSize, numBlocks);
+    std::vector<Point> boxSizeVect;
+    std::vector<MBPatchID_t> patches;
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        boxSizeVect.push_back(Point::Ones(boxSize));
+        for (auto pi : Box::Cube(domainSize / boxSize))
+        {
+            if (pi == Point::X()*(domainSize/boxSize - 1)) {continue;}
+            patches.push_back(MBPatchID_t(pi,bi));
+        }
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
+    Point ghost = Point::Ones(ghostSize);
+
+    for (int ti = 0; ti < 4; ti++)
+    {
+        switch (ti)
+        {
+            case 0: depth = +1; bothSides = true; break;
+            case 1: depth = -1; bothSides = true; break;
+            case 2: depth = +1; bothSides = false; break;
+            case 3: depth = -1; bothSides = false; break;
+        }
+        MBBoundaryRegister<int, 1, HOST, PR_CELL> boundRegister(layout, depth, ghost, bothSides);
+        boundRegister.exchange();
+        for (auto iter : layout)
+        {
+
+        }
+    }
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

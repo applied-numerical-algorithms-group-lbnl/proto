@@ -122,6 +122,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
             }
         }
     }
+    m_copier.define(MBBoundaryCopierOp<T,C,MEM,CTR>(*this));
 }
 
 // Get All Boundary Data
@@ -310,13 +311,17 @@ void MBBoundaryRegister<T,C,MEM,CTR>::clear()
 /** Local data is maintained
 */
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void MBBoundaryRegister<T,C,MEM,CTR>::exchange(){}
-
-// Exchange and fill local data
-/** Local data is replaced by adjacent (properly rotated)
-*/
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void MBBoundaryRegister<T,C,MEM,CTR>::exchangeToLocal(){}
+void MBBoundaryRegister<T,C,MEM,CTR>::exchange()
+{
+    PR_TIME("MBBoundaryRegister::exchange");
+#ifdef PR_MPI
+    {
+        PR_TIME("MBBoundaryRegister::exchange (MPI barrier)");
+        barrier();
+    }
+#endif
+    m_copier.execute();
+}
 
 //=======================================================================================
 // COPIER
@@ -340,7 +345,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
         auto localBlock = layout.block(iter);
         for (auto dir : dirs)
         {
-            auto bounds = a_op->bounds(iter, dir);
+            auto bounds = a_op.m_data->bounds(iter, dir);
             for (auto bound : bounds)
             {
                 PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
@@ -349,12 +354,13 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 auto adjBlock = layout.block(bound.adjIndex);
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
                 
-                // this copier doesn't do the rotation
-                Box adjBox_to = bound.localData->box();
                 Box localBox_to = bound.localData->box();
+                Box adjBox_to = layout.domain().convert(
+                        localBox_to, localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(
                         bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
+                toMotionItem.rotation = bound.adjToLocal;
                 if (localRank == adjRank)
                 {
                     this->m_localMotionPlan.push_back(toMotionItem);
@@ -362,11 +368,13 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
                     
-                    // again, no rotation
-                    Box adjBox_from = adjBox_to;
-                    Box localBox_from = localBox_to;
+                    Box localBox_from = bound.adjData->box();
+                    Box adjBox_from = layout.domain().convert(
+                            localBox_from, localBlock, adjBlock);
+                    
                     MBMotionItem fromMotionItem(
                             bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
+                    fromMotionItem.rotation = bound.adjToLocal.inverse();
                     fromMotionItem.procID = adjRank;
                     this->m_fromMotionPlan.push_back(fromMotionItem);
                 }
@@ -422,9 +430,9 @@ MBBoundaryCopierOp<T,C,MEM,CTR>::linearIn(
         "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. %i != %i", mem, MEM);
     const auto& srcIndex = a_info.fromIndex;
     const auto& dstIndex = a_info.toIndex;
+    auto R = a_info.rotation;
     auto& patch = m_data->adjacent(dstIndex, srcIndex); 
-    CInterval cint(0, C - 1);
-    patch.linearIn(a_buffer, a_info.toRegion, cint);
+    R.rotateBuffer<T,C>((T*)a_buffer, patch.data(), a_info.fromRegion, a_info.toRegion);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -460,7 +468,9 @@ MBBoundaryCopierOp<T,C,MEM,CTR>::localCopy(
 
     } else {
         PR_TIMERS("MBBoundaryCopierOp::localCopy");
-        m_data->local(srcIndex, dstIndex).copyTo(m_data->adjacent(dstIndex, srcIndex));
+        m_data->local(srcIndex, dstIndex).copyTo(
+                m_data->adjacent(dstIndex, srcIndex),
+                a_info.rotation);
     }
 }
 

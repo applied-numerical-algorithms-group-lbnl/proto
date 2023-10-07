@@ -164,6 +164,7 @@ namespace Proto
         Point m_ghost;
         const MBDisjointBoxLayout* m_layout;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
+        MBBoundaryCopier<T,C,MEM,CTR> m_copier; 
     };
 #include "implem/Proto_MBBoundaryRegisterImplem.H"
 } // end namespace Proto
