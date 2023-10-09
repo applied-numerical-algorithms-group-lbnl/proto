@@ -8,7 +8,41 @@
 
 using namespace Proto;
 
+
+
 #if DIM==2
+#if 1
+TEST(MBLevelOp, Iteration) {
+    HDF5Handler h5;
+    int domainSize = 32;
+    int boxSize = 32;
+    int numGhost = 4;
+    Array<double, DIM> k{1,1,1,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
+    Array<Point, DIM+1> srcGhost;
+    Array<Point, DIM+1> dstGhost;
+    Array<Point, DIM+1> mapGhost;
+
+    srcGhost.fill(Point::Ones(numGhost));
+    mapGhost.fill(Point::Ones(numGhost+1));
+    dstGhost.fill(Point::Zeros());
+
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    MBLevelMap<MBMap_Shear, HOST> map;
+    map.define(layout, mapGhost);
+
+    MBLevelOp<BoxOp_MBLaplace, MBMap_Shear, double> op(map);
+
+    for (auto iter : layout)
+    {
+        EXPECT_EQ(op[iter].box(), layout[iter]);
+    }
+}
+#endif
 #if 1
 TEST(MBLevelOp, ShearLaplace) {
 

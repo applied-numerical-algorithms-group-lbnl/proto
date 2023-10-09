@@ -127,6 +127,7 @@ class LevelOp
     inline const BC& bc() const { return m_bc; }
     inline const DisjointBoxLayout& layout() const {return m_layout; }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
+    inline OP& operator[](const LevelIndex& a_index) { return m_ops[a_index]; }
     private:
    
     T m_diagScale;

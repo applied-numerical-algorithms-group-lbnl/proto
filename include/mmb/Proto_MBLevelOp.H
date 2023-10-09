@@ -53,7 +53,8 @@ class MBLevelOp
         const LevelStateData&   a_state,
         const LevelAuxData&     a_aux,
         T                       a_scale = 1.0);
-
+    inline OP& operator[](MBIndex a_index);
+    inline const OP& operator[](MBIndex a_index) const;
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline void setTime(T a_time);

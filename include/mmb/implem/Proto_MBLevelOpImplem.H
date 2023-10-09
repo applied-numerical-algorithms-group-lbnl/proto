@@ -79,6 +79,22 @@ void MBLevelOp<OPType, MAP, T,  MEM>::operator()(
     }
 }
 
+template<template<typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,  MemType MEM>
+OPType<T,MEM>& MBLevelOp<OPType, MAP, T,  MEM>::operator[](MBIndex a_index)
+{
+    return m_ops[a_index];
+}
+
+template<template<typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,  MemType MEM>
+const OPType<T,MEM>& MBLevelOp<OPType, MAP, T,  MEM>::operator[](MBIndex a_index) const
+{
+    return m_ops[a_index];
+}
+
 template <template<typename, MemType> class OpType,
     template<MemType> typename MAP,
          typename T,

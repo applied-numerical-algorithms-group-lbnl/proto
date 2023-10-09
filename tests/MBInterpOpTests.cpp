@@ -154,8 +154,7 @@ TEST(MBInterpOp, ShearTestStandalone)
 
     // interpolate
     hostSrc.exchange();
-    //interpBoundaries<MBMap_Shear>(hostSrc);
-    CubedSphereShell::InterpBoundaries(hostSrc);
+    interpBoundaries<MBMap_Shear>(hostSrc);
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_ShearStandalone");
 #endif
