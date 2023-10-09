@@ -62,6 +62,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         for (int cc = 1; cc <= DIM; cc++)
         {
             int ghostSize = m_ghost[cc].max();
+            if (ghostSize <= 0) {continue; }
             for (auto di : K)
             {
                 if (di.codim() != cc)
