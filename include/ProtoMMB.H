@@ -11,6 +11,7 @@
 #include "mmb/Proto_MBProblemDomain.H"
 #include "mmb/Proto_MBBoxPartition.H"
 #include "mmb/Proto_MBDisjointBoxLayout.H"
+#include "mmb/Proto_MBBoundaryRegister.H"
 #include "mmb/Proto_MBLevelBoxData.H"
 #include "mmb/Proto_MBMapOp.H"
 #include "mmb/Proto_MBLevelMap.H"

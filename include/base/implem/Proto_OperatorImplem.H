@@ -889,9 +889,8 @@ cofactorMatrix(
 }
 
 // Copy lowest 0-index slice to all the other slices.
-
-template<class T,unsigned int C,MemType MEM>
-void spreadSlice(BoxData<T,C,MEM>& a_bd)
+template<class T,unsigned int C,MemType MEM,unsigned char D, unsigned char E>
+void spreadSlice(BoxData<T,C,MEM,D,E>& a_bd)
 {
   PR_TIMERS("spreadSlice");
   Box bx= a_bd.box();
@@ -923,11 +922,13 @@ void spreadSlice(BoxData<T,C,MEM>& a_bd)
                        
   // The version below is about 6x faster on a CPU than the forall version above.
   // Reduces the run time of CubedSphereGeometry by about 25%.
+  for (int e = 0; e < E; e++)
+  for (int d = 0; d < D; d++)
   for (int c = 0; c < C; c++)
     {
       for (auto bit : bx0)
         {
-          T* data0 = a_bd.data(bit,c);
+          T* data0 = a_bd.data(bit,c,d,e);
           for (int i = 1; i < bx.high()[0] - bx.low()[0] + 1; i++)
             {
               *(data0 + i) = *data0;
