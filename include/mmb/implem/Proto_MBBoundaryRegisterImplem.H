@@ -356,7 +356,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 
                 Box localBox_to = bound.localData->box();
                 Box adjBox_to = layout.domain().convert(
-                        localBox_to, localBlock, adjBlock);
+                        bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(
                         bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
@@ -367,10 +367,9 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 } else {
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
-                    
-                    Box localBox_from = bound.adjData->box();
-                    Box adjBox_from = layout.domain().convert(
-                            localBox_from, localBlock, adjBlock);
+                  
+                    Box localBox_from = localBox_to;
+                    Box adjBox_from = adjBox_to;
                     
                     MBMotionItem fromMotionItem(
                             bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
