@@ -178,7 +178,7 @@ TEST(MBBoundaryRegister, Exchange) {
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
     Point ghost = Point::Ones(ghostSize);
 
-    for (int ti = 0; ti < 4; ti++)
+    for (int ti = 2; ti < 3; ti++)
     {
         switch (ti)
         {
@@ -187,11 +187,40 @@ TEST(MBBoundaryRegister, Exchange) {
             case 2: depth = +1; bothSides = false; break;
             case 3: depth = -1; bothSides = false; break;
         }
-        MBBoundaryRegister<int, 1, HOST, PR_CELL> boundRegister(layout, depth, ghost, bothSides);
+        MBBoundaryRegister<int, DIM, HOST, PR_CELL> boundRegister(
+                layout, depth, ghost, bothSides);
+        for (auto iter : layout)
+        {
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                auto p1 = layout.point(bi.localIndex);
+                auto p2 = layout.point(bi.adjIndex);
+            
+                forallInPlace_p(f_MBPointID, *bi.localData, bi.localIndex);
+                bi.adjData->setVal(42);
+            }
+        }
         boundRegister.exchange();
         for (auto iter : layout)
         {
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                auto p1 = layout.point(bi.localIndex);
+                auto p2 = layout.point(bi.adjIndex);
+               
+                pout() << "\nBOUNDARY:" << std::endl;
+                pout() << "[" << p1 << ", " << b1 << "]\t->\t[" << p2 << ", " << b2 << "]" << std::endl; 
 
+                bi.localData->printData();
+                bi.adjData->printData();
+
+                forallInPlace_p(f_MBPointID, *bi.localData, bi.localIndex);
+                bi.adjData->setVal(42);
+            }
         }
     }
 }

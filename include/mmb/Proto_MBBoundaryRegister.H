@@ -87,9 +87,13 @@ namespace Proto
                 Side::LoHiSide  a_side);
         
         // Get All Boundary Data
-        inline std::vector<MBBoundaryData<T,C,MEM>>& bounds(
+        inline std::vector<MBBoundaryData<T,C,MEM>> bounds(
                 MBIndex a_index,
                 Point   a_dir);
+        
+        // Get All Boundary Data
+        inline std::vector<MBBoundaryData<T,C,MEM>> bounds(
+                MBIndex a_index);
 
         // Get Local Data
         inline BoxData<T,C,MEM>& local(
