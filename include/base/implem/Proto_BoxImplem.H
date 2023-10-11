@@ -102,7 +102,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 //=======================++ 
 
 ACCEL_DECORATION
-inline std::size_t Box::size(unsigned char a_dim) const
+inline ::std::size_t Box::size(unsigned char a_dim) const
 {
     PROTO_ASSERT((a_dim < DIM),
         "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
@@ -114,7 +114,7 @@ inline std::size_t Box::size(unsigned char a_dim) const
 }
 
 ACCEL_DECORATION
-inline std::size_t Box::size() const
+inline ::std::size_t Box::size() const
 {
     if (m_size <= 0)
     {
@@ -262,8 +262,8 @@ Box Box::operator&(const Point& a_pt) const
         Point H = m_high;
         for (int ii = 0; ii < DIM; ii++)
         {
-            L[ii] = std::min(a_pt[ii], L[ii]);
-            H[ii] = std::max(a_pt[ii], H[ii]);
+            L[ii] = ::std::min(a_pt[ii], L[ii]);
+            H[ii] = ::std::max(a_pt[ii], H[ii]);
         }
         return Box(L,H);
     }
@@ -572,7 +572,7 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
         "Box::face(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
         a_dir, DIM);
     int s = size(a_dir);
-    int dist = std::min(a_dist, s);
+    int dist = ::std::min(a_dist, s);
     if (a_side == Side::Lo)
     {
         return edge(Point::Basis(a_dir, -1), dist);
@@ -701,7 +701,7 @@ BoxIterator Box::rend() const
 
 void Box::print() const 
 {
-    std::cout<<*this<<std::endl;
+    ::std::cout<<*this<<::std::endl;
 }
 
 size_t Box::linearSize() const

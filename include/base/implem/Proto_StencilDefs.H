@@ -402,7 +402,7 @@ Stencil<T> Stencil<T>::faceToCell(int a_dir,int a_order)
       cout << "facesToCells defined only for a_order = 2,4 " << endl;
       abort();
     }
-};
+}
 template<typename T>
 Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
 {
@@ -427,7 +427,7 @@ Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
       cout << "cornersToFaces defined only for a_order = 2,4 " << endl;
       abort();
     }
-};
+}
 template<typename T>
 Stencil<T> Stencil<T>::cornersToCells(int a_order)
 {
@@ -449,6 +449,7 @@ Stencil<T> Stencil<T>::cornersToCells(int a_order)
       cout << "cornersToCells defined only for a_order = 2,4 " << endl;
       abort();
     }
+
 }
 
 #endif

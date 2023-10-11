@@ -2,6 +2,7 @@
 #define __PROTO_HEADER__
 
 #include <cstdlib>
+#include <limits>
 #include "base/Proto_PAssert.H"
 #include "base/Proto_parstream.H"
 #include "base/Proto_macros.H"
