@@ -32,10 +32,10 @@ void BoxPartition::define(
     Morton::sort(sortedPatches);
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
-
+#if 0
 void BoxPartition::define(
         const ProblemDomain& a_patchDomain,
-        const std::vector<std::pair<Point, unsigned int>>& a_patches)
+        std::vector<std::pair<Point, unsigned int>>& a_patches)
 {
     m_patchDomain = a_patchDomain;
     m_partition.clear();
@@ -49,7 +49,7 @@ void BoxPartition::define(
 
     }
 }
-
+#endif
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,

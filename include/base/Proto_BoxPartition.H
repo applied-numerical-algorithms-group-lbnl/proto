@@ -66,7 +66,8 @@ namespace Proto
                 const std::vector<Point>& a_patches,
                 unsigned int a_startProc,
                 unsigned int a_endProc);
-
+        
+#if 0
         /// Define
         /**
          *  Create a BoxPartition from a set of patches that have already been assigned
@@ -77,8 +78,9 @@ namespace Proto
          */
         inline void define(
                 const ProblemDomain& a_patchDomain,
-                std::vector<std::pair<Point,int>>& a_assignedPatches);
-        
+                std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
+#endif
+
         /// Load Balance
         /**
          * Rebalance the load of this by distributing the input patches evenly 

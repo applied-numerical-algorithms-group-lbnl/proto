@@ -35,6 +35,7 @@ namespace Proto_Transition
             const vector<pair<pr_box, int> > >&  a_layout)
     {
       shared_ptr<pr_dbl> retval;
+        #if 0
       PROTO_ASSERT(a_layout.size() > 0,
               "DataUtilities::getLayout | Error: empty input");
       
@@ -54,7 +55,7 @@ namespace Proto_Transition
         patches.push_back(iter.first.low() / sizes);
       }
 
-
+        #endif
       pr_mayday::Error("Doh! getMetaData not implemented")
       return retval;
     }
