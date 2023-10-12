@@ -123,22 +123,6 @@ TEST(MBBoundaryRegister, Construction) {
                 {
                     EXPECT_EQ(bounds.size(), 1);
                     EXPECT_TRUE(layout.isBlockBoundary(iter, dir, xBlock));
-                    /*
-                    Point adjDir = -CCW(dir);
-                    Box adjPatchBoundary;
-                    if (bothSides)
-                    {
-                        adjPatchBoundary = patchBoundary;
-                        //adjPatchBoundary = adjPatchBox.edge(adjDir, abs(depth));
-                        //adjPatchBoundary = adjPatchBoundary.extrude(adjDir, abs(depth));
-                    } else if (depth < 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.edge(adjDir, depth);
-                    } else if (depth > 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.adjacent(adjDir, depth);
-                    }
-                    */
                     EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  xBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
@@ -148,21 +132,6 @@ TEST(MBBoundaryRegister, Construction) {
                     if (neighbor == Point::Y()*(domainSize/boxSize)){continue;} //we manually removed this patch. 
                     EXPECT_EQ(bounds.size(),  1);
                     EXPECT_TRUE(layout.isBlockBoundary(iter, dir, yBlock));
-                    /*
-                    Point adjDir = -CW(dir); 
-                    Box adjPatchBoundary;
-                    if (bothSides)
-                    {
-                        adjPatchBoundary = adjPatchBox.edge(adjDir, abs(depth));
-                        adjPatchBoundary = adjPatchBoundary.extrude(adjDir, abs(depth));
-                    } else if (depth < 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.edge(adjDir, depth);
-                    } else if (depth > 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.adjacent(adjDir, depth);
-                    }
-                    */
                     EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  yBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
@@ -170,22 +139,6 @@ TEST(MBBoundaryRegister, Construction) {
                 } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
                 {
                     EXPECT_EQ(bounds.size(), numBlocks-3);
-                    /*
-                    Point adjDir = -dir;
-                    adjDir[0] = dir[0]; adjDir[1] = dir[1];
-                    Box adjPatchBoundary;
-                    if (bothSides)
-                    {
-                        adjPatchBoundary = adjPatchBox.edge(adjDir, abs(depth));
-                        adjPatchBoundary = adjPatchBoundary.extrude(adjDir, abs(depth));
-                    } else if (depth < 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.edge(adjDir, depth);
-                    } else if (depth > 0)
-                    {
-                        adjPatchBoundary = adjPatchBox.adjacent(adjDir, depth);
-                    }
-                    */
                     for (auto bound : bounds)
                     {
                         EXPECT_EQ(layout.block(bound.localIndex), blockID);
@@ -234,11 +187,51 @@ TEST(MBBoundaryRegister, Exchange) {
             case 2: depth = +1; bothSides = false; break;
             case 3: depth = -1; bothSides = false; break;
         }
-        MBBoundaryRegister<int, 1, HOST, PR_CELL> boundRegister(layout, depth, ghost, bothSides);
+        MBBoundaryRegister<int, DIM, HOST, PR_CELL> boundRegister(
+                layout, depth, ghost, bothSides);
+        for (auto iter : layout)
+        {
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                auto p1 = layout.point(bi.localIndex);
+                auto p2 = layout.point(bi.adjIndex);
+            
+                forallInPlace_p(f_MBPointID, *bi.localData, b1);
+                bi.adjData->setVal(42);
+            }
+        }
         boundRegister.exchange();
         for (auto iter : layout)
         {
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                //pout() << "\n======================================================" << std::endl;
+                //pout() << "BOUNDARY: " << std::endl;
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                auto p1 = layout.point(bi.localIndex);
+                auto p2 = layout.point(bi.adjIndex);
+                //pout() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
+                Box dstBox = bi.adjData->box();
+                auto R = bi.adjToLocal;
+                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                BoxData<int, DIM> adjSln(srcBox);
+                BoxData<int, DIM> locSln(dstBox);
 
+                forallInPlace_p(f_MBPointID, adjSln, b2);
+                adjSln.copyTo(locSln, R);
+                EXPECT_EQ(locSln.box(), bi.adjData->box());
+                //pout() << "Local Solution (Computed): " << std::endl;
+                //locSln.printData();
+                //pout() << "Copied Data: " << std::endl;
+                //bi.adjData->printData();
+                locSln -= (*bi.adjData);
+                //std::cout << "Error: " << locSln.absMax() << std::endl;
+                //locSln.printData();
+                EXPECT_LT(locSln.absMax(), 1e-12);
+            }
         }
     }
 }

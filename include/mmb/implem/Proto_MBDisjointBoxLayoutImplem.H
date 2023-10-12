@@ -211,7 +211,7 @@ bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
-        MBIndex         a_index,
+        const MBIndex&  a_index,
         Point           a_dir,
         unsigned int    a_block) const
 {
@@ -232,6 +232,80 @@ bool MBDisjointBoxLayout::isBlockBoundary(
 
     auto adjIndex = find(adjPatch, a_block);
     if (adjIndex == end()){return false;}
+    return true;
+}
+
+std::vector<MBIndex> MBDisjointBoxLayout::bounds(
+        const MBIndex& a_index) const
+{
+    std::vector<MBIndex> ret;
+    auto b0 = block(a_index);
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto conn = domain().graph().connectivity(b0, bi);
+        if (bi != b0 && conn == Point::Zeros()) { continue; }
+        Box patchDomain = getBlock(bi).patchDomain().box();
+        for (auto pi : patchDomain)
+        {
+            auto index = find(pi, bi);
+            if (index != *end() && (connectivity(a_index, index) != Point::Zeros()))
+            {
+                ret.push_back(index);
+            }
+        }
+    }
+    return ret;
+}
+
+Point MBDisjointBoxLayout::connectivity(
+        const MBIndex& a_i1,
+        const MBIndex& a_i2) const
+{
+    unsigned int b1 = block(a_i1);
+    unsigned int b2 = block(a_i2);
+    Point p1 = point(a_i1);
+    Point p2 = point(a_i2);
+
+    // patches on same block
+    if (b1 == b2)
+    {
+        if (Box::Kernel(1).shift(p1).contains(p2))
+        {
+            return (p2 - p1);
+        }
+    }
+    
+    // patches on different blocks
+
+    Point conn12 = domain().graph().connectivity(b1, b2);
+    if (conn12 == Point::Zeros()) { return Point::Zeros(); }
+    Point conn21 = domain().graph().connectivity(b2, b1);
+    PROTO_ASSERT(conn21 != Point::Zeros(),
+            "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
+    Box adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
+    Box adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
+    auto R = domain().graph().rotation(b1,conn12,b2);
+
+    Box dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
+    //std::cout << "checking " << p1 << " -> " << p2 << " | conn12: " << conn12 << " | conn21: " << conn21;
+    //std::cout << " | dirs: " << dirs << " | adjPatch1: " << adjPatch1 << " | adjPatch2: " << adjPatch2 << std::endl;
+    for (auto dir : dirs)
+    {
+        Point n1 = p1 + dir;
+        if (!adjPatch1.contains(n1)){ continue; }
+        Point n2 = R.rotateCell(
+                n1, adjPatch1, adjPatch2);
+        if (n2 == p2) {return dir; }
+    }
+    return Point::Zeros();
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex& a_i1,
+        const MBIndex& a_i2) const
+{
+    if (block(a_i1) == block(a_i2)) {return false;}
+    if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
     return true;
 }
 
