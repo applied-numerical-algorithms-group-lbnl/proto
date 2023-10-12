@@ -44,7 +44,7 @@ hdf5_inc_serial = [
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
 parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc','CC'], default=default_compiler)
-parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
+parser.add_argument('--dim', type=int, help='dimensionality to build executables [3]',default='3')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
                     action="store_true",default=False)
@@ -112,12 +112,12 @@ for t in targets:
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda --expt-relaxed-constexpr')
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
+        f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_CUDA -arch=compute_70')
     if args.cxx == 'hipcc':
-       f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP -I${MPICH_DIR}/include') 
+       f.write('\nCXXOPTFLAGS+=-DPROTO_ACCEL -DPROTO_HIP -I${MPICH_DIR}/include') 
        f.write('\nLIBS+=-L${MPICH_DIR}/lib -lmpi')
     if os.path.isdir(os.path.expandvars('$ROCM_COMPILER_PATH')):
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP  -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
+        f.write('\nCXXOPTFLAGS+= -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
     if args.cxx=='mpicxx':
       use_mpi = True
     if args.hdf5=='TRUE':

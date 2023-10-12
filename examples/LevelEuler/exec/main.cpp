@@ -6,9 +6,9 @@
 using namespace Proto;
 using namespace std;
 
-template<typename T, MemType MEM>
+template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START 
-void f_initialize_(Point& a_pt, Var<T, NUMCOMPS, MEM>& a_U, double a_dx, const double a_gamma)
+void f_initialize_(Point& a_pt, Var<T, C, MEM>& a_U, double a_dx, const double a_gamma)
 {
     double x = a_pt[0]*a_dx + a_dx/2.0;
     double rho0 = a_gamma;
@@ -22,11 +22,11 @@ void f_initialize_(Point& a_pt, Var<T, NUMCOMPS, MEM>& a_U, double a_dx, const d
     double c = sqrt(a_gamma*p/rho);
     umag = 2*(c-c0)/(a_gamma-1.);
     a_U(1) = rho*umag;
-    //NOTE: This assumes that NUMCOMPS=DIM+2
+    //NOTE: This assumes that C=DIM+2
     for(int dir=2; dir<=DIM; dir++)
         a_U(dir)=0.0;
     double ke = 0.5*umag*umag;
-    a_U(NUMCOMPS-1) = p/(a_gamma-1.0) + rho*ke;
+    a_U(C-1) = p/(a_gamma-1.0) + rho*ke;
 }
 PROTO_KERNEL_END(f_initialize_, f_initialize)
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     typedef BoxOp_Euler<double> OP;
 
     // INITIALIZE DATA
-    LevelBoxData<double, NUMCOMPS> U(layout, OP::ghost());
+    LevelBoxData<double, OP::numState()> U(layout, OP::ghost());
     //U.initConvolve(f_initialize, dx, gamma);
     Operator::initConvolve(U, f_initialize, dx, gamma);
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    std::vector<std::string> varnames(NUMCOMPS);
+    std::vector<std::string> varnames(OP::numState());
     varnames[0] = "rho";
     for (int ii = 1; ii <= DIM; ii++)
     {
