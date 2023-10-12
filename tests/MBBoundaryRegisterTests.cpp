@@ -178,7 +178,7 @@ TEST(MBBoundaryRegister, Exchange) {
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
     Point ghost = Point::Ones(ghostSize);
 
-    for (int ti = 2; ti < 3; ti++)
+    for (int ti = 0; ti < 4; ti++)
     {
         switch (ti)
         {
@@ -198,7 +198,7 @@ TEST(MBBoundaryRegister, Exchange) {
                 auto p1 = layout.point(bi.localIndex);
                 auto p2 = layout.point(bi.adjIndex);
             
-                forallInPlace_p(f_MBPointID, *bi.localData, bi.localIndex);
+                forallInPlace_p(f_MBPointID, *bi.localData, b1);
                 bi.adjData->setVal(42);
             }
         }
@@ -207,19 +207,30 @@ TEST(MBBoundaryRegister, Exchange) {
         {
             for (auto bi : boundRegister.bounds(iter))
             {
+                //pout() << "\n======================================================" << std::endl;
+                //pout() << "BOUNDARY: " << std::endl;
                 auto b1 = layout.block(bi.localIndex);
                 auto b2 = layout.block(bi.adjIndex);
                 auto p1 = layout.point(bi.localIndex);
                 auto p2 = layout.point(bi.adjIndex);
-               
-                pout() << "\nBOUNDARY:" << std::endl;
-                pout() << "[" << p1 << ", " << b1 << "]\t->\t[" << p2 << ", " << b2 << "]" << std::endl; 
+                //pout() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
+                Box dstBox = bi.adjData->box();
+                auto R = bi.adjToLocal;
+                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                BoxData<int, DIM> adjSln(srcBox);
+                BoxData<int, DIM> locSln(dstBox);
 
-                bi.localData->printData();
-                bi.adjData->printData();
-
-                forallInPlace_p(f_MBPointID, *bi.localData, bi.localIndex);
-                bi.adjData->setVal(42);
+                forallInPlace_p(f_MBPointID, adjSln, b2);
+                adjSln.copyTo(locSln, R);
+                EXPECT_EQ(locSln.box(), bi.adjData->box());
+                //pout() << "Local Solution (Computed): " << std::endl;
+                //locSln.printData();
+                //pout() << "Copied Data: " << std::endl;
+                //bi.adjData->printData();
+                locSln -= (*bi.adjData);
+                //std::cout << "Error: " << locSln.absMax() << std::endl;
+                //locSln.printData();
+                EXPECT_LT(locSln.absMax(), 1e-12);
             }
         }
     }
