@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     if (boxSize > domainSize)
     {
-        pout() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
+        pr_out() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
         boxSize = domainSize;
     }
     PR_TIMER_SETFILE(to_string(domainSize) 
@@ -119,12 +119,12 @@ int main(int argc, char** argv)
     dx.fill(physDomainSize / domainSize);
     double dt = 0.5 / domainSize;
 
-    pout() << setw(50) << setfill('=') << "=" << std::endl;
-    pout() << "Coarsest Level Parameters" << std::endl;
-    pout() << setw(50) << setfill('-') << "-" << std::endl;
-    pout() << "dx: " << dx[0] << " | dt: " << dt << std::endl;
-    pout() << "domain: " << domainBox << std::endl;
-    pout() << setw(50) << setfill('-') << "-" << std::endl << std::endl;
+    pr_out() << setw(50) << setfill('=') << "=" << std::endl;
+    pr_out() << "Coarsest Level Parameters" << std::endl;
+    pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+    pr_out() << "dx: " << dx[0] << " | dt: " << dt << std::endl;
+    pr_out() << "domain: " << domainBox << std::endl;
+    pr_out() << setw(50) << setfill('-') << "-" << std::endl << std::endl;
 
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     AMRGrid grid(layout, refRatios, numLevels);
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx);
 
     double sum0 = U[0].sum();
-    pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
+    pr_out() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
     double time = t0;
 #ifdef PR_HDF5
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     }
 
     sum0 = U[0].sum();
-    pout() << "Final level 0 conservation sum: " << sum0 << std::endl;
+    pr_out() << "Final level 0 conservation sum: " << sum0 << std::endl;
 
     AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
     //USoln.initConvolve(dx[0], f_advectionExact, time);

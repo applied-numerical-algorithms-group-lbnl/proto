@@ -58,7 +58,6 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    using Proto::pout;
     typedef BoxOp_Laplace<double> OP;
 
     int domainSize = 32;
@@ -138,7 +137,7 @@ int main(int argc, char** argv)
 #endif
         
         // SOLVE
-        pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
+        pr_out() << "Integral of RHS: " << G.integrate(dx) << std::endl;
         solver.solve(Phi, G, solveIter, tolerance);
         Phi.averageDown();
 
@@ -149,7 +148,7 @@ int main(int argc, char** argv)
         PhiErr.averageDown();
         err[nn] = PhiErr.integrateAbs(dx);
         
-        pout() << "Error: " << err[nn] << std::endl;
+        pr_out() << "Error: " << err[nn] << std::endl;
         if (procID() == 0)
         {
             std::cout << "Error: " << err[nn] << std::endl;
@@ -160,7 +159,7 @@ int main(int argc, char** argv)
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
         if (procID() == 0)
         {
             std::cout << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;

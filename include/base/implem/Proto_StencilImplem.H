@@ -379,6 +379,7 @@ Stencil<T>::print() const
 // Apply ||
 //=======++ 
 
+//FIXME: INPUTS ARE IN THE WRONG ORDER! SRC <--> DST
 // Apply Stencil
 template <typename T>
 template <unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>

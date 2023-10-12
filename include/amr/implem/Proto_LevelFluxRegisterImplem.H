@@ -611,7 +611,6 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const Da
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::print() const
 {
-    using Proto::pout;
     pr_out() << "Level Flux Register: " << std::endl;
     pr_out() << "Coarse Registers: " << std::endl;
     for (int ii = 0; ii < m_crseRegisters.size(); ii++)

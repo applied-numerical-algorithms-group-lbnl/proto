@@ -142,7 +142,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
 #endif
 
 TEST(MBMap, XPoint) {
-    pout() << "THIS IS A VISUAL TEST. CONFIRM RESULTS IN VISIT" << std::endl;
+    pr_out() << "THIS IS A VISUAL TEST. CONFIRM RESULTS IN VISIT" << std::endl;
     constexpr int C = 2;
     HDF5Handler h5;
     int domainSize = 64;

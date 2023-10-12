@@ -91,7 +91,6 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    using Proto::pout;
 
     T res0 = resnorm(m_residual, a_state, a_force);
     std::array<T, DIM> dx = m_mg->op().dx();
@@ -102,7 +101,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
         h5.writeLevel(dx, a_state, "MG_STATE_I%i", 0);
         h5.writeLevel(dx, a_force, "MG_FORCE");
 #endif
-        pout() << "MG solve: initial residual = " << res0 << std::endl;
+        pr_out() << "MG solve: initial residual = " << res0 << std::endl;
         if (procID() == 0)
         {
             std::cout << "MG solve: initial residual = " << res0 << std::endl;
@@ -121,8 +120,8 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
             h5.writeLevel(dx, m_residual, "MG_RES_I%i", ii+1);
             h5.writeLevel(dx, a_state, "MG_STATE_I%i", ii+1);
 #endif
-            pout() << "\tMG solve: resnorm = " << res;
-            pout() << " | integral = " << m_residual.integrate(dx) << std::endl;
+            pr_out() << "\tMG solve: resnorm = " << res;
+            pr_out() << " | integral = " << m_residual.integrate(dx) << std::endl;
             if (procID() == 0)
             {
                 std::cout << "\tMG solve: resnorm = " << res;

@@ -135,16 +135,16 @@ int main(int argc, char** argv)
         {
             case 0:
             {
-                Proto::pout() << "Running Test 0: 2D Diagonal Line" << std::endl;
+                Proto::pr_out() << "Running Test 0: 2D Diagonal Line" << std::endl;
                 Box domain = Box::Cube(domainSize);
 
                 Point tagBufferSize = Point::Ones(bufferSize);
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
 
-                Proto::pout() << "\tTag Buffer Size: " << tagBufferSize << std::endl;
-                Proto::pout() << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
-                Proto::pout() << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
+                Proto::pr_out() << "\tTag Buffer Size: " << tagBufferSize << std::endl;
+                Proto::pr_out() << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
+                Proto::pr_out() << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
 
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
@@ -353,17 +353,17 @@ int main(int argc, char** argv)
                 for (int ii = 0; ii < 3; ii++)
                 {
 
-                    pout() << "Initializing level " << ii << std::endl;
+                    pr_out() << "Initializing level " << ii << std::endl;
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                     data_before[ii].layout().print();
                     h5.writeLevel(dx_vect[ii], data_before[ii], "Grid_L%i_0", ii);
                 }
-                pout() << "Writing AMR data " << std::endl;
+                pr_out() << "Writing AMR data " << std::endl;
                 //h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
                 
-                pout() << "Before enfore nesting" << std::endl;
+                pr_out() << "Before enfore nesting" << std::endl;
                 grid.enforceNesting(1, nestingDistance);
-                pout() << "After enfore nesting" << std::endl;
+                pr_out() << "After enfore nesting" << std::endl;
 
                 AMRData<double> data_after(grid, Point::Zeros());
                 for (int ii = 0; ii < 3; ii++)
