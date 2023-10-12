@@ -379,6 +379,16 @@ bool Point::isotropic() const
     return true;
 }
 
+int Point::codim() const
+{
+    int numZeros = 0;
+    for (int d = 0; d < DIM; d++)
+    {
+        if ((*this)[d] != 0) { numZeros++; }
+    }
+    return numZeros;
+}
+
 std::array<Point, DIM> Point::parallelUnit() const
 {
     std::array<Point, DIM> basis;
@@ -407,6 +417,20 @@ std::array<Point, DIM> Point::perpUnit() const
         }
     }
     return basis;
+}
+
+std::vector<Point> Point::split() const
+{
+    std::vector<Point> points;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        int s = (*this)[ii];
+        if (s != 0)
+        {
+            points.push_back(Point::Basis(ii, s));
+        }
+    }
+    return points;
 }
 
 Point Point::dir() const

@@ -24,6 +24,7 @@
 #include <cstdlib>  // for size_t
 #include <cmath>    // floating point abs
 #include <map>
+#include <random>   // random initialization
 #include <unordered_map>
 
 
@@ -74,6 +75,9 @@ namespace Proto
     template<typename T> class Stencil;
     template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     class LazyStencil;
+    
+    template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    class LazyInterpStencil;
 
     template<MemType MEM>
     inline void null_deleter_boxdata(void* ptr) { }
@@ -420,6 +424,7 @@ namespace Proto
           \param a_op   The output of a Stencil or InterpStencil apply operation.
           */
         BoxData(LazyStencil<T,C,MEM,D,E>&& a_op);
+        BoxData(LazyInterpStencil<T,C,MEM,D,E>&& a_op);
 
         /// Slice Constructor
         /**
@@ -549,7 +554,9 @@ namespace Proto
          *  \param a_dst        Destination data holder
          *  \param a_rotation   Permutation from this to a_dst's coordinates
         */
-        void copyTo(BoxData<T, C, MEM, D, E>&   a_dst, const CoordPermutation& a_rotation) const;
+        void copyTo(
+                BoxData<T, C, MEM, D, E>&   a_dst,
+                const CoordPermutation& a_rotation) const;
        
         /// Rotate Coordinates
         /**
@@ -558,7 +565,9 @@ namespace Proto
          * \param a_box         Rotated domain. Must have the same number of points as the current one
          * \param a_rotation    Permutation from current to desired coordinates
         */
-        void rotate(Box a_box, const CoordPermutation& a_rotation);
+        void rotate(
+                Box a_box,
+                const CoordPermutation& a_rotation);
         ///@}
 
         ///////////////////////////////////////////////////////////////////////////////////////
@@ -958,6 +967,9 @@ namespace Proto
                 int a_d = 0,
                 int a_e = 0);
 
+        /// Set Random Noise
+        inline void setRandom(T a_low, T a_high);
+
         /// Generic Reduction (Global)
         /**
           Computes a reduction operation
@@ -1128,6 +1140,43 @@ namespace Proto
           \param a_e      Third tensor index.
           */
         inline void sum(Reduction<T, Sum, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        
+        /// Sum Abs(Global)
+        /**
+          Return the global sum of the absolute value
+          */
+        inline T sumAbs() const;
+
+        /// Sum Abs(Componentwise)
+        /**
+          Returns the sum of a particular component
+
+          \param a_c      First tensor index.
+          \param a_d      Second tensor index.
+          \param a_e      Third tensor index.
+          */
+        inline T sumAbs(int a_c, int a_d = 0, int a_e = 0) const;
+
+        /// Sum Abs (Global, Reduction)
+        /**
+          Computes the global sum
+          Stores the result in a reduction operator
+
+          \param a_rxn    A reduction operator.
+          */
+        inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn) const;
+
+        /// Sum (Componentwise)
+        /**
+          Computes the sum of a particular component
+          Stores the result in a reduction operator
+
+          \param a_rxn    A reduction operator.
+          \param a_c      First tensor index.
+          \param a_d      Second tensor index.
+          \param a_e      Third tensor index.
+          */
+        inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Integrate (Isotropic Grid)
         /**
@@ -1152,7 +1201,7 @@ namespace Proto
           \param a_e    Third tensor index.
         */
         inline T integrate(
-                std::array<T, DIM> a_dx,
+                Array<T, DIM> a_dx,
                 int a_c = 0, int a_d = 0, int a_e = 0) const;
 
         /// Shift Domain
@@ -1355,6 +1404,64 @@ namespace Proto
         T*                      m_rawPtr; ///< Raw pointer to the data
     }; // end class BoxData
 
+    template<class T = double, unsigned int C=1,
+        MemType MEM=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
+    class FluxBoxData
+    {
+        public:
+            FluxBoxData(){}
+            FluxBoxData(const Box& a_box, bool a_doExtrude = true)
+            {
+                define(a_box, a_doExtrude);
+            }
+            FluxBoxData(Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& a_data)
+            {
+                m_data = a_data;
+            }
+            FluxBoxData(std::vector<std::shared_ptr<BoxData<T,C,MEM,D,E>>>& a_data)
+            {
+                PROTO_ASSERT(a_data.size() == DIM,
+                        "FluxBoxData::constructor | Error: input vector must have DIM components");
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    m_data[ii] = a_data[ii];
+                }
+            }
+            void define(const Box& a_box, bool a_doExtrude = true)
+            {
+                m_box0 = a_box;
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    Box Bd = a_box;
+                    if (a_doExtrude)
+                    {
+                        Bd = a_box.extrude(Point::Basis(dir));
+                    }
+                    m_data[dir] = std::make_shared<BoxData<T,C,MEM,D,E>>(Bd);
+                }
+            }
+            BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index)
+            {
+                PROTO_ASSERT(a_index < DIM,
+                        "FluxBoxData::operator[] | Error: index out of bounds");
+                return *(m_data[a_index]);
+            }
+            const BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index) const
+            {
+                PROTO_ASSERT(a_index < DIM,
+                        "FluxBoxData::operator[] | Error: index out of bounds");
+                return *(m_data[a_index]);
+            }
+            Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() {return m_data;}
+            const Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() const {return m_data;}
+            Box box() {return m_box0; }
+            Box box(int a_dir) {return m_data[a_dir]->box(); }
+        private:
+            Box m_box0;
+            Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
+    };
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /** @name Alias and Slice Operators 
     The alias and slice operations facilitate BoxData operations while avoiding unnecessary copies.
@@ -1424,6 +1531,7 @@ namespace Proto
             const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);
 
+    
 ///@}
 
 #include "implem/Proto_BoxDataImplem.H"

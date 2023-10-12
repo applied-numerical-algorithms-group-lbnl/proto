@@ -22,8 +22,9 @@ class AMRSolver
 {
     public:
     typedef OpType<T, MEM> BOP;
-    typedef LevelOp<OpType, T, MEM> LOP;
-    typedef LevelOp<OpType, T, MEM> AMROP;
+    // NB: Periodic BC is not used
+    typedef LevelOp<OpType, T, PeriodicBC, MEM> LOP;
+    typedef AMROp<OpType, T, MEM> AMROP;
     typedef AMRData<T, BOP::numState(), MEM> AMRStateData;
     typedef AMRData<T, BOP::numAux(),   MEM> AMRAuxData;
     static constexpr unsigned int numState() { return BOP::numState(); }

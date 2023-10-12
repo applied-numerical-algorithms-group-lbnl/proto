@@ -62,25 +62,29 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(T a_dx);
+    inline BoxOp(const Box& a_box, T a_dx);
     
     /// Non-Trivial Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(std::array<T, DIM> a_dx);
+    inline BoxOp(const Box& a_box, Array<T, DIM> a_dx);
 
+    inline BoxOp(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
+    inline BoxOp<T,C_STATE,C_AUX,MEM>& operator=(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
     /// Lazy Isotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(T a_dx);
+    inline void define(const Box& a_box, T a_dx);
     
     /// Lazy Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(std::array<T, DIM> a_dx);
+    inline void define(const Box& a_box, Array<T, DIM> a_dx);
+
+
 
     /// Initialize
     /**
@@ -135,7 +139,7 @@ class BoxOp
     inline virtual void
     operator()(
         StateData& a_output,
-        std::array<StateData, DIM>& a_fluxes,
+        Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         const AuxData&   a_aux,
         T                a_scale = 1.0) const;
@@ -150,7 +154,7 @@ class BoxOp
     inline virtual void
     operator()(
         StateData& a_output,
-        std::array<StateData, DIM>& a_fluxes,
+        Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale = 1.0) const;
     
@@ -272,6 +276,9 @@ class BoxOp
    
     /// Set Time
     inline void setTime(T a_time);
+
+    /// Set Runge Kutta Stage
+    inline void setRKStage(unsigned int a_stage);
     
     /// Read Diagonal Term Scaling
     inline T diagScale() const { return m_scaleDiag; }
@@ -279,17 +286,52 @@ class BoxOp
     /// Read Flux Term Scaling
     inline T fluxScale() const { return m_scaleFlux; }
     
+    /// Read Flux Term Scaling
+    inline unsigned int RKStage() const { return m_RKStage; }
+    
     /// Get Time
     inline T time() const { return m_time; }
 
     /// Get Grid Spacing
-    inline std::array<T, DIM> dx() const;
+    inline Array<T, DIM> dx() const;
 
     /// Get Min Grid Spacing
     inline T dxMin() const;
     
     /// Get Max Grid Spacing
     inline T dxMax() const;
+    
+    /// Get Box
+    inline const Box& box() const {return m_box; }
+    
+    /// Mapped Multiblock Utilities
+#ifdef PR_MMB
+
+    /// Map Constructor
+    /** a_x is node centered, a_J is cell averaged */
+    inline BoxOp(
+            const Box& a_box,
+            const Array<double, DIM>& a_dx,
+            const BoxData<double, DIM, MEM>& a_x, 
+            const BoxData<double, 1, MEM>& a_J);
+    
+    /// Map Define
+    /** a_x is node centered, a_J is cell averaged */
+    inline void define(
+            const Box& a_box,
+            const Array<double, DIM>& a_dx,
+            const BoxData<double, DIM, MEM>& a_x, 
+            const BoxData<double, 1, MEM>& a_J);
+    
+    /// Get Coordinates
+    /** Output is immutable and node centered */
+    inline const BoxData<double, DIM, MEM>& x() const;
+    
+    /// Get Coordinates
+    /** Output is immutable and cell averaged */
+    inline const BoxData<double, 1, MEM>& jacobian() const;
+#endif
+
     protected:
 
     private:
@@ -297,11 +339,18 @@ class BoxOp
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
+    unsigned int m_RKStage;
+    Box m_box;
 
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;
 
-    std::array<T, DIM> m_dx;
+    Array<T, DIM> m_dx;
+
+#ifdef PR_MMB
+    const BoxData<double, DIM, MEM>* m_x;
+    const BoxData<double, 1, MEM>* m_J;
+#endif
 };
 
 #include "implem/Proto_BoxOpImplem.H"

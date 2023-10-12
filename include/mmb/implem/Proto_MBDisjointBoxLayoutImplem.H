@@ -1,28 +1,38 @@
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         Point a_boxSize)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     std::vector<Point> boxSizes(a_domain.numBlocks(), a_boxSize);
     define(a_domain, boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<Point>& a_boxSizes)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<MBPatchID_t>& a_patches,
         const std::vector<Point>& a_boxSizes)
 {
+    m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_patches, a_boxSizes);
 }
 
+MBDisjointBoxLayout::MBDisjointBoxLayout(
+        std::shared_ptr<MBBoxPartition> a_partition,
+        const std::vector<Point>& a_boxSizes)
+{
+    define(a_partition, a_boxSizes);
+}
+
 void MBDisjointBoxLayout::define(
-        const MBProblemDomain& a_domain, 
+        MBProblemDomain& a_domain, 
         const std::vector<Point>& a_boxSizes)
 {
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
@@ -41,15 +51,16 @@ void MBDisjointBoxLayout::define(
 }
 
 void MBDisjointBoxLayout::define(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<MBPatchID_t>& a_patches,
         const std::vector<Point>& a_boxSizes)
 {
+    a_domain.close();
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 
     m_domain = a_domain;
-    m_partition = std::make_shared<MBBoxPartition>(a_domain.coarsen(a_boxSizes), a_patches);
+    m_partition->define(a_domain.coarsen(a_boxSizes), a_patches);
     m_layouts.clear();
     m_layouts.resize(a_domain.numBlocks());
     
@@ -59,7 +70,21 @@ void MBDisjointBoxLayout::define(
     }
 }
 
-MBProblemDomain MBDisjointBoxLayout::domain() const
+void MBDisjointBoxLayout::define(
+        std::shared_ptr<MBBoxPartition> a_partition,
+        const std::vector<Point>& a_boxSizes)
+{
+    m_partition = a_partition;
+    m_domain = a_partition->domain().refine(a_boxSizes);
+    m_layouts.clear();
+    m_layouts.resize(m_domain.size());
+    for (int bi = 0; bi < m_domain.size(); bi++)
+    {
+        m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
+    }
+}
+
+const MBProblemDomain& MBDisjointBoxLayout::domain() const
 {
     return m_domain;
 }
@@ -138,7 +163,7 @@ unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
     return block;
 }
 
-DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
+DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
@@ -146,7 +171,7 @@ DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
     return m_layouts[a_block];
 }
 
-const DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block) const
+const DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block) const
 {
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
@@ -156,35 +181,10 @@ const DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block) 
 
 DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
 {
-    /*
-    Point boxSize = blockLayout(0).boxSize();
-    Point tileSize = Point::Zeros();
-    for (int bi = 0; bi < numBlocks(); bi++)
-    {
-        auto& layout = blockLayout(bi);
-        for (int di = 0; di < DIM; di++)
-        {
-            tileSize[di] = max(tileSize[di], layout.domain().box().high()[di]);
-            boxSize[di] = min(boxSize[di], layout.boxSize(di));
-        }
-    }
-    for (int di = 0; di < DIM; di++)
-    {
-        PROTO_ASSERT(tileSize[di] % boxSize[di] == 0, 
-                "MBDIsjointBoxLayout::levelLayout | Error: \
-                Tile size must be divisible by box size");
-        for (int bi = 0; bi < numBlocks(); bi++)
-        {
-            PROTO_ASSERT(blockLayout(bi).boxSize(di) % boxSize(di) == 0,
-                    "MBDisjointBoxLayout::levelLayout | Error: \
-                    The box sizes must be integer multiples of one another.");
-        }
-    }
-    */
     return m_layouts[0];
 }
 
-MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)
+MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block) const
 {
     auto patchDomain = m_layouts[a_block].patchDomain();
     if (!patchDomain.contains(a_point))
@@ -203,6 +203,120 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned i
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
 {
     return m_partition->procStartIndex(a_proc);
+}
+
+bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
+{
+    return m_partition->compatible(*a_rhs.m_partition);
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir,
+        unsigned int    a_block) const
+{
+    unsigned int thisBlock = block(a_index);
+    Point thisPatch = point(a_index);
+    
+    Point conn = domain().graph().connectivity(thisBlock, a_block);
+    if (conn == Point::Zeros()) {return false;}
+    Point invConn = domain().graph().reverseDir(thisBlock, a_block, conn);
+    auto R = domain().graph().rotation(thisBlock, conn, a_block);
+
+    Box localBoundPatches = getBlock(thisBlock).patchDomain().box().adjacent(conn);
+    Box adjBoundPatches = getBlock(a_block).patchDomain().box().edge(invConn);
+    Point neighbor = thisPatch + a_dir;
+
+    Point adjPatch = R.rotateCell(
+            neighbor, localBoundPatches, adjBoundPatches);
+
+    auto adjIndex = find(adjPatch, a_block);
+    if (adjIndex == end()){return false;}
+    return true;
+}
+
+std::vector<MBIndex> MBDisjointBoxLayout::bounds(
+        const MBIndex& a_index) const
+{
+    std::vector<MBIndex> ret;
+    auto b0 = block(a_index);
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto conn = domain().graph().connectivity(b0, bi);
+        if (bi != b0 && conn == Point::Zeros()) { continue; }
+        Box patchDomain = getBlock(bi).patchDomain().box();
+        for (auto pi : patchDomain)
+        {
+            auto index = find(pi, bi);
+            if (index != *end() && (connectivity(a_index, index) != Point::Zeros()))
+            {
+                ret.push_back(index);
+            }
+        }
+    }
+    return ret;
+}
+
+Point MBDisjointBoxLayout::connectivity(
+        const MBIndex& a_i1,
+        const MBIndex& a_i2) const
+{
+    unsigned int b1 = block(a_i1);
+    unsigned int b2 = block(a_i2);
+    Point p1 = point(a_i1);
+    Point p2 = point(a_i2);
+
+    // patches on same block
+    if (b1 == b2)
+    {
+        if (Box::Kernel(1).shift(p1).contains(p2))
+        {
+            return (p2 - p1);
+        }
+    }
+    
+    // patches on different blocks
+
+    Point conn12 = domain().graph().connectivity(b1, b2);
+    if (conn12 == Point::Zeros()) { return Point::Zeros(); }
+    Point conn21 = domain().graph().connectivity(b2, b1);
+    PROTO_ASSERT(conn21 != Point::Zeros(),
+            "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
+    Box adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
+    Box adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
+    auto R = domain().graph().rotation(b1,conn12,b2);
+
+    Box dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
+    //std::cout << "checking " << p1 << " -> " << p2 << " | conn12: " << conn12 << " | conn21: " << conn21;
+    //std::cout << " | dirs: " << dirs << " | adjPatch1: " << adjPatch1 << " | adjPatch2: " << adjPatch2 << std::endl;
+    for (auto dir : dirs)
+    {
+        Point n1 = p1 + dir;
+        if (!adjPatch1.contains(n1)){ continue; }
+        Point n2 = R.rotateCell(
+                n1, adjPatch1, adjPatch2);
+        if (n2 == p2) {return dir; }
+    }
+    return Point::Zeros();
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex& a_i1,
+        const MBIndex& a_i2) const
+{
+    if (block(a_i1) == block(a_i2)) {return false;}
+    if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
+    return true;
+}
+
+unsigned int MBDisjointBoxLayout::size() const
+{
+    return m_partition->numBoxes();
+}
+
+unsigned int MBDisjointBoxLayout::localSize() const
+{
+    return m_partition->numBoxes(Proto::procID());
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

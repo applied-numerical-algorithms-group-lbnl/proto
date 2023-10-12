@@ -23,7 +23,8 @@ class AMROp
     public:
 
     typedef OPType<T, MEM> BOP;
-    typedef LevelOp<OPType, T, MEM> LOP;
+    // NB: PeriodicBC isn't used because BCs are computed manually by AMROp
+    typedef LevelOp<OPType, T, PeriodicBC, MEM> LOP;
     typedef AMRData<T, BOP::numState(), MEM, PR_CELL> AMRStateData;
     typedef AMRData<T, BOP::numAux(),   MEM, PR_CELL> AMRAuxData;
     typedef LevelBoxData<T, BOP::numState(), MEM, PR_CELL> LevelStateData;
@@ -64,7 +65,7 @@ class AMROp
         \param cdx   Coarsest level grid spacing
     */
     inline AMROp(AMRGrid& a_grid, T a_cdx);
-    inline AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx);
+    inline AMROp(AMRGrid& a_grid, Array<T, DIM>& a_cdx);
     
     /// Lazy Constructor
     /**
@@ -72,7 +73,7 @@ class AMROp
         \param cdx   Coarsest level grid spacing
     */
     inline void define(AMRGrid& a_grid, T a_cdx);
-    inline void define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx);
+    inline void define(AMRGrid& a_grid, Array<T, DIM>& a_cdx);
     
     /// Apply
     /**
@@ -162,15 +163,15 @@ class AMROp
 
     inline void setDiagScale(T a_value, int a_gridFactor = 0);
     inline void setFluxScale(T a_value, int a_gridFactor = 0);
-    inline std::array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
+    inline Array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
     const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
-    const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
+    const BOP& boxOp(int a_level, const LevelIndex& a_index) const { return levelOp(a_level)[a_index]; }
 
     private:
 
     bool m_defined;    
     AMRGrid m_grid; //this is intentionally a deep copy.
-    std::vector<std::array<T, DIM>>      m_dx;
+    std::vector<Array<T, DIM>>      m_dx;
     std::vector<LOP>         m_levelOps;
     std::vector<std::shared_ptr<LevelFluxRegister<T, BOP::numState(), MEM>>> m_fluxRegisters;
     std::vector<InterpStencil<T>> m_interp;

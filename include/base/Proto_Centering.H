@@ -15,6 +15,8 @@ namespace Proto
         PR_FACE_5,
         PR_FACE_6,
         PR_NODE = 7,
+        PR_FACE,
+        PR_EDGE
     };
 }
 

@@ -9,15 +9,28 @@
 #include <array>
 #include <iostream>
 #include <cmath>
+#include <limits>
 #include "Proto_accel.H"
 #include "Proto_Point.H"
 
 namespace Proto {
 
 template<typename T, size_t N>
+class ArrayIterator;
+template<typename T, size_t N>
+class ConstArrayIterator;
+
+template<typename T, size_t N>
 class Array {
 
 public:
+
+    ACCEL_DECORATION
+    inline static Array<T,N> Zeros();
+
+    ACCEL_DECORATION
+    inline static Array<T,N> Ones(T a_scale = 1.0);
+
     ACCEL_DECORATION
     inline Array();
 
@@ -39,8 +52,10 @@ public:
     ACCEL_DECORATION
     inline Array<T,N>& operator=(Array<T,N> &&arr) = default;
 
+    ACCEL_DECORATION
     inline Array<T,N>& operator=(const std::array<T,N> &arr);
 
+    ACCEL_DECORATION
     operator std::array<T,N>() const
     {
         std::array<T,N> arr;
@@ -53,6 +68,7 @@ public:
     ACCEL_DECORATION
     inline Array(const Point &a_pt);
 
+    ACCEL_DECORATION
     inline Array(const std::array<T,N> &arr);
 
     ACCEL_DECORATION
@@ -68,13 +84,13 @@ public:
     inline T* data();
     
     ACCEL_DECORATION
-    inline T* data() const;
+    inline const T* data() const;
     
     ACCEL_DECORATION
     inline T& operator[](size_t i);
     
     ACCEL_DECORATION
-    inline T& operator[](size_t i) const;
+    inline const T& operator[](size_t i) const;
 
     ACCEL_DECORATION
     inline bool operator==(const Array<T,N> &a_rhs) const;
@@ -139,18 +155,74 @@ public:
     inline T norm() const; //square root of sum of squares
 
     ACCEL_DECORATION
-    inline T* begin() const;
+    inline ArrayIterator<T,N> begin();
     ACCEL_DECORATION
-    inline const T* cbegin() const;
+    inline ConstArrayIterator<T,N> begin() const;
     ACCEL_DECORATION
-    inline T* end() const;
+    inline ArrayIterator<T,N> end();
     ACCEL_DECORATION
-    inline const T* cend() const;
+    inline ConstArrayIterator<T,N> end() const;
 
     inline void print() const;
 
 private:
     T m_data[N];
+};
+
+template<typename T, size_t N>
+class ArrayIterator
+{
+    public:
+    inline ArrayIterator(Array<T, N>& a_data, int a_index)
+    {
+        m_data = &a_data;
+        m_index = a_index;
+    }
+
+    inline T& operator*() {return (*m_data)[m_index]; } 
+    inline bool operator==(const ArrayIterator<T, N>& a_iter) const
+    {
+        if (a_iter.m_data != m_data) {return false;}
+        if (a_iter.m_index != m_index) {return false;}
+        return true;
+    }
+    inline bool operator !=(const ArrayIterator<T, N>& a_iter) const
+    {
+        return !(*this == a_iter);
+    }
+    inline ArrayIterator& operator++() {m_index++; return *this; }
+    inline ArrayIterator& operator--() {m_index--; return *this; }
+    private:
+    Array<T, N>* m_data;
+    int m_index;
+};
+
+template<typename T, size_t N>
+class ConstArrayIterator
+{
+    public:
+    inline ConstArrayIterator(const Array<T, N>& a_data, int a_index)
+    {
+        m_data = &a_data;
+        m_index = a_index;
+    }
+
+    inline const T& operator*() {return (*m_data)[m_index]; } 
+    inline bool operator==(const ConstArrayIterator<T, N>& a_iter) const
+    {
+        if (a_iter.m_data != m_data) {return false;}
+        if (a_iter.m_index != m_index) {return false;}
+        return true;
+    }
+    inline bool operator !=(const ConstArrayIterator<T, N>& a_iter) const
+    {
+        return !(*this == a_iter);
+    }
+    inline ConstArrayIterator& operator++() {m_index++; return *this; }
+    inline ConstArrayIterator& operator--() {m_index--; return *this; }
+    private:
+    const Array<T, N>* m_data;
+    int m_index;
 };
 
 // Premultiplication by a scalar

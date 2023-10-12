@@ -1,5 +1,12 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+AMRData<T,C,MEM,CTR>::AMRData(
+        std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data)
+{
+    define(a_data);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 {
     m_ghost = a_ghost;
@@ -10,55 +17,124 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
         auto level = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(a_grid[ii], a_ghost);
         m_data.push_back(level);
     }
-
     m_defined = true;
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void AMRData<T, C, MEM, CTR>::define(
+        std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data)
+{
+    if (a_data.size() == 0)
+    {
+        m_ghost = Point::Zeros();
+        m_grid = AMRGrid();
+        m_data.clear();
+        m_defined = false;
+        return;
+    }
+
+    Point ghost = a_data[0]->ghost();
+    std::vector<DisjointBoxLayout> layouts;
+    std::vector<Point> refRatios;
+    int numLevels = a_data.size();
+    for (int li = 0; li < numLevels; li++)
+    {
+        PROTO_ASSERT(a_data[li]->ghost() == ghost,
+                "AMRData::define (alias) | Error: inconsistent ghost region sizes.");
+        layouts.push_back(a_data[li]->layout());
+        if (li > 0)
+        {
+            Point coarseDomainSize = layouts[li-1].domain().box().sizes();
+            Point fineDomainSize = layouts[li].domain().box().sizes();
+            PROTO_ASSERT(fineDomainSize % coarseDomainSize == Point::Zeros(),
+                    "AMRData::define (alias) | Error: cant determine refinement ratio");
+            Point refRatio = fineDomainSize / coarseDomainSize;
+            refRatios.push_back(refRatio);
+        }
+    }
+    m_ghost = ghost;
+    m_grid.define(layouts, refRatios, numLevels);
+    m_data = a_data;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
 {
-  if (m_defined)
+  #ifdef PR_HDF5
+  HDF5Handler h5;
+#endif
+    if (m_defined)
     {
-      int ghostInterp = 2;
+        int ghostInterp = 2;
+        // PC:debug
+        T dx0 = 1.0;
         for (int ii = a_level;ii + 1 < a_newgrid.numLevels();ii++)          
         {
-          Point refratio = a_newgrid.refRatio(ii);
-          InterpStencilTP<double > stencil(a_order,refratio[0]);
-          PR_assert(refratio == Point::Ones()*refratio[0]);
-          
-        //PC: Need to extend InterpStencilTP to non-isotropic case !!
-          
-          auto newleveldata =std::make_shared<LevelBoxData<T, C, MEM, CTR> >
-            (a_newgrid[ii+1], m_ghost);
-          auto dblCoarse =
-            a_newgrid[ii+1].coarsen(a_newgrid.refRatio(ii));
-          LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
-                                                   Point::Ones(ghostInterp));
-          (*this)[ii].copyTo(dataCoarse);
-          for (auto dit=dataCoarse.begin();dit != dit.end();++dit)
+            Point refratio = a_newgrid.refRatio(ii);
+            auto stencil = InterpStencil<T>::FiniteVolume(refratio, a_order);
+            PR_assert(refratio == Point::Ones()*refratio[0]);
+
+            //PC: Need to extend InterpStencil to non-isotropic case !!
+
+            auto newleveldata =std::make_shared<LevelBoxData<T, C, MEM, CTR> >
+                (a_newgrid[ii+1], m_ghost);
+            auto dblCoarse =
+                a_newgrid[ii+1].coarsen(a_newgrid.refRatio(ii));
+            LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
+                    Point::Ones(ghostInterp));
+            dataCoarse.setVal(1.2345e6);
+            (*this)[ii].copyTo(dataCoarse);
+            //dataCoarse.exchange();
+            if (ii == 0)
+              {
+                //(*this)[ii].layout().print();
+                //dblCoarse.print();                
+                //a_newgrid[ii+1].print();
+                //h5.writeLevel(dx0,dataCoarse,"UCoarseLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                //h5.writeLevel(dx0,(*this)[ii],"OldUCoarseLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                dx0 *= 1.0/a_newgrid.refRatio(ii)[0];
+                //abort();
+              }
+            for (auto dit : dataCoarse)
             {
-              stencil.apply((*newleveldata)[*dit],dataCoarse[*dit]);
+                auto& newData = (*newleveldata)[dit];
+                auto& oldData = dataCoarse[dit];                
+                
+                if (ii==0)
+                  {
+                    auto bxFrom = oldData.box();
+                    auto bxTo = newData.box();
+                    // stencil.range(bxFrom);
+                    // cout << "from: " << bxFrom << ", inferred: "<< stencil.range(bxFrom)
+                    //     << ", range: " << bxTo << endl;
+                  }
+                newData |= stencil(oldData);
             }
-          // copy old data to new data on intersection.
-          (*this)[ii+1].copyTo(*newleveldata);
-          // replace the data pointer with the new data pointer.
-          m_data[ii+1] = newleveldata;
+            if (ii == 0)
+              {
+                //h5.writeLevel(dx0,*newleveldata,"UFineLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+                //m_counter++;
+              }
+            // copy old data to new data on intersection.
+            (*this)[ii+1].copyTo(*newleveldata);
+            if (ii == 0)
+              {
+                //h5.writeLevel(dx0,*newleveldata,"NewUFineLevel_"+to_string(ii)+"_step"+to_string(m_counter));
+              }
+            // replace the data pointer with the new data pointer.
+            m_data[ii+1] = newleveldata;
         }
-        m_grid = a_newgrid;
+        m_grid = a_newgrid;        
     }
-  else
+    else
     {
-       MayDay<void>::Error("AMRData::regrid | Error: attempting to regrid undefined AMRData.");
+        MayDay<void>::Error("AMRData::regrid | Error: attempting to regrid undefined AMRData.");
     }
-  // Check to see if grids are consistent.
-  PR_assert(m_grid.numLevels() == (*this).numLevels()); 
-  for (int ii = 0; ii < m_grid.numLevels();ii++)
-    {
-      if (!(m_data[ii]->layout() == m_grid[ii]))
-        {
-          (*m_data[ii]).layout().print();
-          m_grid[ii].print();
-          PR_assert(m_data[ii]->layout() == m_grid[ii]); 
-        }
+    // Check to see if grids are consistent.
+    PR_assert(m_grid.numLevels() == (*this).numLevels());
+    for (int ii = 0; ii < m_grid.numLevels();ii++)
+    {       
+      PR_assert(m_data[ii]->layout().compatible(m_grid[ii]));
     }
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -182,17 +258,39 @@ AMRData<T, C, MEM, CTR>::increment(
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::operator+=(T a_value)
+{
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        auto& data = (*this)[lvl];
+        data += a_value;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::operator*=(T a_value)
+{
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        auto& data = (*this)[lvl];
+        data *= a_value;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
 AMRData<T, C, MEM, CTR>::integrate(T a_cdx, unsigned int a_c)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_cdx);
     return integrate(dx, a_c);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
-AMRData<T, C, MEM, CTR>::integrate(const std::array<T, DIM>& a_cdx, unsigned int a_c)
+AMRData<T, C, MEM, CTR>::integrate(const Array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
     double integral = (*this)[0].integrate(a_cdx, a_c);
@@ -203,14 +301,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
 AMRData<T, C, MEM, CTR>::integrateAbs(T a_cdx, unsigned int a_c)
 {
-    std::array<T, DIM> dx;
+    Array<T, DIM> dx;
     dx.fill(a_cdx);
     return integrateAbs(dx, a_c);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
-AMRData<T, C, MEM, CTR>::integrateAbs(const std::array<T, DIM>& a_cdx, unsigned int a_c)
+AMRData<T, C, MEM, CTR>::integrateAbs(const Array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
     double integral = (*this)[0].integrateAbs(a_cdx, a_c);

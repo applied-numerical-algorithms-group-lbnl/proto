@@ -68,7 +68,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_srcs   Inputs (BoxData and primitive data)
@@ -121,7 +121,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_box    Range on which a_F will be evaluated
@@ -168,7 +168,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_srcs   Inputs (BoxData and primitive data)
@@ -218,7 +218,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_box    Range on which a_F will be evaluated
@@ -257,7 +257,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_srcs   Inputs (BoxData and primitive data)
@@ -295,7 +295,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_box    Range of computation.
@@ -330,7 +330,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_srcs   Inputs (BoxData and primitive data)
@@ -369,7 +369,7 @@ namespace Proto {
     /**
       Overload of the pointwise operator with additional instrumentation inputs
      
-      \param a_num_flops_point  Number of flops used to compoute a_F at each Point
+      \param a_num_flops_point  Number of flops used to compute a_F at each Point
       \param a_timername        The name of a timer
       \param a_F      Pointwise function
       \param a_box    Range of computation.

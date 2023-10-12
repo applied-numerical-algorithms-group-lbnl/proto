@@ -3,7 +3,6 @@
 #define _PROTO_DATA_INDEX_
 #include <vector>
 #include <iostream>
-#include "Proto.H"
 
 namespace Proto
 {

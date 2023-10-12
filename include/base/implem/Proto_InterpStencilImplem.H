@@ -1,138 +1,172 @@
-template<class T>
-void InterpStencil<T>::define(Point a_ratio)
+
+template<typename T>
+InterpStencil<T>::InterpStencil(Point a_refRatio)
 {
-    for (int ii = 0; ii < DIM; ii++)
+    define(a_refRatio);
+}
+
+template<typename T>
+void InterpStencil<T>::define(Point a_refRatio)
+{
+    PROTO_ASSERT(a_refRatio.min() > 0, 
+        "InterpStencil::define | Error: non-positive refinement ratio");
+    m_ratio = a_refRatio;
+    for (int dir = 0; dir < DIM; dir++)
     {
-        PROTO_ASSERT(a_ratio[ii] > 0,
-                "InterpStencil(Point ratio) invalid. All ratios must be 1 or greater");
+        m_interp[dir].define(dir, a_refRatio[dir]); 
     }
-    m_r = a_ratio;
-    m_k = Box(a_ratio);
-    m_s.resize(m_k.size());
-    m_closed = false;
 }
 
-template<class T>
-void InterpStencil<T>::close()
+template<typename T>
+Box InterpStencil<T>::domain(Box a_range) const
 {
-    if (m_closed == true) { return; }
-    for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
+    Point L = Point::Zeros();
+    Point H = Point::Zeros();
+    for (int dir = 0; dir < DIM; dir++)
+    for (int shift = 0; shift < m_interp[dir].ratio(); shift++)
     {
-        Stencil<T>& S = (*this)(*iter);
-        S.destRatio() = m_k.high() + Point::Ones();
-        S.destShift() = *iter;
+        Box di = m_interp[dir].get(shift).domain(a_range);
+        L[dir] = std::min(di.low()[dir], L[dir]);
+        H[dir] = std::max(di.high()[dir], H[dir]);
     }
-    m_closed = true;
+    return Box(L,H);
 }
 
-template<class T>
-Stencil<T>& InterpStencil<T>::operator()(Point a_p)
+template<typename T>
+Box InterpStencil<T>::range(Box a_domain) const
 {
-    PROTO_ASSERT(!m_closed,
-        "InterpStencil::operator() | Error: \
-        Components of InterpStencil are read-only once closed. Use InterpStencil::get instead.");
-    PROTO_ASSERT(m_k.contains(a_p),
-        "InterpStencil::operator() | Error: \
-        p is not in the InterStencil kernel");
-    return m_s[m_k.index(a_p)];
-}
-
-template<class T>
-const Stencil<T>& InterpStencil<T>::get(Point a_p) const
-{
-    PROTO_ASSERT(m_k.contains(a_p),
-        "InterpStencil::operator() | Error: \
-        p is not a member of the InterStencil kernel");
-    return m_s[m_k.index(a_p)];
-}
-
-template<class T>
-Box InterpStencil<T>::span() const
-{
-    Box span;
-    for (int ii = 0; ii < m_s.size(); ii++)
+    Point L, H;
+    for (int dir = 0; dir < DIM; dir++)
+    for (int shift = 0; shift < m_interp[dir].ratio(); shift++)
     {
-        span = span & m_s[ii].span().low();
-        span = span & m_s[ii].span().high();
+        Box di = m_interp[dir].get(shift).range(a_domain);
+        if (shift == 0)
+        {
+            L[dir] = di.low()[dir];
+            H[dir] = di.high()[dir];
+        } else {
+            L[dir] = std::min(di.low()[dir], L[dir]);
+            H[dir] = std::max(di.high()[dir], H[dir]);
+        }
     }
-    return span;
+    return Box(L,H);
 }
 
-template<class T>
+template<typename T>
 Point InterpStencil<T>::ghost() const
 {
-    Box spanBox = span();
-    int v[DIM];
-    for (int ii = 0; ii < DIM; ii++)
+    Point span_0 = m_interp[0].ghost();
+    for (int jj = 1; jj < DIM; jj++)
     {
-        v[ii] = std::max(std::abs(spanBox.low()[ii]), std::abs(spanBox.high()[ii]));
-    }
-    return Point(v);
-}
-
-template<class T>
-void InterpStencil<T>::print() const
-{
-    for (auto iter = begin(); iter != end(); ++iter)
-    {
-        (*iter).print();
-    }
-}
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
-        const BoxData<T,C,MEMTYPE,D,E>& a_src,
-        Box                             a_box,
-        T                               a_scale)
-{
-    if (!m_closed){this->close();}
-
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(a_box & b);
-        ret.m_scale.push_back(a_scale);
-    }
-    return ret;
-}
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
-        const BoxData<T,C,MEMTYPE,D,E>& a_src,
-		T                               a_scale)
-{
-    if (!m_closed){this->close();}
-    
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        //compute range for building the output BoxData, if necessary
-        if (ii == 0)
+        Point span = m_interp[jj].ghost();
+        for (int dir = 0; dir < DIM; dir++)
         {
-            ret.m_range = m_s[ii].range(bsrc); //initialize
-        } else {
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).low();
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
+            span_0[dir] = max(span[dir], span_0[dir]);
         }
-
-        //compute the largest possible computation box (different from range) 
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(b);
-        ret.m_scale.push_back(a_scale);
     }
-    return ret;
+    return span_0;
 }
+
+template<typename T>
+Box InterpStencil<T>::span() const
+{
+    Box b = m_interp[0].span();
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        b = b & m_interp[dir].span().low();
+        b = b & m_interp[dir].span().high();
+    }
+    return b;
+}
+
+
+template<typename T>
+template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void InterpStencil<T>::apply(
+    BoxData<T, C, MEM, D, E>& a_output,
+    const BoxData<T, C, MEM, D, E>& a_input,
+    Box                       a_range,
+    bool                      a_overwrite,
+    T                         a_scale) const
+{
+    PR_TIMERS("InterpStencil::apply");
+    Box rangeBox = a_range;
+    if (rangeBox.empty())
+    {
+        rangeBox = range(a_input.box()) & a_output.box();
+    }
+
+    Array<BoxData<T, C, MEM>, DIM> stage;
+    stage[0] = m_interp[0](a_input);
+    for (int dir = 0; dir < DIM-1; dir++)
+    {
+        stage[dir+1] = m_interp[dir+1](stage[dir]);
+    }
+    Stencil<T> S = a_scale*Shift::Zeros();
+    if (a_overwrite)
+    {
+        a_output |= S(stage[DIM-1], rangeBox);
+    } else {
+        a_output += S(stage[DIM-1], rangeBox);
+    }
+}
+
+template<typename T>
+template<unsigned int C, MemType MEM,
+    unsigned char D, unsigned char E>
+LazyInterpStencil<T, C, MEM, D, E>
+InterpStencil<T>::operator()(
+        const BoxData<T, C, MEM, D, E>& a_input,
+        T a_scale) const
+{
+    return LazyInterpStencil<T,C,MEM,D,E>(
+            *this, a_input, Box(), a_scale);
+}
+
+template<typename T>
+template<unsigned int C, MemType MEM,
+    unsigned char D, unsigned char E>
+LazyInterpStencil<T, C, MEM, D, E>
+InterpStencil<T>::operator()(
+        const BoxData<T, C, MEM, D, E>& a_input,
+        Box a_box,
+        T a_scale) const
+{
+#ifndef NDEBUG
+    Box b = this->range(a_input.box());
+    PROTO_ASSERT(b.contains(a_box),
+            "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
+#endif
+    return LazyInterpStencil<T,C,MEM,D,E>(
+            *this, a_input, a_box, a_scale);
+}
+
+template<typename T, unsigned int C, MemType MEM,
+    unsigned char D, unsigned char E>
+LazyInterpStencil<T,C,MEM,D,E>::LazyInterpStencil(
+        const InterpStencil<T>& a_stencil,
+        const BoxData<T, C, MEM, D, E>& a_src,
+        Box a_range, T a_scale)
+{
+    op = &a_stencil;
+    range = a_range;
+    scale = a_scale;
+    srcData = &a_src;
+}
+
+template<typename T, unsigned int C, MemType MEM,
+    unsigned char D, unsigned char E>
+void LazyInterpStencil<T,C,MEM,D,E>::apply(
+    BoxData<T,C,MEM,D,E>& a_dst, bool a_overwrite) const
+{
+    op->apply(a_dst, *srcData, range, a_overwrite, scale);  
+}
+
+template<typename T, unsigned int C, MemType MEM,
+    unsigned char D, unsigned char E>
+Box LazyInterpStencil<T,C,MEM,D,E>::inferredRange() const
+{
+    return op->range(srcData->box());
+}
+
+

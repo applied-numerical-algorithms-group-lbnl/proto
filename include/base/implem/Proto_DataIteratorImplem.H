@@ -30,13 +30,6 @@ DataIterator<P>::ok() const
 }
 
 template<typename P>
-unsigned int
-DataIterator<P>::localSize() const
-{
-    return (m_partition->procEndIndex(procID()) - m_partition->procStartIndex(procID()));
-}
-
-template<typename P>
 DataIterator<P>&
 DataIterator<P>::operator++()
 {
@@ -50,15 +43,6 @@ DataIterator<P>::operator++()
         m_current = m_end;
     }
     return *this;
-}
-
-template<typename P>
-const DataIndex<P>
-DataIterator<P>::operator[](unsigned int a_localIndex) const
-{
-    PROTO_ASSERT(a_localIndex < localSize(),
-            "DataIterator::operator[] | Error: index out of bounds");
-    return DataIndex<P>(m_partition, m_partition->procStartIndex(procID()) + a_localIndex);
 }
 
 template<typename P>

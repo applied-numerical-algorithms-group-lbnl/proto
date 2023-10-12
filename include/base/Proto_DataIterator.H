@@ -82,32 +82,20 @@ namespace Proto
         */
         inline bool ok() const;
 
-        /// Size
-        /** Number of iterates on this processor
-         */
-        inline unsigned int localSize() const;
-
         /// Increment 
         inline DataIterator<P>& operator++();
        
         /// Equality
-        inline bool operator==(const DataIterator<P>& a_rhs) const
-        { return m_current == a_rhs.m_current; }
+        inline bool operator==(const DataIterator<P>& a_rhs) const { return m_current == a_rhs.m_current; }
         
         /// Equality
-        inline bool operator==(const DataIndex<P>& a_rhs) const
-        { return m_current == a_rhs; }
+        inline bool operator==(const DataIndex<P>& a_rhs) const { return m_current == a_rhs; }
         
         /// Inquality
-        inline bool operator!=(const DataIterator<P>& a_rhs) const
-        { return m_current != a_rhs.m_current; }
+        inline bool operator!=(const DataIterator<P>& a_rhs) const { return m_current != a_rhs.m_current; }
         
         /// Inquality
-        inline bool operator!=(const DataIndex<P>& a_rhs) const
-        { return m_current != a_rhs; }
-
-        /// Integer Dereference
-        inline const DataIndex<P> operator[](unsigned int a_index) const;
+        inline bool operator!=(const DataIndex<P>& a_rhs) const { return m_current != a_rhs; }
 
         /// Dereference
         /**
@@ -121,7 +109,9 @@ namespace Proto
         inline bool compatible(const DataIndex<P>& a_index) const;
         
         inline bool compatible(const DataIterator<P>& a_iter) const;
-        
+       
+        inline operator int() const { return m_current.local(); }
+
         protected:
         
         std::shared_ptr<P> m_partition;

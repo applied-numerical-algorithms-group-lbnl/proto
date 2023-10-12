@@ -79,7 +79,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) con
         MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
     }
 
-    vector<char> buffer(srcSize);
+    std::vector<char> buffer(srcSize);
     {
         void* b = (void*)&(buffer[0]);
         linearOut(b, a_info);
@@ -94,7 +94,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) con
         MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
     }
 
-    vector<char> buffer(sizeSource);
+    std::vector<char> buffer(sizeSource);
     {
         PR_TIMERS("linearIn / linearOut inside LDOP::op");
         void* b = (void*)&(buffer[0]);
@@ -190,15 +190,6 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
         }
     }     
     this->sort();
-    /*
-    pr_out() << std::endl << "=======================================================================" << std::endl;
-    pr_out() << "Printing FluxRegisterCopier" << std::endl;
-    pr_out() << "Coarse Layout" << std::endl;
-    crseLayout.print();
-    pr_out() << "Fine Layout" << std::endl;
-    fineLayout.print();
-    this->print();
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -206,7 +197,7 @@ LevelFluxRegister<T,C,MEM>::LevelFluxRegister(
         const DisjointBoxLayout& a_fineLayout,
         const DisjointBoxLayout& a_crseLayout,
         const Point& a_refRatio,
-        std::array<T,DIM> a_dxCrse)
+        Array<T,DIM> a_dxCrse)
 {
     define(a_fineLayout,a_crseLayout,a_refRatio,a_dxCrse);
 }
@@ -216,7 +207,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         const DisjointBoxLayout& a_crseLayout,
         const DisjointBoxLayout& a_fineLayout,
         const Point& a_refRatio,
-        std::array<T, DIM> a_dxCrse)
+        Array<T, DIM> a_dxCrse)
 {
     // Fine registers are defined relative to the fine patch coordinates, and coarse 
     // registers are defined relative to the coarse patch coordinates. What happens in 
@@ -611,27 +602,28 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const Da
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::print() const
 {
-    pr_out() << "Level Flux Register: " << std::endl;
-    pr_out() << "Coarse Registers: " << std::endl;
+    using Proto::pout;
+    pout() << "Level Flux Register: " << std::endl;
+    pout() << "Coarse Registers: " << std::endl;
     for (int ii = 0; ii < m_crseRegisters.size(); ii++)
     {
         for (int jj = 0; jj < m_crseRegisters[ii].size(); jj++)
         {
             auto item = m_crseRegisters[ii][jj];
-            pr_out() << "\t box: " << item.m_data->box();
-            pr_out() << " | dir: " << item.m_dir;
-            pr_out() << " | side: " << item.m_side << std::endl;
+            pout() << "\t box: " << item.m_data->box();
+            pout() << " | dir: " << item.m_dir;
+            pout() << " | side: " << item.m_side << std::endl;
         }
     }
-    pr_out() << "Fine Registers: " << std::endl;
+    pout() << "Fine Registers: " << std::endl;
     for (int ii = 0; ii < m_fineRegisters.size(); ii++)
     {
         for (int jj = 0; jj < m_fineRegisters[ii].size(); jj++)
         {
             auto item = m_fineRegisters[ii][jj];
-            pr_out() << "\t box: " << item.m_data->box();
-            pr_out() << " | dir: " << item.m_dir;
-            pr_out() << " | side: " << item.m_side << std::endl;
+            pout() << "\t box: " << item.m_data->box();
+            pout() << " | dir: " << item.m_dir;
+            pout() << " | side: " << item.m_side << std::endl;
         }
     }
 }

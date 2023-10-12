@@ -16,7 +16,7 @@ namespace Proto
         FinitePointSet(const FinitePointSet& a_pointSet) = delete;
         FinitePointSet& operator=(const FinitePointSet& a_pointSet) = delete;
 
-        inline FinitePointSet(Box a_domain, std::array<bool, DIM> a_periodic);
+        inline FinitePointSet(Box a_domain, Array<bool, DIM> a_periodic);
         inline FinitePointSet(Box a_domain, bool a_periodic);
         inline FinitePointSet(ProblemDomain a_domain);
         inline ~FinitePointSet();

@@ -20,7 +20,8 @@ class LevelSolver
 {
     public:
     typedef OpType<T, MEM> BOP;
-    typedef LevelOp<OpType, T, MEM> LOP;
+    //Note: BC is a placeholder and isn't fully implemented
+    typedef LevelOp<OpType, T, PeriodicBC, MEM> LOP;
     typedef LevelBoxData<T, BOP::numState(), MEM, PR_CELL> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(),   MEM, PR_CELL> LevelAuxData;
     static constexpr unsigned int numState() { return BOP::numState(); }

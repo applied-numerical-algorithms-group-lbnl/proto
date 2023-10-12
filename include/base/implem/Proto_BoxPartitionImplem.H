@@ -1,8 +1,15 @@
+
 BoxPartition::BoxPartition(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches)
 {
     define(a_patchDomain, a_patches, 0, numProc());
+}
+
+BoxPartition::BoxPartition(const ProblemDomain& a_patchDomain)
+{
+    std::vector<Point> patches;
+    define(a_patchDomain, patches, 0, numProc());
 }
 
 BoxPartition::BoxPartition(
@@ -32,24 +39,7 @@ void BoxPartition::define(
     Morton::sort(sortedPatches);
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
-#if 0
-void BoxPartition::define(
-        const ProblemDomain& a_patchDomain,
-        std::vector<std::pair<Point, unsigned int>>& a_patches)
-{
-    m_patchDomain = a_patchDomain;
-    m_partition.clear();
-    m_partition = a_patches;
-    m_indexMap.clear();
-    for (int global = 0; global < a_patches.size(); global++)
-    {
-        auto patch = a_patches[global].first;
-        uint64_t mortonIndex = Morton::index(first);
-        m_indexMap.insert(std::pair<uint64_t, int>(mortonIndex, global));
 
-    }
-}
-#endif
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,
@@ -221,22 +211,23 @@ unsigned int BoxPartition::find(Point a_pt)
 
 void BoxPartition::print() const
 {
-    pr_out() << "Box Partition: " << std::endl;
-    pr_out() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
-    pr_out() << "\tNum Boxes: " << numBoxes() << std::endl;
-    pr_out() << "\tNum Procs: " << numProcs() << std::endl;
-    pr_out() << "\tData By Processor: " << std::endl;
+    using Proto::pout;
+    pout() << "Box Partition: " << std::endl;
+    pout() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
+    pout() << "\tNum Boxes: " << numBoxes() << std::endl;
+    pout() << "\tNum Procs: " << numProcs() << std::endl;
+    pout() << "\tData By Processor: " << std::endl;
     for (auto procData : m_procMap)
     {
         unsigned int proc = procData.first;
-        pr_out() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
-        pr_out() << " | Start Index: " << procStartIndex(proc);
-        pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
+        pout() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
+        pout() << " | Start Index: " << procStartIndex(proc);
+        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
     }
-    pr_out() << "\tData Partition: " << std::endl;
+    pout() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
     {
-        pr_out() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
+        pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
 }
 

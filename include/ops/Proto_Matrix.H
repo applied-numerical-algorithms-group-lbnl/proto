@@ -79,7 +79,7 @@ class Matrix
             unsigned int a_numCols,
             MatrixStorageType a_storage = COL_MAJOR);
 
-    /// Copy Assignment (Disabled)
+    /// Copy Assignment
     inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = delete;
 
     /// Move Assignment
@@ -245,6 +245,7 @@ class Matrix
      */
     inline const Matrix<T> transpose() const;
 
+    inline double sum() const;
     inline double norm1() const;
     inline double normInf() const;
     inline double max() const;

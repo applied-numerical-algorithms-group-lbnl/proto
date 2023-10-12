@@ -20,7 +20,9 @@ namespace Proto
     class BoxPartition
     {
         public: 
-       
+
+        inline BoxPartition(){};
+
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -35,6 +37,9 @@ namespace Proto
                 const ProblemDomain& a_patchDomain,
                 const std::vector<Point>& a_patches);
         
+        /// Constructor (Empty)
+        inline BoxPartition(const ProblemDomain& a_patchDomain);
+        
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -67,20 +72,6 @@ namespace Proto
                 unsigned int a_startProc,
                 unsigned int a_endProc);
         
-#if 0
-        /// Define
-        /**
-         *  Create a BoxPartition from a set of patches that have already been assigned
-         *  to processors. Use this function if load balancing is executed externally.
-         *
-         *  \param a_patchDomain        A ProblemDomain where each Point corresponds to a Box
-         *  \param a_assignedPatches    A vector of patch-processor pairs
-         */
-        inline void define(
-                const ProblemDomain& a_patchDomain,
-                std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
-#endif
-
         /// Load Balance
         /**
          * Rebalance the load of this by distributing the input patches evenly 
@@ -138,8 +129,7 @@ namespace Proto
         */
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment);
-       
-
+        
         /// Compatibility Query
         /**
          * Determine if this has the same layout structure as another BoxPartition.
@@ -214,11 +204,9 @@ namespace Proto
                 int                 a_proc,
                 unsigned int        a_num);
 
-        ProblemDomain m_patchDomain; ///< Domain in patch space
+        ProblemDomain m_patchDomain; ///< Domain in patch space (one point per patch)
         std::unordered_map<uint64_t, int> m_indexMap; ///< Maps Morton index to global index
         std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>>      m_procMap; ///< Maps processor number to global index
-        //std::vector<unsigned int> m_procIndices; ///< Maps processor number to global index space
-        //unsigned int m_startProc; ///< The first proc on which this partition has data
         std::vector<std::pair<Point, unsigned int>> m_partition; ///< Maps each patch to a proc
     };
 
