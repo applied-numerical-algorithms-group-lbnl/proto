@@ -54,7 +54,7 @@ int main() {
 }
 #endif
 
-bool checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data)
+bool BoxPartition::checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data)
 {
     if (a_data.size() == 0) { return true; }
     unsigned int proc = a_data[0].second;

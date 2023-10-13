@@ -213,6 +213,8 @@ namespace Proto
         inline bool doLoadBalance() const { return m_doLoadBalance; }
         private:
         
+        inline bool checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data);
+
         template<typename... vals>
         inline void unpack(
                 std::vector<Point>& a_patches,
