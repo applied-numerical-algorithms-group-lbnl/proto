@@ -27,6 +27,8 @@ namespace Proto
         inline unsigned int numBlocks() const;
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
+        inline uint64_t localIndex(uint64_t a_globalIndex, unsigned int a_proc) const;
+        inline uint64_t globalIndex(uint64_t a_localIndex, unsigned int a_proc) const;
         inline uint64_t find(Point a_patch, unsigned int a_block);
         inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const
         { return m_partition; }

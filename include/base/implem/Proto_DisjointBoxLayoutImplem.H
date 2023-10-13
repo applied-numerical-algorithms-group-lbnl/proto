@@ -233,7 +233,8 @@ DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
     PROTO_ASSERT(a_indexInt < localSize(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return LevelIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
+    //return LevelIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
+    return LevelIndex(m_partition, m_partition->localIndex(a_indexInt, Proto::procID()));
 }
 
 LevelIndex

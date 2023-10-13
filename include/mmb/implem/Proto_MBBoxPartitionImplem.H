@@ -140,6 +140,14 @@ uint64_t MBBoxPartition::procEndIndex(unsigned int a_proc) const
     if (data == m_procMap.end()) { return numBoxes(); }
     return (*data).second.second;
 }
+uint64_t MBBoxPartition::localIndex(uint64_t a_globalIndex, unsigned int a_proc) const
+{
+    return a_globalIndex - procStartIndex(a_proc);
+}
+uint64_t MBBoxPartition::globalIndex(uint64_t a_localIndex, unsigned int a_proc) const
+{
+    return a_localIndex + procStartIndex(a_proc);
+}
 
 
 inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int a_block) const
