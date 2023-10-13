@@ -87,11 +87,14 @@ namespace Proto_Transition
     ///
     /**
      *      \a_domain - problem domain
+     *      \a_domain_face_dir is the direction of the domain face
+     *      \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
     inline void
     domainGhostReflectEven(
             pr_level_data             &    a_devi_data,
-            const pr_box              &    a_domain)
+            const pr_box              &    a_domain,
+            int a_domain_face_dir,  int    a_lo_or_hi_side)  
     {
       pr_mayday::Error("Doh!  ghostReflectEven not implemented");
     }
@@ -99,11 +102,14 @@ namespace Proto_Transition
     ///
     /**
      *      \a_domain - problem domain
+     *      \a_domain_face_dir is the direction of the domain face
+     *      \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
     inline void
     domainGhostReflectOdd(
             pr_level_data             &    a_devi_data,
-            const pr_box              &    a_domain)
+            const pr_box              &    a_domain,
+            int a_domain_face_dir,  int lo_or_hi_side)  
     {
       pr_mayday::Error("Doh!  ghostReflectOdd not implemented");
     }
