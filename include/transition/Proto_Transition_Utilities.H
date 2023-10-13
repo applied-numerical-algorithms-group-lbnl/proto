@@ -20,6 +20,7 @@ namespace Proto_Transition
   typedef  Proto::Point                            pr_point;
   typedef  Proto::Box                              pr_box;
   typedef  Proto::DisjointBoxLayout                pr_dbl;
+  typedef  Proto::ProblemDomain                    pr_dom;
   template <int ncomp>
   class DataUtilities
   {
@@ -28,11 +29,18 @@ namespace Proto_Transition
     typedef  Proto::BoxData<     double, ncomp>      pr_box_data;
 
 
-    ///
-    /** get me a dbl based on box - proc pairs
+    ///Get a Proto::DisjointBoxLayout that conforms to the input meta data
+    /** 
+        A box here is its point refined by the box size.   
+        pair.first = the valid box of the layout.
+        pair.second = the processor assignment of said box.
+        The input layout can be in any order or have any distribution but 
+        the boxes MUST BE DISJOINT.
      **/
     inline pr_dbl getLayout(
-            const vector<pair<pr_box, int> > >&  a_layout)
+      const vector<pair<pr_point, int> > >&  a_layout,
+      const pr_point                      &  a_gridSize,
+      const pr_dom                        &  a_domain)
     {
       shared_ptr<pr_dbl> retval;
         #if 0
@@ -74,7 +82,10 @@ namespace Proto_Transition
 
     ///
     /**
-     *  \param a_devi_data - one buffer per box
+     *  \param a_devi_data  device data to be filled in
+     *  \param a_host_data  matching host pointers for each BoxData in a_devi_data
+     *  The host data has to be in fortran ordering and must contain the same footprint 
+     *  as the device BoxData (it has to include ghost cell memory).
      **/
     inline void
     copyToDevice(
@@ -101,9 +112,9 @@ namespace Proto_Transition
 
     ///
     /**
-     *      \a_domain - problem domain
-     *      \a_domain_face_dir is the direction of the domain face
-     *      \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
+     * \param     \a_domain - problem domain
+     * \param     \a_domain_face_dir is the direction of the domain face
+     * \param     \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
     inline void
     domainGhostReflectOdd(
@@ -116,8 +127,10 @@ namespace Proto_Transition
 
     ///
     /**
-     *  \param pr_coar_box - coarse problem domain
-     *  \param ref_ratio
+     *  \param a_fine_data - data whose ghost is getting filled
+     *  \param a_coar_data - data   at the next coarser level
+     *  \param a_domain    - domain at the next coarser level
+     *  \param ref_ratio   - refrat to the next coarser level
      **/
     template <int interpolation_order>
     inline void
