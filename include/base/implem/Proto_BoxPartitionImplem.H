@@ -14,6 +14,13 @@ BoxPartition::BoxPartition(
     define(a_patchDomain, a_patches, a_startProc, a_endProc);
 }
 
+BoxPartition::BoxPartition(
+        const ProblemDomain& a_patchDomain,
+        const std::vector<std::pair<Point, unsigned int>>& a_patches)
+{
+    define(a_patchDomain, a_patches);
+}
+
 void BoxPartition::define(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches,
@@ -33,26 +40,6 @@ void BoxPartition::define(
     Morton::sort(sortedPatches);
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
-
-#if 0
-bool sortBySecond(const std::pair<Point, unsigned int>& a, const std::pair<Point, unsigned int>& b) {
-    return a.second < b.second;
-}
-
-int main() {
-    std::vector<std::pair<Point, unsigned int>> vec = {{1, 5}, {2, 3}, {3, 8}, {4, 1}, {5, 6}};
-
-    // Sort the vector based on the unsigned int entry in the pair
-    std::sort(vec.begin(), vec.end(), sortBySecond);
-
-    // Print the sorted vector
-    for (const auto& pair : vec) {
-        std::cout << "(" << pair.first << ", " << pair.second << ") ";
-    }
-
-    return 0;
-}
-#endif
 
 bool BoxPartition::checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data)
 {

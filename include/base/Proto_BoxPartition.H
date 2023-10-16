@@ -34,7 +34,7 @@ namespace Proto
         inline BoxPartition(
                 const ProblemDomain& a_patchDomain,
                 const std::vector<Point>& a_patches);
-        
+
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -51,6 +51,11 @@ namespace Proto
                 unsigned int a_startProc,
                 unsigned int a_endProc);
         
+        /// Constructor (Exteral Load Balancing) 
+        inline BoxPartition(
+                const ProblemDomain& a_patchDomain,
+                const std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
+
         /// Define
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches

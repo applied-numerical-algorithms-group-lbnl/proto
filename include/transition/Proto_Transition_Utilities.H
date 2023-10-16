@@ -14,13 +14,14 @@
 namespace Proto_Transition
 {
   using std::shared_ptr;
-  using std::shared_vector;
+  //using std::shared_vector;
   using std::pair;
-  typedef  Proto::MayDay                           pr_mayday;
+  typedef  Proto::MayDay<void>                     pr_mayday;
   typedef  Proto::Point                            pr_point;
   typedef  Proto::Box                              pr_box;
   typedef  Proto::DisjointBoxLayout                pr_dbl;
   typedef  Proto::ProblemDomain                    pr_dom;
+  typedef  Proto::BoxPartition                     pr_partition;
   template <int ncomp>
   class DataUtilities
   {
@@ -38,34 +39,34 @@ namespace Proto_Transition
         the boxes MUST BE DISJOINT.
      **/
     inline pr_dbl getLayout(
-      const vector<pair<pr_point, int> > >&  a_layout,
-      const pr_point                      &  a_gridSize,
-      const pr_dom                        &  a_domain)
+      const vector<pair<pr_point, int> >  &  a_layout,
+      const pr_point                      &  a_boxSize,
+      const pr_dom                        &  a_domain,
+      const Proto::Array<bool, DIM>       &  a_periodicity)
     {
-      shared_ptr<pr_dbl> retval;
-        #if 0
-      PROTO_ASSERT(a_layout.size() > 0,
-              "DataUtilities::getLayout | Error: empty input");
-      
-      auto sizes = a_layout[0].first.sizes();
-      vector<pr_point> patches;
-      for (auto iter : a_layout)
-      {
-        // the following assertion can be relaxed if necessary, but it simplifies the math without losing much
-        PROTO_ASSERT(iter.first.low().min() >= 0,
-                "DataUtilities::getLayout | Error: input boxes must be in the strictly non-negative index space");
-        // check for constant size / shape
-        PROTO_ASSERT(iter.first.sizes() == sizes,
-                "DataUtilities::getLayout | Error: inputs do not represent a constant box size");
-        // check for overlapping / improperly shifted boxes
-        PROTO_ASSERT(iter.first.low() % sizes == Point::Zeros(),
-                "DataUtilities::getLayout | Error: detected overlapping boxes");
-        patches.push_back(iter.first.low() / sizes);
-      }
 
-        #endif
-      pr_mayday::Error("Doh! getMetaData not implemented")
-      return retval;
+        // Input Checks
+        PROTO_ASSERT(a_layout.size() > 0,
+                "DataUtilities::getLayout | Error: empty input");
+        PROTO_ASSERT(a_domain.coarsenable(a_boxSize),
+                "DataUtilities::getLayout | Error: domain is not coarsenable by the given box size.");
+        pr_box patchDomain = a_domain.coarsen(a_boxSize);
+        for (auto iter : a_layout)
+        {
+            pr_point patch = iter.first;
+            PROTO_ASSERT(patch.min() >= 0,
+                    "DataUtilities::getLayout | Error: Patches must be in the non-negative index space");
+            PROTO_ASSERT(patchDomain.contains(patch),
+                    "DataUtilities::getLayout | Error: Patch detected outside of the given domain");
+        }
+
+        // Domain
+        pr_dom domain(a_domain, a_periodicity);
+        // Box Partition
+        std::shared_ptr<pr_partition> partition = std::make_shared<pr_partition>(domain, a_layout);
+        // Box Layout
+        pr_dbl retval(partition, a_boxSize);
+        return retval;
     }
 
     ///
@@ -77,7 +78,7 @@ namespace Proto_Transition
             vector< double * >  &    a_host_data,
             const pr_level_data &    a_devi_data)
     {
-      pr_mayday::Error("Doh! copyToHost not implemented")
+      pr_mayday::Error("Doh! copyToHost not implemented");
     }
 
     ///
@@ -92,7 +93,7 @@ namespace Proto_Transition
             pr_level_data             &    a_devi_data,
             const vector< double * >  &    a_host_data)
     {
-      pr_mayday::Error("Doh! copyToDevice not implemented")
+      pr_mayday::Error("Doh! copyToDevice not implemented");
     }
 
     ///
