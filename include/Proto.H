@@ -45,4 +45,5 @@
 #include "ProtoMMB.H"
 #endif
 
+#include "transition/Proto_Transition_Utilities.H"
 #endif
