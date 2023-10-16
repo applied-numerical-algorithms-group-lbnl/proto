@@ -24,19 +24,19 @@ MBPointInterpOp::MBPointInterpOp(
 {
     PR_TIME("MBPointInterpOp::constructor");
 #if PR_VERBOSE > 1
-    pout() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
+    pr_out() << "DST_POINT: " << a_dst.point << " | BLOCK: " << a_dst.dstBlock() << std::endl;
 #endif
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
 
 #if PR_VERBOSE > 1
-    pout() << "SRC_POINTS: ";
+    pr_out() << "SRC_POINTS: ";
     for (auto si : m_srcs)
     {
-        pout() << "\tpoint: " << si.point << " | block: " << si.srcBlock() << std::endl;
+        pr_out() << "\tpoint: " << si.point << " | block: " << si.srcBlock() << std::endl;
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 #endif
     // References
     auto& layout = a_map.map().layout();
@@ -115,7 +115,7 @@ MBPointInterpOp::MBPointInterpOp(
 #if PR_VERBOSE==3
         if (dstBlock == 0)
         {
-            pout() << "Cached Jacobian for data from block " << block << " to block " << dstBlock << std::endl;
+            pr_out() << "Cached Jacobian for data from block " << block << " to block " << dstBlock << std::endl;
             srcJ[block]->printData(4);
         }
 #endif

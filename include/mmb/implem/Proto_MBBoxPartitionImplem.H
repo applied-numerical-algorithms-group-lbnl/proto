@@ -190,32 +190,32 @@ uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 
 void MBBoxPartition::print()
 {
-    using Proto::pout;
-    pout() << "MBBoxPartition" << std::endl;
+    using Proto::pr_out;
+    pr_out() << "MBBoxPartition" << std::endl;
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        pout() << "Block " << bi << std::endl;
+        pr_out() << "Block " << bi << std::endl;
         m_blockPartitions[bi]->print();
     }
-    pout() << "Global Partition Data" << std::endl;
-    pout() << "\tNum Boxes:  " << numBoxes() << std::endl;
-    pout() << "\tNum Blocks: " << numBlocks() << std::endl; 
-    pout() << "\tNum Procs:  " << numProcs() << std::endl;
-    pout() << "\tData By Processor: " << std::endl;
+    pr_out() << "Global Partition Data" << std::endl;
+    pr_out() << "\tNum Boxes:  " << numBoxes() << std::endl;
+    pr_out() << "\tNum Blocks: " << numBlocks() << std::endl; 
+    pr_out() << "\tNum Procs:  " << numProcs() << std::endl;
+    pr_out() << "\tData By Processor: " << std::endl;
     for (auto procData : m_procMap)
     {
         unsigned int proc = procData.first;
-        pout() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
-        pout() << " | Start Index: " << procStartIndex(proc);
-        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
+        pr_out() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
+        pr_out() << " | Start Index: " << procStartIndex(proc);
+        pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
     }
-    pout() << "\tData Partition: " << std::endl;
+    pr_out() << "\tData Partition: " << std::endl;
     for (auto patchData : m_partition)
     {
         auto patchID = patchData.first;
         auto proc = patchData.second;
-        pout() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
-        pout() << " | Proc: " << proc << std::endl;
+        pr_out() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
+        pr_out() << " | Proc: " << proc << std::endl;
     }
 }
 

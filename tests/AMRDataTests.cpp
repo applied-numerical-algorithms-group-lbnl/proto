@@ -262,8 +262,8 @@ constexpr int PLOT_NUM = 0;
             LevelBoxData<double> dataCF(layoutCF, ghost);
             dataCF.setVal(1e6);
             dataC.copyTo(dataCF);
-            pout() << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-            pout() << "NOW PRINTING " << kk+1 << "-PATCH DATASET" << std::endl;
+            pr_out() << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+            pr_out() << "NOW PRINTING " << kk+1 << "-PATCH DATASET" << std::endl;
             for (auto iter : dataCF)
             {
                 dataCF[iter].printData();

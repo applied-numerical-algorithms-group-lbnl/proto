@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     #endif
 
-    using Proto::pout;
+    using Proto::pr_out;
     HDF5Handler h5;
 
     int domainSize = 64;

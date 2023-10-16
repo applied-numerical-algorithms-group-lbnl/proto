@@ -52,7 +52,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     h5.writeAMRData(m_amrOp->dx(0), a_force, "AMR_FORCE");
 #endif
 
-    //Proto::pout() << "AMR solve: initial residual = " << res0 << std::endl;
+    //Proto::pr_out() << "AMR solve: initial residual = " << res0 << std::endl;
 
     if (procID() == 0) { 
         std::cout << "AMR solve: initial residual = " << res0 << std::endl;
@@ -67,8 +67,8 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
         h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", ii+1);
         h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", ii+1);
 #endif
-        //Proto::pout() << "\tAMR solve: resnorm = " << res;
-        //pout() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+        //Proto::pr_out() << "\tAMR solve: resnorm = " << res;
+        //pr_out() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
 
         if (procID() == 0)
         {

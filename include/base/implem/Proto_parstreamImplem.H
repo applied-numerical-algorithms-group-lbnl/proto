@@ -1,29 +1,29 @@
 
 //
-// pout() returns the standard output stream for Chombo codes.
+// pr_out() returns the standard output stream for Chombo codes.
 //
 // In parallel, each proc sends the stream to a separate file,
 //  distinguished by having the proc num in the filename.
 // In serial, the stream goes to std::cout.
 //
-// Since the pout() function gets used a lot, it should be as
+// Since the pr_out() function gets used a lot, it should be as
 // streamlined as possible, hence the use of shared variables.
 //
 // The other feature is that the application can choose the base filename
 // for the parallel output files (the proc num is always appended).  The
-// application is allowed to change the base name after pout() has been called
+// application is allowed to change the base name after pr_out() has been called
 // the first time, which closes the previously open file, if any, and opens a
 // new one.  The output files are _always_ truncated on open -- append is not
 // supported.
 //
 // Special notes:
-//  If running in parallel, and pout() is called before MPI_Initialize(),
+//  If running in parallel, and pr_out() is called before MPI_Initialize(),
 //   it will return std::cout.
 //  If poutFilename() is called before MPI_Initialize(), it fails because
 //   the filename cannot be computed before the proc number is known.
 //
 // Method:
-//  Serial is easy; pout() always returns std::cout and poutFilename()
+//  Serial is easy; pr_out() always returns std::cout and poutFilename()
 //   always returns "cout".
 //  Parallel is hard because the app can call setPoutBaseName() multiple
 //   times.  Since nothing matters except when
@@ -105,7 +105,7 @@ inline static void openFile()
  *  different file on each proc (see setPoutBaseName()).
  */
 
-inline std::ostream& pout()
+inline std::ostream& pr_out()
 {
 #ifdef PR_MPI
   // the common case is _open == true, which just returns s_pout
@@ -144,7 +144,7 @@ inline std::ostream& pout()
 
 //----------------------------------------------------------------
 
-/// Set the base name for the parallel output files used by pout().
+/// Set the base name for the parallel output files used by pr_out().
 /**
  * If the file has already been used and this is a different name,
  * close the current file and open a new one.
@@ -167,7 +167,7 @@ inline void setPoutBaseName( const std::string & a_Name )
 
 //----------------------------------------------------------------
 
-/// return the current filename as used by pout()
+/// return the current filename as used by pr_out()
 /** in serial, just return the string "cout";
  *  abort if MPI is not initialized.
  */
@@ -189,7 +189,7 @@ inline const std::string & poutFileName()
       }
       setFileName() ;
       //[NOTE: could open the file here, but we would still need
-      //       code in pout() to handle the case where the file isn't
+      //       code in pr_out() to handle the case where the file isn't
       //       open, so there's no point duplicating the code here. <dbs>]
     }
   }

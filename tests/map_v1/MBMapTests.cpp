@@ -53,23 +53,23 @@ bool testMapBoundData(MBMap<Func>& a_map)
                 //EXPECT_LT(locBoundErr.absMax(), 1e-10);
 
 #if PR_VERBOSE > 0
-                pout() << "DIR: " << dir << std::endl;
-                pout() << "adjBlock: " << adjBlock << " | adjDir: " << adjDir << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "local bound box: " << locBoundBox0 << std::endl;
-                pout() << "adjacent bound box: " << adjBoundBox0 << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "local bound data: " << locBoundX.box() << "(" << locBoundX.box().size() << " points)" << std::endl;
-                pout() << "adjacent bound data: " << adjBoundX.box() << "(" << adjBoundX.box().size() << " points)" << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "local bound box (init): " << locBoundBox1 << std::endl;
-                pout() << "adjacent bound box (init): " << adjBoundBox1 << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "Adjacent Data: " << std::endl;
+                pr_out() << "DIR: " << dir << std::endl;
+                pr_out() << "adjBlock: " << adjBlock << " | adjDir: " << adjDir << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "local bound box: " << locBoundBox0 << std::endl;
+                pr_out() << "adjacent bound box: " << adjBoundBox0 << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "local bound data: " << locBoundX.box() << "(" << locBoundX.box().size() << " points)" << std::endl;
+                pr_out() << "adjacent bound data: " << adjBoundX.box() << "(" << adjBoundX.box().size() << " points)" << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "local bound box (init): " << locBoundBox1 << std::endl;
+                pr_out() << "adjacent bound box (init): " << adjBoundBox1 << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "Adjacent Data: " << std::endl;
                 adjX.printData();
-                pout() << "Bound Data (loc): " << std::endl;
+                pr_out() << "Bound Data (loc): " << std::endl;
                 XBound.localData->printData();
-                pout() << "Bound Data (adj): " << std::endl;
+                pr_out() << "Bound Data (adj): " << std::endl;
                 XBound.adjData->printData();
 
 #endif
@@ -92,20 +92,20 @@ bool testMapBoundData(MBMap<Func>& a_map)
 
                 auto& adjJ = a_map.jacobian()[JBound.adjIndex];
 #if PR_VERBOSE > 0
-                pout() << "DIR: " << dir << std::endl;
-                pout() << "adjBlock: " << adjBlock << " | adjDir: " << adjDir << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "local bound box (computed): " << locBoundBox0 << std::endl;
-                pout() << "adjacent bound box (computed): " << adjBoundBox0 << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "local bound box (init): " << locBoundBox1 << std::endl;
-                pout() << "adjacent bound box (init): " << adjBoundBox1 << std::endl;
-                pout() << "---------------------------------------------------------------" << std::endl;
-                pout() << "Adjacent Data: " << std::endl;
+                pr_out() << "DIR: " << dir << std::endl;
+                pr_out() << "adjBlock: " << adjBlock << " | adjDir: " << adjDir << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "local bound box (computed): " << locBoundBox0 << std::endl;
+                pr_out() << "adjacent bound box (computed): " << adjBoundBox0 << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "local bound box (init): " << locBoundBox1 << std::endl;
+                pr_out() << "adjacent bound box (init): " << adjBoundBox1 << std::endl;
+                pr_out() << "---------------------------------------------------------------" << std::endl;
+                pr_out() << "Adjacent Data: " << std::endl;
                 adjJ.printData(4);
-                pout() << "Bound Data (loc): " << std::endl;
+                pr_out() << "Bound Data (loc): " << std::endl;
                 JBound.localData->printData(4);
-                pout() << "Bound Data (adj): " << std::endl;
+                pr_out() << "Bound Data (adj): " << std::endl;
                 JBound.adjData->printData(4);
 
 #endif
@@ -535,14 +535,14 @@ TEST(MBMap, AnalyticOps2) {
     auto x01 = map(B0,0,1);
     auto x11 = map(B0,1,1);
     
-    pout() << "B0: " << B0 << std::endl;
-    pout() << "map(B0,0,0): " << std::endl;
+    pr_out() << "B0: " << B0 << std::endl;
+    pr_out() << "map(B0,0,0): " << std::endl;
     x00.printData();
-    pout() << "map(B0,1,0): " << std::endl;
+    pr_out() << "map(B0,1,0): " << std::endl;
     x10.printData();
-    pout() << "map(B0,0,1): " << std::endl;
+    pr_out() << "map(B0,0,1): " << std::endl;
     x01.printData();
-    pout() << "map(B0,1,1): " << std::endl;
+    pr_out() << "map(B0,1,1): " << std::endl;
     x11.printData();
 
     auto y00 = map(B1,0,0);
@@ -550,14 +550,14 @@ TEST(MBMap, AnalyticOps2) {
     auto y01 = map(B1,0,1);
     auto y11 = map(B1,1,1);
     
-    pout() << "\nB1: " << B1 << std::endl;
-    pout() << "map(B1,0,0): " << std::endl;
+    pr_out() << "\nB1: " << B1 << std::endl;
+    pr_out() << "map(B1,0,0): " << std::endl;
     y00.printData();
-    pout() << "map(B1,1,0): " << std::endl;
+    pr_out() << "map(B1,1,0): " << std::endl;
     y10.printData();
-    pout() << "map(B1,0,1): " << std::endl;
+    pr_out() << "map(B1,0,1): " << std::endl;
     y01.printData();
-    pout() << "map(B1,1,1): " << std::endl;
+    pr_out() << "map(B1,1,1): " << std::endl;
     y11.printData();
 }
 #endif

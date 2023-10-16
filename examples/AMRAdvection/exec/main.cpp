@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    using Proto::pout; 
+    using Proto::pr_out; 
     typedef BoxOp_Advection<double> OP;
 
     int domainSize =32;
@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 
         if (boxSize > domainSize)
           {
-            pout() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
+            pr_out() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
             boxSize = domainSize;
           }
         PR_TIMER_SETFILE(to_string(domainSize) 
@@ -133,12 +133,12 @@ int main(int argc, char** argv)
         dx.fill(physDomainSize / domainSize);
         double dt = 0.5 / domainSize;
 
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
-        pout() << "Coarsest Level Parameters" << std::endl;
-        pout() << setw(50) << setfill('-') << "-" << std::endl;
-        pout() << "dx: " << dx[0] << " | dt: " << dt << std::endl;
-        pout() << "domain: " << domainBox << std::endl;
-        pout() << setw(50) << setfill('-') << "-" << std::endl << std::endl;
+        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
+        pr_out() << "Coarsest Level Parameters" << std::endl;
+        pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+        pr_out() << "dx: " << dx[0] << " | dt: " << dt << std::endl;
+        pr_out() << "domain: " << domainBox << std::endl;
+        pr_out() << setw(50) << setfill('-') << "-" << std::endl << std::endl;
 
         std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
         AMRGrid grid(layout, refRatios, numLevels);
@@ -170,7 +170,7 @@ int main(int argc, char** argv)
         U.averageDown();
         AMRRK4<BoxOp_Advection, double> advectionOp(U, dx,regridInterval,regridBufferSize);
         double sum0 = U[0].integrate(dx[0]);
-        pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
+        pr_out() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
         double time = t0;
 #ifdef PR_HDF5
@@ -187,7 +187,7 @@ int main(int argc, char** argv)
               int step = 0;
               sizeout << step << " " << usage.ru_maxrss << endl;
             }
-          // pout() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
+          // pr_out() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
         }
     }
 
@@ -232,7 +232,7 @@ int main(int argc, char** argv)
           getrusage(RUSAGE_SELF, &usage);
           if (Proto::procID() == 0)
             cout << "memory HWM after evolution: " << usage.ru_maxrss << endl;
-          // pout() << "memory HWM after evolution: " << usage.ru_maxrss << endl;
+          // pr_out() << "memory HWM after evolution: " << usage.ru_maxrss << endl;
         }
         U.averageDown();
         

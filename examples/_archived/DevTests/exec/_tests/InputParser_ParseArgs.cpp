@@ -17,9 +17,9 @@ int main(int argc, char** argv)
     args.parse(argc, argv);
     args.print();
 
-    pout() << "D: " << D << std::endl;
-    pout() << "I: " << I << std::endl;
-    pout() << "B: " << B << std::endl;
-    pout() << "S: " << S << std::endl;
+    pr_out() << "D: " << D << std::endl;
+    pr_out() << "I: " << I << std::endl;
+    pr_out() << "B: " << B << std::endl;
+    pr_out() << "S: " << S << std::endl;
 
 };

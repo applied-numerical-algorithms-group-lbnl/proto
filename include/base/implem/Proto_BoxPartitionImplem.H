@@ -321,10 +321,10 @@ void BoxPartition::print() const
             pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
         }
     }
-    pout() << "\tData Partition: " << std::endl;
+    pr_out() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
     {
-        pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
+        pr_out() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
 }
 

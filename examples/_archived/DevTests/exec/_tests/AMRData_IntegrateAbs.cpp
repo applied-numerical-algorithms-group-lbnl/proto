@@ -94,13 +94,13 @@ int main(int argc, char** argv)
         std::cout << "Integral is " << integral << std::endl;
         
         err[nn] = (integral - 1);
-        pout() << "Error: " << err[nn] << std::endl;
+        pr_out() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;
     }
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
     }
 
     #ifdef PR_MPI

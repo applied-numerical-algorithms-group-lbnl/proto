@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
     // READ INPUT PARAMETERS
     HDF5Handler h5;
-    using Proto::pout;
+    using Proto::pr_out;
 
     int domainSize = 64;
     int boxSize = 32;
@@ -53,14 +53,14 @@ int main(int argc, char* argv[])
     args.set("kx", &kx);
     args.set("ky", &ky);
    
-    pout() << "Running with the following inputs (these can be changed in the file 'inputs')" << std::endl;
-    pout() << setw(75) << setfill('-') << "-" << std::endl;
-    pout() << "domainSize: " << domainSize << std::endl;
-    pout() << "boxSize: "    << boxSize << std::endl;
-    pout() << "numIter: "    << numIter << std::endl;
-    pout() << "kx: "         << kx << std::endl;
-    pout() << "ky: "         << ky << std::endl;
-    pout() << setw(75) << setfill('-') << "-" << std::endl;
+    pr_out() << "Running with the following inputs (these can be changed in the file 'inputs')" << std::endl;
+    pr_out() << setw(75) << setfill('-') << "-" << std::endl;
+    pr_out() << "domainSize: " << domainSize << std::endl;
+    pr_out() << "boxSize: "    << boxSize << std::endl;
+    pr_out() << "numIter: "    << numIter << std::endl;
+    pr_out() << "kx: "         << kx << std::endl;
+    pr_out() << "ky: "         << ky << std::endl;
+    pr_out() << setw(75) << setfill('-') << "-" << std::endl;
     
         
     int refRatio = PR_AMR_REFRATIO;
@@ -186,35 +186,35 @@ int main(int argc, char* argv[])
             }
         }
         LPhiCrse.copyTo(LPhiCF);
-        pout() << "Integral of Phi:              " << Phi.integrate(dx[0])      << std::endl;
-        pout() << "Integral of LPhiSoln (Valid): " << LPhiSoln.integrate(dx[0]) << std::endl;
+        pr_out() << "Integral of Phi:              " << Phi.integrate(dx[0])      << std::endl;
+        pr_out() << "Integral of LPhiSoln (Valid): " << LPhiSoln.integrate(dx[0]) << std::endl;
         double refinedIntegral = LPhiSoln[1].integrate(dx[1]);
-        pout() << "Integral of LPhiSoln (Fine):  " << refinedIntegral << std::endl;
+        pr_out() << "Integral of LPhiSoln (Fine):  " << refinedIntegral << std::endl;
         
-        pout() << std::endl;
-        pout() << "Integral of LPhi Coarse (No Average, No Reflux):    " << LPhi.integrate(dx[0]) << std::endl;
+        pr_out() << std::endl;
+        pr_out() << "Integral of LPhi Coarse (No Average, No Reflux):    " << LPhi.integrate(dx[0]) << std::endl;
         LPhi.averageDown();
         LPhiCrse.copyTo(LPhiCFAvg);
-        pout() << "Integral of LPhi Coarse (Averaged Down, No Reflux): " << LPhi.integrate(dx[0]) << std::endl;
+        pr_out() << "Integral of LPhi Coarse (Averaged Down, No Reflux): " << LPhi.integrate(dx[0]) << std::endl;
         
         frFine.reflux(RefluxFine, 1.0/dx[0]);
         frCrse.reflux(RefluxCrse, 1.0/dx[0]);
         frCorr.reflux(RefluxCorr, 1.0/dx[0]);
         frCorr.reflux(LPhiCrse, 1.0/dx[0]);
         
-        pout() << "Integral of LPhi Coarse (Averaged Down, Refluxed):  " << LPhi.integrate(dx[0]) << std::endl;
-        pout() << std::endl;
-        pout() << "Integral of Coarse Reflux / cdx: " << RefluxCrse.integrate(dx[0]) << std::endl;
-        pout() << "\tError: " << RefluxCrse.integrate(dx[0]) - refinedIntegral << std::endl;
-        pout() << "Integral of Fine Reflux / cdx:   " << RefluxFine.integrate(dx[0]) << std::endl;
-        pout() << "\tError: " << -RefluxFine.integrate(dx[0]) - refinedIntegral << std::endl;
-        pout() << std::endl;
-        pout() << "Integral of LPhi Refined Region (Coarse, Before Avg Down): " << LPhiCF.integrate(dx[0]) << std::endl;
-        pout() << "\tError: " << LPhiCF.integrate(dx[0]) - refinedIntegral << std::endl;
-        pout() << "Integral of LPhi Refined Region (Coarse, After  Avg Down): " << LPhiCFAvg.integrate(dx[0]) << std::endl;
-        pout() << "\tError: " << LPhiCFAvg.integrate(dx[0]) - refinedIntegral << std::endl;
-        pout() << "Integral of LPhiSoln Refined Region (Coarse): " << LPhiSolnCF.integrate(dx[0]) << std::endl;
-        pout() << "\tError: " << LPhiSolnCF.integrate(dx[0]) - refinedIntegral << std::endl;
+        pr_out() << "Integral of LPhi Coarse (Averaged Down, Refluxed):  " << LPhi.integrate(dx[0]) << std::endl;
+        pr_out() << std::endl;
+        pr_out() << "Integral of Coarse Reflux / cdx: " << RefluxCrse.integrate(dx[0]) << std::endl;
+        pr_out() << "\tError: " << RefluxCrse.integrate(dx[0]) - refinedIntegral << std::endl;
+        pr_out() << "Integral of Fine Reflux / cdx:   " << RefluxFine.integrate(dx[0]) << std::endl;
+        pr_out() << "\tError: " << -RefluxFine.integrate(dx[0]) - refinedIntegral << std::endl;
+        pr_out() << std::endl;
+        pr_out() << "Integral of LPhi Refined Region (Coarse, Before Avg Down): " << LPhiCF.integrate(dx[0]) << std::endl;
+        pr_out() << "\tError: " << LPhiCF.integrate(dx[0]) - refinedIntegral << std::endl;
+        pr_out() << "Integral of LPhi Refined Region (Coarse, After  Avg Down): " << LPhiCFAvg.integrate(dx[0]) << std::endl;
+        pr_out() << "\tError: " << LPhiCFAvg.integrate(dx[0]) - refinedIntegral << std::endl;
+        pr_out() << "Integral of LPhiSoln Refined Region (Coarse): " << LPhiSolnCF.integrate(dx[0]) << std::endl;
+        pr_out() << "\tError: " << LPhiSolnCF.integrate(dx[0]) - refinedIntegral << std::endl;
         
         Flux[0].exchange();
         // COMPUTE ERROR IN LPHI AND FLUX
@@ -238,9 +238,9 @@ int main(int argc, char* argv[])
          
         err[nn] = LPhiError.absMax();    
         err_cf[nn] = LPhiErrorCF.absMax();
-        pout() << std::endl;
-        pout() << "Error in LPhi: " << err[nn] << std::endl;
-        pout() << "Error in LPhiCF: " << err_cf[nn] << std::endl;
+        pr_out() << std::endl;
+        pr_out() << "Error in LPhi: " << err[nn] << std::endl;
+        pr_out() << "Error in LPhiCF: " << err_cf[nn] << std::endl;
         h5.writeAMRData(dx[0], Flux,       "Flux_N%i", nn);
         h5.writeAMRData(dx[0], LPhi,       "LPhi_N%i", nn);
         h5.writeAMRData(dx[0], LPhiSoln,   "LPhiSoln_N%i", nn);
@@ -250,14 +250,14 @@ int main(int argc, char* argv[])
         h5.writeLevel(dx[0],   LPhiError,  "LPhiError_N%i", nn);
         
         domainSize *= 2;
-        pout() << std::endl;
-        pout() << std::setfill('=') << std::setw(75) << "=" << std::endl << std::endl;; 
+        pr_out() << std::endl;
+        pr_out() << std::setfill('=') << std::setw(75) << "=" << std::endl << std::endl;; 
     }
 
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1]/err[ii])/log(2.0) << std::endl;
-        pout() << "Convergence Rate (Refined Region): " << log(err_cf[ii-1]/err_cf[ii])/log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1]/err[ii])/log(2.0) << std::endl;
+        pr_out() << "Convergence Rate (Refined Region): " << log(err_cf[ii-1]/err_cf[ii])/log(2.0) << std::endl;
     }
 #ifdef PR_MPI
     MPI_Finalize();

@@ -83,7 +83,7 @@ TEST(MBInterpOp, ShearTest)
                         MBPointInterpOp op(dstDataPoint, ghost[0], map, footprint, 4);
                         op.apply(hostDst, hostSrc);
 #if PR_VERBOSE > 1
-                        pout() << "Coefs at point " << bi << std::endl;
+                        pr_out() << "Coefs at point " << bi << std::endl;
                         auto coefs = op.coefs(hostSrc);
                         coefs.print("%10.2e");
 #endif
@@ -229,7 +229,7 @@ TEST(MBInterpOp, XPointTest)
                         MBPointInterpOp op(dstDataPoint, ghost[0], map, footprint, 4);
                         op.apply(hostDst, hostSrc);
 #if PR_VERBOSE > 1
-                        pout() << "Coefs at point " << bi << std::endl;
+                        pr_out() << "Coefs at point " << bi << std::endl;
                         auto coefs = op.coefs(hostSrc);
                         coefs.print("%10.2e");
 #endif

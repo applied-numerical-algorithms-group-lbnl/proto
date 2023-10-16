@@ -6,7 +6,7 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     #endif
     
-    pout() << "Hello from rank " << procID() << std::endl;
+    pr_out() << "Hello from rank " << procID() << std::endl;
 
 #ifdef PR_MPI
     MPI_Finalize();

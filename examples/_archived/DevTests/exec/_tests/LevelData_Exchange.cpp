@@ -165,9 +165,9 @@ int main(int argc, char** argv)
                     bool pass = (dst_h(*biter, cc) == sln_h(*biter, cc));
                     if (!pass)
                     {
-                        pout() << "TEST FAILED | patch: " << (*iter).global();
-                        pout() << " | dst(" << *biter << ", " << cc << ") = " << dst_h(*biter, cc);
-                        pout() << " != sln(" << *biter << ", " << cc << ") = " << sln_h(*biter, cc) << std::endl;
+                        pr_out() << "TEST FAILED | patch: " << (*iter).global();
+                        pr_out() << " | dst(" << *biter << ", " << cc << ") = " << dst_h(*biter, cc);
+                        pr_out() << " != sln(" << *biter << ", " << cc << ") = " << sln_h(*biter, cc) << std::endl;
                     }
                     PASS &= pass;
                 }

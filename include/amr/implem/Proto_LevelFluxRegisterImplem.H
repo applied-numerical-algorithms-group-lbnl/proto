@@ -602,28 +602,28 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const Da
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::print() const
 {
-    using Proto::pout;
-    pout() << "Level Flux Register: " << std::endl;
-    pout() << "Coarse Registers: " << std::endl;
+    using Proto::pr_out;
+    pr_out() << "Level Flux Register: " << std::endl;
+    pr_out() << "Coarse Registers: " << std::endl;
     for (int ii = 0; ii < m_crseRegisters.size(); ii++)
     {
         for (int jj = 0; jj < m_crseRegisters[ii].size(); jj++)
         {
             auto item = m_crseRegisters[ii][jj];
-            pout() << "\t box: " << item.m_data->box();
-            pout() << " | dir: " << item.m_dir;
-            pout() << " | side: " << item.m_side << std::endl;
+            pr_out() << "\t box: " << item.m_data->box();
+            pr_out() << " | dir: " << item.m_dir;
+            pr_out() << " | side: " << item.m_side << std::endl;
         }
     }
-    pout() << "Fine Registers: " << std::endl;
+    pr_out() << "Fine Registers: " << std::endl;
     for (int ii = 0; ii < m_fineRegisters.size(); ii++)
     {
         for (int jj = 0; jj < m_fineRegisters[ii].size(); jj++)
         {
             auto item = m_fineRegisters[ii][jj];
-            pout() << "\t box: " << item.m_data->box();
-            pout() << " | dir: " << item.m_dir;
-            pout() << " | side: " << item.m_side << std::endl;
+            pr_out() << "\t box: " << item.m_data->box();
+            pr_out() << " | dir: " << item.m_dir;
+            pr_out() << " | side: " << item.m_side << std::endl;
         }
     }
 }

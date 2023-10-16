@@ -262,8 +262,8 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
                 Box Bi = Box::Cube(domainSize).edge(dir_ij, 2);
                 Box Bj = Box::Cube(domainSize).adjacent(dir_ji, 2);
                 
-                pout() << "Checking boundary between block " << bi << " and " << bj << std::endl;
-                pout() << "dir_ij: " << dir_ij << " | dir_ji: " << dir_ji << std::endl;
+                pr_out() << "Checking boundary between block " << bi << " and " << bj << std::endl;
+                pr_out() << "dir_ij: " << dir_ij << " | dir_ji: " << dir_ji << std::endl;
 
                 BoxData<double, DIM> Xi(Bi.grow(PR_NODE));
                 BoxData<double, DIM> EXi(Bi.grow(PR_NODE));

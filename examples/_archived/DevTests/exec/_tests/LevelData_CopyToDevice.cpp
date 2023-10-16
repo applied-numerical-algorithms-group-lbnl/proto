@@ -38,20 +38,20 @@ int main(int argc, char** argv)
     ProblemDomain domain(domainBox, periodicity);
     DisjointBoxLayout layout(domain, boxSizeVect);
     
-    pout() << "Defining device data" << std::endl;
+    pr_out() << "Defining device data" << std::endl;
     LevelBoxData<int, NUMCOMPS, DEVICE> data_d(layout, Point::Ones(1));
-    pout() << "Defining host data" << std::endl;
+    pr_out() << "Defining host data" << std::endl;
     LevelBoxData<int, NUMCOMPS, HOST> data_h(layout, Point::Ones(1));
-    pout() << "Initializing device data" << std::endl;
+    pr_out() << "Initializing device data" << std::endl;
     data_d.initialize(d_pointID);
-    pout() << "Initializing host data" << std::endl;
+    pr_out() << "Initializing host data" << std::endl;
     data_h.setVal(-1);
 
-    pout() << "Copying DEVICE --> HOST" << std::endl;
+    pr_out() << "Copying DEVICE --> HOST" << std::endl;
     data_d.copyTo(data_h);
-    pout() << "Writing HOST data" << std::endl;
+    pr_out() << "Writing HOST data" << std::endl;
     h5.writeLevel(dx, data_h, "HOST_DATA");
-    pout() << "Test complete" << std::endl;
+    pr_out() << "Test complete" << std::endl;
     
     #endif
 

@@ -207,13 +207,13 @@ TEST(MBBoundaryRegister, Exchange) {
         {
             for (auto bi : boundRegister.bounds(iter))
             {
-                //pout() << "\n======================================================" << std::endl;
-                //pout() << "BOUNDARY: " << std::endl;
+                //pr_out() << "\n======================================================" << std::endl;
+                //pr_out() << "BOUNDARY: " << std::endl;
                 auto b1 = layout.block(bi.localIndex);
                 auto b2 = layout.block(bi.adjIndex);
                 auto p1 = layout.point(bi.localIndex);
                 auto p2 = layout.point(bi.adjIndex);
-                //pout() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
+                //pr_out() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
                 Box dstBox = bi.adjData->box();
                 auto R = bi.adjToLocal;
                 Box srcBox = layout.domain().convert(dstBox, b1, b2);
@@ -223,9 +223,9 @@ TEST(MBBoundaryRegister, Exchange) {
                 forallInPlace_p(f_MBPointID, adjSln, b2);
                 adjSln.copyTo(locSln, R);
                 EXPECT_EQ(locSln.box(), bi.adjData->box());
-                //pout() << "Local Solution (Computed): " << std::endl;
+                //pr_out() << "Local Solution (Computed): " << std::endl;
                 //locSln.printData();
-                //pout() << "Copied Data: " << std::endl;
+                //pr_out() << "Copied Data: " << std::endl;
                 //bi.adjData->printData();
                 locSln -= (*bi.adjData);
                 //std::cout << "Error: " << locSln.absMax() << std::endl;

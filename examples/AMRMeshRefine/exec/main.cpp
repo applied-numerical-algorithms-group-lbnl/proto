@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
-    using Proto::pout;
+    using Proto::pr_out;
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
@@ -397,7 +397,7 @@ int main(int argc, char** argv)
                 for (int ii = 0; ii < 3; ii++)
                 {
 
-//                    Proto::pout() << "Initializing level " << ii << std::endl;
+//                    Proto::pr_out() << "Initializing level " << ii << std::endl;
 
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                     data_before[ii].layout().print();
@@ -405,7 +405,7 @@ int main(int argc, char** argv)
                     h5.writeLevel(dx_vect[ii], data_before[ii], "Grid_L%i_0", ii);
 #endif
                 }
-//                pout() << "Writing AMR data " << std::endl;
+//                pr_out() << "Writing AMR data " << std::endl;
                 //h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
 #endif
                 

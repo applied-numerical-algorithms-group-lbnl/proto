@@ -605,7 +605,7 @@ TEST(MBLevelBoxData, MBDataPointOperator)
                     MBDataPoint pi(iter, bi, layout, dir, adjBlock);
                     for (int ii = 0; ii < DIM; ii++)
                     {
-                        //pout() << "\tValue at point " << bi << ": " << hostData[pi](ii) << std::endl;
+                        //pr_out() << "\tValue at point " << bi << ": " << hostData[pi](ii) << std::endl;
                         double soln = bound.localData->operator()(bi, ii);
                         EXPECT_EQ(soln, hostData[pi](ii));
                     }
