@@ -14,14 +14,12 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
         if (patch != Point::Zeros()) { patches.push_back(patch); }
     }
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     periodicity.fill(true);
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
 }
-
 #if 0
-
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -75,9 +73,9 @@ TEST(Operator, ConvolveFace) {
     {
         double dx = 1.0/domainSize;
         Box B = Box::Cube(domainSize);
-        std::array<BoxData<double, 1, HOST>, DIM> data;
-        std::array<BoxData<double, 1, HOST>, DIM> soln;
-        std::array<BoxData<double, 1, HOST>, DIM> err;
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box Bd = B.grow(1).grow(dir,-1);
@@ -160,9 +158,9 @@ TEST(Operator, DeconvolveFace) {
     {
         double dx = 1.0/domainSize;
         Box B = Box::Cube(domainSize);
-        std::array<BoxData<double, 1, HOST>, DIM> data;
-        std::array<BoxData<double, 1, HOST>, DIM> soln;
-        std::array<BoxData<double, 1, HOST>, DIM> err;
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box Bd = B.grow(1).grow(dir,-1);
@@ -254,51 +252,94 @@ TEST(Operator, InitConvolve)
 #endif
     }
 }
-
 #endif
-
+#if DIM==3
 TEST(Operator, Cofactor)
 {
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
-    double dx = 1.0/domainSize;
-    int block = 0;
-    Point offset(1,2,3,4,5,6);
-    Point k(1,2,3,4,5,6);
+    int domainSize_0 = 32;
+    int thickness = 1;
+    double r0 = 0.9;
+    double r1 = 1.1;
     int ghostSize = 3;
-    std::array<double, DIM> scale;
-    for (int ii = 0; ii < DIM; ii++) {scale[ii] = pow(0.5, ii);}
 
-    // Define Mapping
-    Box domainBox = Box::Cube(domainSize+1).grow(ghostSize);
-    BoxData<double, DIM, HOST> X(domainBox);
-    
-    forallInPlace_p(f_TestMap, X, block, dx, offset, k);
-
-    for (int dir = 0; dir < DIM; dir++)
+    int N = 3;
+    for (int tt = 0; tt < 2; tt++)
     {
-        auto Xi = slice(X, dir);
-        Xi *= scale[dir];
-    }
-    
-    // Compute Metrics
-    std::array<BoxData<double, DIM, HOST>, DIM> NT;
-    std::cout << "X.box: " << X.box() << std::endl;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        NT[dir] = Operator::cofactor(X, dir);
-        std::cout << "NT[" << dir << "].box: " << NT[dir].box() << std::endl;
-    }
-    BoxData<double, 1, HOST> J;
-    J = Operator::jacobian(X, NT); 
-    std::cout << "J.box: " << J.box() << std::endl;
-    
-    BoxData<double, 1, HOST> Div_0(domainBox, 0);
+        //tt == 0 -> classical sphere
+        //tt == 1 -> cube sphere
+        int domainSize = domainSize_0;
+        double dv0; 
+        switch (tt)
+        {
+            case 0: dv0 = 2.0*M_PI*M_PI/2.0*(r1-r0); break;
+            case 1: dv0 = M_PI*M_PI/4.0*(r1-r0); break;
+        }
+        //dv0 = 1.0;
+        double JErrNorm[N];
+        for (int nn = 0; nn < N; nn++)
+        {
+            Array<double, DIM> dx = 1.0/domainSize;
+            dx[0] = 1.0/thickness;
+            double dv = dv0;
+            for (int dir = 0; dir < DIM; dir++) { dv *= dx[dir]; }
 
-    h5.writePatch(dx, X, "X");
+            // Define Mapping
+            Point domainBoxSize(thickness, domainSize, domainSize);
+            Box domainBox(domainBoxSize);
+            domainBox = domainBox.grow(ghostSize+1);
+            BoxData<double, DIM, HOST> X(domainBox);
+            BoxData<double, 1, HOST> J0(domainBox);
+            switch(tt)
+            {
+                case 0: forallInPlace_p(f_classicSphereMap, X, J0, dx, r0, r1); break;
+                case 1: forallInPlace_p(f_cubeSphereMap, X, J0, dx, r0, r1); break;
+            }
+
+            // Compute Metrics
+            Array<BoxData<double, DIM, HOST>, DIM> NT;
+            Array<BoxData<double, DIM, HOST>, DIM> NT0;
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                NT[dir] = Operator::cofactor(X, dir);
+            }
+            BoxData<double, 1, HOST> J;
+            J = Operator::jacobian(X, NT);
+            //J /= dv;
+
+            auto JAvg = Operator::convolve(J0);
+            JAvg *= dv;
+            BoxData<double, 1> JAvg2(J.box());
+            JAvg.copyTo(JAvg2);
+            BoxData<double, 1> JErr(J.box());
+            J.copyTo(JErr);
+            JErr -= JAvg;
+            JErrNorm[nn] = JErr.sumAbs()*dv;
+#if PR_VERBOSE > 0
+            std::cout << "Max Norm Error in J: " << JErrNorm[nn] << std::endl;
+            h5.writePatch({"x", "y", "z"}, dx, X, "X_T%i_N%i", tt, nn);
+            h5.writePatch({"J"}, dx, JAvg2, "J0_T%i_N%i", tt, nn);
+            h5.writePatch({"J"}, dx, J, "J_T%i_N%i", tt, nn);
+            h5.writePatch({"Err"}, dx, JErr, "JErr_T%i_N%i", tt, nn);
+#endif
+            domainSize *= 2;
+        }
+        
+        for (int ii = 1; ii < N; ii++)
+        {
+            double rate = log(JErrNorm[ii-1]/JErrNorm[ii])/log(2.0);
+            double rateErr = std::abs(rate - 4);
+#if PR_VERBOSE > 0
+            std::cout << "Convergence Rate: " << rate << std::endl;
+#endif
+            EXPECT_LT(rateErr, 0.3);
+        }
+
+    }
 }
+#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

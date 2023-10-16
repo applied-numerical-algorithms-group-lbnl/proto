@@ -160,6 +160,24 @@ TEST(Matrix, Copy)
     }
 }
 
+TEST(Matrix, TransposeCopy)
+{
+    int m = 4;
+    int n = 3;
+    Matrix<double> A(m, n);
+    Matrix<double> B(n, m);
+    initialize(A);
+    B.set(0);
+    A.transpose().copyTo(B);
+    for (int ii = 0; ii < m; ii++)
+    {
+        for (int jj = 0; jj < n; jj++)
+        {
+            EXPECT_EQ(A(ii,jj), B(jj,ii));
+        }
+    }
+}
+
 TEST(Matrix, AddSubtract)
 {
     int m = 4;
@@ -264,8 +282,13 @@ TEST(Matrix, Transpose)
     auto AT = A.transpose();
     auto ATA = A.transpose()*A;
 
+    Matrix<double> ATcopy(n,m);
+    A.transpose().copyTo(ATcopy);
+
     EXPECT_EQ(AT.M(), n);
     EXPECT_EQ(AT.N(), m);
+    EXPECT_EQ(ATcopy.M(), n);
+    EXPECT_EQ(ATcopy.N(), m);
     EXPECT_EQ(ATA.M(), n);
     EXPECT_EQ(ATA.N(), n);
     for (int ii = 0; ii < m; ii++)
@@ -276,6 +299,7 @@ TEST(Matrix, Transpose)
         EXPECT_EQ(A.get(ii,jj), Aij);
         EXPECT_EQ(AT(jj, ii), Aij);
         EXPECT_EQ(AT.get(jj, ii), Aij);
+        EXPECT_EQ(ATcopy(jj, ii), Aij);
     }
     for (int ii = 0; ii < n; ii++)
     for (int jj = 0; jj < n; jj++)

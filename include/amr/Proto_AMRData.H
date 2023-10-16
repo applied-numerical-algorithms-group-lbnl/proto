@@ -18,7 +18,8 @@ namespace Proto
         \tparam MEM     Proto::MemType. HOST or DEVICE. 
         \tparam CTR     Centering of underlying LevelBoxData  
     */
-    template<typename T, unsigned int C = 1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
+    template<typename T, unsigned int C = 1,
+        MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
     class AMRData
     {
         public:
@@ -36,21 +37,9 @@ namespace Proto
         */
         AMRData(AMRGrid& a_grid, Point a_ghost) { define (a_grid, a_ghost); }
 
-        /// Single Level Constructor
-        /**
-            Creates an AMRGrid with a single level.
+        /// Alias Constructor
+        AMRData(std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data);
 
-            \param layout       Coarsest level layout
-            \param maxLevels    Maximum number of levels allowable in the grid
-            \param ghost    Specifies the number of ghost cells to allocate
-        */
-        /*
-        AMRData(DisjointBoxLayout& a_layout, int a_maxLevels, Point a_ghost)
-        {
-            AMRGrid grid(a_layout, a_maxLevels);
-            define(grid, a_ghost);
-        }
-        */
         /// Define
         /**
             Lazy construction. If *this is not yet defined, data holders are created based on the
@@ -60,6 +49,10 @@ namespace Proto
         */
         inline void
         define(AMRGrid& a_grid, Point a_ghost);
+       
+        /// Alias Define
+        inline void
+        define(std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data);
       
        /// Reinitialize grids and data due to regridding.
       /**
@@ -94,7 +87,7 @@ namespace Proto
             Proto::forallInPlace_p. The input function must have the signature:
 
             <code>
-            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, std::array<T, DIM> a_dx, ... )
+            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, Array<T, DIM> a_dx, ... )
             </code>
 
             Unlike Proto::forall and its variants, this function cannot manage additional
@@ -187,6 +180,11 @@ namespace Proto
             \param scale    Optional scaling for the right-hand side data 
         */
         inline void increment(AMRData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
+        
+        /// Multiply by a Constant
+        inline void operator*=(T a_value);
+        /// Increment by a Constant
+        inline void operator+=(T a_value);
 
         /// Compute Integral
         /**
@@ -197,7 +195,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrate(T a_cdx, unsigned int a_c = 0);
-        inline T integrate(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrate(const Array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Integral of Absolute Value
         /**
@@ -208,7 +206,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrateAbs(T a_cdx, unsigned int a_c = 0);
-        inline T integrateAbs(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrateAbs(const Array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**
@@ -250,6 +248,8 @@ namespace Proto
         bool m_defined;
         AMRGrid m_grid;
         Point m_ghost;
+        //PC : debug
+        int m_counter = 0;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
     };
     

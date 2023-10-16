@@ -14,7 +14,6 @@
 #include <iomanip>
 #include <stack>
 #include <memory>
-#include <array>
 #include <unordered_map>
 
 namespace Proto 
@@ -87,15 +86,6 @@ namespace Proto
                 const ProblemDomain&    a_problemDomain,
                 const Box&              a_region, 
                 const Point&            a_boxSize);
-
-        /// Direct Define
-        /**
-            Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 
-            This constructor is used internally and is not recommended for public use.
-        */
-        inline void define(
-                std::shared_ptr<BoxPartition>   a_partition,
-                const Point&                    a_boxSize);
         
         /// Copy Constructor
         /**
@@ -104,6 +94,7 @@ namespace Proto
           \param a_layout   Another DisjointBoxLayout
         */
         inline DisjointBoxLayout(const DisjointBoxLayout& a_layout);
+
 
         /// Define (Full Domain)
         /**
@@ -122,7 +113,7 @@ namespace Proto
                 const vector<Point>   & a_coarsenedPatches,
                 const Point           & a_boxSize);
 
-        ///  Define (Partial Domaini - Simple)
+        ///  Define (Partial Domain - Simple)
         /**
           Construct a DisjointBoxLayout lazily or redefine an existing one. 
           */
@@ -130,6 +121,15 @@ namespace Proto
                 const ProblemDomain   & a_problemDomain,
                 const Box             & a_region,
                 const Point           & a_boxSize);
+        
+        /// Direct Define
+        /**
+            Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 
+            This constructor is used internally and is not recommended for public use.
+        */
+        inline void define(
+                std::shared_ptr<BoxPartition>   a_partition,
+                const Point&                    a_boxSize);
 
         /// Load Balance
         /**
@@ -291,6 +291,7 @@ namespace Proto
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
 
+        inline const BoxPartition& partition() const { return *m_partition; }
         /// Find Index
         /**
           Given a patch Point, return the DataIndex of the associated Box if
@@ -462,7 +463,6 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        //LevelIndex   m_end;     
         shared_ptr<BoxPartition>  m_partition;
 };
 

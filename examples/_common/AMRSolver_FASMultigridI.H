@@ -2,7 +2,7 @@ template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 AMRSolver_FASMultigrid<OpType, T, MEM>::AMRSolver_FASMultigrid(
     AMRGrid& a_grid,
-    std::array<T, DIM>&   a_dx)
+    Array<T, DIM>&   a_dx)
 {
     define(a_grid, a_dx);
 }
@@ -12,7 +12,7 @@ template<template<typename, MemType> class OpType,
 void
 AMRSolver_FASMultigrid<OpType, T, MEM>::define(
     AMRGrid& a_grid,
-    std::array<T, DIM>&   a_dx)
+    Array<T, DIM>&   a_dx)
 {
     m_residual.define(a_grid, Point::Zeros());
     m_amrOp = std::make_shared<AMROP>(a_grid, a_dx);
@@ -51,7 +51,9 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_force, "AMR_FORCE");
 #endif
-    pr_out() << "AMR solve: initial residual = " << res0 << std::endl;
+
+    //Proto::pout() << "AMR solve: initial residual = " << res0 << std::endl;
+
     if (procID() == 0) { 
         std::cout << "AMR solve: initial residual = " << res0 << std::endl;
     }
@@ -65,8 +67,9 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
         h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", ii+1);
         h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", ii+1);
 #endif
-        pr_out() << "\tAMR solve: resnorm = " << res;
-        pr_out() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+        //Proto::pout() << "\tAMR solve: resnorm = " << res;
+        //pout() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+
         if (procID() == 0)
         {
             std::cout << "\tAMR solve: resnorm = " << res;
@@ -135,8 +138,8 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
             a_grid[m_level], Point::Ones(2), numMGLevels, m_op->dx(a_level));
    
         // fine correction stencil 
-        m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
-        
+        m_interpolate = InterpStencil<T>::Constant(refRatio);
+
         // define temporaries
         Point interpGhost = m_op->interpStencil(a_level-1).ghost();
         DisjointBoxLayout crseLayout = a_grid[a_level].coarsen(refRatio);
@@ -212,13 +215,13 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
     a_ResC.increment(a_GC); // GC - LC(PhiC)
 
     auto AVG = Stencil<T>::AvgDown(refRatio);
-    for (auto iter = Phi.begin(); iter.ok(); ++iter)
+    for (auto iter : Phi.layout())
     {
-        auto& phi_i  = Phi[*iter];
-        auto& g_i    = a_G[*iter];
-        auto& temp_i = m_crseLocal[*iter];
+        auto& phi_i  = Phi[iter];
+        auto& g_i    = a_G[iter];
+        auto& temp_i = m_crseLocal[iter];
         
-        auto res_i = m_op->boxOp(m_level)(phi_i, Phi.layout()[*iter], -1.0); // -L(Phi)
+        auto res_i = m_op->boxOp(m_level, iter)(phi_i, Phi.layout()[iter], -1.0); // -L(Phi)
         res_i += g_i;
         temp_i |= AVG(res_i); // m_crseLocal now holds average of residual.
     }

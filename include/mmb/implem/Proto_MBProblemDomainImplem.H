@@ -3,10 +3,12 @@ MBProblemDomain::MBProblemDomain()
 {
     m_domains.clear();
     m_domainsDefined.clear();
+    m_closed = false;
 }
 
 MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
 {
+    m_closed = false;
     m_domains.clear();
     m_domains.resize(a_numBlocks);
     m_graph = std::make_shared<MBGraph>(a_numBlocks);
@@ -16,12 +18,13 @@ MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
 
 void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
 {
-    std::array<bool, DIM> periodicity;
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineDomain | Error: ProblemDomain is closed.");
+    Array<bool, DIM> periodicity;
     periodicity.fill(false);
     Box domainBox(a_domainSize);
     m_domains[a_blockID].define(domainBox, periodicity);
     m_domainsDefined[a_blockID] = true;
-    validate();
 }
 
 void MBProblemDomain::defineBoundary(
@@ -31,8 +34,9 @@ void MBProblemDomain::defineBoundary(
         Side::LoHiSide      a_side,
         CoordPermutation&   a_rotation)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineBoundary | Error: ProblemDomain is closed.");
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_side, a_rotation);
-    validate();
 }
 
 void MBProblemDomain::defineBoundary(
@@ -41,8 +45,9 @@ void MBProblemDomain::defineBoundary(
         Point               a_dir,
         CoordPermutation&   a_rotation)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineBoundary | Error: ProblemDomain is closed.");
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
-    validate();
 }
 
 const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
@@ -53,6 +58,16 @@ const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
 Point MBProblemDomain::blockSize(unsigned int a_blockID) const
 {
     return blockDomain(a_blockID).box().sizes();
+}
+
+double MBProblemDomain::dv(unsigned int a_blockID) const
+{
+    double ret = 1.0;
+    Point sizes = blockSize(a_blockID);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        ret /= ((double)sizes[dir]);
+    }
 }
 
 std::vector<MBGraphArc> MBProblemDomain::boundaries(
@@ -72,13 +87,13 @@ Point MBProblemDomain::convert(
     PROTO_ASSERT(a_dstBlock < size(),
             "MBProblemDomain::convert | Error: dstBlock is out of bounds.");
     Point n01 = m_graph->connectivity(a_srcBlock, a_dstBlock);
-    PROTO_ASSERT(codim(n01) == 1,
+    PROTO_ASSERT(n01.codim() <= 2,
             "MBProblemDomain::convert | Error: src and dst blocks are do not \
 share a codimension 1 boundary.");
     
     Box srcBox = m_domains[a_srcBlock].box();
     Box dstBox = m_domains[a_dstBlock].box();
-    auto R01 = m_graph->rotation(a_srcBlock, n01);
+    auto R01 = m_graph->rotation(a_srcBlock, n01, a_dstBlock);
     
     Point d01, d10, v01, v10, s10;
     
@@ -117,13 +132,33 @@ share a codimension 1 boundary.");
 Box MBProblemDomain::convert(
         Box a_box,
         unsigned int a_srcBlock,
-        unsigned int a_dstBlock) const
+        unsigned int a_dstBlock,
+        Centering a_ctr) const
 {
-    Point L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-    Point H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
-    Box B(L, L);
-    B = B & H;
-    return Box(B.low(), B.high()-Point::Ones());
+    Point L, H;
+    switch (a_ctr)
+    {
+        case PR_CELL:
+        {
+            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
+            Box B(L, L);
+            B = B & H;
+            return Box(B.low(), B.high()-Point::Ones());
+        }
+        case PR_NODE:
+        {
+            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convert(a_box.high(), a_srcBlock, a_dstBlock);
+            Box B(L, L);
+            B = B & H;
+            return B;
+        }
+        default:
+        {
+            MayDay<void>::Abort("Method Not Implemented");
+        }
+    }
 }
 
 MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
@@ -140,8 +175,10 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::coarsen(std::vector<Point> a_refRatios) const
+MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
     MBProblemDomain coarsened(size());
     for (int ii = 0; ii < size(); ii++)
     {
@@ -160,6 +197,20 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
     for (int ii = 0; ii < size(); ii++)
     {
         refined.m_domains[ii] = m_domains[ii].refine(a_refRatio);
+        refined.m_domainsDefined[ii] = true;
+    }
+    refined.m_graph = m_graph;
+    return refined;
+}
+
+MBProblemDomain MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
+{
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::refine | Error: Wrong number of refinement ratios");
+    MBProblemDomain refined(size());
+    for (int ii = 0; ii < size(); ii++)
+    {
+        refined.m_domains[ii] = m_domains[ii].refine(a_refRatios[ii]);
         refined.m_domainsDefined[ii] = true;
     }
     refined.m_graph = m_graph;
@@ -200,7 +251,61 @@ bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
     return equal;
 }
 
-void MBProblemDomain::validate() const
+void MBProblemDomain::close()
 {
-    // TODO: validate conformity of blocks
+    if (m_closed) { return; }
+    m_graph->close();
+    PROTO_ASSERT(defined(),
+        "MBProblemDomain::close | Error: Some blocks have undefined domains.");
+    for (unsigned int bi = 0; bi < size(); bi++)
+    {
+        Box box_i = blockDomain(bi).box();
+        for (auto dir_ij : Box::Kernel(1))
+        {
+            if (dir_ij == Point::Zeros()) { continue; }
+            if (dir_ij.codim() > 2) {continue; } //TODO: make this work for higher codim
+            for (auto bound : boundaries(bi, dir_ij))
+            {
+                unsigned int bj = bound.dstBlock;
+                auto dir_ji = bound.dstToSrc;
+                Box box_j = blockDomain(bj).box();
+
+                Box box_ij = box_i.edge(dir_ij,1);
+                Box box_ji = box_j.edge(dir_ji,1);
+                PROTO_ASSERT(bound.R(box_ij.sizes()).abs() == box_ji.sizes().abs(),
+                    "MBProblemDomain::close | Error: Non-conformal boundary between blocks %u and %u.",
+                    bi, bj);
+            }
+        }
+    }
+    m_closed = true;
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(int a_boxSize) const
+{
+    return patches(Point::Ones(a_boxSize));
+}
+std::vector<MBPatchID_t> MBProblemDomain::patches(Point a_boxSize) const
+{
+    std::vector<Point> boxSizes(numBlocks(), a_boxSize);
+    return patches(boxSizes);
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+{
+    PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
+            "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
+    std::vector<MBPatchID_t> patchVect;
+
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        PROTO_ASSERT(coarsenable(bi, a_boxSizes[bi]),
+                "MBProblemDomain::patches | Error: Domain is not coarsenable by box size");
+        Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
+        for (auto pi : patchDomain)
+        {
+            patchVect.push_back(MBPatchID_t(pi, bi));
+        }
+    }
+    return patchVect;
 }

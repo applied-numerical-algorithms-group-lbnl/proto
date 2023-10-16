@@ -1,8 +1,15 @@
+
 BoxPartition::BoxPartition(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches)
 {
     define(a_patchDomain, a_patches, 0, numProc());
+}
+
+BoxPartition::BoxPartition(const ProblemDomain& a_patchDomain)
+{
+    std::vector<Point> patches;
+    define(a_patchDomain, patches, 0, numProc());
 }
 
 BoxPartition::BoxPartition(
@@ -100,8 +107,6 @@ void BoxPartition::define(
         }
     }
 }
-
-
 
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
@@ -316,10 +321,10 @@ void BoxPartition::print() const
             pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
         }
     }
-    pr_out() << "\tData Partition: " << std::endl;
+    pout() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
     {
-        pr_out() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
+        pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
 }
 

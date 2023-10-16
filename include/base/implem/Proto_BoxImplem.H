@@ -102,7 +102,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 //=======================++ 
 
 ACCEL_DECORATION
-inline ::std::size_t Box::size(unsigned char a_dim) const
+inline std::size_t Box::size(unsigned char a_dim) const
 {
     PROTO_ASSERT((a_dim < DIM),
         "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
@@ -114,7 +114,7 @@ inline ::std::size_t Box::size(unsigned char a_dim) const
 }
 
 ACCEL_DECORATION
-inline ::std::size_t Box::size() const
+inline std::size_t Box::size() const
 {
     if (m_size <= 0)
     {
@@ -262,8 +262,8 @@ Box Box::operator&(const Point& a_pt) const
         Point H = m_high;
         for (int ii = 0; ii < DIM; ii++)
         {
-            L[ii] = ::std::min(a_pt[ii], L[ii]);
-            H[ii] = ::std::max(a_pt[ii], H[ii]);
+            L[ii] = std::min(a_pt[ii], L[ii]);
+            H[ii] = std::max(a_pt[ii], H[ii]);
         }
         return Box(L,H);
     }
@@ -369,6 +369,26 @@ Box Box::grow(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
     Point p = Point::Basis(a_dir, a_side);
     return extrude(p, a_dist);
+}
+
+Box Box::grow(Centering a_ctr) const
+{
+    switch (a_ctr)
+    {
+        case PR_FACE:
+        case PR_EDGE:
+            MayDay<void>::Abort("Box::grow(Centering) | Error: Operation undefined for FACE / EDGE centering.");
+        case PR_CELL:
+            return Box(*this);
+        case PR_NODE:
+            return extrude(Point::Ones(), 1);
+        default:
+        {
+            int c = (int)a_ctr;
+            PROTO_ASSERT(c >= 0 && c < DIM, "Box::grow(Centering) | Error: Invalid Centering");
+            return extrude(Point::Basis(c, 1));
+        }
+    }
 }
 
 Box Box::extrude(const Point& a_dir, int a_dist) const
@@ -557,13 +577,19 @@ Box Box::edge(const Point& a_dir) const
 }
 Box Box::edge(const Point& a_dir, int a_dist) const
 {
+    if (a_dist == 0) {return Box(); }
     Point dir = Point::Zeros();
-    for (int ii = 0; ii < DIM; ii++)
+    if (a_dist > 0)
     {
-        if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
-        else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
+            else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
+        }
+        return edge(dir);
+    } else {
+        return adjacent(a_dir, -a_dist);
     }
-    return edge(dir);
 }
 
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
@@ -572,7 +598,7 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
         "Box::face(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
         a_dir, DIM);
     int s = size(a_dir);
-    int dist = ::std::min(a_dist, s);
+    int dist = std::min(a_dist, s);
     if (a_side == Side::Lo)
     {
         return edge(Point::Basis(a_dir, -1), dist);
@@ -617,6 +643,7 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
     Point L = low();
     Point H = high();
+    if (a_dist == 0) {return Box(); }
     if (a_dist > 0)
     {
         Point dir = Point::Zeros();
@@ -627,6 +654,8 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
         }
         return adjacent(dir);
     } else {
+        return edge(a_dir, -a_dist);
+        /*
         for (int ii = 0; ii < DIM; ii++)
         {
             if (a_dir[ii] > 0)
@@ -639,6 +668,7 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
                 L[ii] = L[ii] - size(ii);
             }
         }
+        */
     }
     return Box(L,H);
 }
@@ -701,7 +731,7 @@ BoxIterator Box::rend() const
 
 void Box::print() const 
 {
-    ::std::cout<<*this<<::std::endl;
+    std::cout<<*this<<std::endl;
 }
 
 size_t Box::linearSize() const

@@ -2,8 +2,10 @@
 #ifndef _PROTO_BOX_
 #define _PROTO_BOX_
 
+#include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_LoHiSide.H"
+#include "Proto_Centering.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cmath>
@@ -190,7 +192,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline ::std::size_t size(unsigned char a_dim) const;
+        inline std::size_t size(unsigned char a_dim) const;
 
         /// Volumetric Size
         /**
@@ -206,7 +208,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline ::std::size_t size() const; 
+        inline std::size_t size() const; 
         
         /// All Sizes
         /**
@@ -528,6 +530,13 @@ namespace Proto
           */ 
         inline Box grow(int a_dir, Side::LoHiSide a_side, int a_dist) const; 
 
+        /// Apply Centering
+        /**
+         *  Create a new Box that is grown in such a way as to accomodate the extra points needed
+         *  by a domain with the specified centering. If a_ctr=PR_CELL this function is a null-op.
+        */
+        inline Box grow(Centering a_ctr) const;
+
         /// Extrude
         /**
           AKA directional grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).
@@ -792,7 +801,6 @@ namespace Proto
           @endcode
         */
         inline Box flatten(const int a_dir, bool a_upper = false) const;
-
         /// Adjacent Cells
         /**
           Returns a box adjacent to *this in a given direction with a thickness
@@ -924,22 +932,21 @@ namespace Proto
 
         inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
 
-    public: //hdf5 stuff is using it in the open.   --- dtg
-      Point m_low; ///< Point object containing the lower bounds of the Box.
-      Point m_high;  ///< Point object containing the upper bounds of the Box.
-      int m_size; ///< "Volume" of the box.
+        Point m_low; ///< Point object containing the lower bounds of the Box.
+        Point m_high;  ///< Point object containing the upper bounds of the Box.
+        int m_size; ///< "Volume" of the box.
 
     }; //end class Box
 
      /// OStream Operator 
-    inline ::std::ostream& operator<<(::std::ostream& a_os, const Box& a_box)
+    inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
         a_os << "[" << a_box.low() << "," << a_box.high() << "]";
         return a_os;
     }
 
      /// OStream Operator 
-  inline ::std::istream& operator>>(::std::istream& a_is, Box& a_box)
+  inline std::istream& operator>>(std::istream& a_is, Box& a_box)
     {
 
       Point low, high;

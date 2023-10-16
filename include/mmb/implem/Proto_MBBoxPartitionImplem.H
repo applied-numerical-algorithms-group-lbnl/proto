@@ -1,4 +1,12 @@
 MBBoxPartition::MBBoxPartition(
+        const MBProblemDomain& a_patchDomain)
+{
+    std::vector<MBPatchID_t> patches;
+    // creates the BoxPartition with no patches in it
+    define(a_patchDomain, patches);
+}
+
+MBBoxPartition::MBBoxPartition(
         const MBProblemDomain& a_patchDomain,
         const std::vector<MBPatchID_t>& a_patches)
 {
@@ -10,18 +18,29 @@ void MBBoxPartition::define(
         const std::vector<MBPatchID_t>& a_patches)
 {
     m_patchDomain = a_patchDomain;
+    if (m_blockPartitions.size() != a_patchDomain.size())
+    {
+        for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+        {
+            m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+        }
+    }
+    define(a_patches);
+}
+
+void MBBoxPartition::define(
+        const std::vector<MBPatchID_t>& a_patches)
+{
     std::vector<std::vector<Point>> blockPatches;
-    blockPatches.resize(a_patchDomain.numBlocks());
+    blockPatches.resize(m_patchDomain.numBlocks());
     for (auto pi : a_patches)
     {
         blockPatches[pi.second].push_back(pi.first);
     }
     
-    m_blockPartitions.clear();
-    for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+    for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
     {
-        auto partition = std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi), blockPatches[bi]);
-        m_blockPartitions.push_back(partition);
+        m_blockPartitions[bi]->define(m_patchDomain.blockDomain(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
 }
@@ -155,7 +174,7 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int
     return m_blockPartitions[a_block];
 }
 
-uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block)
+uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 {
     auto blockDomain = m_patchDomain.blockDomain(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),
@@ -171,31 +190,32 @@ uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block)
 
 void MBBoxPartition::print()
 {
-    pr_out() << "MBBoxPartition" << std::endl;
+    using Proto::pout;
+    pout() << "MBBoxPartition" << std::endl;
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        pr_out() << "Block " << bi << std::endl;
+        pout() << "Block " << bi << std::endl;
         m_blockPartitions[bi]->print();
     }
-    pr_out() << "Global Partition Data" << std::endl;
-    pr_out() << "\tNum Boxes:  " << numBoxes() << std::endl;
-    pr_out() << "\tNum Blocks: " << numBlocks() << std::endl; 
-    pr_out() << "\tNum Procs:  " << numProcs() << std::endl;
-    pr_out() << "\tData By Processor: " << std::endl;
+    pout() << "Global Partition Data" << std::endl;
+    pout() << "\tNum Boxes:  " << numBoxes() << std::endl;
+    pout() << "\tNum Blocks: " << numBlocks() << std::endl; 
+    pout() << "\tNum Procs:  " << numProcs() << std::endl;
+    pout() << "\tData By Processor: " << std::endl;
     for (auto procData : m_procMap)
     {
         unsigned int proc = procData.first;
-        pr_out() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
-        pr_out() << " | Start Index: " << procStartIndex(proc);
-        pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
+        pout() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
+        pout() << " | Start Index: " << procStartIndex(proc);
+        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
     }
-    pr_out() << "\tData Partition: " << std::endl;
+    pout() << "\tData Partition: " << std::endl;
     for (auto patchData : m_partition)
     {
         auto patchID = patchData.first;
         auto proc = patchData.second;
-        pr_out() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
-        pr_out() << " | Proc: " << proc << std::endl;
+        pout() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
+        pout() << " | Proc: " << proc << std::endl;
     }
 }
 

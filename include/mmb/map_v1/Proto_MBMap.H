@@ -4,6 +4,7 @@
 
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
+#include "Proto_Operator.H"
 
 namespace Proto
 {
@@ -19,50 +20,73 @@ namespace Proto
 #if DIM==3
 #define PROTO_MAP_END(name) \
     } \
-    struct struct_proto_map_##name { \
+    struct name##_t { \
     template<MemType MEM = MEMTYPE_DEFAULT> \
     inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+    void operator() (Point& a_pt, Var<double, DIM, MEM>& a_x, \
             unsigned int a_block, \
-            Point a_blockSize) const \
+            Point a_blockSize, \
+            Centering a_centering) const \
     { \
-        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
-        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
-        double Z = (a_pt[2]*1.0)/(a_blockSize[2]*1.0); \
-        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+        Array<double, DIM> dX; \
+        for (int dir = 0; dir < DIM; dir++) { dX[dir] = 1.0/a_blockSize[dir]; } \
+        Array<double, DIM> X0;\
+        for (int dir = 0; dir < DIM; dir++) \
+        { \
+            if (a_centering == PR_NODE) \
+            {\
+                X0[dir] = a_pt[dir]*dX[dir]; \
+            } else if (a_centering == PR_CELL) \
+            {\
+                X0[dir] = a_pt[dir]*dX[dir] + 0.5*dX[dir]; \
+            } else {\
+            }\
+        } \
+        proto_map_##name (a_x(0),a_x(1),a_x(2),X0[0],X0[1],X0[2],a_block); \
     } \
     const char* myname = #name; \
-    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
-        Array<double, 3> x; \
+    inline Array<double, DIM> map(const Array<double, DIM>& X, unsigned int block) const { \
+        Array<double, DIM> x; \
         proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
         return x; \
     } \
     }; \
-static struct_proto_map_##name name;
+static name##_t name;
 
 #elif DIM==2
 #define PROTO_MAP_END(name) \
     } \
-    struct struct_proto_map_##name { \
+    struct name##_t { \
     template<MemType MEM = MEMTYPE_DEFAULT> \
     inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+    void operator() (Point& a_pt, Var<double, DIM, MEM>& a_x, \
             unsigned int a_block, \
-            Point a_blockSize) const \
+            Point a_blockSize, \
+            Centering a_centering) const \
     { \
-        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
-        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
-        double Z = 0.0; \
-        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+        Array<double, DIM> dX = a_blockSize; \
+        for (int dir = 0; dir < DIM; dir++) { dX[dir] = 1.0/dX[dir]; } \
+        Array<double, DIM> X0; \
+        for (int dir = 0; dir < DIM; dir++) \
+        { \
+            X0[dir] = a_pt[dir]*dX[dir]; \
+            if (!((int)a_centering == dir || a_centering == PR_NODE)) \
+            { \
+                X0[dir] = X0[dir] + 0.5*dX[dir]; \
+            } \
+        } \
+        double Z = 0; \
+        proto_map_##name (a_x(0),a_x(1),Z,X0[0],X0[1],Z,a_block); \
     } \
     const char* myname = #name; \
-    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
-        Array<double, 3> x; \
-        proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
+    inline Array<double, DIM> map(const Array<double, DIM>& X, unsigned int block) const { \
+        Array<double, DIM> x; \
+        double Z = 0; \
+        proto_map_##name (x[0], x[1], Z, X[0], X[1], Z, block); \
         return x; \
     } \
     }; \
-static struct_proto_map_##name name;
+static name##_t name;
 #endif
 template<typename Func, MemType MEM = MEMTYPE_DEFAULT>
 class MBMap
@@ -80,52 +104,68 @@ class MBMap
             const Func& a_func,
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
+            Point                a_boundGhost,
             unsigned int a_order = 4);
 
     inline void define(
             const Func& a_func,
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
+            Point                a_boundGhost,
             unsigned int a_order = 4);
 
-    /// Map Access
-    inline MBLevelBoxData<double, 3, MEM, PR_NODE>& map();
+    /// Node Centered Map
+    inline MBLevelBoxData<double, DIM, MEM, PR_NODE>& map();
+    inline const MBLevelBoxData<double, DIM, MEM, PR_NODE>& map() const;
+    
+    /// Jacobian Access
+    inline MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian();
+    inline const MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian() const;
 
     /// Compute Mapped Point From Array
-    inline Array<double, 3> operator()(
-            const Array<double, 3> a_X,
+    inline Array<double, DIM> operator()(
+            const Array<double, DIM> a_X,
             unsigned int a_block) const;
     
     /// Compute Mapped Point From MBDataPoint
-    inline Array<double, 3> operator()(
+    inline Array<double, DIM> operator()(
             const MBDataPoint& a_pt,
             Point a_bound = Point::Zeros()) const;
     
     /// Compute Mapped Point From Point
-    inline Array<double, 3> operator()(
+    inline Array<double, DIM> operator()(
             const Point& a_cell,
             const Point& a_bound,
             unsigned int a_block) const;
 
     /// Compute Mapped Region
-    inline BoxData<double, 3> operator()(
+    inline BoxData<double, DIM> operator()(
             const Box& a_domain,
-            unsigned int a_block,
-            unsigned int a_refBlock) const;
+            unsigned int a_computeBlock,
+            unsigned int a_domainBlock,
+            Centering a_ctr = PR_NODE) const;
     
     /// Compute Mapped Region (No Reference Block)
-    inline BoxData<double, 3> operator()(
+    inline BoxData<double, DIM> operator()(
             const Box& a_domain,
-            unsigned int a_block) const;
+            unsigned int a_block,
+            Centering a_ctr = PR_NODE) const;
     
     // Find Cell
     inline bool contains(
-            const MBIndex& a_patch, const Point& a_cell, const Array<double, 3>& a_X) const;
+            const MBIndex& a_patch, const Point& a_cell, const Array<double, DIM>& a_X) const;
+    
+    // Grid Spacing
+    inline Array<double, DIM> dx(const MBIndex& a_patch) const;
+    inline Array<double, DIM> dx(unsigned int a_block) const;
     private:
 
         unsigned int m_order;
         const Func* m_func;
-        MBLevelBoxData<double, 3, MEM, PR_NODE>   m_X;
+        MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
+        MBLevelBoxData<double, 1, MEM, PR_CELL>   m_J;
+
+        
 };
 
 // TODO: This doesn't quite work without a copy function / move constructor
@@ -170,10 +210,10 @@ MBMap<Func, MEM>&& buildMap(
             \param a_order   Order of accuracy for differentiation (default: 4)
         */
         inline MBMap(MBDisjointBoxLayout& a_layout,
-                std::array<Point, DIM+1>& a_ghost,
+                Array<Point, DIM+1>& a_ghost,
                 unsigned int a_order = 4);
         inline void define(MBDisjointBoxLayout& a_layout,
-                std::array<Point, DIM+1>& a_ghost,
+                Array<Point, DIM+1>& a_ghost,
                 unsigned int a_order = 4);
         
         /// Compute Metric Terms
@@ -208,16 +248,15 @@ MBMap<Func, MEM>&& buildMap(
         
         // Find Cell
         inline bool contains(
-                const MBIndex& a_patch, const Point& a_cell, const std::array<T, 3>& a_X) const;
-        //inline std::vector<MBIndex> find(const std::array<T, 3>& a_X) const;
-        //inline MBIndex find(const std::array<T, 3>& a_X, unsigned int a_blockIndex) const;
+                const MBIndex& a_patch, const Point& a_cell, const Array<T, 3>& a_X) const;
+        //inline std::vector<MBIndex> find(const Array<T, 3>& a_X) const;
+        //inline MBIndex find(const Array<T, 3>& a_X, unsigned int a_blockIndex) const;
         private:
         
         unsigned int m_order;
 
         MBLevelBoxData<T, 3, MEM, PR_NODE>   m_X;
         MBLevelBoxData<T, 1, MEM, PR_CELL>   m_J;
-
 
         bool m_defined;  ///< Has data been allocated
         bool m_computed; ///< Has data been computed

@@ -123,6 +123,62 @@ TEST(LevelBoxData, SetVal) {
     }
 }
 
+TEST(LevelBoxData, Iota) {
+    int domainSize = 32;
+    Point boxSize = Point::Ones(16);
+    DisjointBoxLayout layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, DIM, HOST, PR_CELL>   hostCellData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST, PR_FACE_0> hostFaceData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST, PR_NODE>   hostNodeData(layout, Point::Ones());
+    Array<double, DIM> dx;
+    Array<double, DIM> offset;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        dx[dir] = (dir+1.0)/domainSize;
+        offset[dir] = (double)dir;
+    }
+    hostCellData.iota(dx, offset);
+    hostFaceData.iota(dx, offset);
+    hostNodeData.iota(dx, offset);
+    for (auto iter : layout)
+    {
+        auto& xc = hostCellData[iter];
+        double err = 0;
+        for (auto pi : xc.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + 0.5*dx[dir] + offset[dir];
+                err = max(err, abs(xc(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+        auto& xf = hostFaceData[iter];
+        err = 0;
+        for (auto pi : xf.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + 0.5*dx[dir] + offset[dir];
+                if (dir == 0) {x -= 0.5*dx[dir];}
+                err = max(err, abs(xf(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+        auto& xn = hostNodeData[iter];
+        err = 0;
+        for (auto pi : xn.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + offset[dir];
+                err = max(err, abs(xn(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+}
+
 TEST(LevelBoxData, Initialize) {
     int domainSize = 32;
     double dx = 1.0/domainSize;
@@ -153,6 +209,79 @@ TEST(LevelBoxData, Initialize) {
     }
 }
 
+TEST(LevelBoxData, InitializeVariadic) {
+    int domainSize = 16;
+    double dx = 1.0/domainSize;
+    double dx2 = 2*dx;
+    Point offset = Point::Zeros();
+    Point k(1,2,3,4,5,6);
+    Point k2(2,4,6,8,10,12);
+    Point boxSize = Point::Ones(8);
+    DisjointBoxLayout layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 1, HOST>   hostData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST> hostX(layout, Point::Ones());
+    hostX.initialize(f_iotaCenter, dx2);
+    unsigned int dummyBlock = 0;
+    hostData.initialize(f_phiM, dummyBlock, hostX, k, offset);
+#ifdef PROTO_ACCEL
+    LevelBoxData<double, 1, DEVICE>     deviData(layout, Point::Ones());
+    LevelBoxData<double, DIM, DEVICE>   deviX(layout, Point::Ones());
+    deviX.initialize(f_iotaCenter, dx2);
+    deviData.initialize(f_phiM, dummyBlock, deviX, k, offset);
+#endif
+    for (auto iter : layout)
+    {
+        auto& hostData_i = hostData[iter];
+        int N = hostData_i.size();
+        Box B = hostData_i.box();
+        BoxData<double, 1, HOST> soln_i(B);
+        forallInPlace_p(f_phi, soln_i, dx, k2, offset);
+        EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
+#ifdef PROTO_ACCEL
+        BoxData<double, 1, HOST> tmpData_i(B);
+        auto& deviData_i = deviData[iter];
+        deviData_i.copyTo(tmpData_i);
+        EXPECT_TRUE(compareBoxData(soln_i, tmpData_i));
+#endif
+    }
+}
+/*
+TEST(LevelBoxData, FaceCentering) {
+    int domainSize = 32;
+    double dx = 1.0/domainSize;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    Point ghost = Point::Zeros();
+    LevelBoxData<double, 1, HOST, PR_FACE> src(layout, ghost);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        src.setVal(dir+1.0, 0, dir);
+    }
+    for (auto iter : layout)
+    {
+        auto fluxes = src.fluxes(iter);
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Box b0 = fluxes[dir].box();
+            Box b1 = layout[iter].grow((Centering)dir).grow(ghost);
+#if PR_VERBOSE > 0
+            std::cout << b0 << " ==? " << b1 << std::endl;
+#endif
+            EXPECT_EQ(fluxes[dir].box(), layout[iter].grow((Centering)dir));
+        }
+    }
+
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        auto absMax = src.absMax(0,dir);
+#if PR_VERBOSE > 0
+        std::cout << "absMax of flux " << dir << ": " << absMax << std::endl;
+#endif
+        EXPECT_EQ(absMax, dir+1);
+    }
+
+}
+*/
 TEST(LevelBoxData, LinearSize)
 {
     int domainSize = 32;
@@ -333,7 +462,6 @@ TEST(LevelBoxData, ExchangeDevice)
     EXPECT_TRUE(testExchange(hostData));
 }
 #endif
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

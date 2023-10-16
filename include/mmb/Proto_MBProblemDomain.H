@@ -7,6 +7,7 @@
 
 namespace Proto
 {
+    typedef std::pair<Point, unsigned int> MBPatchID_t;
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -16,7 +17,7 @@ namespace Proto
     class MBProblemDomain
     {
         public:
-        
+       
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
@@ -46,13 +47,18 @@ namespace Proto
         inline unsigned int numBlocks() const { return size(); }
         
         // Get Graph Reference
-        inline const MBGraph& graph() const { return *m_graph; }
+        inline MBGraph& graph() const { return *m_graph; }
         
         // Get Local Problem Domain
         inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
         
         // Get Size of Block
         inline Point blockSize(unsigned int a_blockID) const;
+        
+        // Get Differential Volume
+        inline double dv(unsigned int a_blockID) const;
+
+
         inline std::vector<MBGraphArc> boundaries(
                 unsigned int a_srcBlock,
                 Point        a_dir) const;
@@ -67,20 +73,26 @@ namespace Proto
         inline Box convert(
                 Box a_box,
                 unsigned int a_srcBlock,
-                unsigned int a_dstBlock) const;
+                unsigned int a_dstBlock,
+                Centering a_ctr = PR_CELL) const;
 
         inline MBProblemDomain coarsen(Point a_refRatio) const;
-        inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;
+        inline MBProblemDomain coarsen(const std::vector<Point>& a_refRatios) const;
         inline MBProblemDomain refine(Point a_refRatio) const;
+        inline MBProblemDomain refine(const std::vector<Point>& a_refRatios) const;
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
         inline bool defined();
         inline bool operator==(const MBProblemDomain& a_rhs) const;
-        inline void validate() const;
+        inline void close();
+        
+        inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
+        inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
+        inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
         private:
 
-        mutable bool m_valid;
+        mutable bool m_closed;
 
         std::vector<ProblemDomain>  m_domains;
         std::shared_ptr<MBGraph> m_graph;

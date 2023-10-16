@@ -98,7 +98,7 @@ namespace Proto {
             inline static Shift Ones(int a_scale=1){return Shift(Point::Ones(a_scale));};
 
             /// Get Shift Point
-            inline Point& shift(){ return m_shift; }
+            inline Point& point(){ return m_shift; }
 
             /// Scalar Multiplication
             /**
@@ -177,8 +177,8 @@ namespace Proto {
 
         inline void apply(BoxData<T,C,MEMTYPE,D,E>& a_dest, bool a_overwrite);
 
-        inline unsigned long long int size(){return m_stencil.size();}
-
+        inline unsigned long long int size() const {return m_stencil.size();}
+        inline Box inferredRange() const;
         Box m_range;
 
         std::vector<const Stencil<T>*> m_stencil;
@@ -685,27 +685,17 @@ namespace Proto {
           // Footprint: 
           //    | x | x | o | x |
           //            ^
-          auto S4H = CellToFaceL(0, Side::Hi, 4);
-          // Footprint: 
-          //    | x | o | x | x |
-          //            ^
           auto S5L = CellToFaceL(0, Side::Lo, 5);
           // Footprint: 
           //    | x | x | x | o | x |
           //                ^
-          auto S5H = CellToFaceL(0, Side::Hi, 5);
-          // Footprint: 
-          //    | x | x | o | x | x |
-          //                ^
           @endcode
 
           \param dir      Coordinate direction in [0, DIM)
-          \param side     Upper or lower side (Side::Hi or Side::Lo) (default: Side::Lo)
           \param order    (Optional) Order of accuracy. ( default: 4 | supported: 4, 5 )
         */
         static Stencil<T> CellToFaceL(
                 int             a_dir,
-                Side::LoHiSide  a_side = Side::Lo,
                 int             a_order = 4);
 
         /// Stencil Library: Upwind Cell to Face Interpolation
@@ -723,27 +713,17 @@ namespace Proto {
           // Footprint: 
           //    | x | x | o | x |
           //            ^
-          auto S4H = CellToFaceH(0, Side::Hi, 4);
-          // Footprint: 
-          //    | x | o | x | x |
-          //            ^
           auto S5L = CellToFaceH(0, Side::Lo, 5);
           // Footprint: 
           //    | x | x | o | x | x |
           //            ^     
-          auto S5H = CellToFaceH(0, Side::Hi, 5);
-          // Footprint: 
-          //    | x | o | x | x | x |
-          //            ^    
           @endcode
 
           \param dir      Coordinate direction in [0, DIM)
-          \param side     Upper or lower side (Side::Hi or Side::Lo ) (default: Side::Lo)
           \param order    (Optional) Order of accuracy. ( default: 4 | supported: 4, 5 )
         */
         static Stencil<T> CellToFaceH(
                 int             a_dir,
-                Side::LoHiSide  a_side = Side::Lo,
                 int             a_order = 4);
 
         /// Stencil Library: Simple Average
@@ -813,11 +793,11 @@ namespace Proto {
         */
       static Stencil<T> FluxDivergence(int a_dir);
       /// Interpolate from face average to cell average.
-      static Stencil<T> faceToCell(int a_dir,int a_order);
+      static Stencil<T> faceToCell(int a_dir,int a_order = 4);
       /// Interpolate from corners to face average.
-      static Stencil<T> cornersToFaces(int a_dir,int a_order);
+      static Stencil<T> cornersToFaces(int a_dir,int a_order = 4);
       /// Interpolate from corners to cell average.
-      static Stencil<T> cornersToCells(int a_order);
+      static Stencil<T> CornersToCells(int a_order = 4);
         ///@}
 
         // End of Stencil Operations Doxygen Module

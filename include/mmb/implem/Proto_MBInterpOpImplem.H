@@ -1,131 +1,134 @@
-/*
-int choose(int n, int k)
-{
-    if (k == 0){return 1;}
-    return (n * choose(n-1,k-1)/k);
-}
-*/
 
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
-void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point a_p)
+void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, DIM, MEM>& a_x, Point a_p)
 {
     a_xp(0) = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        a_xp(0) *= pow(a_x(dir), a_p[dir]);
+        if (a_p[dir] != 0)
+        {
+            a_xp(0) *= pow(a_x(dir), a_p[dir]);
+        }
     }
 }
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
 
-template<typename Func>
+template<template<MemType> typename MAP, MemType MEM>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
-        MBMap<Func>& a_map,
+        Point a_ghost,
+        MBLevelMap<MAP, MEM>& a_map,
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
+    PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
+    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
     
     // References
     auto& layout = a_map.map().layout();
-    unsigned int dstBlock = layout.block(a_dst.index);
-
-    // Compute exponents
-    std::vector<Point> exponents;
-    for (auto bi : Box::Cube(a_order))
+    unsigned int dstBlock = a_dst.dstBlock();
+    
+    // Compute Exponents
+    Box spanBox;
+    for (auto si : m_srcs)
     {
-        if (bi.sum() < a_order - 1)
+        spanBox &= si.point;
+    }
+    Point expBoxSize = Point::Ones(a_order);
+    // Cull exponents if the footprint is "flat" in a given direction
+    // This allows for sub-DIM dimensional operators
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
+    }
+    m_exponents.clear();
+    for (auto bi : Box(expBoxSize))
+    {
+        if (bi.sum() < a_order)
         {
-            exponents.push_back(bi);
+            m_exponents.push_back(bi);
         }
     }
-    int N = exponents.size();
+    int N = m_exponents.size();
     int M = m_srcs.size();
 
-    // ** Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
-    // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
-    // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
-    // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]
+    // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
+    // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
+    // Mp = <(x-xg)^p/Rg>_g   |  p = nomial
+    // Sj = sum_p(Mp*Cinv_pj) = m_coefs[j]
     
     // Compute Rg
+    // This is the approximate radius in physical space of the operator
+    // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
-    auto xg = a_map(a_dst);
+    auto xg = a_map.cellCentered(a_dst);
     for (int ii = 0; ii < M; ii++)
     {
-        auto xj = a_map(m_srcs[ii]);
+        auto xj = a_map.cellCentered(m_srcs[ii]);
         auto dist = xj - xg;
         Rg += dist.norm();
     }
     Rg /= M;
-    
-    // Compute Matrices
-    Matrix<double> C(M,N);
-    std::array<BoxData<double, DIM>, DIM> NT;
-    BoxData<double> J;
-    for (int ii = 0; ii < M; ii++)
+    // Cache Moment Data
+    // We cache < J * ((x-xg)/Rg)^p > for each exponent p
+    auto C2C = Stencil<double>::CornersToCells(a_order);
+    std::unordered_map<int, Box> srcBoxes;
+    std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
+    Box B0(a_dst.point, a_dst.point);
+    srcBoxes[a_dst.dstBlock()] = B0;
+    for (auto si : m_srcs)
     {
-        // Get data at (and near) the source point
-        auto& src = m_srcs[ii];
-        unsigned int srcBlock = layout.block(src.index);
-        // 3 ghost cells are needed in all directions to compute J
-        // 4 ghost cells are needed to compute the quadrature with J
-        Box srcBox = Box::Kernel(4).shift(src.point);
-        auto xi = a_map(srcBox, srcBlock);
-        
-        // compute metric terms
-        for (int d = 0; d < DIM; d++)
+        int bi = si.srcBlock();
+        if (srcBoxes.find(bi) == srcBoxes.end())
         {
-            NT[d] = Operator::cofactor(xi, d);
+            srcBoxes[bi] = Box(si.point, si.point); 
+        } else {
+            srcBoxes[bi] &= si.point;
         }
-        J = Operator::jacobian(xi, NT);
-        // subtract xg
-        xi -= xg;
-        // divide by Rg
-        xi /= Rg;
-
+    }
+    for (auto& [block, box] : srcBoxes)
+    {
+        BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
+        BoxData<double, 1, MEM> Ji(box.grow(1));
+        a_map.doApply(Xi, Ji, block, dstBlock); 
+        Xi -= xg;
+        Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
-            // compute binomial power
-            BoxData<double> xi_p(xi.box());
-            forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
-        
-            BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
-            auto Jx = Operator::cellProduct(J, xi_p_avg);
-            C(ii,jj) = Jx(src.point);
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            BoxData<double> Xi_p_avg = C2C(Xi_p);
+            Ji.setVal(1.0);
+            srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
         }
     }
-    Matrix<double> D(1,N);
-
+   
+    // Compute Matrices
+    m_C.define(M,N);
+    for (int ii = 0; ii < M; ii++)
+    {
+        auto& src = m_srcs[ii];
+        auto srcBlock = src.srcBlock();
+        for (int jj = 0; jj < N; jj++)
+        {
+            m_C(ii,jj) = srcData[srcBlock][jj](src.point);
+        }
+    }
+    m_D.define(1,N);
     for (int jj = 0; jj < N; jj++)
     {
-        unsigned int dstBlock = layout.block(a_dst.index);
-        Box dstBox = Box::Kernel(4).shift(a_dst.point);
-        auto xi = a_map(dstBox, dstBlock);
-        // compute metric terms
-        for (int d = 0; d < DIM; d++)
-        {
-            NT[d] = Operator::cofactor(xi, d);
-        }
-        J = Operator::jacobian(xi, NT);
-        xi -= xg;
-        xi /= Rg;
-        BoxData<double> xi_p(xi.box());
-        forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
-        BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
-        auto Jx = Operator::cellProduct(J, xi_p_avg);
-        D(0,jj) = Jx(a_dst.point);
+        m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
     }
-
+    
     // Compute "Stencil"
-    auto Cinv = C.inverse();
-    auto S = D*Cinv;
+    m_Cinv = m_C.inverse();
+    m_S = m_D*m_Cinv;
     m_coefs.clear();
     m_coefs.resize(M);
     for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = S(0,ii);
+        m_coefs[ii] = m_S(0,ii);
     }
 }
 
@@ -134,6 +137,7 @@ void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
+    PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
     for (int ii = 0; ii < size(); ii++)
     {
@@ -146,41 +150,92 @@ void MBPointInterpOp::apply(
     }
 }
 
+template<typename T, unsigned int C, MemType MEM>
+Matrix<double> MBPointInterpOp::coefs(
+        MBLevelBoxData<T, C, MEM>& a_src,
+        int a_srcComponent)
+{
+    PROTO_ASSERT(a_srcComponent < C, "Component index %i is out of bounds.", a_srcComponent);
+    int M = m_Cinv.M();
+    int N = m_Cinv.N();
+    PROTO_ASSERT(N == m_srcs.size(),"");
+    Matrix<double> Y0(N,1);
+    for (int ii = 0; ii < N; ii++)
+    {
+        Y0(ii,0) = a_src[m_srcs[ii]](a_srcComponent);
+    }
+    return m_Cinv*Y0;
+}
+
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
 }
 
-template<typename Func>
-MBInterpOp::MBInterpOp(
-        MBMap<Func>& a_map,
-        const std::vector<Point>& a_footprint,
-        Point a_maxGhostSize,
-        unsigned int a_order)
+MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 {
+    PR_TIME("MBInterpOp::constructor");
+    m_order = a_order;
+    m_ghost = a_ghost;
     m_ops.clear();
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+        MBLevelMap<MAP,MEM>&            a_map,
+        const std::vector<Point>&   a_footprint,
+        int                         a_block)
+{
     const auto& layout = a_map.map().layout();
-    const auto& domain = layout.domain();
-    const auto& graph = layout.domain().graph();
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
-        Box domainBox = layout.domain().blockDomain(block).box(); 
+        if ((a_block >= 0) && (block != a_block)) {continue; }
+        Box blockDomainBox = layout.domain().blockDomain(block).box(); 
+        Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
-           if (dir == Point::Zeros()) {continue;}
-           if (graph.boundaries(block, dir).size() > 0)
-           {
-               Box patchBox = layout[iter];
-               Box ghostBox = patchBox.adjacent(dir*a_maxGhostSize);
-               for (auto gi : ghostBox)
-               {
-                std::cout << "Computing operator at point: " << gi << " | block: " << block << std::endl;
-                   MBDataPoint p(iter, gi);
-                   MBPointInterpOp op(p, a_map, a_footprint, a_order);
-                   m_ops.push_back(op);
-               }
-           }
+            if (layout.domain().graph().isTriplePoint(block, dir))
+            {
+                std::set<Point> fset;
+                auto dirs = dir.split();
+                for (auto fi : a_footprint)
+                {
+                    fset.insert(fi);
+                    for (auto di : dirs)
+                    {
+                        fset.insert(fi-di);
+                    }
+                }
+                std::vector<Point> extFootprint(fset.begin(), fset.end());
+                Box boundBox = patchBox.adjacent(m_ghost*dir);
+                if (blockDomainBox.contains(boundBox))
+                {
+                    continue;
+                }
+                for (auto bi : boundBox)
+                {
+                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    m_ops.push_back(
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
+                }
+                continue;
+            }
+            auto bounds = a_map.map().bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                Box boundBox = patchBox.adjacent(m_ghost*dir);
+                if (blockDomainBox.contains(boundBox))
+                {
+                    continue;
+                }
+                for (auto bi : boundBox)
+                {
+                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    m_ops.push_back(
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, 4));
+                }
+            }
         }
     }
 }
@@ -190,14 +245,57 @@ void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
-    for (auto op : m_ops)
+    PR_TIME("MBInterpOp::apply");
+    for (auto& op : m_ops)
     {
         auto block = a_dst.layout().block(op.target().index);
-        std::cout << "Computing target | block: " << block << " | point: " << op.target().point << std::endl;
-        // check that dst has the data destination point
         op.apply(a_dst, a_src);
     }
 }
+
+template<typename T, unsigned int C, unsigned int P, MemType MEM>
+void MBInterpOp::coefs(
+        MBLevelBoxData<T, P, MEM>& a_coefs,
+        MBLevelBoxData<T, C, MEM>& a_src,
+        int a_srcComponent)
+{
+    for (auto& op : m_ops)
+    {
+        auto poly = op.coefs(a_src, a_srcComponent);
+        for (int pi = 0; pi < P; pi++)
+        {
+            a_coefs[op.target()](pi) = poly(pi,0);
+        }
+    }
+}
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order)
+{
+    MBLevelMap<MAP, MEM> map(a_data.layout(), a_data.ghost());
+    interpBoundaries<MAP, T, C, MEM, CTR>(a_data, map, a_order);
+}
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        MBLevelMap<MAP, MEM>& a_map,
+        unsigned int a_order)
+{
+    std::vector<Point> footprint;
+    Box K = Box::Kernel(2);
+    for (auto pi : K)
+    {
+        if (pi.abs().sum() <= 2)
+        {
+            footprint.push_back(pi);
+        }
+    }
+    MBInterpOp op(a_data.ghost()[0], a_order);
+    op.define(a_map, footprint);
+    op.apply(a_data, a_data);
+}
+
 
 
 

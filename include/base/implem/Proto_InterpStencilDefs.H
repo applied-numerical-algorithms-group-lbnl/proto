@@ -1,49 +1,36 @@
 template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
+InterpStencil<T> InterpStencil<T>::Constant(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Box K = Box(a_ratio);
-    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    auto S = 1.0*Shift::Zeros(); 
+    for (int dir = 0; dir < DIM; dir++)
     {
-        Stencil<T>& S = ret(*iter);
-        S = 1.0*Shift::Zeros();
-        S.destRatio() = a_ratio;
-        S.destShift() = (*iter);
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
+        {
+            Id.set(S, shift);
+        }
     }
     return ret;
 }
 
 template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
+InterpStencil<T> InterpStencil<T>::Linear(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Box K = Box(a_ratio);
-    Box U = Box::Cube(2);
-    for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
+    for (int dir = 0; dir < DIM; dir++)
     {
-        Point p = *kiter;
-        Point q = a_ratio - p;
-        Stencil<double>& S = ret(*kiter);
-        for (auto uiter = U.begin(); uiter != U.end(); ++ uiter)
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
         {
-            Point e = *uiter;
-            double coef = 1.0;
-            for (int ii = 0; ii < DIM; ii++)
-            {
-                if (e[ii] == 0)
-                {
-                    coef *= q[ii]/((double)a_ratio[ii]);
-                } else {
-                    coef *= p[ii]/((double)a_ratio[ii]);
-                }
-            }
-            if (coef != 0)
-            {
-                S += coef*Shift(e);
-            }
+            double r = a_ratio[dir];
+            double s = shift;
+            double p = s/r;
+            double q = (r - s)/r;
+            auto S = q*Shift::Zeros() + p*Shift::Basis(dir, 1);
+
+            Id.set(S, shift);
         }
-        S.destRatio() = a_ratio;
-        S.destShift() = p;
     }
     return ret;    
 }
@@ -52,7 +39,7 @@ InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
 inline double qcoef(int a_ni, int a_r, int a_side)
 {
     PROTO_ASSERT(std::abs(a_side) <= 1,
-    "qcoef(ni, r, side) invalide for side = %i. Value must be in [-1,1]", a_side);
+    "qcoef(ni, r, side) invalid for side = %i. Value must be in [-1,1]", a_side);
     double n = a_ni; double r = a_r;
     double coef = 0;
     if (a_side == -1)
@@ -72,10 +59,26 @@ inline double qcoef(int a_ni, int a_r, int a_side)
 }
 
 template<class T>
-InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
+InterpStencil<T> InterpStencil<T>::Quadratic(Point a_ratio)
 {
-    //can make it anisotropic later...
-    InterpStencil<T> ret(Point::Ones(a_ratio));
+    InterpStencil<T> ret(a_ratio);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        auto& Id = ret.m_interp[dir];
+        for (int shift = 0; shift < a_ratio[dir]; shift++)
+        {
+            Stencil<T> S;
+            for (int ii = -1; ii <= 1; ii++)
+            {
+                T coef = qcoef(shift, a_ratio[dir], ii);
+                S += coef*Shift::Basis(dir,ii);
+            }
+            Id.set(S, shift);
+        }
+    }
+    return ret;    
+
+#if 0
     Box K = Box(Point::Ones(a_ratio));
     Box U = Box::Cube(3).shift(Point::Ones(-1));
 
@@ -98,9 +101,125 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
         S.destRatio() = Point::Ones(a_ratio);
         S.destShift() = n;
     }
-    return ret;    
+#endif
 }
 
+template<class T>
+InterpStencil<T> InterpStencil<T>::FiniteVolume(Point a_ratio, int a_order)
+{
+    InterpStencil<T> ret(a_ratio);
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        int r = a_ratio[dir];
+        auto& Id = ret.m_interp[dir];
+        std::vector<Array<T,5>> coefs;
+        coefs.resize(r);
+        switch (r)
+        {
+            case 2:
+            {
+                switch (a_order)
+                  {
+                  case 2:
+                  case 3:
+                    {
+                      coefs = 
+                        {
+                          {0,1.0/8.0,1.0,-1.0/8.0,0},
+                          {0,-1.0/8.0,1.0,1.0/8.0,0}
+                        };
+                      break;
+                    }
+                  case 4:
+                  case 5:
+                    {
+                      coefs = 
+                        {
+                          {-3.0/128,22.0/128,128.0/128,-22.0/128,3.0/128},
+                          {3.0/128,-22.0/128,128.0/128,22.0/128,-3.0/128}
+                        };
+                      break;
+                    }
+                    default:
+                        MayDay<void>::Abort(
+                            "InterpStencil::FiniteVolume | Error: Case not implemented.");
+                }
+                break;
+            }
+            case 4:
+            {
+              switch (a_order)
+                {
+                  case 2:
+                  {
+                    coefs =
+                      {
+                        {0,3.0/16.0,1.0,-3.0/16.0,0.},
+                        {0,1.0/16.0,1.0,-1.0/16.0,0.},
+                        {0,-1.0/16.0,1.0,1.0/16.0,0.},
+                        {0,-3.0/16.0,1.0,3.0/16.0,0.}
+                      };
+                      break;
+                  }
+                  case 3:
+                  {
+                    coefs =
+                      {
+                        {0,7.0/32.0,30.0/32.0,-5.0/32.0,0},
+                        {0,1.0/32.0,34.0/32.0,-3.0/32.0,0},
+                        {0,-3.0/32.0,34.0/32.0,1.0/32.0,0},
+                        {0,-5.0/32.0,30.0/32.0,7.0/32.0,0}
+                      };
+                      break;
+                  }                
+                case 4:
+                  {
+                    coefs = 
+                      {
+                        {-35.0/1024,294.0/1024,960.0/1024,-230.0/1024,35.0/1024},
+                        {-13.0/1024,58.0/1024,1088.0/1024,-122.0/1024,13.0/1024},
+                        {13.0/1024,-122.0/1024,1088.0/1024,58.0/1024,-13.0/1024},
+                        {35.0/1024,-230.0/1024,960.0/1024,294.0/1024,-35.0/1024}
+                      };
+                    break;
+                  }
+                case 5:
+                  {
+                    coefs = 
+                      {
+                        {-77.0/2048,616.0/2048,1878.0/2048,-432.0/2048,63.0/2048},
+                        {-19.0/2048,88.0/2048,2218.0/2048,-272.0/2048,33.0/2048},
+                        {33.0/2048,-272.0/2048,2218.0/2048,88.0/2048,-19.0/2048},
+                        {63.0/2048,-432.0/2048,1878.0/2048,616.0/2048,-77.0/2048}
+                      };
+                    break;
+                  }
+                default:
+                  MayDay<void>::Abort(
+                                      "InterpStencil::FiniteVolume | Error: Case not implemented.");
+                }
+                break;
+            }
+            default:
+                MayDay<void>::Abort(
+                    "InterpStencil::FiniteVolume | Error: Case not implemented.");
+        }
+        for (int shift = 0; shift < r; shift++)
+        {
+            Stencil<T> S;
+            Box b = Box(Point::Basis(dir, -2), Point::Basis(dir,2));
+            for (int ii = 0; ii < 5; ii++)
+            {
+                S += coefs[shift][ii]*Shift(b[ii]);
+            }
+            Id.set(S, shift);
+        }
+    }
+    return ret;
+}
+
+// EVERYTHING BELOW THIS LINE IS PART OF THE BUILD API
+#if 0
 // helper function for Build(...)
 /*
     Returns <x^p> over the coarse cell shifted by s
@@ -438,3 +557,4 @@ InterpStencil<T> InterpStencil<T>::Build(int a_order, Point a_refRatio)
     }
     return ret; //should never get here, this is just to stifle a compiler warning
 }
+#endif

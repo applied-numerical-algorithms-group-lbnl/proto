@@ -13,7 +13,8 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
     public:
    
     typedef OpType<T, MEM> BOP;
-    typedef LevelOp<OpType, T, MEM> LOP;
+    //Note: PeriodicBC is just a default
+    typedef LevelOp<OpType, T, PeriodicBC, MEM> LOP;
     typedef LevelBoxData<T, BOP::numState(), MEM> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(), MEM> LevelAuxData;
 
@@ -27,7 +28,7 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
-        std::array<T, DIM> a_dx);
+        Array<T, DIM> a_dx);
     
     inline void define(
         DisjointBoxLayout& a_layout,
@@ -39,7 +40,7 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
-        std::array<T, DIM> a_dx);
+        Array<T, DIM> a_dx);
 
     /*
     inline void defineAsSubcycler(
@@ -82,12 +83,12 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
                 
         MGLevel(DisjointBoxLayout&      a_layout,
                 Point                   a_refRatio,
-                std::array<T, DIM>      a_dx,
+                Array<T, DIM>      a_dx,
                 int                     a_level);
         
         void define(DisjointBoxLayout&  a_layout,
                 Point                   a_refRatio,
-                std::array<T, DIM>      a_dx,
+                Array<T, DIM>      a_dx,
                 int                     a_level);
         /*
         void defineAsSubcycler(DisjointBoxLayout&  a_layout,

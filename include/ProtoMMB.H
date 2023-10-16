@@ -11,9 +11,22 @@
 #include "mmb/Proto_MBProblemDomain.H"
 #include "mmb/Proto_MBBoxPartition.H"
 #include "mmb/Proto_MBDisjointBoxLayout.H"
+#include "mmb/Proto_MBBoundaryRegister.H"
 #include "mmb/Proto_MBLevelBoxData.H"
-#include "mmb/Proto_MBMap.H"
+#include "mmb/Proto_MBMapOp.H"
+#include "mmb/Proto_MBLevelMap.H"
+#include "mmb/Proto_MBLevelOp.H"
 #ifdef PR_OPS 
 #include "mmb/Proto_MBInterpOp.H"
+#endif
+#ifdef PR_AMR
+#include "ProtoAMR.H"
+#include "mmb/Proto_MBAMRBoxPartition.H"
+#include "mmb/Proto_MBAMRGrid.H"
+#include "mmb/Proto_MBAMRData.H"
+#include "mmb/Proto_MBAMRMap.H"
+#endif
+#if DIM == 3
+#include "utils/Proto_CubedSphereShell.H"
 #endif
 #endif

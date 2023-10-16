@@ -122,8 +122,9 @@ TEST(Box, Adjacent) {
     EXPECT_EQ(B2, Box(L - 2*y,          H - D*y));
     Box B3 = B0.adjacent(y-x, 2); // [(-2,8), (-1,9)]
     EXPECT_EQ(B3, Box(L - 2*x + D*y,  H - D*x + 2*y));
-    Box B4 = B0.adjacent(x,-1);   // [(8,0) , (15,7)]
-    EXPECT_EQ(B4, Box(L + D*x,  H + D*x));
+    Box B4 = B0.adjacent(x,-1);   // [(7,0) , (7,7)]
+    //EXPECT_EQ(B4, Box(L + D*x,  H + D*x));
+    EXPECT_EQ(B4, Box(L+(D-1)*x, H));
     Box B5 = B0.adjacent(x-(2*y));    // [(8,-2) , (15,-1)]
     EXPECT_EQ(B5, Box(L + D*x - 2*y,  H + x - D*y));
 }

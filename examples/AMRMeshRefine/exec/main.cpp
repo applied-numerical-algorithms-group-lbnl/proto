@@ -3,22 +3,27 @@
 
 using namespace Proto;
 
-void f_const (Point& a_pt, Var<double>& a_data, double a_dx, double a_value)
+PROTO_KERNEL_START
+void f_const_0(Point& a_pt, Var<double>& a_data, double a_dx, double a_value)
 {
     a_data(0) = a_value;
 }
+PROTO_KERNEL_END(f_const_0, f_const);
 
-void f_sin (Point& a_pt, Var<double>& a_data, double a_dx)
+PROTO_KERNEL_START
+void f_sin_0(Point& a_pt, Var<double>& a_data, double a_dx)
 {
     double x = a_pt[0]*a_dx + a_dx/2.0;
     double y = a_pt[1]*a_dx + a_dx/2.0;
     
     a_data(0) = sin(2.0*M_PI*(x + y));
 }
+PROTO_KERNEL_END(f_sin_0, f_sin);
 
-void f_tags_line (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
+PROTO_KERNEL_START
+void f_tags_line_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     for (int ii = 0; ii < DIM; ii++)
     {
         x[ii] = (a_pt[ii] - a_origin[ii])*a_dx + a_dx/2.0;
@@ -31,10 +36,12 @@ void f_tags_line (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_line_0, f_tags_line);
 
-void f_tags_sphere (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
+PROTO_KERNEL_START
+void f_tags_sphere_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     double r = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -51,8 +58,10 @@ void f_tags_sphere (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_sphere_0, f_tags_sphere);
 
-void f_tags_corner (Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner)
+PROTO_KERNEL_START
+void f_tags_corner_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner)
 {
     if (a_pt == a_corner)
     {
@@ -61,10 +70,12 @@ void f_tags_corner (Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_corner_0, f_tags_corner);
 
-void f_gaussian (Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, double a_sigma)
+PROTO_KERNEL_START
+void f_gaussian_0(Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, double a_sigma)
 {
-    std::array<double, DIM> x;
+    Array<double, DIM> x;
     double rr = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -74,22 +85,25 @@ void f_gaussian (Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, 
    
     a_data(0) = exp(-rr / (2.0*a_sigma*a_sigma));
 }
+PROTO_KERNEL_END(f_gaussian_0, f_gaussian);
 
 int main(int argc, char** argv)
 {
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
-
+    using Proto::pout;
+#ifdef PR_HDF5
     HDF5Handler h5;
-    
+#endif
+
     int domainSize = 64;
     int boxSize = 32;
     double tagThreshold = 0.1;
     int refRatio = 2;
     int nestingDistance = 1;
     int TEST = -1;
-    std::array<bool, DIM> periodicity;
+    Array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
     InputArgs args;
@@ -125,6 +139,8 @@ int main(int argc, char** argv)
     
     double L = 1.0;
     int bufferSize = 1;
+    int one = 1;
+    int zro = 0;
     Point refRatioV = Point::Ones(refRatio);
     for (int nn = 0; nn < 1; nn++)
     {
@@ -157,16 +173,22 @@ int main(int argc, char** argv)
 
                 AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
-                testData[0].initialize(f_const, 1, 0);
-                testData[1].initialize(f_const, 1, 1);
+                testData[0].initialize(f_const, one, zro);
+                testData[1].initialize(f_const, one, one);
+#ifdef PR_HDF5
                 h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
+#endif
 
                 LevelTagData tags(layout, tagBufferSize);
                 tags.initialize(f_tags_line, dx, origin);
 
+#ifdef PR_HDF5
                 h5.writeLevel(tags, "Tags_0"); 
+#endif
                 AMRGrid::buffer(tags, tagBufferSize);
+#ifdef PR_HDF5
                 h5.writeLevel(tags, "Tags_1"); 
+#endif
 
                 grid.regrid(tags, 0, fineBoxSizeVect);
 
@@ -183,10 +205,12 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data[0].initialize(f_const, 1, 0);
-                data[1].initialize(f_const, 1, 1);
+                data[0].initialize(f_const, one, zro);
+                data[1].initialize(f_const, one, one);
 
+#ifdef PR_HDF5
                 h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
+#endif
                 break;
             // ===========================================================
             // TEST 1
@@ -219,16 +243,22 @@ int main(int argc, char** argv)
 
                 AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
-                testData[0].initialize(f_const, 1, 0);
-                testData[1].initialize(f_const, 1, 1);
+                testData[0].initialize(f_const, one, zro);
+                testData[1].initialize(f_const, one, one);
+#ifdef PR_HDF5
                 h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
+#endif
 
                 LevelTagData tags(layout, tagBufferSize);
                 tags.initialize(f_tags_sphere, dx, origin);
 
+#ifdef PR_HDF5
                 h5.writeLevel(tags, "Tags_0"); 
+#endif
                 AMRGrid::buffer(tags, tagBufferSize);
+#ifdef PR_HDF5
                 h5.writeLevel(tags, "Tags_1"); 
+#endif
 
                 grid.regrid(tags, 0, fineBoxSizeVect);
 
@@ -245,10 +275,12 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data[0].initialize(f_const, 1, 0);
-                data[1].initialize(f_const, 1, 1);
+                data[0].initialize(f_const, one, zro);
+                data[1].initialize(f_const, one, one);
 
+#ifdef PR_HDF5
                 h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
+#endif
                 break;
             // ===========================================================
             // TEST 2
@@ -276,21 +308,29 @@ int main(int argc, char** argv)
                 refRatios.push_back(refRatioV);
                 AMRGrid grid(layout, refRatios, 2);
                 AMRData<double> data(grid, bufferSize);
-                data.initialize(dx, f_gaussian, origin, 0.25);
+                double sigma = 0.25;
+                data.initialize(dx, f_gaussian, origin, sigma);
+#ifdef PR_HDF5
                 h5.writeAMRData({"data"}, dx, data, "InputData");  
+#endif
               
                 // Compute Tags 
                 LevelTagData tags;
                 AMRGrid::computeTags(tags, data[0], tagBufferVect, tagThreshold);
+#ifdef PR_HDF5
                 h5.writeLevel({"tags"}, dx, tags, "TagData");
+#endif
                
                 // Use Tags to Refine Mesh
                 grid.regrid(tags, 0, fineBoxSizeVect);
                 // this is just so we can see the output grid
                 AMRData<double> gridData(grid, Point::Zeros());
-                gridData[0].initialize(f_const, dx, 0);
-                gridData[1].initialize(f_const, dx / refRatio, 1);
+                gridData[0].initialize(f_const, dx, zro);
+                double dxFine = dx / refRatio;
+                gridData[1].initialize(f_const, dxFine, one);
+#ifdef PR_HDF5
                 h5.writeAMRData({"gridData"}, dx, gridData, "Grid");
+#endif
                 
                 Point originPatch = origin / fineBoxSizeVect * refRatioV; 
                 if (procID() == 0)
@@ -338,14 +378,18 @@ int main(int argc, char** argv)
                 LevelTagData tags_0(layout, Point::Zeros());
                 Point corner_0 = Point::Ones(boxSize) + Point::Basis(0, 1);
                 tags_0.initialize(f_tags_corner, dx_vect[0], corner_0);
+#ifdef PR_HDF5
                 h5.writeLevel(dx_vect[0], tags_0, "Tags_0");
+#endif
 
                 grid.regrid(tags_0, 0, boxSizeVect);
 
                 LevelTagData tags_1(grid[1], Point::Zeros());
                 Point corner_1 = (Point::Ones(boxSize) + Point::Basis(0, 1)) * refRatioV;
                 tags_1.initialize(f_tags_corner, dx_vect[1], corner_1);
+#ifdef PR_HDF5
                 h5.writeLevel(dx_vect[1], tags_1, "Tags_1");
+#endif
 
                 grid.regrid(tags_1, 1, fineBoxSizeVect);
 
@@ -353,13 +397,17 @@ int main(int argc, char** argv)
                 for (int ii = 0; ii < 3; ii++)
                 {
 
-                    pr_out() << "Initializing level " << ii << std::endl;
+//                    Proto::pout() << "Initializing level " << ii << std::endl;
+
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                     data_before[ii].layout().print();
+#ifdef PR_HDF5
                     h5.writeLevel(dx_vect[ii], data_before[ii], "Grid_L%i_0", ii);
+#endif
                 }
-                pr_out() << "Writing AMR data " << std::endl;
+//                pout() << "Writing AMR data " << std::endl;
                 //h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
+#endif
                 
                 pr_out() << "Before enfore nesting" << std::endl;
                 grid.enforceNesting(1, nestingDistance);
@@ -370,7 +418,9 @@ int main(int argc, char** argv)
                 {
                     data_after[ii].initialize(f_const, dx_vect[ii], ii);
                 }
+#ifdef PR_HDF5
                 h5.writeAMRData(dx_vect[0], data_after, "Grid_1");
+#endif
                 break;
             // ===========================================================
             // TEST 11
@@ -405,14 +455,18 @@ int main(int argc, char** argv)
                 LevelTagData tags_0(layout, Point::Zeros());
                 Point corner_0 = Point::Zeros();
                 tags_0.initialize(f_tags_corner, dx_vect[0], corner_0);
+#ifdef PR_HDF5
                 h5.writeLevel(dx_vect[0], tags_0, "Tags_0");
+#endif
 
                 grid.regrid(tags_0, 0, boxSizeVect);
 
                 LevelTagData tags_1(grid[1], Point::Zeros());
                 Point corner_1 = refRatioV;
                 tags_1.initialize(f_tags_corner, dx_vect[1], corner_1);
+#ifdef PR_HDF5
                 h5.writeLevel(dx_vect[1], tags_1, "Tags_1");
+#endif
 
                 grid.regrid(tags_1, 1, fineBoxSizeVect);
 
@@ -421,7 +475,9 @@ int main(int argc, char** argv)
                 {
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                 }
+#ifdef PR_HDF5
                 h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
+#endif
 
                 grid.enforceNesting(1, nestingDistance);
 
@@ -430,7 +486,9 @@ int main(int argc, char** argv)
                 {
                     data_after[ii].initialize(f_const, dx_vect[ii], ii);
                 }
+#ifdef PR_HDF5
                 h5.writeAMRData(dx_vect[0], data_after, "Grid_1");
+#endif
                 break;
             } default: {
                 break;

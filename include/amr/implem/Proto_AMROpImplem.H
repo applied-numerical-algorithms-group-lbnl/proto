@@ -12,7 +12,7 @@ AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, T a_cdx)
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
+AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
 {
     define(a_grid, a_cdx);
 }
@@ -20,13 +20,13 @@ AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, T a_cdx)
 {
-    std::array<T, DIM> cdx;
+    Array<T, DIM> cdx;
     cdx.fill(a_cdx);
     define(a_grid, cdx);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
+void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
 {
     int numLevels = a_grid.numLevels();
     m_dx.clear();
@@ -42,7 +42,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         m_dx[lvl] = dx;
-        m_levelOps[lvl].define(dx);
+        m_levelOps[lvl].define(a_grid[lvl], dx);
         if (lvl < numLevels - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
@@ -50,8 +50,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
                 std::make_shared<LevelFluxRegister<T, BOP::numState(), MEM>>(
                     a_grid[lvl], a_grid[lvl+1],
                     refRatio, dx);
-            m_interp[lvl] = 
-                InterpStencil<T>::Build(BOP::order() + 1, refRatio);
+            m_interp[lvl] = InterpStencil<T>::FiniteVolume(refRatio, BOP::order()+1);
             for (int dir = 0; dir < DIM; dir++)
             {
                 dx[dir] /= refRatio[dir];
@@ -251,24 +250,24 @@ void AMROp<OPType, T, MEM>::reflux(
     
     fluxRegister.reset();
    
-    for (auto iter = fluxRegister.crseLayout().begin(); iter.ok(); ++iter)
+    for (auto iter : fluxRegister.crseLayout())
     {
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto& crse_i = a_crseState[*iter];
-            StateData flux_id(fluxRegister.crseLayout()[*iter].grow(dir, Side::Hi, 1));
-            crseOp.op().flux(flux_id, crse_i, dir);
-            fluxRegister.incrementCoarse(flux_id, *iter, 1.0, dir);
+            auto& crse_i = a_crseState[iter];
+            StateData flux_id(fluxRegister.crseLayout()[iter].grow(dir, Side::Hi, 1));
+            crseOp[iter].flux(flux_id, crse_i, dir);
+            fluxRegister.incrementCoarse(flux_id, iter, 1.0, dir);
         }
     }
-    for (auto iter = fluxRegister.fineLayout().begin(); iter.ok(); ++iter)
+    for (auto iter : fluxRegister.fineLayout())
     {
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto& fine_i = a_fineState[*iter];
-            StateData flux_id(fluxRegister.fineLayout()[*iter].grow(dir, Side::Hi, 1));
-            fineOp.op().flux(flux_id, fine_i, dir);
-            fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
+            auto& fine_i = a_fineState[iter];
+            StateData flux_id(fluxRegister.fineLayout()[iter].grow(dir, Side::Hi, 1));
+            fineOp[iter].flux(flux_id, fine_i, dir);
+            fluxRegister.incrementFine(flux_id, iter, 1.0, dir);
         }
     }
 

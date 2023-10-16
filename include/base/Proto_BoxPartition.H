@@ -20,7 +20,9 @@ namespace Proto
     class BoxPartition
     {
         public: 
-       
+
+        inline BoxPartition(){};
+
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -34,6 +36,9 @@ namespace Proto
         inline BoxPartition(
                 const ProblemDomain& a_patchDomain,
                 const std::vector<Point>& a_patches);
+        
+        /// Constructor (Empty)
+        inline BoxPartition(const ProblemDomain& a_patchDomain);
         
         /// Constructor
         /**
@@ -136,8 +141,7 @@ namespace Proto
         */
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment);
-       
-
+        
         /// Compatibility Query
         /**
          * Determine if this has the same layout structure as another BoxPartition.

@@ -7,6 +7,5 @@
 
 #include "Proto.H"
 
-//#include "ops/Proto_Operator.H"
 #include "ops/Proto_Matrix.H"
 #endif

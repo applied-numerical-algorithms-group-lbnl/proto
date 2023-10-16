@@ -1,29 +1,29 @@
 
 //
-// pr_out() returns the standard output stream for Chombo codes.
+// pout() returns the standard output stream for Chombo codes.
 //
 // In parallel, each proc sends the stream to a separate file,
 //  distinguished by having the proc num in the filename.
 // In serial, the stream goes to std::cout.
 //
-// Since the pr_out() function gets used a lot, it should be as
+// Since the pout() function gets used a lot, it should be as
 // streamlined as possible, hence the use of shared variables.
 //
 // The other feature is that the application can choose the base filename
 // for the parallel output files (the proc num is always appended).  The
-// application is allowed to change the base name after pr_out() has been called
+// application is allowed to change the base name after pout() has been called
 // the first time, which closes the previously open file, if any, and opens a
 // new one.  The output files are _always_ truncated on open -- append is not
 // supported.
 //
 // Special notes:
-//  If running in parallel, and pr_out() is called before MPI_Initialize(),
+//  If running in parallel, and pout() is called before MPI_Initialize(),
 //   it will return std::cout.
-//  If pr_outFilename() is called before MPI_Initialize(), it fails because
+//  If poutFilename() is called before MPI_Initialize(), it fails because
 //   the filename cannot be computed before the proc number is known.
 //
 // Method:
-//  Serial is easy; pr_out() always returns std::cout and pr_outFilename()
+//  Serial is easy; pout() always returns std::cout and poutFilename()
 //   always returns "cout".
 //  Parallel is hard because the app can call setPoutBaseName() multiple
 //   times.  Since nothing matters except when
@@ -31,9 +31,6 @@
 ////////////////////////////////////////////////////////////////
 
 // the shared variables
-
-#ifndef _Proto_PARSTREAM_IMPLEM_H_
-#define _Proto_PARSTREAM_IMPLEM_H_
 
 static std::string       s_pout_filename ;
 static std::string       s_pout_basename ;
@@ -57,7 +54,7 @@ inline static void setFileName()
   if (charInterv != NULL)
     {
       outInterv =  atoi(charInterv);
-      // If zero specified, change it to numProc() which should give pr_out.0 only
+      // If zero specified, change it to numProc() which should give pout.0 only
       if (outInterv == 0) outInterv=numProc();
     }
 #endif
@@ -108,7 +105,7 @@ inline static void openFile()
  *  different file on each proc (see setPoutBaseName()).
  */
 
-inline std::ostream& pr_out()
+inline std::ostream& pout()
 {
 #ifdef PR_MPI
   // the common case is _open == true, which just returns s_pout
@@ -122,7 +119,7 @@ inline std::ostream& pr_out()
     // app hasn't set a basename yet, so set the default
     if ( ! s_pout_init )
     {
-      s_pout_basename = "pr_out" ;
+      s_pout_basename = "pout" ;
       s_pout_init = true ;
     }
     // if MPI not initialized, we cant open the file so return cout
@@ -147,7 +144,7 @@ inline std::ostream& pr_out()
 
 //----------------------------------------------------------------
 
-/// Set the base name for the parallel output files used by pr_out().
+/// Set the base name for the parallel output files used by pout().
 /**
  * If the file has already been used and this is a different name,
  * close the current file and open a new one.
@@ -170,13 +167,13 @@ inline void setPoutBaseName( const std::string & a_Name )
 
 //----------------------------------------------------------------
 
-/// return the current filename as used by pr_out()
+/// return the current filename as used by pout()
 /** in serial, just return the string "cout";
  *  abort if MPI is not initialized.
  */
 //[NOTE: to be static-initialization-safe, only app. code should call this function.]
 
-inline const std::string & pr_outFileName()
+inline const std::string & poutFileName()
 {
 #ifdef PR_MPI
   int flag;
@@ -187,12 +184,12 @@ inline const std::string & pr_outFileName()
     {
       if ( ! s_pout_init )
       {
-        s_pout_basename = "pr_out" ;
+        s_pout_basename = "pout" ;
         s_pout_init = true ;
       }
       setFileName() ;
       //[NOTE: could open the file here, but we would still need
-      //       code in pr_out() to handle the case where the file isn't
+      //       code in pout() to handle the case where the file isn't
       //       open, so there's no point duplicating the code here. <dbs>]
     }
   }
@@ -203,7 +200,7 @@ inline const std::string & pr_outFileName()
     // proc number is known.  So treat it as a programming bug.  Since MPI
     // isn't initialized, all procs must be running this code, so all procs
     // will fail.
-    std::cerr << "error: pr_outFileName() cannot be called before MPI_Initialize()." << std::endl ;
+    std::cerr << "error: poutFileName() cannot be called before MPI_Initialize()." << std::endl ;
     exit( 111 );
   }
 #else
@@ -213,5 +210,3 @@ inline const std::string & pr_outFileName()
 #endif
   return s_pout_filename ;
 }
-
-#endif

@@ -1,11 +1,14 @@
 #pragma once
 #ifndef _PROTO_MORTON_H_
 #define _PROTO_MORTON_H_
-#include <array>
 #include <cstdint>
 #include <algorithm>
 #include "Proto_Point.H"
 
+#if DIM==1
+#define LOGSIZE 16 // 21 // DIM*LOGSIZE must be less than the size (in bits) of (uint64_t).
+#define MORTONSIZE 65536 // 2097152 // = 2^LOGSIZE.
+#endif
 #if DIM==2
 #define LOGSIZE 16 // 21 // DIM*LOGSIZE must be less than the size (in bits) of (uint64_t).
 #define MORTONSIZE 65536 // 2097152 // = 2^LOGSIZE.
@@ -56,7 +59,7 @@ namespace Proto
         
         private:
 
-        std::array<vector<uint64_t>,DIM> m_morton1D;
+        Array<vector<uint64_t>,DIM> m_morton1D;
         
         // Public construction is not allowed. Morton is a singleton.
         inline Morton();

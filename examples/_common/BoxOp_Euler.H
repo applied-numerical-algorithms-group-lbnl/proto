@@ -7,18 +7,29 @@
 #define NUMCOMPS DIM+2
 
 using namespace Proto;
-
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> Vector;
+
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
-
+//template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void
+f_thresholdF(
+             Var<short>& a_tags,
+             Var<double, NUMCOMPS>& a_U)
+{
+  double thresh = 1.001;
+  if (a_U(0) > thresh) {a_tags(0) = 1;}
+  else {a_tags(0) = 0;};
+};
+PROTO_KERNEL_END(f_thresholdF, f_threshold);
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_consToPrim_(
         Var<T, NUMCOMPS, MEM>&          a_W, 
-        const Var<T, NUMCOMPS, MEM>&  a_U,
+        const Var<T, NUMCOMPS, MEM>&    a_U,
         double                          a_gamma)
 {
     double rho = a_U(0);
@@ -35,6 +46,7 @@ void f_consToPrim_(
     }
 
     a_W(NUMCOMPS-1) = (a_U(NUMCOMPS-1) - .5 * rho * v2) * (a_gamma - 1.0);
+    
 }
 PROTO_KERNEL_END(f_consToPrim_, f_consToPrim)
 
@@ -112,6 +124,10 @@ void f_getFlux_(
 
     a_F(a_dir+1) += a_W(NUMCOMPS-1);
     a_F(NUMCOMPS-1) = gamma/(gamma - 1.0) * a_W(a_dir+1) * a_W(NUMCOMPS-1) + 0.5 * F0 * W2;
+    for (int c = 0 ; c < NUMCOMPS; c++)
+      {
+        a_F(c) = -a_F(c);
+      }
 }
 PROTO_KERNEL_END(f_getFlux_, f_getFlux)
 
@@ -124,7 +140,7 @@ void f_waveSpeedBound_(Var<double,1>& a_speed,
     a_speed(0) = DIM*sqrt(a_gamma*a_W(NUMCOMPS-1)/a_W(0));
     for (int dir = 1 ; dir <= DIM; dir++)
     {
-        a_speed(0) += a_W(dir);
+      a_speed(0) += fabs(a_W(dir));
     }
 }
 PROTO_KERNEL_END(f_waveSpeedBound_, f_waveSpeedBound)
@@ -133,6 +149,7 @@ template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
 {
     public:
+    using BoxOp<T,NUMCOMPS,1,MEM>::BoxOp;
 
     T gamma = 1.4;
     mutable T umax;
@@ -145,10 +162,6 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
     
     // What is the intended order of accuracy of the operator
     inline static constexpr int order() { return 4; }
-    
-    inline BoxOp_Euler() : BoxOp<T, NUMCOMPS, 1, MEM>() {}
-    inline BoxOp_Euler(std::array<double, DIM> a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
-    inline BoxOp_Euler(double a_dx) : BoxOp<T, NUMCOMPS, 1, MEM>(a_dx) {}
     
     // Initialization
     inline void init()
@@ -169,22 +182,16 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             int a_dir) const
     {
         PR_TIME("BoxOp_Euler::computeFlux");
-        unsigned long long int sqrtnum = 10;  //this one is just a guess
-        unsigned long long int getfluxnum = 9 + DIM*3;
-        unsigned long long int upwindnum  = sqrtnum + 25;
         Vector W_ave_L = m_interp_L[a_dir](a_W_ave); 
         Vector W_ave_H = m_interp_H[a_dir](a_W_ave); 
-        Vector W_ave_f = forallOp<double,NUMCOMPS>(
-                upwindnum, "upwind", f_upwindState, W_ave_L, W_ave_H, a_dir, gamma);
+        Vector W_ave_f = forall<double,NUMCOMPS>(f_upwindState, W_ave_L, W_ave_H, a_dir, gamma);
 #if DIM>1
-        Vector F_bar_f = forallOp<double,NUMCOMPS>(
-                getfluxnum, "getflux", f_getFlux, W_ave_f, a_dir,  gamma);
+        Vector F_bar_f = forall<double,NUMCOMPS>(f_getFlux, W_ave_f, a_dir,  gamma);
         Vector W_f = Operator::deconvolveFace(W_ave_f, a_dir);
 #else
         Vector W_f = W_ave_f;
 #endif
-        a_flux = forallOp<double,NUMCOMPS>(
-                getfluxnum, "getflux", f_getFlux, W_f, a_dir, gamma);
+        a_flux = forall<double,NUMCOMPS>(f_getFlux, W_f, a_dir, gamma);
 #if DIM>1
         a_flux += m_laplacian_f[a_dir](F_bar_f, 1.0/24.0);
 #endif
@@ -197,45 +204,44 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             int a_dir) const
     {
         PR_TIME("BoxOp_Euler::flux");
-        // FLOP COUNTS
-        unsigned long long int ctoprmnum  = 4*DIM + 5;
         
-        Vector W_bar = forallOp<double, NUMCOMPS>(
-            ctoprmnum, "consToPrim", f_consToPrim, a_U, gamma);
+        
+        Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
         Vector U = Operator::deconvolve(a_U);
-        Vector W = forallOp<double, NUMCOMPS>(
-            ctoprmnum, "consToPrim", f_consToPrim, U, gamma);
+        Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);
         Vector W_ave = Operator::_convolve(W, W_bar);
         computeFlux(a_flux, W_ave, a_dir);
     }
+    // Apply BCs by filling ghost cells in stage values. For Euler, this is done by calling
+    // exchange. For the MHD code, it will be more complicated.
+    // The interface is very provisional. We expect it to evolve as we d more real problems.
+    inline void bcStage(
+                        LevelBoxData<T,NUMCOMPS>& a_UStage,
+                        const LevelBoxData<T,NUMCOMPS>& a_U0,
+                        int a_stage)
+    {
+      a_UStage.exchange();
+    }                 
     
     // Apply Operator
     inline void operator()(
             BoxData<T, NUMCOMPS>&                   a_Rhs,
-            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            Array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
             const BoxData<T, NUMCOMPS>&             a_U,
             T                                       a_scale = 1.0) const
     {
         T dx = this->dx()[0];
-        PR_TIME("BoxOp_Euler::operator()");
-        // FLOP COUNTS
-        unsigned long long int sqrtnum = 10;  //this one is just a guess
-        unsigned long long int ctoprmnum  = 4*DIM + 5;
-        unsigned long long int wavespdnum = sqrtnum +3 + DIM;
-    
+        PR_TIME("BoxOp_Euler::operator()");        
         // COMPUTE W_AVE
         a_Rhs.setVal(0.0);    
-        Vector W_bar = forallOp<double, NUMCOMPS>(
-            ctoprmnum, "consToPrim", f_consToPrim, a_U, gamma);
+        Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
         Vector U = Operator::deconvolve(a_U);
-        Vector W = forallOp<double, NUMCOMPS>(
-            ctoprmnum, "consToPrim", f_consToPrim, U, gamma);
+        Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);
         Vector W_ave = Operator::_convolve(W, W_bar);
         
         // COMPUTE MAX WAVE SPEED
         Box rangeBox = a_U.box().grow(-ghost());
-        Scalar uabs = forallOp<double>(
-            wavespdnum, "wavespeed", f_waveSpeedBound, rangeBox, W, gamma);
+        Scalar uabs = forall<double>(f_waveSpeedBound, rangeBox, W, gamma);
         umax = uabs.absMax();
 
         // COMPUTE DIV FLUXES
@@ -244,15 +250,25 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             computeFlux(a_fluxes[dir], W_ave, dir);
             a_Rhs += m_divergence[dir](a_fluxes[dir]);
         }
-        a_Rhs *= (-1.0*a_scale / dx); //Assuming isotropic grid spacing
+        a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
     }
+#ifdef PR_AMR
+  static inline void generateTags(
+                                  TagData& a_tags,
+                                  BoxData<T, NUMCOMPS>& a_state)
+  {
+    forallInPlace(f_threshold, a_tags, a_state);
+  }
+#endif
+private:
 
-
-    private:
-    Stencil<T> m_interp_H[DIM];
-    Stencil<T> m_interp_L[DIM];
-    Stencil<T> m_divergence[DIM];
-    Stencil<T> m_laplacian_f[DIM];
+  //Array<std::shared_ptr<Array<BoxData<double>,DIM>>,DIM> m_data;
+  //std::shared_ptr<BoxData<double, 1>> m_data;
+  BoxData<double> m_data;
+  Stencil<T> m_interp_H[DIM];
+  Stencil<T> m_interp_L[DIM];
+  Stencil<T> m_divergence[DIM];
+  Stencil<T> m_laplacian_f[DIM];
 };
 
 #endif //end include guard

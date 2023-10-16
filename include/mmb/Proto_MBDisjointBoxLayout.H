@@ -17,28 +17,36 @@ namespace Proto
         typedef DataIndex<MBBoxPartition> MBIndex;
         
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 Point a_boxSize);
 
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<Point>& a_boxSizes);
         
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
         
-        inline void define(
-                const MBProblemDomain& a_domain,
+        inline MBDisjointBoxLayout(
+                std::shared_ptr<MBBoxPartition> a_partition,
                 const std::vector<Point>& a_boxSizes);
         
         inline void define(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
+                const std::vector<Point>& a_boxSizes);
+        
+        inline void define(
+                MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
 
-        inline MBProblemDomain domain() const; 
+        inline void define(
+                std::shared_ptr<MBBoxPartition> a_partition,
+                const std::vector<Point>& a_boxSizes);
+
+        inline const MBProblemDomain& domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
         inline unsigned int numBoxes() const;
@@ -51,12 +59,27 @@ namespace Proto
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
         inline unsigned int block(const MBIndex& a_index) const; 
-        inline DisjointBoxLayout& blockLayout(unsigned int a_block);
-        inline const DisjointBoxLayout& blockLayout(unsigned int a_block) const;
+        inline DisjointBoxLayout& getBlock(unsigned int a_block);
+        inline const DisjointBoxLayout& getBlock(unsigned int a_block) const;
         inline DisjointBoxLayout levelLayout() const;
-        inline MBIndex find(Point a_point, unsigned int a_block);
+        inline MBIndex find(Point a_point, unsigned int a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
         inline size_t offset(unsigned int a_proc) const;
+        inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
+        inline Point connectivity(
+                const MBIndex&  a_i1,
+                const MBIndex&  a_i2) const;
+        inline bool isBlockBoundary(
+                const MBIndex&  a_i1,
+                const MBIndex&  a_i2) const;
+        inline bool isBlockBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir,
+                unsigned int    a_block) const;
+        inline std::vector<MBIndex> bounds(
+                const MBIndex&  a_index) const;
+        inline unsigned int size() const;
+        inline unsigned int localSize() const;
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

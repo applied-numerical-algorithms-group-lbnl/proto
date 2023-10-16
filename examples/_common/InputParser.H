@@ -118,9 +118,16 @@ class InputArgs
     
     inline void print()
     {
-        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
-        pr_out() << "Input Arguments:" << std::endl;
-        pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+//<<<<<<< HEAD:examples/common/InputParser.H
+//        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
+//        pr_out() << "Input Arguments:" << std::endl;
+//        pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+//=======
+//        using Proto::pout;
+//        pout() << setw(50) << setfill('=') << "=" << std::endl;
+//        pout() << "Input Arguments:" << std::endl;
+//        pout() << setw(50) << setfill('-') << "-" << std::endl;
+//>>>>>>> dev:examples/_common/InputParser.H
         for (auto iter = stringArgs.begin(); iter != stringArgs.end(); ++iter)
         {
             pr_out() << setw(30) << left << setfill(' ') << iter->first;

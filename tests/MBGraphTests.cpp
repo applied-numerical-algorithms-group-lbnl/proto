@@ -5,6 +5,7 @@
 
 
 using namespace Proto;
+
 MBGraph buildXPoint()
 {
     MBGraph graph(XPOINT_SIZE);
@@ -13,6 +14,7 @@ MBGraph buildXPoint()
     {
         graph.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
+    graph.fixRotations();
     return graph;
 }
 
@@ -178,6 +180,24 @@ TEST(MBGraph, XPointBoundaries) {
     }
 }
 
+TEST(MBGraph, XPointBlockBoundary) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    Point x = Point::X();
+    Point y = Point::Y();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == x || dir == y || dir == x + y)
+            {
+                EXPECT_TRUE(graph.isBlockBoundary(bi, dir));
+            } else {
+                EXPECT_FALSE(graph.isBlockBoundary(bi, dir));
+            }
+        }
+    }
+}
 TEST(MBGraph, CubedSphere) {
     int numBlocks = 2*DIM+1;
     MBGraph graph(numBlocks);
@@ -211,6 +231,7 @@ TEST(MBGraph, CubedSphere) {
             }
         }
     }
+    graph.fixRotations();
     auto dirs = codimDirs(1);
     for (auto di : dirs)
     {
@@ -230,6 +251,26 @@ TEST(MBGraph, CubedSphere) {
         }
     }
 }
+TEST(MBGraph, TriplePoint) {
+    
+    MBGraph g0(3);
+    auto CCW = CoordPermutation::ccw();
+    auto CW = CoordPermutation::cw();
+    auto I = CoordPermutation::identity();
+    auto X = Point::X();
+    auto Y = Point::Y();
+    g0.defineBoundary(0,1,X, CCW);
+    g0.defineBoundary(0,2,Y, CCW);
+    EXPECT_FALSE(g0.isTriplePoint(0,X+Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,X-Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X+Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X-Y));
+    g0.defineBoundary(1,2,X,CW);
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
+    EXPECT_TRUE(g0.isTriplePoint(1,X+Y));
+    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y));
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

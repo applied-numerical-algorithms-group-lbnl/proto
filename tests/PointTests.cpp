@@ -44,6 +44,22 @@ TEST(Point, VectorSpace) {
     }
 }
 
+TEST(Point, BinaryReduction) {
+    Point p1{ 1, 2, 3, 4,  5,  6};
+    Point p2{-2, 4,-6, 8,-10, 12};
+    Point pmax_0{1,4,3,8,5,12};
+    Point pmin_0{-2,2,-6,4,-10,6};
+    Point pabsMax_0{2,4,6,8,10,12};
+
+    auto pmax = maxPoint(p1,p2);
+    auto pmin = minPoint(p1,p2);
+    auto pabsMax = absMaxPoint(p1,p2);
+
+    EXPECT_EQ(pmax, pmax_0);
+    EXPECT_EQ(pmin, pmin_0);
+    EXPECT_EQ(pabsMax, pabsMax_0);
+
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

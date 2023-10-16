@@ -86,7 +86,7 @@ mpi_basic_execute:
       - srun basic_mpi_build/bin/BoxTests
       - srun basic_mpi_build/bin/BoxDataTests
       - srun basic_mpi_build/bin/ReductionTests
-      - srun basic_mpi_build/bin/forAllTests
+      - srun basic_mpi_build/bin/ForallTests
       - srun basic_mpi_build/bin/StencilTests
         #      - srun basic_mpi_build/bin/InterpTests
 
@@ -176,7 +176,7 @@ mpi_full_execute:
       - srun full_mpi_build/bin/BoxTests
       - srun full_mpi_build/bin/BoxDataTests
       - srun full_mpi_build/bin/ReductionTests
-      - srun full_mpi_build/bin/forAllTests
+      - srun full_mpi_build/bin/ForallTests
       - srun full_mpi_build/bin/StencilTests
         #      - srun full_mpi_build/bin/InterpTests
 

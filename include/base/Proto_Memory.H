@@ -4,6 +4,11 @@
 #include <cstring>
 #include "Proto_MemType.H"
 
+#include <sys/resource.h>
+
+//#define   RUSAGE_SELF     0
+//#define   RUSAGE_CHILDREN     -1
+
 namespace Proto
 {
 
