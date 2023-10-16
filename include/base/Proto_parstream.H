@@ -8,8 +8,8 @@
  */
 #endif
 
-#ifndef _PARSTREAM_H_
-#define _PARSTREAM_H_
+#ifndef _PROTO_PARSTREAM_H_
+#define _PROTO_PARSTREAM_H_
 
 #include <iostream>
 #include <iomanip>
