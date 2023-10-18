@@ -325,25 +325,25 @@ unsigned int BoxPartition::find(Point a_pt)
 
 void BoxPartition::print() const
 {
-    pr_out() << "Box Partition: " << std::endl;
-    pr_out() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
-    pr_out() << "\tNum Boxes: " << numBoxes() << std::endl;
-    pr_out() << "\tNum Procs: " << numProcs() << std::endl;
-    pr_out() << "\tData By Processor: " << std::endl;
+    pout() << "Box Partition: " << std::endl;
+    pout() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
+    pout() << "\tNum Boxes: " << numBoxes() << std::endl;
+    pout() << "\tNum Procs: " << numProcs() << std::endl;
+    pout() << "\tData By Processor: " << std::endl;
     if (m_procSorted)
     {
         for (auto procData : m_procMap)
         {
             unsigned int proc = procData.first;
-            pr_out() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
-            pr_out() << " | Start Index: " << procStartIndex(proc);
-            pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
+            pout() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
+            pout() << " | Start Index: " << procStartIndex(proc);
+            pout() << " | End Index: " << procEndIndex(proc) << std::endl;
         }
     }
-    pr_out() << "\tData Partition: " << std::endl;
+    pout() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
     {
-        pr_out() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
+        pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
 }
 

@@ -1,6 +1,5 @@
-
-#ifndef __Proto_Transition_Utilities.H__
-#define __Proto_Transition_Utilities.H__
+#ifndef __Proto_Transition_Utilities_H__
+#define __Proto_Transition_Utilities_H__
 
 #include "Proto.H"
 ///
@@ -13,23 +12,17 @@
  */
 namespace Proto_Transition
 {
-  using std::shared_ptr;
-  //using std::shared_vector;
-  using std::pair;
-  typedef  Proto::MayDay<void>                     pr_mayday;
-  typedef  Proto::Point                            pr_point;
-  typedef  Proto::Box                              pr_box;
-  typedef  Proto::DisjointBoxLayout                pr_dbl;
-  typedef  Proto::ProblemDomain                    pr_dom;
-  typedef  Proto::BoxPartition                     pr_partition;
-  template <int ncomp>
-  class DataUtilities
+  ///class has no data
+  class MetaUtilities
   {
   public:
-    typedef  Proto::LevelBoxData<double, ncomp>      pr_level_data;
-    typedef  Proto::BoxData<     double, ncomp>      pr_box_data;
-
-
+    typedef  Proto::MayDay<void>                     pr_mayday;
+    typedef  Proto::Point                            pr_point;
+    typedef  Proto::Box                              pr_box;
+    typedef  Proto::DisjointBoxLayout                pr_dbl;
+    typedef  Proto::ProblemDomain                    pr_dom;
+    typedef  Proto::BoxPartition                     pr_partition;
+    
     ///Get a Proto::DisjointBoxLayout that conforms to the input meta data
     /** 
         A box here is its point refined by the box size.   
@@ -37,35 +30,52 @@ namespace Proto_Transition
         pair.second = the processor assignment of said box.
         The input layout can be in any order or have any distribution but 
         the boxes MUST BE DISJOINT.
-     **/
-    inline pr_dbl getLayout(
+    **/
+    static shared_ptr< pr_dbl > getLayout(
       const vector<pair<pr_point, unsigned int> >   &  a_layout,
       const pr_point                                &  a_boxSize,
       const pr_dom                                  &  a_domain)
     {
 
-        // Input Checks
-        PROTO_ASSERT(a_layout.size() > 0,
-                "DataUtilities::getLayout | Error: empty input");
-        PROTO_ASSERT(a_domain.box().coarsenable(a_boxSize),
-                "DataUtilities::getLayout | Error: domain is not coarsenable by the given box size.");
-        pr_box patchDomain = a_domain.box().coarsen(a_boxSize);
-        for (auto iter : a_layout)
-        {
-            pr_point patch = iter.first;
-            PROTO_ASSERT(patch.min() >= 0,
-                    "DataUtilities::getLayout | Error: Patches must be in the non-negative index space");
-            PROTO_ASSERT(patchDomain.contains(patch),
-                    "DataUtilities::getLayout | Error: Patch detected outside of the given domain");
-        }
+      // Input Checks
+      PROTO_ASSERT(a_layout.size() > 0,
+                   "DataUtilities::getLayout | Error: empty input");
+      PROTO_ASSERT(a_domain.box().coarsenable(a_boxSize),
+                   "DataUtilities::getLayout | Error: domain is not coarsenable by the given box size.");
+      pr_box patchDomain = a_domain.box().coarsen(a_boxSize);
+      for (auto iter : a_layout)
+      {
+        pr_point patch = iter.first;
+        PROTO_ASSERT(patch.min() >= 0,
+                     "DataUtilities::getLayout | Error: Patches must be in the non-negative index space");
+        PROTO_ASSERT(patchDomain.contains(patch),
+                     "DataUtilities::getLayout | Error: Patch detected outside of the given domain");
+      }
 
-        // Box Partition
-        std::shared_ptr<pr_partition> partition = std::make_shared<pr_partition>(a_domain.coarsen(a_boxSize), a_layout);
-        // Box Layout
-        pr_dbl retval;
-        retval.define(partition, a_boxSize);
-        return retval;
+      // Box Partition
+      std::shared_ptr<pr_partition> partition = std::make_shared<pr_partition>(a_domain.coarsen(a_boxSize), a_layout);
+      // Box Layout
+      shared_ptr< pr_dbl>  retval(new pr_dbl());
+      retval->define(partition, a_boxSize);
+      return retval;
     }
+  };
+  
+  ///This class also has no data.
+  template <int ncomp>
+  class DataUtilities
+  {
+  public:
+    typedef  Proto::MayDay<void>                     pr_mayday;
+    typedef  Proto::Point                            pr_point;
+    typedef  Proto::Box                              pr_box;
+    typedef  Proto::DisjointBoxLayout                pr_dbl;
+    typedef  Proto::ProblemDomain                    pr_dom;
+    typedef  Proto::BoxPartition                     pr_partition;
+    typedef  Proto::LevelBoxData<double, ncomp>      pr_level_data;
+    typedef  Proto::BoxData<     double, ncomp>      pr_box_data;
+
+
 
     ///
     /**
