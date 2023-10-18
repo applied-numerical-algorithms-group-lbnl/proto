@@ -41,6 +41,7 @@ void BoxPartition::define(
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
 
+
 bool BoxPartition::checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data)
 {
     if (a_data.size() == 0) { return true; }
@@ -57,6 +58,17 @@ void BoxPartition::define(
         const ProblemDomain& a_patchDomain,
         const std::vector<std::pair<Point, unsigned int>>& a_patches)
 {
+
+    PROTO_ASSERT(a_patchDomain.box().low().min() >= 0,
+            "BoxPartition::define | Error: domain must be in the positive index space.");
+    for (auto iter : a_patches)
+    {
+        PROTO_ASSERT(a_patchDomain.box().contains(iter.first),
+                "BoxPartition::define | Error: Patch not contained in domain.");
+        PROTO_ASSERT(iter.second < numProc(),
+                "BoxPartition::define | Error: invalid process %i.", iter.second);
+    }
+
     m_procSorted = checkProcSorting(a_patches);
     m_doLoadBalance = false;
     m_patchDomain = a_patchDomain;
@@ -82,12 +94,27 @@ void BoxPartition::define(
                 procIndexStart = global;
                 currentProc = a_patches[global].second;
             }
+            if (global == a_patches.size()-1)
+            {
+                m_procMap[currentProc] =
+                    std::pair<unsigned int, unsigned int>(procIndexStart, global+1);
+            }
         } else {
-            m_procMapUnsorted[a_patches[0].second].push_back(global);
+            m_procMapUnsorted[a_patches[global].second].push_back(global);
         }
     }
 }
 
+std::shared_ptr<BoxPartition> BoxPartition::sortByProc() const
+{
+    std::vector<std::pair<Point, unsigned int>> sorted = m_partition;
+    std::sort(sorted.begin(), sorted.end(),
+        [](const std::pair<Point, unsigned int>& a, const std::pair<Point, unsigned int>& b)
+        {
+            return a.second < b.second;
+        });
+    return std::make_shared<BoxPartition>(m_patchDomain, sorted);
+}
 
 
 void BoxPartition::assign(
@@ -225,7 +252,17 @@ unsigned int BoxPartition::numBoxes() const
 
 unsigned int BoxPartition::numBoxes(unsigned int a_proc) const
 {
-    return procEndIndex(a_proc) - procStartIndex(a_proc);
+    if (m_procSorted)
+    {
+        return procEndIndex(a_proc) - procStartIndex(a_proc);
+    } else {
+        auto iter = m_procMapUnsorted.find(a_proc);
+        if (iter != m_procMapUnsorted.end())
+        {
+            return iter->second.size();
+        }
+        return 0;
+    }
 }
 
 unsigned int BoxPartition::procStartIndex(unsigned int a_proc) const

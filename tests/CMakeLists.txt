@@ -55,6 +55,10 @@ blt_add_executable(NAME LevelBoxDataTests SOURCES LevelBoxDataTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME LevelBoxDataTests COMMAND LevelBoxDataTests)
+blt_add_executable(NAME ChomboTests SOURCES ChomboTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME ChomboTests COMMAND ChomboTests)
 endif()
 if(OPS)
   blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp

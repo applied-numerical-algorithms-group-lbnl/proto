@@ -84,6 +84,12 @@ namespace Proto
                 const ProblemDomain& a_patchDomain,
                 const std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
 
+        /// Sort By Processor
+        /** Return a new BoxPartition that is identical to *this except that it is sorted
+         *  by processor
+         */
+        inline std::shared_ptr<BoxPartition> sortByProc() const;
+
         /// Load Balance
         /**
          * Rebalance the load of this by distributing the input patches evenly 

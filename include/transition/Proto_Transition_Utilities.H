@@ -39,18 +39,17 @@ namespace Proto_Transition
         the boxes MUST BE DISJOINT.
      **/
     inline pr_dbl getLayout(
-      const vector<pair<pr_point, int> >  &  a_layout,
-      const pr_point                      &  a_boxSize,
-      const pr_dom                        &  a_domain,
-      const Proto::Array<bool, DIM>       &  a_periodicity)
+      const vector<pair<pr_point, unsigned int> >   &  a_layout,
+      const pr_point                                &  a_boxSize,
+      const pr_dom                                  &  a_domain)
     {
 
         // Input Checks
         PROTO_ASSERT(a_layout.size() > 0,
                 "DataUtilities::getLayout | Error: empty input");
-        PROTO_ASSERT(a_domain.coarsenable(a_boxSize),
+        PROTO_ASSERT(a_domain.box().coarsenable(a_boxSize),
                 "DataUtilities::getLayout | Error: domain is not coarsenable by the given box size.");
-        pr_box patchDomain = a_domain.coarsen(a_boxSize);
+        pr_box patchDomain = a_domain.box().coarsen(a_boxSize);
         for (auto iter : a_layout)
         {
             pr_point patch = iter.first;
@@ -60,12 +59,11 @@ namespace Proto_Transition
                     "DataUtilities::getLayout | Error: Patch detected outside of the given domain");
         }
 
-        // Domain
-        pr_dom domain(a_domain, a_periodicity);
         // Box Partition
-        std::shared_ptr<pr_partition> partition = std::make_shared<pr_partition>(domain, a_layout);
+        std::shared_ptr<pr_partition> partition = std::make_shared<pr_partition>(a_domain.coarsen(a_boxSize), a_layout);
         // Box Layout
-        pr_dbl retval(partition, a_boxSize);
+        pr_dbl retval;
+        retval.define(partition, a_boxSize);
         return retval;
     }
 

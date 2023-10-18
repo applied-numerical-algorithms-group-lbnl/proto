@@ -96,6 +96,14 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     //m_end = LevelIndex(m_partition, a_patches.size());
 }
 
+DisjointBoxLayout
+DisjointBoxLayout::sorted() const
+{
+    DisjointBoxLayout ret;
+    ret.define(m_partition->sortByProc(), m_boxSize);
+    return ret;
+}
+
 void
 DisjointBoxLayout::loadBalance(
         unsigned int a_startProc,

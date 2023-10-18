@@ -131,6 +131,9 @@ namespace Proto
                 const Box             & a_region,
                 const Point           & a_boxSize);
 
+        /// Get Sorted Version of This
+        inline DisjointBoxLayout sorted() const;
+
         /// Load Balance
         /**
             Distribute the load of this layout over the range of processors whose
