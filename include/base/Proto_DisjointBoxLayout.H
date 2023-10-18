@@ -133,6 +133,8 @@ namespace Proto
 
         /// Get Sorted Version of This
         inline DisjointBoxLayout sorted() const;
+        
+        inline bool isSorted() const {return m_partition->isSorted(); }
 
         /// Load Balance
         /**

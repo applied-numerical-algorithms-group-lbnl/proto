@@ -664,6 +664,15 @@ void HDF5Handler::addLevel(hid_t* a_file,
 {
     PR_TIMERS("HDF5Handler::addLevel");
     PR_TIMER("parallel_write", timer);
+    
+    if (!a_data.layout().isSorted())
+    {
+        LevelBoxData<T,C,HOST,CTR> tmp(a_data.layout().sorted(), a_data.ghost());
+        a_data.copyTo(tmp);
+        addLevel(a_file, tmp, a_dx0, a_refRatio, a_level);
+        return;
+    }
+
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
 

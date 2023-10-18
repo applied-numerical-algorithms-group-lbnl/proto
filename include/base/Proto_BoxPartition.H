@@ -90,6 +90,7 @@ namespace Proto
          */
         inline std::shared_ptr<BoxPartition> sortByProc() const;
 
+        inline bool isSorted() const { return m_procSorted; }
         /// Load Balance
         /**
          * Rebalance the load of this by distributing the input patches evenly 
