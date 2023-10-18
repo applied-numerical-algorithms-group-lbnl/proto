@@ -78,6 +78,23 @@ namespace Proto_Transition
 
 
     ///
+    inline void
+    copyToDevice(double       * a_devi_data,
+                 const double * a_host_data,
+                 size_t a_dat_size)
+    {
+      proto_memcpy<HOST, DEVICE>(a_host_data, a_devi_data, a_dat_size);
+    }
+    
+    ///
+    inline void
+    copyToHost(double       * a_host_data,
+               const double * a_devi_data,
+               size_t a_dat_size)
+    {
+      proto_memcpy<DEVICE, HOST>(a_devi_data, a_host_data, a_dat_size);
+    }
+    ///
     /**
      *  \param a_host_data - one buffer per box
      **/ 
@@ -86,8 +103,19 @@ namespace Proto_Transition
             vector< double * >  &    a_host_data,
             const pr_level_data &    a_devi_data)
     {
-      pr_mayday::Error("Doh! copyToHost not implemented");
+      auto dit = a_devi_data.dataIterator();
+      for(int ibox = 0; ibox < dit.size(); ibox++)
+      {
+        const double* devi_ptr = a_devi_data[dit[ibox]].data();
+        double      * host_ptr = a_host_data[ibox];
+        const pr_box& fabbox   = a_devi_data[dit[ibox]].box();
+        size_t num_points      = fabbox.size();
+        size_t data_size       = ncomp*sizeof(double)*num_points;
+        copyToHost(host_ptr, devi_ptr, data_size);
+      }
+      
     }
+
 
     ///
     /**
@@ -101,7 +129,19 @@ namespace Proto_Transition
             pr_level_data             &    a_devi_data,
             const vector< double * >  &    a_host_data)
     {
-      pr_mayday::Error("Doh! copyToDevice not implemented");
+
+      auto dit = a_devi_data.dataIterator();
+      for(int ibox = 0; ibox < dit.size(); ibox++)
+      {
+        double*       devi_ptr = a_devi_data[dit[ibox]].data();
+        const doubl * host_ptr = a_host_data[ibox];
+        const pr_box& fabbox   = a_devi_data[dit[ibox]].box();
+        size_t num_points      = fabbox.size();
+        size_t data_size       = ncomp*sizeof(double)*num_points;
+        copyToDevice(devi_ptr, host_ptr, data_size);
+      }
+
+
     }
 
     ///
