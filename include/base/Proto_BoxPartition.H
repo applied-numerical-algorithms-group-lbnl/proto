@@ -20,9 +20,7 @@ namespace Proto
     class BoxPartition
     {
         public: 
-
-        inline BoxPartition(){};
-
+       
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -36,10 +34,7 @@ namespace Proto
         inline BoxPartition(
                 const ProblemDomain& a_patchDomain,
                 const std::vector<Point>& a_patches);
-        
-        /// Constructor (Empty)
-        inline BoxPartition(const ProblemDomain& a_patchDomain);
-        
+
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -56,6 +51,11 @@ namespace Proto
                 unsigned int a_startProc,
                 unsigned int a_endProc);
         
+        /// Constructor (Exteral Load Balancing) 
+        inline BoxPartition(
+                const ProblemDomain& a_patchDomain,
+                const std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
+
         /// Define
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches
@@ -72,6 +72,25 @@ namespace Proto
                 unsigned int a_startProc,
                 unsigned int a_endProc);
         
+        /// Define
+        /**
+         *  Create a BoxPartition from a set of patches that have already been assigned
+         *  to processors. Use this function if load balancing is executed externally.
+         *
+         *  \param a_patchDomain        A ProblemDomain where each Point corresponds to a Box
+         *  \param a_assignedPatches    A vector of patch-processor pairs
+         */
+        inline void define(
+                const ProblemDomain& a_patchDomain,
+                const std::vector<std::pair<Point,unsigned int>>& a_assignedPatches);
+
+        /// Sort By Processor
+        /** Return a new BoxPartition that is identical to *this except that it is sorted
+         *  by processor
+         */
+        inline std::shared_ptr<BoxPartition> sortByProc() const;
+
+        inline bool isSorted() const { return m_procSorted; }
         /// Load Balance
         /**
          * Rebalance the load of this by distributing the input patches evenly 
@@ -129,7 +148,8 @@ namespace Proto
         */
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment);
-        
+       
+
         /// Compatibility Query
         /**
          * Determine if this has the same layout structure as another BoxPartition.
@@ -175,7 +195,20 @@ namespace Proto
          * Returns this->size() if the processor is not assigned to this.
         */
         inline unsigned int procEndIndex(unsigned int a_proc) const;
-        
+       
+        /// Get Global Index
+        /** Get the global index from a local index and processor number. Works even
+         *  if the data in this is unsorted.
+         *
+         * */
+        inline unsigned int globalIndex(unsigned int a_localIndex, unsigned int a_proc);
+
+        /// Get Local Index
+        /** Get the global index from a local index and processor number. Works even
+         *  if the data in this is unsorted.
+         *
+         * */
+        inline unsigned int localIndex(unsigned int a_globalIndex, unsigned int a_proc);
         /// Get Patch Index
         /**
          * Get the index in global array corresponding to a specified patch.
@@ -187,9 +220,13 @@ namespace Proto
 
         /// Print
         inline void print() const;
-        
+       
+        /// Check If This Controls Load Balancing
+        inline bool doLoadBalance() const { return m_doLoadBalance; }
         private:
         
+        inline bool checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data);
+
         template<typename... vals>
         inline void unpack(
                 std::vector<Point>& a_patches,
@@ -204,10 +241,13 @@ namespace Proto
                 int                 a_proc,
                 unsigned int        a_num);
 
-        ProblemDomain m_patchDomain; ///< Domain in patch space (one point per patch)
+        bool m_procSorted = true;
+        bool m_doLoadBalance = true;
+        ProblemDomain m_patchDomain; ///< Domain in patch space
         std::unordered_map<uint64_t, int> m_indexMap; ///< Maps Morton index to global index
-        std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>>      m_procMap; ///< Maps processor number to global index
+        std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>> m_procMap; ///< Maps processor number to global index
         std::vector<std::pair<Point, unsigned int>> m_partition; ///< Maps each patch to a proc
+        std::unordered_map<unsigned int, std::vector<unsigned int>> m_procMapUnsorted; ///< Same as procMap for unsorted data
     };
 
 #include "implem/Proto_BoxPartitionImplem.H"
