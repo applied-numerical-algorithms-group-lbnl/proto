@@ -61,7 +61,7 @@ namespace Proto_Transition
     }
   };
   
-  ///This class also has no data.
+  ///This class also has no data. Just a pile of static functions, really.
   template <int ncomp>
   class DataUtilities
   {
@@ -78,7 +78,7 @@ namespace Proto_Transition
 
 
     ///
-    inline void
+    static void
     copyToDevice(double       * a_devi_data,
                  const double * a_host_data,
                  size_t a_dat_size)
@@ -87,7 +87,7 @@ namespace Proto_Transition
     }
     
     ///
-    inline void
+    static void
     copyToHost(double       * a_host_data,
                const double * a_devi_data,
                size_t a_dat_size)
@@ -98,7 +98,7 @@ namespace Proto_Transition
     /**
      *  \param a_host_data - one buffer per box
      **/ 
-    inline void
+    static void
     copyToHost(
             vector< double * >  &    a_host_data,
             const pr_level_data &    a_devi_data)
@@ -124,10 +124,10 @@ namespace Proto_Transition
      *  The host data has to be in fortran ordering and must contain the same footprint 
      *  as the device BoxData (it has to include ghost cell memory).
      **/
-    inline void
+    static void
     copyToDevice(
             pr_level_data             &    a_devi_data,
-            const vector< double * >  &    a_host_data)
+            const vector< double * >  &    a_host_data) 
     {
 
       auto dit = a_devi_data.dataIterator();
@@ -150,7 +150,7 @@ namespace Proto_Transition
      *      \a_domain_face_dir is the direction of the domain face
      *      \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
-    inline void
+    static void
     domainGhostReflectEven(
             pr_level_data             &    a_devi_data,
             const pr_box              &    a_domain,
@@ -165,7 +165,7 @@ namespace Proto_Transition
      * \param     \a_domain_face_dir is the direction of the domain face
      * \param     \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
-    inline void
+    static void
     domainGhostReflectOdd(
             pr_level_data             &    a_devi_data,
             const pr_box              &    a_domain,
@@ -182,7 +182,7 @@ namespace Proto_Transition
      *  \param ref_ratio   - refrat to the next coarser level
      **/
     template <int interpolation_order>
-    inline void
+    static void
     fillGhostOverCoarseFineBoundaries(
             pr_level_data             &    a_fine_data,
             const pr_level_data       &    a_coar_data,
