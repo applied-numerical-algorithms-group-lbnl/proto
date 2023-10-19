@@ -87,6 +87,11 @@ namespace Proto
          */
         inline unsigned int localSize() const;
 
+      ///deprecated but useful
+      inline int size() const
+      {
+        return localSize();
+      }
         /// Increment 
         inline DataIterator<P>& operator++();
        
