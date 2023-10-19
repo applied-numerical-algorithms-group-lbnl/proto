@@ -1,9 +1,9 @@
 //#include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+//#include "Lambdas.H"
 //#include "MBLevelMap_Shear.H"
 //#include "MBLevelMap_XPointRigid.H"
-#include "Proto_CubedSphereShell.H"
+//#include "Proto_CubedSphereShell.H"
 #include "BoxOp_EulerCubedSphere.H"
  
 void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn)

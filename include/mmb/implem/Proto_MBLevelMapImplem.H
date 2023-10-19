@@ -140,6 +140,12 @@ const Array<double, DIM>& MBLevelMap<MAP,MEM>::dx(int a_blockID) const
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+MAP<MEM>& MBLevelMap<MAP,MEM>::op(int a_blockID) const
+{
+    return m_ops[a_blockID];
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
         const Box& a_box,
         const Array<double, DIM>& a_dx) const

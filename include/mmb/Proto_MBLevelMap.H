@@ -44,9 +44,7 @@ class MBLevelMap
             unsigned int         a_focalBlock = 0);
     
     /// Define
-    /** Delayed construction. Define must be explicitly called by the user on an
-     *  already declared map. This requirement ensures that the user defined
-     *  initialization is called correctly. This restriction may be removed later.
+    /** Delayed construction.
      *
      *  \param a_layout     A mapped multiblock layout defining the domain
      *  \param a_ghost      An array of ghost data sizes. This ghost array is used
@@ -169,6 +167,9 @@ class MBLevelMap
     /// Get Mapped Grid Spacing
     inline const Array<double, DIM>& dx(int a_block) const;
 
+    /// Get Operator
+    inline MAP<MEM>& op(int a_block) const;
+
     /// Get Mapped Coordinate Values
     /** Given a node-centered box and grid spacing, generate the node centered mapped
      *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
@@ -183,7 +184,7 @@ class MBLevelMap
     private:
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
-        mutable std::vector<MAP<MEM>>           m_ops;  ///< Map operators
+        mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
         std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
         std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
