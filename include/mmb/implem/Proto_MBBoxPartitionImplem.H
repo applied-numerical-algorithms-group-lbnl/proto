@@ -22,7 +22,8 @@ void MBBoxPartition::define(
     {
         for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
         {
-            m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+            const auto& domain = a_patchDomain.blockDomain(bi);
+            m_blockPartitions.push_back(std::make_shared<BoxPartition>(domain));
         }
     }
     define(a_patches);

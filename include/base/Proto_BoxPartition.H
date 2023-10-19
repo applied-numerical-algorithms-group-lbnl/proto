@@ -20,7 +20,11 @@ namespace Proto
     class BoxPartition
     {
         public: 
-       
+        
+        // Constructor
+        inline BoxPartition(
+                const ProblemDomain& a_patchDomain);
+
         /// Constructor
         /**
          * Create a BoxPartition from a "patch domain" and an array of patches

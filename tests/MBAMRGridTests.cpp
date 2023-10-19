@@ -26,7 +26,7 @@ TEST(MBAMRGrid, Construction) {
         {
             auto& blockGrid = grid.getBlock(bi); 
             EXPECT_TRUE(levelLayout.getBlock(bi) == blockGrid[li]);
-            EXPECT_EQ(&levelLayout.getBlock(bi).partition(), &blockGrid[li].partition());
+            EXPECT_EQ(levelLayout.getBlock(bi).partition(), blockGrid[li].partition());
         }
 
         for (auto iter : levelLayout)

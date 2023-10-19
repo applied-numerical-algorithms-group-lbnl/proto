@@ -4,7 +4,7 @@
 
 using namespace Proto;
 
-
+/*
 template<typename T, unsigned int C>
 bool compareBoxData(
         const BoxData<T, C, HOST>& a_src,
@@ -24,7 +24,7 @@ bool compareBoxData(
     }
     return true;
 }
-
+*/
 TEST(AMRData, Initialize) {
     int domainSize = 32;
     int numLevels = 3;

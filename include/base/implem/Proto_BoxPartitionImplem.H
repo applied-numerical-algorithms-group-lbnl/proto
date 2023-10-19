@@ -1,4 +1,16 @@
 BoxPartition::BoxPartition(
+        const ProblemDomain& a_patchDomain)
+{
+    std::vector<Point> patches;
+    for (auto pi : a_patchDomain.box())
+    {
+        patches.push_back(pi);
+    }
+    define(a_patchDomain, patches, 0, numProc());
+}
+
+
+BoxPartition::BoxPartition(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches)
 {
