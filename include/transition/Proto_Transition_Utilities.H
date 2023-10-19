@@ -83,7 +83,7 @@ namespace Proto_Transition
                  const double * a_host_data,
                  size_t a_dat_size)
     {
-      proto_memcpy<HOST, DEVICE>(a_host_data, a_devi_data, a_dat_size);
+      Proto::proto_memcpy<Proto::HOST, Proto::DEVICE>(a_host_data, a_devi_data, a_dat_size);
     }
     
     ///
@@ -92,7 +92,7 @@ namespace Proto_Transition
                const double * a_devi_data,
                size_t a_dat_size)
     {
-      proto_memcpy<DEVICE, HOST>(a_devi_data, a_host_data, a_dat_size);
+      Proto::proto_memcpy<Proto::DEVICE, Proto::HOST>(a_devi_data, a_host_data, a_dat_size);
     }
     ///
     /**
@@ -134,7 +134,7 @@ namespace Proto_Transition
       for(int ibox = 0; ibox < dit.size(); ibox++)
       {
         double*       devi_ptr = a_devi_data[dit[ibox]].data();
-        const doubl * host_ptr = a_host_data[ibox];
+        const double* host_ptr = a_host_data[ibox];
         const pr_box& fabbox   = a_devi_data[dit[ibox]].box();
         size_t num_points      = fabbox.size();
         size_t data_size       = ncomp*sizeof(double)*num_points;
