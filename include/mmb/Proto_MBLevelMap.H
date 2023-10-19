@@ -95,7 +95,7 @@ class MBLevelMap
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            unsigned int a_block);
+            unsigned int a_block) const;
     
     /// Compute Map (With Metrics)
     /** Users should override this function when defining their map if they want
@@ -114,7 +114,7 @@ class MBLevelMap
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT,
-            unsigned int a_block);
+            unsigned int a_block) const;
 
     /// Compute Map With Rotation
     /**
@@ -129,7 +129,7 @@ class MBLevelMap
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             unsigned int a_computeBlock,
-            unsigned int a_outBlock);
+            unsigned int a_outBlock) const;
    
     /// Compute Cell Centered Coordinates
     /** Returns the cell-centered coordinates on a specified range.
@@ -141,7 +141,7 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> cellCentered(
             const Box& a_box,
             unsigned int a_computeBlock,
-            unsigned int a_outBlock);
+            unsigned int a_outBlock) const;
     
     /// Compute Cell Centered Coordinates
     /** Returns the cell-averaged coordinates on a specified range.
@@ -153,15 +153,15 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> cellAveraged(
             const Box& a_box,
             unsigned int a_computeBlock,
-            unsigned int a_outBlock);
+            unsigned int a_outBlock) const;
 
     /// Compute Cell Centered Coordinates
     /** Computes the cell-centered coodinate values at a specified MBDataPoint */
-    inline Array<double, DIM> cellCentered(const MBDataPoint& a_point);
+    inline Array<double, DIM> cellCentered(const MBDataPoint& a_point) const;
     
     /// Compute Cell Averaged Coordinates
     /** Computes the cell-averaged coodinate values at a specified MBDataPoint */
-    inline Array<double, DIM> cellAveraged(const MBDataPoint& a_point);
+    inline Array<double, DIM> cellAveraged(const MBDataPoint& a_point) const;
 
     /// Get Layout
     inline const MBDisjointBoxLayout& layout() const;
@@ -183,7 +183,7 @@ class MBLevelMap
     private:
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
-        std::vector<MAP<MEM>>           m_ops;  ///< Map operators
+        mutable std::vector<MAP<MEM>>           m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
         std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
         std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values

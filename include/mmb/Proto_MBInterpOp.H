@@ -33,7 +33,7 @@ namespace Proto
         inline MBPointInterpOp(
             MBDataPoint                 a_dst,
             Point                       a_ghost,
-            MBLevelMap<MAP, MEM>&       a_map,
+            const MBLevelMap<MAP, MEM>&       a_map,
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
         
@@ -111,7 +111,9 @@ namespace Proto
     class MBInterpOp
     {
         public:
-        
+       
+        inline MBInterpOp(){}
+
         /// Initialize 
         /** This function does not create any operators. The user must call define separately */
         inline MBInterpOp(Point a_ghost, unsigned int a_order);
@@ -124,7 +126,19 @@ namespace Proto
          *  physical space when building the operators for each block */
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
-                MBLevelMap<MAP, MEM>&       a_map,
+                const MBLevelMap<MAP, MEM>& a_map,
+                int                         a_order = 4,
+                int                         a_block = -1);
+        
+        /// Define Block
+        /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
+         *  implied by the input MBLevelMap and the number of ghost cells this was initialized
+         *  with (see constructor). This function only defines the operators used to interpolate
+         *  into the specified block. A user may choose to specify a different version of
+         *  physical space when building the operators for each block */
+        template<template<MemType> typename MAP, MemType MEM>
+        inline void define(
+                const MBLevelMap<MAP, MEM>& a_map,
                 const std::vector<Point>&   a_footprint,
                 int block = -1);
         

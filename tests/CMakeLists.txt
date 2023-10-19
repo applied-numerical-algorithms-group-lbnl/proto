@@ -102,6 +102,10 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelMapTests COMMAND MBLevelMapTests)
+        blt_add_executable(NAME MBLevelRK4Tests SOURCES MBLevelRK4Tests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelRK4Tests COMMAND MBLevelRK4Tests)
     endif()
     if (OPS)
         blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp

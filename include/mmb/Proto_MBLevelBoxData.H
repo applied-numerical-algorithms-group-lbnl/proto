@@ -235,6 +235,9 @@ namespace Proto
         /// Get Patch Reference (Const Overload)
         inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
 
+        /// Increment
+        inline void increment(const MBLevelBoxData<T,C,MEM,CTR>& a_data, T a_scale = 1.0);
+
         /// Get Block Data
         /** Returns the normal LevelBoxData associated with a specified block */
         inline LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block);
@@ -346,7 +349,7 @@ namespace Proto
                 const Point& a_center,
                 const Point& a_ghost,
                 const std::vector<Point>& a_footprint,
-                const MBIndex& a_index);
+                const MBIndex& a_index) const;
         
         /// Print Boundary Buffer Data
         /** Prints the contents of the boundary buffers associated with a specified index.

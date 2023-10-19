@@ -1,22 +1,29 @@
+
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-MBLevelOp<OPType, MAP, T,  MEM>::MBLevelOp()
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp()
 {
 }
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T, MemType MEM>
-MBLevelOp<OPType, MAP, T,  MEM>::MBLevelOp(MBLevelMap<MAP,MEM>& a_map)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp(const MBLevelMap<MAP,MEM>& a_map)
 {
     define(a_map);
 }
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-void MBLevelOp<OPType, MAP, T,  MEM>::define(MBLevelMap<MAP,MEM>& a_map)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map)
 {
     auto& layout = a_map.map().layout();
     m_map = &a_map;
@@ -33,8 +40,10 @@ void MBLevelOp<OPType, MAP, T,  MEM>::define(MBLevelMap<MAP,MEM>& a_map)
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-void MBLevelOp<OPType, MAP, T,  MEM>::operator()(
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         LevelStateData&         a_output,
         const LevelStateData&   a_state,
         T                       a_scale)
@@ -55,8 +64,10 @@ void MBLevelOp<OPType, MAP, T,  MEM>::operator()(
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-void MBLevelOp<OPType, MAP, T,  MEM>::operator()(
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         LevelStateData&         a_output,
         const LevelStateData&   a_state,
         const LevelAuxData&     a_aux,
@@ -81,25 +92,30 @@ void MBLevelOp<OPType, MAP, T,  MEM>::operator()(
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-OPType<T,MEM>& MBLevelOp<OPType, MAP, T,  MEM>::operator[](MBIndex a_index)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index)
 {
     return m_ops[a_index];
 }
 
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-    typename T,  MemType MEM>
-const OPType<T,MEM>& MBLevelOp<OPType, MAP, T,  MEM>::operator[](MBIndex a_index) const
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+const OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index) const
 {
     return m_ops[a_index];
 }
 
-template <template<typename, MemType> class OpType,
+template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-         typename T,
-         MemType MEM>
-void MBLevelOp<OpType,MAP,T,MEM>::setDiagScale(T a_value)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::setDiagScale(T a_value)
 {
     m_diagScale = a_value;
     for (auto iter : m_map->layout())
@@ -108,11 +124,12 @@ void MBLevelOp<OpType,MAP,T,MEM>::setDiagScale(T a_value)
     }
 }
 
-template <template<typename, MemType> class OpType,
+template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-         typename T,
-         MemType MEM>
-void MBLevelOp<OpType,MAP,T,MEM>::setFluxScale(T a_value)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::setFluxScale(T a_value)
 {
     m_fluxScale = a_value;
     for (auto iter : m_map->layout())
@@ -121,11 +138,12 @@ void MBLevelOp<OpType,MAP,T,MEM>::setFluxScale(T a_value)
     }
 }
 
-template <template<typename, MemType> class OpType,
+template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-         typename T,
-         MemType MEM>
-void MBLevelOp<OpType,MAP,T,MEM>::setTime(T a_time)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::setTime(T a_time)
 {
     m_time = a_time;
     for (auto iter : m_map->layout())
@@ -134,11 +152,12 @@ void MBLevelOp<OpType,MAP,T,MEM>::setTime(T a_time)
     }
 }
 
-template <template<typename, MemType> class OpType,
+template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
-         typename T,
-         MemType MEM>
-void MBLevelOp<OpType,MAP,T,MEM>::setRKStage(unsigned int a_stage)
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
 {
     m_rkStage = a_stage;
     for (auto iter : m_map->layout())

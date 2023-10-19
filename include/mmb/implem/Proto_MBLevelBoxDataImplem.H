@@ -310,6 +310,24 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::increment(
+        const MBLevelBoxData<T,C,MEM,CTR>& a_data,
+        T                                  a_scale)
+{
+    PROTO_ASSERT(layout().compatible(a_data.layout()),
+        "MBLevelBoxData::increment | Error: Incompatible layouts");
+    PR_TIME("MBLevelBoxData::increment");
+    Stencil<T> INCR = a_scale*Shift::Zeros();
+    for (auto iter : layout())
+    {
+        auto& lhs = (*this)[iter];
+        const auto& rhs = a_data[iter];
+        lhs += INCR(rhs);
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Array<Point, DIM + 1>
 MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 {
@@ -573,9 +591,9 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const Point &a_center,
     const Point& a_ghost,
     const std::vector<Point> &a_footprint,
-    const MBIndex &a_index)
+    const MBIndex &a_index) const
 {
-    auto &srcPatch = (*this)[a_index];
+    //const auto &srcPatch = (*this)[a_index];
     Box patchDomain = this->layout()[a_index].grow(a_ghost);
 
     PROTO_ASSERT(patchDomain.contains(a_center),

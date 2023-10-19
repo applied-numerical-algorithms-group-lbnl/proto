@@ -47,7 +47,7 @@ template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
-        unsigned int a_block)
+        unsigned int a_block) const
 {
     m_ops[a_block]._apply(a_X, a_J);
 }
@@ -57,7 +57,7 @@ void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
         FluxBoxData<double, DIM, MEM>& a_NT,
-        unsigned int a_block)
+        unsigned int a_block) const
 {
     m_ops[a_block]._apply(a_X, a_J, a_NT);
 }
@@ -67,7 +67,7 @@ void MBLevelMap<MAP,MEM>::doApply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_computeBlock,
-        unsigned int a_outBlock)
+        unsigned int a_outBlock) const
 {
     if (a_computeBlock != a_outBlock)
     {
@@ -90,7 +90,7 @@ template<template<MemType> typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellAveraged(
         const Box&   a_box,
         unsigned int a_computeBlock,
-        unsigned int a_outBlock)
+        unsigned int a_outBlock) const
 {
     Box B0 = m_c2c.domain(a_box);
     BoxData<double, DIM, MEM> X0(B0);
@@ -103,14 +103,14 @@ template<template<MemType> typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellCentered(
         const Box&   a_box,
         unsigned int a_computeBlock,
-        unsigned int a_outBlock)
+        unsigned int a_outBlock) const
 {
     auto X0 = cellAveraged(a_box.grow(1), a_computeBlock, a_outBlock);
     return Operator::deconvolve(X0);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
+Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point) const
 {
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
@@ -120,7 +120,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
+Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point) const
 {
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
