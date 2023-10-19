@@ -18,7 +18,7 @@ template<template<MemType> typename MAP, MemType MEM>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
-        MBLevelMap<MAP, MEM>& a_map,
+        const MBLevelMap<MAP, MEM>& a_map,
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
@@ -182,7 +182,32 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
-        MBLevelMap<MAP,MEM>&            a_map,
+        const MBLevelMap<MAP,MEM>&    a_map,
+        int                     a_order,
+        int                     a_block)
+{
+    std::vector<Point> footprint;
+    switch (a_order)
+    {
+        case 4:
+            for (auto pi : Box::Kernel(2))
+            {
+                if (pi.abs().sum() <= 2)
+                {
+                    footprint.push_back(pi);
+                }
+            }
+            break;
+        default:
+            MayDay<void>::Error("MBInterpOp::define | Function undefined for order %i", a_order);
+            break;
+    }
+    define(a_map, footprint, a_block);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+        const MBLevelMap<MAP,MEM>&            a_map,
         const std::vector<Point>&   a_footprint,
         int                         a_block)
 {
