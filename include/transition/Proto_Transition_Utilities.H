@@ -83,7 +83,11 @@ namespace Proto_Transition
                  const double * a_host_data,
                  size_t a_dat_size)
     {
+#ifdef PROTO_ACCEL      
       Proto::proto_memcpy<Proto::HOST, Proto::DEVICE>(a_host_data, a_devi_data, a_dat_size);
+#else      
+      Proto::proto_memcpy<Proto::HOST, Proto::HOST  >(a_host_data, a_devi_data, a_dat_size);
+#endif      
     }
     
     ///
@@ -92,7 +96,11 @@ namespace Proto_Transition
                const double * a_devi_data,
                size_t a_dat_size)
     {
+#ifdef PROTO_ACCEL      
       Proto::proto_memcpy<Proto::DEVICE, Proto::HOST>(a_devi_data, a_host_data, a_dat_size);
+#else      
+      Proto::proto_memcpy<Proto::HOST  , Proto::HOST>(a_devi_data, a_host_data, a_dat_size);
+#endif      
     }
     ///
     /**
