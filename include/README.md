@@ -1,4 +1,4 @@
-#include
+# proto/include
 * Proto.H is the only thing any proto user needs to include.
 
 # Subdirectories
