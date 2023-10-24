@@ -654,6 +654,8 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
+#endif
+
 template<typename T, unsigned int C>
 bool compareBoxData(
         const BoxData<T, C, HOST>& a_src,
@@ -723,5 +725,4 @@ bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
     }
     return true;
 }
-#endif //end if PR_AMR
 #endif //end include guard
