@@ -17,7 +17,7 @@ namespace Proto_Transition
   {
   public:
     typedef  Proto::MayDay<void>                     pr_mayday;
-    typedef  Proto::Point                            pr_point;
+    typedef  Proto::Point                            pr_pt;
     typedef  Proto::Box                              pr_box;
     typedef  Proto::DisjointBoxLayout                pr_dbl;
     typedef  Proto::ProblemDomain                    pr_dom;
@@ -32,8 +32,8 @@ namespace Proto_Transition
         the boxes MUST BE DISJOINT.
     **/
     static shared_ptr< pr_dbl > getLayout(
-      const vector<pair<pr_point, unsigned int> >   &  a_layout,
-      const pr_point                                &  a_boxSize,
+      const vector<pair<pr_pt, unsigned int> >   &  a_layout,
+      const pr_pt                                &  a_boxSize,
       const pr_dom                                  &  a_domain)
     {
 
@@ -45,7 +45,7 @@ namespace Proto_Transition
       pr_box patchDomain = a_domain.box().coarsen(a_boxSize);
       for (auto iter : a_layout)
       {
-        pr_point patch = iter.first;
+        pr_pt patch = iter.first;
         PROTO_ASSERT(patch.min() >= 0,
                      "DataUtilities::getLayout | Error: Patches must be in the non-negative index space");
         PROTO_ASSERT(patchDomain.contains(patch),
@@ -67,7 +67,7 @@ namespace Proto_Transition
   {
   public:
     typedef  Proto::MayDay<void>                     pr_mayday;
-    typedef  Proto::Point                            pr_point;
+    typedef  Proto::Point                            pr_pt;
     typedef  Proto::Box                              pr_box;
     typedef  Proto::DisjointBoxLayout                pr_dbl;
     typedef  Proto::ProblemDomain                    pr_dom;
@@ -168,49 +168,49 @@ namespace Proto_Transition
       pr_pt   hibox = a_validBox.high();
       pr_pt   lodom = a_domain.low();
       pr_pt   hidom = a_domain.high();
-      pr_box srcBox = a_validBox.grow(Point::Ones(a_numGhost));
+      pr_box srcBox = a_validBox.grow(pr_pt::Ones(a_num_ghost));
       a_stencils.resize(   0);
-      a_apply_boxes.resize(0);
+      a_appboxes.resize(0);
       double  stenSign = double(a_sten_sign);
 
-      if(zero_lo_one_hi == 0) //low side
+      if(a_zero_lo_one_hi == 0) //low side
       {
-        Point loapp  = srcBox.low();
-        Point hiapp  = srcBox.high();
-        loapp[idir]  = lodom[idir]-1;
-        hiapp[idir]  = lodom[idir]-1;
+        pr_pt loapp  = srcBox.low();
+        pr_pt hiapp  = srcBox.high();
+        loapp[a_idir]  = lodom[a_idir]-1;
+        hiapp[a_idir]  = lodom[a_idir]-1;
 
-        if(lobox[idir] == lodom[idir])
+        if(lobox[a_idir] == lodom[a_idir])
         {
           a_stencils.resize(a_num_ghost);
           a_appboxes.resize(a_num_ghost);
-          string bcname = a_domainBCName[loindex];
-          Box appBox0(loapp, hiapp);
-          for(int igh = 0; igh < numghost; igh++)
+
+          pr_box appBox0(loapp, hiapp);
+          for(int igh = 0; igh < a_num_ghost; igh++)
           {
-            a_appboxes[igh] = appBox0.shift(idir, -igh);
-            a_stencils[igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+            a_appboxes[igh] = appBox0.shift(a_idir, -igh);
+            a_stencils[igh] = (stenSign)*Proto::Shift(pr_pt::Basis(a_idir, 2*igh+1));
           }
         }
       }
-      else if (zero_lo_one_hi == 1)// high side
+      else if (a_zero_lo_one_hi == 1)// high side
       {
-        if(hibox[idir] == hidom[idir]) 
+        if(hibox[a_idir] == hidom[a_idir]) 
         {
           a_stencils.resize(a_num_ghost);
           a_appboxes.resize(a_num_ghost);
 
-          Point loapp = srcBox.low();
-          Point hiapp = srcBox.high();
-          loapp[idir] = hidom[idir]+1;
-          hiapp[idir] = hidom[idir]+1;
+          pr_pt loapp = srcBox.low();
+          pr_pt hiapp = srcBox.high();
+          loapp[a_idir] = hidom[a_idir]+1;
+          hiapp[a_idir] = hidom[a_idir]+1;
 
-          Box appBox0(loapp, hiapp);
+          pr_box appBox0(loapp, hiapp);
         
-          for(int igh = 0; igh < numghost; igh++)
+          for(int igh = 0; igh < a_num_ghost; igh++)
           {
-            a_appboxes[igh] = appBox0.shift(idir, igh);
-            a_stencils[igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+            a_appboxes[igh] = appBox0.shift(a_idir, igh);
+            a_stencils[igh] = (stenSign)*Proto::Shift(pr_pt::Basis(a_idir, 2*igh+1));
           }
         }
       
@@ -235,13 +235,16 @@ namespace Proto_Transition
       auto grids = a_devi_data.layout();
       auto dombx = grids.domain().box();
       bool initToZero = true;
+      int num_ghost = a_devi_data.ghost()[a_domain_face_dir];
       for(int ibox = 0; ibox < dit.size(); ibox++)
       {
         
         pr_box              valid = grids[dit[ibox]];
         vector<pr_sten>  stencils; 
         vector<pr_box>   appboxes;
-        getDomainBCReflectionStencils(stencils, appboxes, valid, a_num_ghost, a_idir, a_zero_lo_one_hi, a_sten_sign);
+
+        getDomainBCReflectionStencils(stencils, appboxes, valid, dombx, num_ghost,
+                                      a_domain_face_dir, a_zero_lo_one_hi, a_sten_sign);
         // these vectors are empty away from the domain boundary
         auto& datafab = a_devi_data[dit[ibox]];
         for(int isten = 0; isten < stencils.size(); isten++)
@@ -275,7 +278,7 @@ namespace Proto_Transition
     domainGhostReflectOdd(
             pr_level_data             &    a_devi_data,
             const pr_box              &    a_domain,
-            int a_domain_face_dir,  int lo_or_hi_side)  
+            int a_domain_face_dir,  int a_zero_lo_one_hi)
     {
       int sten_sign = -1;
       domainGhostReflection(a_devi_data,
@@ -296,7 +299,7 @@ namespace Proto_Transition
             pr_level_data             &    a_fine_data,
             const pr_level_data       &    a_coar_data,
             const pr_box              &    a_domain,
-            const pr_point            &    a_ref_ratio)
+            const pr_pt               &    a_ref_ratio)
     {
       pr_mayday::Error("Doh!  fillGhostOverCoarseFineBoundaries not implemented");
     }
