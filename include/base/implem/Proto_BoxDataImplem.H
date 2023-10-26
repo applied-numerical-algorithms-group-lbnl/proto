@@ -575,13 +575,14 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
                         BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
-                        int srcPencilOffset = srcbd.box().size(0);
-                        int dstPencilOffset = dstbd.box().size(0);
-                        int pencilLength = dstBox.size(0);
+                        /** looks like all this stuff is unused ---dtg
+                        int srcPencilOffset = srcbd.box().size(0); 
+                        int dstPencilOffset = dstbd.box().size(0); 
                         int srcStartOffset = srcbd.box().index(srcBox.low());
                         int dstStartOffset = dstbd.box().index(dstBox.low());
                         int numPencils = dstBox.flatten(0).size();
-                        
+                        **/
+                        int pencilLength = dstBox.size(0);
                         Box srcPencilBox = srcBox.flatten(0);
                         for (auto pi : srcPencilBox)
                         {
