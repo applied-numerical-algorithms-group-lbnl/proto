@@ -74,7 +74,7 @@ namespace Proto_Transition
     typedef  Proto::BoxPartition                     pr_partition;
     typedef  Proto::LevelBoxData<double, ncomp>      pr_level_data;
     typedef  Proto::BoxData<     double, ncomp>      pr_box_data;
-
+    typedef  Proto::Stencil<     double>             pr_sten;
 
 
     ///
@@ -152,26 +152,124 @@ namespace Proto_Transition
 
     }
 
+
+    static void
+    getDomainBCReflectionStencils(vector<pr_sten>  & a_stencils,
+                                  vector<pr_box>   & a_appboxes,
+                                  const  pr_box    & a_validBox,
+                                  const  pr_box    & a_domain,
+                                  int                a_num_ghost,
+                                  int                a_idir,
+                                  int                a_zero_lo_one_hi,
+                                  int a_sten_sign )//1 reflect even, -1 reflect odd
+    
+    {
+      pr_pt   lobox = a_validBox.low();
+      pr_pt   hibox = a_validBox.high();
+      pr_pt   lodom = a_domain.low();
+      pr_pt   hidom = a_domain.high();
+      pr_box srcBox = a_validBox.grow(Point::Ones(a_numGhost));
+      a_stencils.resize(   0);
+      a_apply_boxes.resize(0);
+      double  stenSign = double(a_sten_sign);
+
+      if(zero_lo_one_hi == 0) //low side
+      {
+        Point loapp  = srcBox.low();
+        Point hiapp  = srcBox.high();
+        loapp[idir]  = lodom[idir]-1;
+        hiapp[idir]  = lodom[idir]-1;
+
+        if(lobox[idir] == lodom[idir])
+        {
+          a_stencils.resize(a_num_ghost);
+          a_appboxes.resize(a_num_ghost);
+          string bcname = a_domainBCName[loindex];
+          Box appBox0(loapp, hiapp);
+          for(int igh = 0; igh < numghost; igh++)
+          {
+            a_appboxes[igh] = appBox0.shift(idir, -igh);
+            a_stencils[igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+          }
+        }
+      }
+      else if (zero_lo_one_hi == 1)// high side
+      {
+        if(hibox[idir] == hidom[idir]) 
+        {
+          a_stencils.resize(a_num_ghost);
+          a_appboxes.resize(a_num_ghost);
+
+          Point loapp = srcBox.low();
+          Point hiapp = srcBox.high();
+          loapp[idir] = hidom[idir]+1;
+          hiapp[idir] = hidom[idir]+1;
+
+          Box appBox0(loapp, hiapp);
+        
+          for(int igh = 0; igh < numghost; igh++)
+          {
+            a_appboxes[igh] = appBox0.shift(idir, igh);
+            a_stencils[igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+          }
+        }
+      
+      }
+      else
+      {
+        pr_mayday::Error("Doh! getDomainBCs: bogus zero_lo_one_hi (must be 0 or 1)");
+      }
+    }
+
+
     ///
     /**
-     *      \a_domain - problem domain
-     *      \a_domain_face_dir is the direction of the domain face
-     *      \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
      **/
     static void
-    domainGhostReflectEven(
-            pr_level_data             &    a_devi_data,
-            const pr_box              &    a_domain,
-            int a_domain_face_dir,  int    a_lo_or_hi_side)  
+    domainGhostReflection(
+      pr_level_data             &    a_devi_data,
+      const pr_box              &    a_domain,
+      int a_domain_face_dir,  int    a_zero_lo_one_hi,  int a_sten_sign)  
     {
-      pr_mayday::Error("Doh!  ghostReflectEven not implemented");
+      auto dit   = a_devi_data.dataIterator();
+      auto grids = a_devi_data.layout();
+      auto dombx = grids.domain().box();
+      bool initToZero = true;
+      for(int ibox = 0; ibox < dit.size(); ibox++)
+      {
+        
+        pr_box              valid = grids[dit[ibox]];
+        vector<pr_sten>  stencils; 
+        vector<pr_box>   appboxes;
+        getDomainBCReflectionStencils(stencils, appboxes, valid, a_num_ghost, a_idir, a_zero_lo_one_hi, a_sten_sign);
+        // these vectors are empty away from the domain boundary
+        auto& datafab = a_devi_data[dit[ibox]];
+        for(int isten = 0; isten < stencils.size(); isten++)
+        {
+          stencils[isten].apply(datafab, datafab, appboxes[isten], initToZero, 1.0);
+        }
+      }
     }
 
     ///
     /**
-     * \param     \a_domain - problem domain
-     * \param     \a_domain_face_dir is the direction of the domain face
-     * \param     \a_lo_or_hi_side  = 0 for low side of the domain, = 1 for high.
+       fill ghost cells outside domain with an even reflection of interior data
+     **/
+    static void
+    domainGhostReflectEven(
+      pr_level_data             &    a_devi_data,
+      const pr_box              &    a_domain,
+      int a_domain_face_dir,  int    a_zero_lo_one_hi)  
+    {
+      int sten_sign = 1;
+      domainGhostReflection(a_devi_data,
+                            a_domain, a_domain_face_dir,
+                            a_zero_lo_one_hi, sten_sign);
+    }
+
+    ///
+    /**
+       fill ghost cells outside domain with an odd reflection of interior data
      **/
     static void
     domainGhostReflectOdd(
@@ -179,7 +277,10 @@ namespace Proto_Transition
             const pr_box              &    a_domain,
             int a_domain_face_dir,  int lo_or_hi_side)  
     {
-      pr_mayday::Error("Doh!  ghostReflectOdd not implemented");
+      int sten_sign = -1;
+      domainGhostReflection(a_devi_data,
+                            a_domain, a_domain_face_dir,
+                            a_zero_lo_one_hi, sten_sign);
     }
 
     ///
