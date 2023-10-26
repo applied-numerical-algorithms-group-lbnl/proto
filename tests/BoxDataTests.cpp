@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cmath>
+#include <climits>
 #include "Proto.H"
 #include "Lambdas.H"
 

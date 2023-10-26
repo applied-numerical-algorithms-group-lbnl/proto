@@ -6,6 +6,7 @@
 #define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
 #define SHEAR_SLOPE 1.0
+#define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -148,7 +149,6 @@ MBProblemDomain buildShear(int a_domainSize)
     }
     return domain;
 }
-#endif
 
 #if DIM > 2
 MBProblemDomain buildRing(Point a_domainSize)
@@ -183,6 +183,7 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     }
     return domain;
 }
+#endif
 #endif
 
 
