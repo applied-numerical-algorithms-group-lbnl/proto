@@ -93,6 +93,10 @@ add_compile_options(-w)
 
 if (ENABLE_HIP)
     set(ENV{CXX} "hipcc")  # should set CMAKE_CXX_COMPILER
+elseif (ENABLE_SYCL)
+	add_compile_definitions(PROTO_SYCL)
+	set(CMAKE_CXX_COMPILER icpx CACHE STRING "C++ compiler")
+	set(CMAKE_CXX_FLAGS -fsycl CACHE STRING "C++ flags")
 endif()
 project(Proto VERSION 4.0 DESCRIPTION "Proto examples") # LANGUAGES CXX) # HDF5 fails with LANGUAGES argument
 enable_language(CXX)
@@ -140,8 +144,10 @@ if(ENABLE_MPI)
 	find_package(MPI REQUIRED)
 endif()
 
-if(ENABLE_CUDA OR ENABLE_HIP)
+if(ENABLE_CUDA OR ENABLE_HIP OR ENABLE_SYCL)
     add_compile_definitions(PROTO_ACCEL)
+endif()
+if(ENABLE_CUDA OR ENABLE_HIP)
     if(ENABLE_CUDA AND ENABLE_HIP)
         message(FATAL_ERROR "Must specify at most one of CUDA and HIP")
     endif()

@@ -5,10 +5,10 @@
 #ifndef PR_TURN_OFF_TIMERS
 
 #ifdef PROTO_ACCEL
-#ifndef PROTO_HIP
+#ifdef PROTO_CUDA
 #include <nvToolsExt.h>
 #include <nvToolsExtCuda.h>
-#else
+#elif defined PROTO_HIP
 #include <roctx.h>
 #endif
 #endif
@@ -346,9 +346,9 @@ namespace Proto
     *mutex = 1;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
 #ifdef PROTO_ACCEL
-#ifndef PROTO_HIP
+#ifdef PROTO_CUDA
     nvtxRangePushA(m_name);
-#else
+#elif defined PROTO_HIP
    roctxRangePushA(m_name);
 #endif
 #endif
@@ -373,9 +373,9 @@ namespace Proto
     if(m_pruned) return 0;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
 #ifdef PROTO_ACCEL
-#ifndef PROTO_HIP
+#ifdef PROTO_CUDA
     nvtxRangePop();
-#else
+#elif defined PROTO_HIP
     roctxRangePop();
 #endif
 #endif

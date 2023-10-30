@@ -23,6 +23,8 @@
 #elif defined PROTO_HIP
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#elif defined PROTO_SYCL
+#include "sycl/sycl.hpp"
 #endif
 #include "iostream" // Use for CHECK(X)
 
@@ -72,9 +74,11 @@
 	#define protoGetErrorString(X)    cudaGetErrorString(X)
 	#define protoThreadSynchronize()  cudaThreadSynchronize()
 
+#else // PROTO_SYCL
+	#define protoStream_t             sycl::queue
 #endif
 
-#ifndef NDEBUG
+#if !(defined NDEBUG || defined PROTO_SYCL)
 
 	#ifndef superDebug
 		#define GPU_CHECK(in)                                    \
@@ -258,19 +262,6 @@ static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in
     PRINT_KER((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
 #endif
 
-
-template<typename T>
-inline bool isDeviceMemory(T* ptr)
-{
-  protoPointerAttributes att;
-  protoPointerGetAttributes(&att, ptr);
-#if defined PROTO_HIP
-  if(att.memoryType == hipMemoryTypeDevice) return true; // = 2-> device allocation
-#elif defined PROTO_CUDA
-  if(att.type == 2) return true; // = 2-> device allocation
-#endif
-  return false;
-}
 
 //// tuning
 // 

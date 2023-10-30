@@ -70,6 +70,15 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 
 #else //If PROTO_ACCEL is defined
 #include "Proto_gpu.H"
+struct dim3 { 
+  sycl::range<3> r;
+  size_t x, y, z;
+  dim3(size_t a_x, size_t a_y, size_t a_z) : x(a_x), y(a_y), z(a_z), r(x,y,z) {};
+  dim3(size_t a_x, size_t a_y) : x(a_x), y(a_y), z(1), r(x,y,z) {};
+  dim3(size_t a_x) : x(a_x), y(1), z(1), r(x,y,z) {}
+  dim3() : r(1,1,1) {};
+  const sycl::range<3> range() { return r; }
+};
 
 #define protoMalloc(memtype,PTR,NBYTES) \
     if(memtype==Proto::MemType::DEVICE) { protoMallocGPU(PTR,NBYTES); }\
@@ -131,7 +140,10 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 // #endif
 */
 template<typename Ker, typename... Args>
-__global__ void generalLaunch(const Args... args)
+#ifndef PROTO_SYCL
+__global__ 
+#endif
+void generalLaunch(const Args... args)
 {
   Ker::gpu(args...);
 }
@@ -146,8 +158,17 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
   {
     assert(nBlocks.x> 0 && nBlocks.y> 0 &&  nBlocks.z> 0 && nbThreads > 0);
     assert(nbThreads<=MAXTHREADS);
+#ifdef PROTO_SYCL
+	auto selector = sycl::gpu_selector_v;
+	sycl::device dev(selector);
+	sycl::queue q(dev);
+	sycl::range<3> local{static_cast<size_t>(nbThreads),1,1};
+	sycl::nd_range nd(nBlocks.range(), local);
+	q.submit(nd, Ker, args);
+#else
     protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads,args...);
     GPU_CHECK(protoGetLastError());
+#endif
   }
   else
     Ker::cpu( args...);
@@ -161,12 +182,19 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
   {
     assert(nBlocks.x> 0 && nBlocks.y> 0 &&  nBlocks.z> 0 && nbThreads > 0);
     assert(nbThreads<=MAXTHREADS);
+#ifdef PROTO_SYCL
+	try {
+#endif
 #ifndef PROTO_DEBUG
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, stream, args...);
 #else
     protoLaunchKernelMemGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, args...);
 #endif
+#ifdef PROTO_SYCL
+	} catch (sycl::exception &e) { std::cerr << e.what() << std::endl; }
+#else
     GPU_CHECK(protoGetLastError());
+#endif
   }
   else
     Ker::cpu( args...);

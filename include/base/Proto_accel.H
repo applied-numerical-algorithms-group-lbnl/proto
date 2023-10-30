@@ -2,7 +2,7 @@
 #define __PROTO_ACCEL_HEADER__
 
 
-#ifdef PROTO_ACCEL
+#if defined PROTO_ACCEL && !defined PROTO_SYCL
 
 #define ACCEL_DECORATION __host__ __device__
 #define ACCEL_KERNEL __global__
