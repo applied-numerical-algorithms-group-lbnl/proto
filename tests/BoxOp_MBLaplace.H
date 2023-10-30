@@ -37,6 +37,7 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
         // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
         a_flux = Operator::_faceMatrixProductAB(
                 faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
+        a_flux /= this->dx()[a_dir];
     }
 
     // Cache metric terms and Jacobian
@@ -48,6 +49,7 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
         for (int dir = 0; dir < DIM; dir++)
         {
             auto C2F = Stencil<double>::CellToFace(dir);
+            //m_NT[dir] = Operator::cofactor(this->x(), dir);
             m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
             m_Jf.push_back(C2F(this->jacobian()));
         }

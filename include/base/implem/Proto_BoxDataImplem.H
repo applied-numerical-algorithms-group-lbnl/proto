@@ -15,7 +15,10 @@ static struct_##local_name app_name;
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
-BoxData<T,C,MEM,D,E>::BoxData() : m_rawPtr(nullptr) {}
+BoxData<T,C,MEM,D,E>::BoxData() : m_rawPtr(nullptr)
+{
+    m_alias = false;
+}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
@@ -38,7 +41,10 @@ template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
-      m_rawPtr(a_src.m_rawPtr) {}
+      m_rawPtr(a_src.m_rawPtr)
+{
+    m_alias = false;
+}
 
 // Define
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
@@ -60,6 +66,7 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
+    m_alias = false;
 }
 
 // Alias Define
@@ -73,6 +80,7 @@ void BoxData<T,C,MEM,D,E>::define(
     m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
     m_data   = a_src.aliasData();
+    m_alias  = true;
 }           
 
 // Raw Pointer Constructor
@@ -93,6 +101,7 @@ void BoxData<T,C,MEM,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
     m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata<MEM>));
     m_rawPtr = castPtr;
     m_box = a_box;
+    m_alias = true;
 }
 
 // Stencil Constructor
@@ -122,6 +131,7 @@ BoxData<T,C,MEM,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const
     m_data = a_data;
     m_box = (a_box);
     m_rawPtr = (T*)a_ptr;
+    m_alias = true;
 }
 
 // Destructor
@@ -141,13 +151,18 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator=(BoxData<T,C,MEM,D,E>&& a_s
     PR_TIME("BoxData::operator=(BoxData&& (move assign)");
     if (!a_src.isAlias(*this))
     {
-        std::swap<Box>(m_box,a_src.m_box);
-        std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
-        m_rawPtr = a_src.m_rawPtr;
-        a_src.m_rawPtr = nullptr;
+        if (m_alias)
+        {
+            a_src.copyTo(*this);
+        } else {
+            std::swap<Box>(m_box,a_src.m_box);
+            std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
+            m_rawPtr = a_src.m_rawPtr;
+            a_src.m_rawPtr = nullptr;
 #ifdef PROTO_MEM_CHECK
-        BoxDataMemCheck::numMoveAssign()++;
+            BoxDataMemCheck::numMoveAssign()++;
 #endif
+        }
     }
     return *this;
 }

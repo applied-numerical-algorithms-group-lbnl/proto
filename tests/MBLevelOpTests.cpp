@@ -108,13 +108,18 @@ TEST(MBLevelOp, ShearLaplace) {
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
+        double dx = 1.0/domainSize;
+        double J = pow(dx,DIM);
+        std::cout << "dx^DIM: " << J << std::endl;
         for (auto iter : layout)
         {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
-            dst_i *= domainSize; //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
             dst_i.copyTo(err_i);
+            double J0 = map.jacobian()[iter].absMax(); //J is a constant
+            std::cout << "J0: " << J0 << std::endl;
+            err_i /= J0;
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);
         }
@@ -174,6 +179,7 @@ TEST(MBLevelOp, XPointLaplace) {
     for (int nn = 0; nn < N; nn++)
     {
         err[nn] = 0.0;
+        double dx = 1.0/domainSize;
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -182,6 +188,7 @@ TEST(MBLevelOp, XPointLaplace) {
         map.define(layout, mapGhost);
         
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
+        MBLevelBoxData<double, DIM, HOST> hostFlx(layout, srcGhost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
@@ -211,16 +218,29 @@ TEST(MBLevelOp, XPointLaplace) {
         hostSrc.exchange();
         hostDst.setVal(0);
         hostErr.setVal(0);
-       
+        hostFlx.setVal(7);
+
         MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
+        
         for (auto iter : layout)
         {
+            auto& src_i = hostSrc[iter];    //source data already initialized
+            auto& flx_i = hostFlx[iter];    //uninitialized data with DIM components
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                auto fd = slice(flx_i, ii); //alias to a single component(?)
+                op[iter].flux(fd, src_i,ii);              //update fd
+                std::cout << "fd: " << fd.data() << " | flx: " << flx_i.data() << std::endl;
+                std::cout << "diff: " << (fd.data() - flx_i.data())/sizeof(double) << std::endl;
+                return;
+            }
+
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
-            dst_i *= domainSize;    //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
+            //dst_i *= domainSize;    //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
             double J0 = map.jacobian()[iter].absMax(); //J is a constant
             dst_i /= (J0);
@@ -240,6 +260,7 @@ TEST(MBLevelOp, XPointLaplace) {
         h5.writeMBLevel({"err"}, map, hostErr, "XPoint_Err_%i", nn);
         h5.writeMBLevel({"Lphi"}, map, hostDst, "XPoint_LPhi_%i", nn);
         h5.writeMBLevel({"J"}, map, map.jacobian(), "XPoint_J_%i", nn);
+        h5.writeMBLevel({"F"}, map, hostFlx, "XPoint_Flux_%i", nn);
 #endif
         domainSize *= 2;
         boxSize *= 2;

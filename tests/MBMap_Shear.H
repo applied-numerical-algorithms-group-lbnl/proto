@@ -54,6 +54,7 @@ class MBMap_Shear : public MBMapOp<MEM>
                 }
             }, a_X, X0, block
         );
+        //a_J.setVal(dx.product());
         a_J.setVal(1.0);
     }
 };

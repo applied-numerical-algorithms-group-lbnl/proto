@@ -1397,7 +1397,7 @@ namespace Proto
         }
 
         private:
-
+        bool                    m_alias; ///< was this created as an alias
         bool                    m_stackAlloc;
         Box                     m_box; ///< Box defining the domain of *this
         ::std::shared_ptr<T>    m_data; ///< Data array

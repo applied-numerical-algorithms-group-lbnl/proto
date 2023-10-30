@@ -44,6 +44,7 @@ template <typename T,
 void
 BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, Array<T, DIM> a_dx)
 {
+    m_isMapped = false;
     m_scaleDiag = 0;
     m_scaleFlux = 1;
     m_dx = a_dx;
@@ -80,9 +81,19 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
             if (!m_definedFlux) {break; }
             if (dir == 0)
             {
-                divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
+                if (m_isMapped)
+                {
+                    divFlux |= DIV(flux_d);
+                } else {
+                    divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
+                }
             } else {
-                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
+                if (m_isMapped)
+                {
+                    divFlux += DIV(flux_d);
+                } else {
+                    divFlux += DIV(flux_d, 1.0/m_dx[dir]);
+                }
             }
         }
         if (m_definedFlux)
@@ -136,7 +147,12 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
             auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, dir);
             if (!m_definedFlux) {break; }
-            divFlux += DIV(flux_d, 1.0/m_dx[dir]);
+            if (m_isMapped) {
+                //divFlux += DIV(flux_d);
+                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
+            } else {
+                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
+            }
         }
         if (m_definedFlux)
         {
@@ -423,6 +439,7 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::define(
     m_x = &a_x;
     m_J = &a_J;
     define(a_box, a_dx);
+    m_isMapped = true;
 }
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>

@@ -335,7 +335,7 @@ class BoxOp
     protected:
 
     private:
-
+    bool m_isMapped;
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
