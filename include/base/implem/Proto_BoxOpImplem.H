@@ -83,14 +83,16 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
             {
                 if (m_isMapped)
                 {
-                    divFlux |= DIV(flux_d);
+                    //divFlux |= DIV(flux_d);
+                    divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
                 } else {
                     divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
                 }
             } else {
                 if (m_isMapped)
                 {
-                    divFlux += DIV(flux_d);
+                    //divFlux += DIV(flux_d);
+                    divFlux += DIV(flux_d, 1.0/m_dx[dir]);
                 } else {
                     divFlux += DIV(flux_d, 1.0/m_dx[dir]);
                 }
