@@ -29,6 +29,7 @@
 
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
+#include "utils/Proto_MBMultigrid.H"
 #if DIM == 3
 #include "utils/Proto_CubedSphereShell.H"
 #endif
