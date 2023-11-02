@@ -25,9 +25,14 @@ public:
             Point                       a_refRatio,
             int                         a_numLevels);
     
+    inline MBMultigrid(
+            const MBDisjointBoxLayout&  a_fineLayout,
+            const std::vector<Point>&   a_refRatios,
+            int                         a_numLevels);
+    
     inline void define(
             const MBDisjointBoxLayout&  a_fineLayout,
-            Point                       a_refRatio,
+            const std::vector<Point>&   a_refRatio,
             int                         a_numLevels);
     
     inline T solve(

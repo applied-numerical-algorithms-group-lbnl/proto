@@ -80,6 +80,10 @@ namespace Proto
                 const MBIndex&  a_index) const;
         inline unsigned int size() const;
         inline unsigned int localSize() const;
+        inline std::vector<Point> boxSizes() const;
+        inline MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
+        inline MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

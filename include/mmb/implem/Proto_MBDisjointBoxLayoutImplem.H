@@ -41,7 +41,7 @@ void MBDisjointBoxLayout::define(
     std::vector<MBPatchID_t> patches;
     for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
     {
-        Box patchBox = a_domain.blockDomain(bi).box().coarsen(a_boxSizes[bi]);
+        Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
         {
             patches.push_back(MBPatchID_t(pi, bi));
@@ -317,6 +317,38 @@ unsigned int MBDisjointBoxLayout::size() const
 unsigned int MBDisjointBoxLayout::localSize() const
 {
     return m_partition->numBoxes(Proto::procID());
+}
+
+std::vector<Point> MBDisjointBoxLayout::boxSizes() const
+{
+    std::vector<Point> ret;
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        ret.push_back(m_layouts[bi].boxSize());
+    }
+    return ret;
+}
+
+MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
+{
+    std::vector<Point> refRatios(numBlocks(), a_refRatio);
+    return this->coarsen(refRatios);
+}
+
+MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
+{
+    PROTO_ASSERT(a_refRatios.size() == numBlocks(),
+            "MBDisjointBoxLayout::coarsen | Error: Wrong number of ref ratios");
+    std::vector<Point> crseBoxSize;
+    std::vector<Point> fineBoxSize = this->boxSizes();
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        PROTO_ASSERT(fineBoxSize[bi] % a_refRatios[bi] == Point::Zeros(),
+            "MBDisjointBoxLayout::coarsen | Error: Layout is not coarsenable by ref ratio.");
+        crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
+    }
+    auto crseDomain = m_domain.coarsen(a_refRatios);
+    return MBDisjointBoxLayout(crseDomain, crseBoxSize);
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

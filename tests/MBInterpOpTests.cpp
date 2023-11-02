@@ -505,7 +505,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
-            Box blockDomain = layout.domain().blockDomain(block).box();
+            Box blockDomain = layout.domain().getBlock(block).box();
 
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
