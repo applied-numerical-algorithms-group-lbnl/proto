@@ -210,7 +210,7 @@ namespace Proto_Transition
           for(int igh = 0; igh < a_num_ghost; igh++)
           {
             a_appboxes[igh] = appBox0.shift(a_idir, igh);
-            a_stencils[igh] = (stenSign)*Proto::Shift(pr_pt::Basis(a_idir, 2*igh+1));
+            a_stencils[igh] = (stenSign)*Proto::Shift(pr_pt::Basis(a_idir, -2*igh-1));
           }
         }
       
