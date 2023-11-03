@@ -42,6 +42,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         const std::vector<Point>&   a_refRatios,
         int                         a_numLevels)
 {
+    PR_TIME("MBMultigrid::define");
     // delete any existing data
     m_state_0.clear();
     m_state.clear();
@@ -59,60 +60,70 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_CFInterp.clear();
 
     // create coarse domains
-    std::vector<ProblemDomain>      problemDomains;
-    std::vector<std::vector<Point>> boxSizes;
-    problemDomains.resize(a_numLevels);
-    boxSizes.resize(a_numLevels);
-    MBProblemDomain nextDomain = a_fineLayout.domain();
-    std::vector<Point> nextBoxSizes = a_fineLayout.boxSizes();
-    int level = a_numLevels-1;
-    while (level >= 0)
+    std::vector<MBProblemDomain>      problemDomains;
+    std::vector<std::vector<Point>>   boxSizes;
+    std::vector<MBDisjointBoxLayout> layouts;
     {
-        problemDomains[level] = nextDomain;
-        boxSizes[level] = nextBoxSizes;
-        if (level > 0)
+        PR_TIME("MBMultigrid::define::build_layouts");
+        problemDomains.resize(a_numLevels);
+        boxSizes.resize(a_numLevels);
+        MBProblemDomain nextDomain = a_fineLayout.domain();
+        std::vector<Point> nextBoxSizes = a_fineLayout.boxSizes();
+        int level = a_numLevels-1;
+        while (level >= 0)
         {
-            // create the next coarser domain
-            nextDomain = nextDomain.coarsen(a_refRatios);
-            // make sure boxSize <= domainSize
-            for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
+            problemDomains[level] = nextDomain;
+            boxSizes[level] = nextBoxSizes;
+            if (level > 0)
             {
-                Box domainBox = nextDomain.getBlock(bi).box();
-                if (domainBox.sizes() < nextBoxSizes[bi])
+                // create the next coarser domain
+                nextDomain = nextDomain.coarsen(a_refRatios);
+                // make sure boxSize <= domainSize
+                for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
                 {
-                    nextBoxSizes[bi] = domainBox;
+                    Box domainBox = nextDomain.getBlock(bi).box();
+                    if (domainBox.sizes() < nextBoxSizes[bi])
+                    {
+                        nextBoxSizes[bi] = domainBox.sizes();
+                    }
                 }
             }
             level--;
         }
-    }
 
-    // Build the layouts
-    std::vector<MBDisjointBoxLayout> layouts;
-    for (int li = 0; li < a_numLevels; li++)
-    {
-        layouts.push_back(MBDisjointBoxLayout(problemDomains[li], boxSizes[li]));
+        // Build the layouts
+        for (int li = 0; li < a_numLevels; li++)
+        {
+            layouts.push_back(MBDisjointBoxLayout(problemDomains[li], boxSizes[li]));
+        }
     }
-
     // initialize all of the state data
     Array<Point,DIM+1> ghost;
     Array<Point,DIM+1> noGhost;
     ghost.fill(OP::ghost());
     noGhost.fill(Point::Zeros());
+
+    m_residual.resize(a_numLevels);
+    m_state.resize(a_numLevels-1);
+    m_state_0.resize(a_numLevels-1);
+    m_force.resize(a_numLevels-1);
+    m_local.resize(a_numLevels-1);
+    
     for (int li = 0; li < a_numLevels; li++)
     {
-        m_residual.push_back(LevelStateData(layouts[li], noGhost));
+        PR_TIME("MBMultigrid::define::allocate_data");
+        m_residual[li] = std::make_shared<LevelStateData>(layouts[li], noGhost);
         
         // we don't need these quantities on the finest level
         if (li < a_numLevels-1)
         {
-            m_state.push_back(   LevelStateData(layouts[li], ghost));
-            m_state_0.push_back( LevelStateData(layouts[li], ghost));
-            m_force.push_back(   LevelStateData(layouts[li], noGhost));
+            m_state[li] = std::make_shared<LevelStateData>(layouts[li], ghost);
+            m_state_0[li] = std::make_shared<LevelStateData>(layouts[li], ghost);
+            m_force[li] = std::make_shared<LevelStateData>(layouts[li], noGhost);
            
             // fine index space, coarse grid. Used for CF operations.
             auto crseFineLayout = layouts[li+1].coarsen(a_refRatios);
-            m_local.push_back(   LevelStateData(crseFineLayout, noGhost));
+            m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, noGhost);
         }
     }
 
@@ -123,19 +134,25 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_increment.resize(a_numLevels);
     for (int li = 0; li < a_numLevels; li++)
     {
+        PR_TIME("MBMultigrid::define::build_maps");
         m_maps[li].define(layouts[li], ghost);
         m_ops[li].define(m_maps[li]);
         m_lambda[li] = 0.5 / m_ops[li].spectralRadius();
         m_increment[li] = m_lambda[li]*Shift::Zeros();
     }
 
-
     // allocate space for block interpolation operators
     m_blockInterp.resize(a_numLevels);
-   
+    for (int li = 0; li < a_numLevels; li++)
+    {
+        PR_TIME("MBMultigrid::define::build_interp_ops");
+        m_blockInterp[li] = std::make_shared<MBInterpOp>(m_maps[li]);
+    }
+
     // define the coarse-fine stencil operators
     for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
     {
+        PR_TIME("MBMultigrid::define::build_stencils");
         m_average.push_back(Stencil<T>::AvgDown(a_refRatios[bi]));
         m_CFInterp.push_back(InterpStencil<T>::Constant(a_refRatios[bi]));
     }

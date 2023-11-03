@@ -160,7 +160,7 @@ TEST(MBInterpOp, ShearTestStandalone)
 #endif
 }
 #endif
-#if 0
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
     int domainSize = 16;

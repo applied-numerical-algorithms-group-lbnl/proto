@@ -25,6 +25,7 @@ template<template<typename, MemType> class OPType,
     MemType MEM>
 void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map)
 {
+    PR_TIME("MBLevelOp::define");
     auto& layout = a_map.map().layout();
     m_map = &a_map;
     m_ops.clear();
@@ -48,6 +49,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelStateData&   a_state,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");
@@ -73,6 +75,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelAuxData&     a_aux,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");

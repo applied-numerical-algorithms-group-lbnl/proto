@@ -70,23 +70,22 @@ private:
             const LevelStateData&   a_force);
 
     // solver temporaries
-    std::vector<LevelStateData>   m_state;    
-    std::vector<LevelStateData>   m_state_0;    
-    std::vector<LevelStateData>   m_force;
-    std::vector<LevelStateData>   m_residual; 
-    std::vector<LevelStateData>   m_local; 
+    std::vector<std::shared_ptr<LevelStateData>>  m_state;    
+    std::vector<std::shared_ptr<LevelStateData>>   m_state_0;    
+    std::vector<std::shared_ptr<LevelStateData>>   m_force;
+    std::vector<std::shared_ptr<LevelStateData>>   m_residual; 
+    std::vector<std::shared_ptr<LevelStateData>>   m_local; 
    
     std::vector<MBLevelMap<MAP>>  m_maps;
-    std::vector<MBInterpOp>       m_blockInterp;
+    std::vector<std::shared_ptr<MBInterpOp>>       m_blockInterp;
 
     std::vector<LOP>              m_ops;
 
-    Stencil<T>                    m_increment;
-    std::vector<Stencil<T>>       m_average;
-    std::vector<InterpStencil<T>> m_CFInterp;
-    std::vector<InterpStencil<T>> m_BCInterp;
+    std::vector<Stencil<T>>       m_increment;    
+    std::vector<Stencil<T>>       m_average;      
+    std::vector<InterpStencil<T>> m_CFInterp;     
 
-    T   m_lambda;
+    std::vector<T>                m_lambda;
     int m_numPreRelax;
     int m_numPostRelax;
     int m_numBottomRelax;

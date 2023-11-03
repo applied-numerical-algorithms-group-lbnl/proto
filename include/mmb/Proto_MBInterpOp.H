@@ -118,6 +118,11 @@ namespace Proto
         /** This function does not create any operators. The user must call define separately */
         inline MBInterpOp(Point a_ghost, unsigned int a_order);
         
+        template<template<MemType> typename MAP, MemType MEM>
+        inline MBInterpOp(
+                const MBLevelMap<MAP, MEM>& a_map,
+                int                         a_order = 4);
+        
         /// Define Block
         /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
          *  implied by the input MBLevelMap and the number of ghost cells this was initialized

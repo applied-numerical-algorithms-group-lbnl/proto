@@ -181,6 +181,17 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+MBInterpOp::MBInterpOp(
+        const MBLevelMap<MAP,MEM>&    a_map,
+        int                           a_order)
+{
+    for (int bi = 0; bi < a_map.layout().numBlocks(); bi++)
+    {
+        define(a_map, a_order, bi);
+    }
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&    a_map,
         int                     a_order,
@@ -216,7 +227,7 @@ void MBInterpOp::define(
     {
         auto block = layout.block(iter);
         if ((a_block >= 0) && (block != a_block)) {continue; }
-        Box blockDomainBox = layout.domain().blockDomain(block).box(); 
+        Box blockDomainBox = layout.domain().getBlock(block).box(); 
         Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
