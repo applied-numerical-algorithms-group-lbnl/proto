@@ -11,14 +11,12 @@ TEST(MBMultigridTests, Construction) {
     int boxSize = 16;
     int numBlocks = 5;
     int numLevels = 3;
+    Point refRatio = Point::Ones(2);
 
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
-    std::vector<MBLevelBoxData<double, 1, HOST>> v;
 
-    Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Zeros());
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, Point::Ones(2), numLevels); 
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels); 
 }
 
 int main(int argc, char *argv[]) {

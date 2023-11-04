@@ -40,6 +40,11 @@ public:
             LevelStateData& a_force,
             int             a_maxIter,
             T               a_tolerance);
+    
+    inline bool validate(
+            const MBDisjointBoxLayout&  a_fineLayout,
+            Point                       a_refRatio,
+            int                         a_numLevels);
 
 private:
 
