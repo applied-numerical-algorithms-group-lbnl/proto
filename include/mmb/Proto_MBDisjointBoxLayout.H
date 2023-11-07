@@ -15,7 +15,9 @@ namespace Proto
     {
         public:
         typedef DataIndex<MBBoxPartition> MBIndex;
-        
+
+        inline MBDisjointBoxLayout(){}
+
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
                 Point a_boxSize);

@@ -169,6 +169,37 @@ template <
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
+bool MBMultigrid<OPType, MAP, T, BCType, MEM>::validate(
+        const MBDisjointBoxLayout&  a_fineLayout,
+        const std::vector<Point>&   a_refRatios,
+        int                         a_numLevels)
+{
+    if (m_state.size() != a_numLevels-1) {return false;}
+    if (m_state_0.size() != a_numLevels-1) {return false;}
+    if (m_force.size() != a_numLevels-1) {return false;}
+    if (m_residual.size() != a_numLevels) {return false;}
+    if (m_local.size() != a_numLevels-1) {return false;}
+
+    for (int li = a_numLevels-1; li > 0; li--)
+    {
+        auto& layout = m_residual[li]->layout();
+        if (!m_local[li-1]->layout().compatible(layout)) {return false;}
+        if (li < a_numLevels-1)
+        {
+            if (!m_state[li]->layout().compatible(layout)) {return false;}
+            if (!m_state_0[li]->layout().compatible(layout)) {return false;}
+            if (!m_force[li]->layout().compatible(layout)) {return false;}
+        }
+    }
+    return true;
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
 T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         LevelStateData& a_state,
         LevelStateData& a_force,

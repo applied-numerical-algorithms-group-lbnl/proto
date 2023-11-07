@@ -43,7 +43,7 @@ public:
     
     inline bool validate(
             const MBDisjointBoxLayout&  a_fineLayout,
-            Point                       a_refRatio,
+            const std::vector<Point>&   a_refRatio,
             int                         a_numLevels);
 
 private:

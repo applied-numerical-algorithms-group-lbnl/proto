@@ -41,7 +41,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
     m_ghost = a_ghost;
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_data.clear();
     m_data.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
@@ -295,8 +295,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -304,8 +304,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -442,8 +442,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -451,8 +451,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -465,7 +465,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     auto &boundaries = bounds(a_index, a_dir);
     for (auto b : boundaries)
     {
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return true;
         }
@@ -486,7 +486,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     {
         auto &b = boundaries[bi];
         // END TEST CODE
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -505,7 +505,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     for (int bi = 0; bi < boundaries.size(); bi++)
     {
         auto &b = boundaries[bi];
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -517,7 +517,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool
 MBLevelBoxData<T, C, MEM, CTR>::compatible(const MBDisjointBoxLayout& a_layout) const
 {
-    return (m_layout->compatible(a_layout));
+    return (m_layout.compatible(a_layout));
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -700,28 +700,28 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end()
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin() const
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end() const
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 //=======================================================================================

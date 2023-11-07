@@ -135,6 +135,30 @@ TEST(MBDisjointBoxLayout, Find) {
     }
 }
 
+TEST(MBDisjointBoxLayout, Coarsen) {
+    int domainSize = 64;
+    int boxSize = 16;
+    int refRatio = 2;
+    int numBlocks = XPOINT_SIZE;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    std::vector<Point> refRatios(numBlocks, Point::Ones(refRatio));
+    auto crseLayout = layout.coarsen(refRatios);
+
+    auto crseDomain = buildXPoint(domainSize/refRatio);
+    MBDisjointBoxLayout crseLayoutSoln(crseDomain, Point::Ones(boxSize/refRatio));
+
+    EXPECT_EQ(crseLayout.numBoxes(), layout.numBoxes());
+    EXPECT_TRUE(crseLayout.compatible(layout));
+    EXPECT_TRUE(crseLayout.compatible(crseLayoutSoln));
+    for (auto iter : crseLayout)
+    {
+        EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
+    }
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
