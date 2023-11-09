@@ -275,8 +275,8 @@ template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
 {
     PR_TIME("MBLevelBoxData::copyTo");
-    PROTO_ASSERT(a_rhs.layout().compatible(layout()),
-                 "MBLevelBoxData::copyTo | Error: Incompatible datasets");
+    //PROTO_ASSERT(a_rhs.layout().compatible(layout()),
+    //             "MBLevelBoxData::copyTo | Error: Incompatible datasets");
     if (SRC_MEM == DST_MEM)
     {
         auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);

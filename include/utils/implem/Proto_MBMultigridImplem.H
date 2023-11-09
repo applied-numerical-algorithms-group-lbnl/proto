@@ -43,6 +43,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         int                         a_numLevels)
 {
     PR_TIME("MBMultigrid::define");
+
     // delete any existing data
     m_state_0.clear();
     m_state.clear();
@@ -72,6 +73,16 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         int level = a_numLevels-1;
         while (level >= 0)
         {
+            /*
+            std::cout << "Level: " << level << std::endl;
+            for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
+            {
+                std::cout << "\tBlock: " << bi << std::endl;
+                std::cout << "\tDomain Box: " << nextDomain.getBlock(bi).box() << std::endl;
+                std::cout << "\tBox Size: " << nextBoxSizes[bi] << std::endl;
+            }
+            */
+
             problemDomains[level] = nextDomain;
             boxSizes[level] = nextBoxSizes;
             if (level > 0)
@@ -161,6 +172,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_numPreRelax = 4;
     m_numPostRelax = 4;
     m_numBottomRelax = 20;
+    m_numLevels = a_numLevels;
 }
 
 template <
@@ -204,7 +216,19 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         LevelStateData& a_state,
         LevelStateData& a_force,
         int             a_maxIter,
-        T               a_tolerance){}
+        T               a_tolerance)
+{
+    int fineLevel = numLevels()-1;
+    T res0 = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
+    T res = res0;
+    for (int ii = 0; ii < a_maxIter; ii++)
+    {
+        vCycle(a_state, a_force, fineLevel);
+        res = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
+        if (res < a_tolerance*res0) { break; }
+    }
+    return res;
+}
 
 template <
     template<typename, MemType> class OPType,
@@ -215,7 +239,50 @@ template <
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::fineCorrect(
         LevelStateData&         a_fine,
         const LevelStateData&   a_crse,
-        const LevelStateData&   a_crse0){}
+        LevelStateData&         a_crse0,
+        int                     a_level)
+{
+    // Do coarse correction
+    for (auto iter : a_crse.layout())
+    {
+        auto& crse_i  = a_crse[iter];
+        auto& crse0_i = a_crse0[iter];
+
+        crse0_i -= crse_i;
+        crse0_i *= -1;
+    }
+    a_crse0.copyTo(*m_local[a_level-1]);
+
+    // increment with the correction
+    for (auto iter : a_fine.layout())
+    {
+        auto block = a_fine.layout().block(iter);
+        auto& fine_i = a_fine[iter];
+        auto& crse_i = (*m_local[a_level-1])[iter];
+        fine_i += m_CFInterp[block](crse_i);
+    }
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBMultigrid<OPType, MAP, T, BCType, MEM>::averageDown(
+        LevelStateData&         a_crse,
+        const LevelStateData&   a_fine,
+        int                     a_level)
+{
+    for (auto iter : a_fine.layout())
+    {
+        auto block = a_fine.layout().block(iter);
+        auto& crse_i = (*m_local[a_level-1])[iter];
+        auto& fine_i = a_fine[iter];
+        crse_i |= m_average[block](fine_i);
+    }
+    m_local[a_level-1]->copyTo(a_crse);
+}
 
 template <
     template<typename, MemType> class OPType,
@@ -225,9 +292,37 @@ template <
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::crseForce(
         LevelStateData&         a_crseForce,
-        const LevelStateData&   a_state,
+        LevelStateData&         a_state,
         const LevelStateData&   a_force,
-        const LevelStateData&   a_crseState){}
+        LevelStateData&         a_crseState,
+        int                     a_level)
+{
+    // fill ghost cells on state data
+    a_state.exchange();
+    m_blockInterp[a_level]->apply(a_state, a_state);
+    a_crseState.exchange();
+    m_blockInterp[a_level-1]->apply(a_crseState, a_crseState);
+
+    for (auto iter : a_state.layout())
+    {
+        auto block = a_state.layout().block(iter);
+        auto& state_i = a_state[iter];
+        auto& resC_i = (*m_local[a_level-1])[iter];
+        auto& force_i = a_force[iter];
+        auto res = m_ops[a_level][iter](state_i, a_state.layout()[iter]);
+        res += force_i;
+        resC_i |= m_average[block](res);
+    }
+    
+    m_local[a_level-1]->copyTo(a_crseForce);
+    for (auto iter : a_crseState.layout())
+    {
+        auto& state_i = a_crseState[iter];
+        auto& force_i = a_crseForce[iter];
+        auto lphi = m_ops[a_level-1][iter](state_i, a_crseState.layout()[iter]);
+        force_i -= lphi;
+    }
+}
 
 template <
     template<typename, MemType> class OPType,
@@ -237,8 +332,24 @@ template <
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         LevelStateData&         a_state,
-        const LevelStateData&   a_rhs,
-        int                     a_numIter){}
+        const LevelStateData&   a_force,
+        int                     a_numIter,
+        int                     a_level)
+{
+    for (int ii = 0; ii < a_numIter; ii++)
+    {
+        a_state.exchange();
+        m_blockInterp[a_level]->apply(a_state, a_state);
+        for (auto iter : a_state.layout())
+        {
+            auto& state_i = a_state[iter];
+            auto& force_i = a_force[iter];
+            auto res = m_ops[a_level][iter](state_i, a_state.layout()[iter]);
+            res += force_i;
+            state_i += m_increment[a_level](res);
+        }
+    }
+}
 
 template <
     template<typename, MemType> class OPType,
@@ -248,7 +359,30 @@ template <
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         LevelStateData&         a_state,
-        const LevelStateData&   a_force){}
+        const LevelStateData&   a_force,
+        int                     a_level)
+{
+    if (a_level > 0)
+    {
+        //pre relax
+        relax(a_state, a_force, m_numPreRelax, a_level);
+        //average down state
+        averageDown(*m_state[a_level-1], a_state, a_level);
+        //save copy of coarse state
+        m_state[a_level-1]->copyTo(*m_state_0[a_level-1]);
+        //compute coarse RHS
+        crseForce(*m_force[a_level-1], a_state, a_force, *m_state[a_level-1], a_level);
+        //recursive vcycle on coarse state/RHS
+        vCycle(*m_state[a_level-1], *m_force[a_level-1], a_level-1);
+        //correct this level's state
+        fineCorrect(a_state, *m_state[a_level-1], *m_force[a_level-1], a_level);
+        //post relax
+        relax(a_state, a_force, m_numPostRelax, a_level);
+    } else {
+        // bottom relax
+        relax(a_state, a_force, m_numBottomRelax, a_level);
+    }
+}
 
 template <
     template<typename, MemType> class OPType,
@@ -258,5 +392,46 @@ template <
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
         LevelStateData&         a_residual,
-        const LevelStateData&   a_state,
-        const LevelStateData&   a_force){}
+        LevelStateData&         a_state,
+        const LevelStateData&   a_force,
+        int                     a_level)
+{
+    a_state.exchange();
+    m_blockInterp[a_level]->apply(a_state, a_state);
+    for (auto iter : a_residual.layout())
+    {
+        auto& res_i = a_residual[iter];
+        auto& state_i = a_state[iter];
+        auto& force_i = a_force[iter];
+
+        m_ops[a_level][iter](res_i, state_i);
+        res_i += force_i;
+    }
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
+        LevelStateData&         a_residual,
+        LevelStateData&         a_state,
+        const LevelStateData&   a_force,
+        int                     a_level)
+{
+    a_state.exchange();
+    m_blockInterp[a_level]->apply(a_state, a_state);
+    Reduction<T,Abs> rxn;
+    for (auto iter : a_residual.layout())
+    {
+        auto& res_i = a_residual[iter];
+        auto& state_i = a_state[iter];
+        auto& force_i = a_force[iter];
+        m_ops[a_level][iter](res_i, state_i);
+        res_i += force_i;
+        res_i.reduce(rxn);
+    }
+    return rxn.fetch();
+}

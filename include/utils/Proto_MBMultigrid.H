@@ -40,48 +40,65 @@ public:
             LevelStateData& a_force,
             int             a_maxIter,
             T               a_tolerance);
-    
+
     inline bool validate(
             const MBDisjointBoxLayout&  a_fineLayout,
             const std::vector<Point>&   a_refRatio,
             int                         a_numLevels);
 
+    inline int numLevels() const { return m_numLevels; }
 private:
 
     // V Cycle subroutines
     inline void fineCorrect(
             LevelStateData&         a_fine,
             const LevelStateData&   a_crse,
-            const LevelStateData&   a_crse0);
+            LevelStateData&         a_crse0,
+            int                     a_level);
+    
+    inline void averageDown(
+            LevelStateData&         a_crse,
+            const LevelStateData&   a_fine,
+            int                     a_level);
 
     inline void crseForce(
             LevelStateData&         a_crseForce,
-            const LevelStateData&   a_state,
+            LevelStateData&         a_state,
             const LevelStateData&   a_force,
-            const LevelStateData&   a_crseState);
+            LevelStateData&         a_crseState,
+            int                     a_level);
 
     inline void relax(
             LevelStateData&         a_state,
-            const LevelStateData&   a_rhs,
-            int                     a_numIter);
+            const LevelStateData&   a_force,
+            int                     a_numIter,
+            int                     a_level);
 
     inline void vCycle(
             LevelStateData&         a_state,
-            const LevelStateData&   a_force);
+            const LevelStateData&   a_force,
+            int                     a_level);
 
     inline void residual(
             LevelStateData&         a_residual,
-            const LevelStateData&   a_state,
-            const LevelStateData&   a_force);
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_level);
+    
+    inline T resnorm(
+            LevelStateData&         a_residual,
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_level);
 
     // solver temporaries
-    std::vector<std::shared_ptr<LevelStateData>>  m_state;    
+    std::vector<std::shared_ptr<LevelStateData>>   m_state;    
     std::vector<std::shared_ptr<LevelStateData>>   m_state_0;    
     std::vector<std::shared_ptr<LevelStateData>>   m_force;
     std::vector<std::shared_ptr<LevelStateData>>   m_residual; 
     std::vector<std::shared_ptr<LevelStateData>>   m_local; 
    
-    std::vector<MBLevelMap<MAP>>  m_maps;
+    std::vector<MBLevelMap<MAP>>                   m_maps;
     std::vector<std::shared_ptr<MBInterpOp>>       m_blockInterp;
 
     std::vector<LOP>              m_ops;
@@ -94,7 +111,7 @@ private:
     int m_numPreRelax;
     int m_numPostRelax;
     int m_numBottomRelax;
-
+    int m_numLevels;
 };
 
 #include "implem/Proto_MBMultigridImplem.H"
