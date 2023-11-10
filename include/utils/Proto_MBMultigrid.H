@@ -47,6 +47,20 @@ public:
             int                         a_numLevels);
 
     inline int numLevels() const { return m_numLevels; }
+    
+    inline void residual(
+            LevelStateData&         a_residual,
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_level);
+    
+    inline T resnorm(
+            LevelStateData&         a_residual,
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_level);
+
+    inline LOP& op(int a_level) { return m_ops[a_level]; }
 private:
 
     // V Cycle subroutines
@@ -79,17 +93,6 @@ private:
             const LevelStateData&   a_force,
             int                     a_level);
 
-    inline void residual(
-            LevelStateData&         a_residual,
-            LevelStateData&         a_state,
-            const LevelStateData&   a_force,
-            int                     a_level);
-    
-    inline T resnorm(
-            LevelStateData&         a_residual,
-            LevelStateData&         a_state,
-            const LevelStateData&   a_force,
-            int                     a_level);
 
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
@@ -112,6 +115,10 @@ private:
     int m_numPostRelax;
     int m_numBottomRelax;
     int m_numLevels;
+
+    int m_solveIter;
+    int m_relaxIter;
+    int m_solveLevel;
 };
 
 #include "implem/Proto_MBMultigridImplem.H"

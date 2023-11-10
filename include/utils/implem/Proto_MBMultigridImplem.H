@@ -218,14 +218,22 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         int             a_maxIter,
         T               a_tolerance)
 {
+    m_solveIter = 0;
     int fineLevel = numLevels()-1;
     T res0 = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
     T res = res0;
+#if PR_VERBOSE > 0
+    pr_out() << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
+#endif
     for (int ii = 0; ii < a_maxIter; ii++)
     {
         vCycle(a_state, a_force, fineLevel);
         res = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
+#if PR_VERBOSE > 0
+        pr_out() << "MBMultigrid::solve | iter: " << ii << " | residual: " << res << std::endl;
+#endif
         if (res < a_tolerance*res0) { break; }
+        m_solveIter++;
     }
     return res;
 }
@@ -336,18 +344,35 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         int                     a_numIter,
         int                     a_level)
 {
+    m_relaxIter = 0;
+    HDF5Handler h5;
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"rhs"}, m_maps[a_level], a_force,
+            "MBMultigrid_JF_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+#endif
     for (int ii = 0; ii < a_numIter; ii++)
     {
         a_state.exchange();
         m_blockInterp[a_level]->apply(a_state, a_state);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"phi"}, m_maps[a_level], a_state,
+                "MBMultigrid_Phi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+#endif
         for (auto iter : a_state.layout())
         {
             auto& state_i = a_state[iter];
             auto& force_i = a_force[iter];
-            auto res = m_ops[a_level][iter](state_i, a_state.layout()[iter]);
-            res += force_i;
-            state_i += m_increment[a_level](res);
+            //auto res = m_ops[a_level][iter](state_i, a_state.layout()[iter]);
+            auto& res_i = (*m_residual[a_level])[iter];
+            m_ops[a_level][iter](res_i, state_i, -1);
+            res_i += force_i;
+            state_i += m_increment[a_level](res_i);
         }
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"residual"}, m_maps[a_level], *m_residual[a_level],
+                "MBMultigrid_Res_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+#endif
+        m_relaxIter++;
     }
 }
 
@@ -362,6 +387,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         const LevelStateData&   a_force,
         int                     a_level)
 {
+    m_solveLevel = a_level;
     if (a_level > 0)
     {
         //pre relax
@@ -404,7 +430,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
         auto& state_i = a_state[iter];
         auto& force_i = a_force[iter];
 
-        m_ops[a_level][iter](res_i, state_i);
+        m_ops[a_level][iter](res_i, state_i, -1);
         res_i += force_i;
     }
 }
@@ -429,7 +455,7 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         auto& res_i = a_residual[iter];
         auto& state_i = a_state[iter];
         auto& force_i = a_force[iter];
-        m_ops[a_level][iter](res_i, state_i);
+        m_ops[a_level][iter](res_i, state_i, -1);
         res_i += force_i;
         res_i.reduce(rxn);
     }

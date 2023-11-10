@@ -12,17 +12,17 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
     using BoxOp<T, 1, 0, MEM>::BoxOp;
     
     // How many ghost cells does the operator need from the state variables
-    inline static Point ghost() { return Point::Ones(1);}
+    inline static Point ghost() { return Point::Ones(3);}
     
     // How many ghost cells does the operator need from the auxiliary variables
-    inline static Point auxGhost() { return Point::Ones(1);}
+    inline static Point auxGhost() { return Point::Zeros();}
     
     // What is the intended order of accuracy of the operator
     inline static constexpr int order() { return 2; }
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
-    inline double spectralRadius() const {return 1;}
+    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
    
     inline void flux(
             BoxData<T, 1>& a_flux,

@@ -198,12 +198,14 @@ TEST(MBLevelOp, XPointLaplace) {
             BoxData<double, DIM> x_i(b_i);
             BoxData<double, 1> J_i(b_i);
             map.apply(x_i, J_i, block);
+            double J0 = J_i.absMax(); //J is a constant
             BoxData<double, 1> phi = forall_p<double, 1>(f_phiM, block, x_i, k, offset);
             src_i |= C2C(phi);
        
             BoxData<double, 1> lphi = forall_p<double, 1>(f_LphiM, block, x_i, k, offset);
             auto& sln_i = hostSln[iter];
             sln_i |= C2C(lphi);
+            sln_i *= J0;
         }
 
 #if PR_VERBOSE > 0
@@ -234,8 +236,8 @@ TEST(MBLevelOp, XPointLaplace) {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
             auto& sln_i = hostSln[iter];
-            double J0 = map.jacobian()[iter].absMax(); //J is a constant
-            dst_i /= (J0);
+            //double J0 = map.jacobian()[iter].absMax(); //J is a constant
+            //dst_i /= (J0);
             dst_i.copyTo(err_i);
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);
