@@ -3,9 +3,13 @@
 #define __PROTO_LEVEL_BC__
 
 #include "Proto_LevelBoxData.H"
-
 namespace Proto {
     
+#ifdef PR_MMB
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        class MBLevelBoxData;
+#endif
+
     /// Storage for the LevelBCOps on each face 
     template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT, Centering CTR=PR_CELL>
     class LevelBC {
@@ -19,6 +23,9 @@ namespace Proto {
         // Basic interface
         inline virtual void init() {}
         inline virtual void apply(LevelBoxData<T,C,MEM,CTR>& a_data) const {}
+        #ifdef PR_MMB
+        inline virtual void apply(MBLevelBoxData<T,C,MEM,CTR>& a_data) const {}
+        #endif
 
         // Helper methods (not yet implemented)
         inline const DisjointBoxLayout& layout() { return m_layout; }

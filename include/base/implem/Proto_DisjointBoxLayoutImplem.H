@@ -286,6 +286,21 @@ DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
 }
 
 bool
+DisjointBoxLayout::isDomainBoundary(const LevelIndex& a_patch, const Point& a_dir) const
+{
+
+    PROTO_ASSERT(this->compatible(a_patch),
+            "DisjointBoxLayout::isDomainBoundary | Error: Index is not compatible");
+    PROTO_ASSERT(a_dir.abs().max() <= 1,
+            "DisjointBoxLayout::isDomainBoundary | Error: Dir is not an adjacent patch.");
+    if (a_dir == Point::Zeros()) { return false; }
+    Point patchID = this->point(a_patch); 
+    Point adjPatchID = patchID + a_dir;
+    if (patchDomain().contains(adjPatchID)) { return false; }
+    return true; 
+}
+
+bool
 DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
 {
     PROTO_ASSERT(find(a_pt) != *end(),

@@ -140,6 +140,55 @@ TEST(MBLevelBoxData, Initialization) {
 }
 #endif
 #if 1
+TEST(MBLevelBoxData, SetBoundary) {
+    HDF5Handler h5;
+    int domainSize = 64;
+    int boxSize = 16;
+    int ghostSize = 1;
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
+    hostData.setVal(0);
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        hostData.setBoundary(ii+1,ii);
+    }
+#if PR_VERBOSE > 0
+    h5.writeMBLevel(hostData, "MBLevelBoxDataTests_SetBoundaries"); 
+#endif
+    for (auto iter : layout)
+    {
+        auto& patch = hostData[iter];
+        for (auto dir : Box::Kernel(1))
+        {
+            Box b;
+            if (dir == Point::Zeros())
+            {
+                b = layout[iter];
+            } else {
+                b = layout[iter].adjacent(dir * ghostSize);
+            }
+            for (auto pi : b)
+            {
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    if (layout.isDomainBoundary(iter, dir))
+                    {
+                        EXPECT_EQ(patch(pi, ii), ii+1);
+                    } else {
+                        EXPECT_EQ(patch(pi, ii), 0);
+                    }
+                }
+            }
+        }
+    }
+    
+}
+#endif
+#if 1
 TEST(MBLevelBoxData, FillBoundaries) {
     HDF5Handler h5;
     int domainSize = 32;
@@ -212,8 +261,8 @@ TEST(MBLevelBoxData, CopyTo) {
     for (auto iter : layout)
     {
         int block = layout.block(iter);
-        h5.writeLevel(1, hostSrc.blockData(block), "CopyTo_Src_B%i", block); 
-        h5.writeLevel(1, hostDst.blockData(block), "CopyTo_Dst_B%i", block); 
+        h5.writeLevel(1, hostSrc.getBlock(block), "CopyTo_Src_B%i", block); 
+        h5.writeLevel(1, hostDst.getBlock(block), "CopyTo_Dst_B%i", block); 
     }
 #endif
 

@@ -323,6 +323,8 @@ namespace Proto
         */
         inline bool onDomainBoundary(const Point& a_pt) const;
 
+        inline bool isDomainBoundary(const LevelIndex& a_patch, const Point& a_dir) const;
+
         /// On Level Boundary
         /**
             Returns true if <code>a_pt</code> corresponds to a patch that is adjacent to a

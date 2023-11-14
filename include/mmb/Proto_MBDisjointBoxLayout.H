@@ -76,8 +76,17 @@ namespace Proto
                 const MBIndex&  a_i2) const;
         inline bool isBlockBoundary(
                 const MBIndex&  a_index,
+                Point           a_dir) const;
+        inline bool isBlockBoundary(
+                const MBIndex&  a_index,
                 Point           a_dir,
                 unsigned int    a_block) const;
+        inline bool isDomainBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir) const;
+        inline bool isInteriorBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir) const;
         inline std::vector<MBIndex> bounds(
                 const MBIndex&  a_index) const;
         inline unsigned int size() const;

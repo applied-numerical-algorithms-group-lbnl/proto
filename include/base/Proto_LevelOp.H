@@ -124,7 +124,7 @@ class LevelOp
     inline T time() const {return m_time; }
     inline unsigned int RKStage() const {return m_rkStage; }
     inline Array<T, DIM> dx() const { return m_dx; }
-    inline const BC& bc() const { return m_bc; }
+    inline BC& bc() { return m_bc; }
     inline const DisjointBoxLayout& layout() const {return m_layout; }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
     inline OP& operator[](const LevelIndex& a_index) { return m_ops[a_index]; }

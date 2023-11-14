@@ -247,6 +247,32 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
+{
+    if (ghost()[0] == Point::Zeros()) { return; } //nothing to do
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "MBLevelBoxData::setBoundary | Error: \
+            %i is not a valid component specification.", a_comp);
+    for (auto iter : m_layout)
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == Point::Zeros()) { continue; }
+            if (!layout().isDomainBoundary(iter, dir)) { continue; }
+            auto& patch = (*this)[iter];
+            Box b = layout()[iter].adjacent(dir * ghost()[0]); 
+            if (a_comp == -1)
+            {
+                patch.setVal(a_value, b);
+            } else {
+                BoxData<T,1,MEM> tmp = slice(patch, a_comp);
+                tmp.setVal(a_value, b);
+            }
+        }
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
 {
     for (auto data : m_data)

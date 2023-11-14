@@ -235,6 +235,52 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     return true;
 }
 
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
+    }
+    return false;
+}
+
+bool MBDisjointBoxLayout::isDomainBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    if (a_dir == Point::Zeros()) { return false; }
+    else if (isBlockBoundary(a_index, a_dir)) {return false; }
+    auto block = this->block(a_index);
+    auto patchID = this->point(a_index);
+    Box domainBox = domain().getBlock(block).box();
+    Box patchDomain = domainBox.coarsen(boxSizes()[block]);
+    PROTO_ASSERT(patchDomain.contains(patchID),
+            "MBDisjointBoxLayout::isDomainBoundary | Error: data corruption");
+    
+    Point neighborID = patchID + a_dir;
+    if (patchDomain.contains(neighborID)) { return false; }
+    return true;
+}
+
+bool MBDisjointBoxLayout::isInteriorBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    if (a_dir == Point::Zeros()) { return false; } // not a boundary
+    auto block = this->block(a_index);
+    auto patchID = this->point(a_index);
+    Box domainBox = domain().getBlock(block).box();
+    Box patchDomain = domainBox.coarsen(boxSizes()[block]);
+    PROTO_ASSERT(patchDomain.contains(patchID),
+            "MBDisjointBoxLayout::isInteriorBoundary | Error: data corruption");
+    Point neighborID = patchID + a_dir;
+    if (!patchDomain.contains(neighborID)) { return false; } // not interior
+    auto neighborIndex = find(neighborID, block);
+    if (neighborIndex == *end()) { return true; } // neighbor patch is not in the layout
+    return false;
+}
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const
 {

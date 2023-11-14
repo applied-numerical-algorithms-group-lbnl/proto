@@ -203,6 +203,9 @@ namespace Proto
         /// Constant Initialization
         inline void setVal(T a_value);
 
+        /// Initialize Boundary Ghost Cells
+        inline void setBoundary(T a_val, int a_comp = -1);
+
         /// Initialize with Random Noise
         inline void setRandom(T a_low, T a_high); 
 
