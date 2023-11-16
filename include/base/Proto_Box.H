@@ -932,6 +932,7 @@ namespace Proto
 
         inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
 
+    public:  // these should be treated as private.  
         Point m_low; ///< Point object containing the lower bounds of the Box.
         Point m_high;  ///< Point object containing the upper bounds of the Box.
         int m_size; ///< "Volume" of the box.
