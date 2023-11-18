@@ -16,26 +16,49 @@ PROTO_KERNEL_END(f_linearF, f_linear)
 PROTO_KERNEL_START
 void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
+    double p = 6.0;
+    double s = 2.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
-        r += (a_X(ii) - a_X0[ii])*(a_X(ii) - a_X0[ii]);
+        double xi = (a_X(ii) - a_X0[ii])*s;
+        r2 += xi*xi;
     }
     double r = sqrt(r2);
-    a_data(0) = (r < M_PI/2.0) ? cos(r)*cos(r) : 0.0;
+    a_data(0) = (r < M_PI/2.0) ? pow(cos(r),p) : 0.0;
 }
 PROTO_KERNEL_END(f_bellF, f_bell)
 
 PROTO_KERNEL_START
 void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
+    double p = 6.0;
+    double s = 2.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
-        r += (a_X(ii) - a_X0[ii])*(a_X(ii) - a_X0[ii]);
+        double xi = (a_X(ii) - a_X0[ii])*s;
+        r2 += xi*xi;
     }
     double r = sqrt(r2);
-    a_data(0) = (r < M_PI/2.0) ? cos(r)*cos(r) : 0.0;
+    double sr = sin(r);
+    double cr = cos(r);
+    a_data(0) = 0;
+    if (r < M_PI/2.0)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            double x = (a_X(dir) - a_X0[dir])*s;
+            a_data(0) += p*(p-1)*pow(cr,p-2)*sr*sr*x*x/(r*r);
+            a_data(0) += p*pow(cr,p-1)*sr*x*x/(r*r*r);
+            a_data(0) -= p*pow(cr,p)*x*x/(r*r);
+            a_data(0) -= p*pow(cr,p-1)*sr/r;
+            //a_data(0) += 2.0*x*x*sr*sr/(r*r);
+            //a_data(0) += 2*x*x*cr*sr/(r*r*r);
+            //a_data(0) -= 2.0*x*x*cr*cr/(r*r);
+            //a_data(0) -= 2.0*cr*sr/r;
+        }
+    }
 }
 PROTO_KERNEL_END(f_LbellF, f_Lbell)
 
@@ -44,15 +67,15 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     HDF5Handler h5;
 
     typedef BoxOp_MBLaplace<double> OP;
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 256;
+    int boxSize = 64;
     int numBlocks = XPOINT_NUM_BLOCKS;
     int numLevels = 2;
     double slope = 1.0;
     int comp = 0;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
-    offset += 0.1;
+    offset += 0.01;
     Point refRatio = Point::Ones(2);
     std::vector<Point> refRatios;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -89,9 +112,8 @@ TEST(MBMultigridTests, LaplaceXPoint) {
         BoxData<double, 1> lphi(layout[iter]);
         lphi.setVal(0);
         */
-        BoxData<double, 1> phi0 = forall<double, 1>(f_linear, x_i, slope, comp);
-        BoxData<double, 1> lphi(layout[iter]);
-        lphi.setVal(0);
+        BoxData<double, 1> phi0 = forall<double, 1>(f_bell, x_i, offset);
+        BoxData<double, 1> lphi = forall<double, 1>(f_Lbell, x_i, offset);
 
 #else
         BoxData<double, 1> phi0 = forall_p<double, 1>(f_phiM, block, x_i, k, offset);
@@ -103,6 +125,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     }
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, phi, "PHI_0");
+    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_0");
 #endif
     mg.solve(phi, rhs, 1, 1e-10);
 #if PR_VERBOSE > 0
@@ -116,10 +139,7 @@ int main(int argc, char *argv[]) {
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
-    PR_TIMER_SETFILE("MBMultigridTests_DIM" + to_string(DIM) + "_NProc" + to_string(numProc())
-            + ".time.table");
     int result = RUN_ALL_TESTS();
-    PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
 #endif
