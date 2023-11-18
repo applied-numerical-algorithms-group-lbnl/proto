@@ -18,7 +18,7 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
     inline static Point auxGhost() { return Point::Zeros();}
     
     // What is the intended order of accuracy of the operator
-    inline static constexpr int order() { return 2; }
+    inline static constexpr int order() { return 4; }
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
@@ -43,13 +43,12 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
     // Cache metric terms and Jacobian
     inline void init()
     {
-        m_NT.define(this->x().box());
+        m_NT.define(this->x().box().grow(1));
         m_NTMatrix.clear();
         m_Jf.clear();
         for (int dir = 0; dir < DIM; dir++)
         {
             auto C2F = Stencil<double>::CellToFace(dir);
-            //m_NT[dir] = Operator::cofactor(this->x(), dir);
             m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
             m_Jf.push_back(C2F(this->jacobian()));
         }

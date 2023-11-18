@@ -149,7 +149,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         m_maps[li].define(layouts[li], ghost);
         m_ops[li].define(m_maps[li]);
         m_lambda[li] = 0.5 / m_ops[li].spectralRadius();
-        m_increment[li] = m_lambda[li]*Shift::Zeros();
+        m_increment[li] = (-m_lambda[li])*Shift::Zeros();
     }
 
     // allocate space for block interpolation operators
@@ -346,7 +346,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
 {
     m_relaxIter = 0;
     HDF5Handler h5;
-#if PR_VERBOSE > 0
+#if PR_VERBOSE > 1
     h5.writeMBLevel({"rhs"}, m_maps[a_level], a_force,
             "MBMultigrid_JF_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
 #endif
@@ -354,7 +354,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
     {
         a_state.exchange();
         m_blockInterp[a_level]->apply(a_state, a_state);
-#if PR_VERBOSE > 0
+#if PR_VERBOSE > 1
         h5.writeMBLevel({"phi"}, m_maps[a_level], a_state,
                 "MBMultigrid_Phi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
 #endif
@@ -362,15 +362,17 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         {
             auto& state_i = a_state[iter];
             auto& force_i = a_force[iter];
-            //auto res = m_ops[a_level][iter](state_i, a_state.layout()[iter]);
             auto& res_i = (*m_residual[a_level])[iter];
             m_ops[a_level][iter](res_i, state_i, -1);
             res_i += force_i;
             state_i += m_increment[a_level](res_i);
         }
-#if PR_VERBOSE > 0
+#if PR_VERBOSE > 1
         h5.writeMBLevel({"residual"}, m_maps[a_level], *m_residual[a_level],
                 "MBMultigrid_Res_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+    
+        auto norm = resnorm(*m_residual[a_level], a_state, a_force, a_level);
+        pr_out() << "\tMBMultigrid::relax | iter: " << ii << " | residual: " << norm << std::endl;
 #endif
         m_relaxIter++;
     }
@@ -387,26 +389,37 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         const LevelStateData&   a_force,
         int                     a_level)
 {
+    HDF5Handler h5;
     m_solveLevel = a_level;
+    h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
     if (a_level > 0)
     {
         //pre relax
         relax(a_state, a_force, m_numPreRelax, a_level);
         //average down state
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
         averageDown(*m_state[a_level-1], a_state, a_level);
+        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //save copy of coarse state
         m_state[a_level-1]->copyTo(*m_state_0[a_level-1]);
+        h5.writeMBLevel(m_maps[a_level-1], *m_state_0[a_level-1], "MBMultigrid_vCycle_PhiC0_S%i_L%i_0", m_solveIter, m_solveLevel);
         //compute coarse RHS
         crseForce(*m_force[a_level-1], a_state, a_force, *m_state[a_level-1], a_level);
+        h5.writeMBLevel(m_maps[a_level-1], *m_force[a_level-1], "MBMultigrid_vCycle_FC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //recursive vcycle on coarse state/RHS
         vCycle(*m_state[a_level-1], *m_force[a_level-1], a_level-1);
+        m_solveLevel = a_level;
+        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_1", m_solveIter, m_solveLevel);
         //correct this level's state
         fineCorrect(a_state, *m_state[a_level-1], *m_force[a_level-1], a_level);
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_2", m_solveIter, m_solveLevel);
         //post relax
         relax(a_state, a_force, m_numPostRelax, a_level);
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_3", m_solveIter, m_solveLevel);
     } else {
         // bottom relax
         relax(a_state, a_force, m_numBottomRelax, a_level);
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
     }
 }
 

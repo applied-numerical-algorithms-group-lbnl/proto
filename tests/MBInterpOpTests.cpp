@@ -18,9 +18,7 @@ TEST(MBInterpOp, ShearTest)
     // grid parameters
     int domainSize = 16;
     int boxSize = 16;
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(1);
+    int ghostSize = 1;
     
     // interpolation stencil generation kernel
     std::vector<Point> footprint;
@@ -40,14 +38,14 @@ TEST(MBInterpOp, ShearTest)
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        ghost[0] = Point::Ones(2);
+        //ghost[0] = Point::Ones(2);
         MBLevelMap<MBMap_Shear, HOST> map;
-        map.define(layout, ghost);
+        map.define(layout, Point::Ones(ghostSize));
 
-        ghost[0] = Point::Ones(1);
-        MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
-        MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
-        MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
+        //ghost[0] = Point::Ones(1);
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
 
         // initialize data. f(x) = (x - offset)^(exp)
         // see Lambdas.H:f_polyM for details
@@ -56,7 +54,13 @@ TEST(MBInterpOp, ShearTest)
             auto& src_i = hostSrc[iter];
             auto& x_i = map.map()[iter];
             auto block = layout.block(iter);
-            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+            
+            Box b0 = layout[iter].grow(ghostSize+1);
+            BoxData<double, DIM> x_j(b0.grow(PR_NODE));
+            BoxData<double, 1> j_i(b0);
+            map.apply(x_j, j_i, block);
+            
+            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_j, exp, offset);
             src_i |= Stencil<double>::CornersToCells(4)(x_pow);
         }
 
@@ -75,12 +79,12 @@ TEST(MBInterpOp, ShearTest)
                 auto bounds = hostSrc.bounds(iter, dir);
                 for (auto bound : bounds)
                 {
-                    Box boundBox = patchBox.adjacent(ghost[0]*dir);
+                    Box boundBox = patchBox.adjacent(ghostSize*dir);
                     if (blockDomainBox.contains(boundBox)) { continue; }
                     for (auto bi : boundBox)
                     {
                         MBDataPoint dstDataPoint(iter, bi, layout);
-                        MBPointInterpOp op(dstDataPoint, ghost[0], map, footprint, 4);
+                        MBPointInterpOp op(dstDataPoint, Point::Ones(ghostSize), map, footprint, 4);
                         op.apply(hostDst, hostSrc);
 #if PR_VERBOSE > 1
                         pr_out() << "Coefs at point " << bi << std::endl;
@@ -170,7 +174,7 @@ TEST(MBInterpOp, XPointTest)
     Array<double, DIM> offset{0,0,0.3,0,0,0};
     HDF5Handler h5;
     Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
+    ghost.fill(Point::Ones(2));
     ghost[0] = Point::Ones(1);
     std::vector<Point> footprint;
     for (auto pi : Box::Kernel(3))

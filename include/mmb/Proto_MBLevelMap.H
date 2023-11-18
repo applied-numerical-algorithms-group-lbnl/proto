@@ -43,6 +43,12 @@ class MBLevelMap
             const Array<Point, DIM+1>& a_ghost,
             unsigned int         a_focalBlock = 0);
     
+    /// Non-Trivial Constructor
+    inline MBLevelMap(
+            const MBDisjointBoxLayout& a_layout,
+            Point                      a_ghost,
+            unsigned int         a_focalBlock = 0);
+    
     /// Define
     /** Delayed construction.
      *
@@ -55,6 +61,11 @@ class MBLevelMap
     inline void define(
             const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1>& a_ghost,
+            unsigned int               a_focalBlock = 0);
+    
+    inline void define(
+            const MBDisjointBoxLayout& a_layout,
+            Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
 
     /// Access Cached Coordinate Values

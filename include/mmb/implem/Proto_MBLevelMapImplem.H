@@ -8,6 +8,27 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+MBLevelMap<MAP,MEM>::MBLevelMap(
+        const MBDisjointBoxLayout&  a_layout,
+        Point                       a_ghost,
+        unsigned int                a_focalBlock)
+{
+    define(a_layout, a_ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBLevelMap<MAP,MEM>::define(
+        const MBDisjointBoxLayout& a_layout,
+        Point                      a_ghost,
+        unsigned int               a_focalBlock)
+{
+    Array<Point, DIM+1> ghost;
+    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th order interpolation
+    ghost[0] = a_ghost;
+    define(a_layout, ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
         const MBDisjointBoxLayout& a_layout,
         const Array<Point, DIM+1>& a_ghost,
