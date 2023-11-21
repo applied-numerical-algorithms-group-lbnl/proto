@@ -7,6 +7,45 @@ using namespace Proto;
 template<typename T>
 class SimpleStencil;
 
+template<typename T>
+struct first {
+	void operator()(T& init, T first) const { init += first; }
+};
+
+template<typename T>
+struct other {
+	void operator()(T& init, T first, T rest) const { init = first+rest; }
+};
+
+template<typename T>
+struct both {
+	void operator()(T in, T& out, T val) const { out = in+val; }
+};
+
+template<typename T>
+class BufferData;
+
+template<typename Func, typename T, typename... Args>
+void foreach(const Func &f, BufferData<T> &b, Args... arg) {
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		sycl::accessor<T,DIM> acc = b.get_buff().get_access(cgh);
+		cgh.parallel_for(b.get_buff().get_range(),[=](sycl::id<DIM> id){ f(acc[id],arg...); });
+	});
+}
+
+template<typename Func, typename T, typename... Args>
+void foreach(const Func &f, BufferData<T> &in, BufferData<T> &out, Args... arg) {
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		sycl::accessor<T,DIM> in_acc = in.get_buff().get_access(cgh);
+		sycl::accessor<T,DIM> out_acc = out.get_buff().get_access(cgh);
+		sycl::range<DIM> in_r = in_acc.get_range(), out_r = out_acc.get_range();
+		sycl::range<DIM> r = (in_r.size() < out_r.size()) ? in_r : out_r;
+		cgh.parallel_for(r,[=](sycl::id<DIM> id){ f(in_acc[id],out_acc[id],arg...); });
+	});
+}
+
 template <typename T>
 class BufferData {
 	friend class SimpleStencil<T>;
@@ -57,11 +96,13 @@ public:
 			cout << endl;
 		}
 #endif
+		cout << endl;
 	}
 	void iota() {
 		sycl::host_accessor<T,DIM> acc(buff);
 		std::iota(acc.begin(),acc.end(),0);
 	}
+	sycl::buffer<T,DIM> get_buff() { return buff; }
 private:
 	sycl::buffer<T,DIM> buff;
 	Box bx;
@@ -88,25 +129,24 @@ private:
 };
 
 template<typename T>
-class SimpleStencil {
-public:
-	SimpleStencil() : m_coefs(2*DIM+1) { m_coefs[0]=make_pair(0,-2*DIM); }
-
+struct SimpleStencil {
 	BufferData<T> apply(BufferData<T> &in) {
 		Point lo(in.box().low()+Point::Ones());
 		Point hi(in.box().high()-Point::Ones());
 		Box bx(lo,hi);
 		BufferData<T> out(bx);
-		size_t length = in.buff.get_range()[0];
-		for (int i=1; i<m_coefs.size(); i+=2) {
-			m_coefs[i]  = make_pair(-pow(length,i/2),1);
-			m_coefs[i+1]= make_pair( pow(length,i/2),1);
+		size_t length = in.buff.get_range()[0]; // assumes symmetric
+		vector<pair<int,T>> coefs(2*DIM+1); // only using neighbors in each dimension
+		coefs[0] = make_pair(0,-2*DIM);
+		for (int i=1; i<coefs.size(); i+=2) {
+			coefs[i]  = make_pair(-pow(length,i/2),1);
+			coefs[i+1]= make_pair( pow(length,i/2),1);
 		}
-		for (auto it : m_coefs) cout << it.first << ',' << it.second << '|'; cout << endl;
+		for (auto it : coefs) cout << it.first << ',' << it.second << '|'; cout << endl;
 		sycl::queue q(sycl::gpu_selector_v);
 		typedef pair<int,T> vec_t;
-		size_t width=m_coefs.size();
-		sycl::buffer<vec_t> stencil(m_coefs.data(),sycl::range<1>(width));
+		size_t width=coefs.size();
+		sycl::buffer<vec_t> stencil(coefs.data(),sycl::range<1>(width));
 		q.submit([&](sycl::handler &cgh) { 
 			sycl::accessor<T,DIM,sycl::access_mode::read> in_acc(in.buff, cgh);
 			sycl::accessor<T,DIM,sycl::access_mode::write> out_acc(out.buff, cgh);
@@ -116,6 +156,4 @@ public:
 		});
 		return out;
 	}
-private:
-	std::vector<std::pair<int,T>> m_coefs;
 };
