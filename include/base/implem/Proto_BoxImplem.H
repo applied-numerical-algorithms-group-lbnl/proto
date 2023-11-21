@@ -204,7 +204,9 @@ inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned in
     
     int tuple[DIM];
     tuple[0] = m_low[0] + a_idx;
+#if DIM > 1
     tuple[1] = m_low[1] + a_idy;
+#endif 
 #if DIM == 3
     tuple[2] = m_low[2] + a_idz;
 #endif 
