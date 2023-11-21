@@ -19,5 +19,7 @@ int main() {
 		bdvec[i]->print(); 
 	foreach(both<double>(),*bdvec[0],*bdvec[1],4.1);
 	bdvec[1]->print();
+	foreach_p(both<double>(),*bdvec[1],*bdvec[0],3.2);
+	bdvec[0]->print();
 	return 0;
 }
