@@ -23,11 +23,11 @@ struct both {
 	void operator()(T in, T& out, sycl::id<DIM> p, T val) const { out = in+p[0]-val; }
 };
 
-template<typename T>
+template<typename T, size_t C=1>
 class BufferData;
 
-template<typename Func, typename T, typename... Args>
-void foreach(const Func &f, BufferData<T> &b, Args... arg) {
+template<typename Func, typename T, size_t C=1, typename... Args>
+void foreach(const Func &f, BufferData<T,C> &b, Args... arg) {
 	sycl::queue q(sycl::gpu_selector_v);
 	q.submit([&](sycl::handler &cgh) {
 		sycl::accessor<T,DIM> acc = b.get_buff().get_access(cgh);
@@ -35,8 +35,8 @@ void foreach(const Func &f, BufferData<T> &b, Args... arg) {
 	});
 }
 
-template<typename Func, typename T, typename... Args>
-void foreach_p(const Func &f, BufferData<T> &b, Args... arg) {
+template<typename Func, typename T, size_t C=1, typename... Args>
+void foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
 	Point low = b.box().low();
 #if DIM==1
 	sycl::id<1> base(low[0]);
@@ -52,8 +52,8 @@ void foreach_p(const Func &f, BufferData<T> &b, Args... arg) {
 	});
 }
 
-template<typename Func, typename T, typename... Args>
-void foreach(const Func &f, BufferData<T> &in, BufferData<T> &out, Args... arg) {
+template<typename Func, typename T, size_t C=1, typename... Args>
+void foreach(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	sycl::queue q(sycl::gpu_selector_v);
 	q.submit([&](sycl::handler &cgh) {
 		sycl::accessor<T,DIM> in_acc = in.get_buff().get_access(cgh);
@@ -64,8 +64,8 @@ void foreach(const Func &f, BufferData<T> &in, BufferData<T> &out, Args... arg) 
 	});
 }
 
-template<typename Func, typename T, typename... Args>
-void foreach_p(const Func &f, BufferData<T> &in, BufferData<T> &out, Args... arg) {
+template<typename Func, typename T, size_t C=1, typename... Args>
+void foreach_p(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	Point low = in.box().low();
 #if DIM==1
 	sycl::id<1> base(low[0]);
@@ -85,7 +85,7 @@ void foreach_p(const Func &f, BufferData<T> &in, BufferData<T> &out, Args... arg
 	});
 }
 
-template <typename T>
+template <typename T, size_t C>
 class BufferData {
 	friend class SimpleStencil<T>;
 public:
