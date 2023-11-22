@@ -4,39 +4,68 @@
 using namespace std;
 using namespace Proto;
 
-template<typename T>
-class SimpleStencil;
+struct SimpleStencil;
 
-template<typename T>
-struct first {
-	void operator()(T& init, T first) const { init += first; }
-};
-
-template<typename T>
-struct other {
-	void operator()(T& init, T first, T rest) const { init = first+rest; }
-};
-
-template<typename T>
-struct both {
-	void operator()(T in, T& out, T val) const { out = in+val; }
-	void operator()(T in, T& out, sycl::id<DIM> p, T val) const { out = in+p[0]-val; }
-};
+#define SYCL_KERNEL_START inline
+#define SYCL_KERNEL_END(local_name, app_name)                  \
+struct struct_##local_name {   \
+    template <typename... T> \
+    inline void operator()(T&... args) const { local_name(args...);} \
+    const char* myname = #app_name; \
+};        \
+static struct_##local_name app_name;
 
 template<typename T, size_t C=1>
 class BufferData;
 
-template<typename Func, typename T, size_t C=1, typename... Args>
-void foreach(const Func &f, BufferData<T,C> &b, Args... arg) {
+template<typename Func, typename T, size_t C, typename... Args>
+inline void foreachIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 	sycl::queue q(sycl::gpu_selector_v);
 	q.submit([&](sycl::handler &cgh) {
-		sycl::accessor<T,DIM> acc = b.get_buff().get_access(cgh);
-		cgh.parallel_for(b.get_buff().get_range(),[=](sycl::id<DIM> id){ f(acc[id],arg...); });
+		auto acc = b.get_buff().template get_access<sycl::access_mode::read_write>(cgh);
+		cgh.parallel_for(acc.get_range(),[=](sycl::id<DIM> id){ f(acc[id],arg...); });
 	});
+
 }
 
-template<typename Func, typename T, size_t C=1, typename... Args>
-void foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
+template<typename Func, typename T, size_t C, typename... Args>
+inline void foreachIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		auto in_acc = in.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto out_acc = out.get_buff().template get_access<sycl::access_mode::read_write>(cgh);
+		cgh.parallel_for(in_acc.get_range(),[=](sycl::id<DIM> id){ f(in_acc[id],out_acc[id],arg...); });
+	});
+
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
+inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &in, Args... arg) {
+	BufferData<T,C> out(in.box());
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		auto in_acc = in.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto out_acc = out.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(in_acc.get_range(),[=](sycl::id<DIM> id){ f(in_acc[id],out_acc[id],arg...); });
+	});
+	return out;
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
+inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
+	BufferData<T,C> ret(left.box()&right.box());
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		auto lacc = left.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto racc = right.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto ret_acc = right.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(ret_acc.get_range(),[=](sycl::id<DIM> id){ f(lacc[id],racc[id],ret_acc[id],arg...); });
+	});
+	return ret;
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
+inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 	Point low = b.box().low();
 #if DIM==1
 	sycl::id<1> base(low[0]);
@@ -47,25 +76,14 @@ void foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
 #endif
 	sycl::queue q(sycl::gpu_selector_v);
 	q.submit([&](sycl::handler &cgh) {
-		sycl::accessor<T,DIM> acc = b.get_buff().get_access(cgh);
-		cgh.parallel_for(b.get_buff().get_range(),[=](sycl::id<DIM> id){ f(acc[id],base+id,arg...); });
+		auto acc = b.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(acc.get_range(),[=](sycl::id<DIM> id){ 
+			auto pt = base+id; f(acc[id],pt,arg...); });
 	});
 }
 
-template<typename Func, typename T, size_t C=1, typename... Args>
-void foreach(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
-	sycl::queue q(sycl::gpu_selector_v);
-	q.submit([&](sycl::handler &cgh) {
-		sycl::accessor<T,DIM> in_acc = in.get_buff().get_access(cgh);
-		sycl::accessor<T,DIM> out_acc = out.get_buff().get_access(cgh);
-		sycl::range<DIM> in_r = in_acc.get_range(), out_r = out_acc.get_range();
-		sycl::range<DIM> r = (in_r.size() < out_r.size()) ? in_r : out_r;
-		cgh.parallel_for(r,[=](sycl::id<DIM> id){ f(in_acc[id],out_acc[id],arg...); });
-	});
-}
-
-template<typename Func, typename T, size_t C=1, typename... Args>
-void foreach_p(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
+template<typename Func, typename T, size_t C, typename... Args>
+inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	Point low = in.box().low();
 #if DIM==1
 	sycl::id<1> base(low[0]);
@@ -76,18 +94,62 @@ void foreach_p(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args...
 #endif
 	sycl::queue q(sycl::gpu_selector_v);
 	q.submit([&](sycl::handler &cgh) {
-		Point low = in.box().low();
-		sycl::accessor<T,DIM> in_acc = in.get_buff().get_access(cgh);
-		sycl::accessor<T,DIM> out_acc = out.get_buff().get_access(cgh);
-		sycl::range<DIM> in_r = in_acc.get_range(), out_r = out_acc.get_range();
-		sycl::range<DIM> r = (in_r.size() < out_r.size()) ? in_r : out_r;
-		cgh.parallel_for(r,[=](sycl::id<DIM> id){ f(in_acc[id],out_acc[id],base+id,arg...); });
+		auto in_acc = in.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto out_acc = out.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(out_acc.get_range(),[=](sycl::id<DIM> id){ 
+			auto pt = base+id; f(in_acc[id],out_acc[id],pt,arg...); });
 	});
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
+inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
+	Box bx = b.box();
+	Point low = bx.low();
+	BufferData<T,C> ret(bx);
+#if DIM==1
+	sycl::id<1> base(low[0]);
+#elif DIM==2
+	sycl::id<2> base(low[0],low[1]);
+#elif DIM==3
+	sycl::id<3> base(low[0],low[1],low[2]);
+#endif
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		auto in_acc = b.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto out_acc = ret.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(in_acc.get_range(),[=](sycl::id<DIM> id){ 
+			auto pt = base+id; f(in_acc[id],out_acc[id],pt,arg...); });
+	});
+	return ret;
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
+inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
+	BufferData<T,C> ret(left.box()&right.box());
+	Point low = ret.box().low();
+#if DIM==1
+	sycl::id<1> base(low[0]);
+#elif DIM==2
+	sycl::id<2> base(low[0],low[1]);
+#elif DIM==3
+	sycl::id<3> base(low[0],low[1],low[2]);
+#endif
+	sycl::queue q(sycl::gpu_selector_v);
+	q.submit([&](sycl::handler &cgh) {
+		auto lacc = left.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto racc = right.get_buff().template get_access<sycl::access_mode::read>(cgh);
+		auto ret_acc = right.get_buff().template get_access<sycl::access_mode::write>(cgh);
+		cgh.parallel_for(ret_acc.get_range(),[=](sycl::id<DIM> id){ 
+			auto pt = base+id; f(lacc[id],racc[id],ret_acc[id],pt,arg...); });
+	});
+	return ret;
 }
 
 template <typename T, size_t C>
 class BufferData {
-	friend class SimpleStencil<T>;
+	friend class SimpleStencil;
+	sycl::buffer<array<T,C>,DIM> buff;
+	Box bx;
 public:
 	BufferData() = delete;
 #if DIM==1
@@ -102,13 +164,16 @@ public:
 		sycl::queue q(sycl::gpu_selector_v);
 		q.submit([&](sycl::handler &cgh){
 			auto acc = buff.get_access<sycl::access_mode::write>(cgh);
-			cgh.parallel_for(r,[=](sycl::id<DIM> id){acc[id] = val;});
+			cgh.parallel_for(r,[=](sycl::id<DIM> id) {
+				for (int i=0; i<C; i++) acc[id][i] = val;});
 		});
 	}
-	const size_t size() const { return bx.size(); }
+	const size_t size() const { return C*bx.size(); }
 	const Box box() const { return bx; }
-	void print() { 
+	void print(size_t cc=0) { 
+		assert(cc<C);
 		sycl::host_accessor acc(buff); 
+		for (int cc=0; cc<C; cc++) {
 #if DIM>2
 		for (int i=0; i<bx.size(DIM-3); i++) {
 #endif
@@ -125,7 +190,7 @@ public:
 #elif DIM==1
 					sycl::range r(k);
 #endif
-					 cout << acc[r] << ' ';
+					 cout << acc[r][cc] << ' ';
 				}
 #if DIM>1
 				cout << endl;
@@ -136,44 +201,49 @@ public:
 		}
 #endif
 		cout << endl;
+		cout << "===============" << endl;
+		}	
 	}
-	void iota() {
-		sycl::host_accessor<T,DIM> acc(buff);
-		std::iota(acc.begin(),acc.end(),0);
+	void random(T lo, T hi) {
+		sycl::host_accessor<array<T,C>,DIM> acc(buff);
+		static std::mt19937 mt_engine(std::random_device{}());
+		static std::uniform_real_distribution<T> idist(lo,hi);
+		for (auto& el : acc) 
+			for (int i=0; i<C; i++)
+			  el[i] = idist(mt_engine);
 	}
-	sycl::buffer<T,DIM> get_buff() { return buff; }
-private:
-	sycl::buffer<T,DIM> buff;
-	Box bx;
+	decltype(buff) get_buff() { return buff; }
 };
 
-template<typename T, typename InAcc, typename OutAcc, typename Stencil>
+template<typename T, size_t C, typename InAcc, typename OutAcc, typename Stencil>
 class Apply {
 public:
 	Apply(InAcc _in, OutAcc _out, Stencil _sten) : in(_in), out(_out), sten(_sten) {}
 	void operator() (sycl::item<DIM> it) const {
 		sycl::id<DIM> in_id(it);
 		for (int i=0; i<DIM; i++) in_id[i]++;
-		T val=in[in_id];
-		for (int i=0; i<sten.size(); i++) {
-			int offset = sten[i].first;
-			T coef = sten[i].second;
-			val += in[in_id+offset]*coef;
+		for (int c=0; c<C; c++) {
+			T val=in[in_id][c];
+			for (int i=0; i<sten.size(); i++) {
+				int offset = sten[i].first;
+				T coef = sten[i].second;
+				val += in[in_id+offset][c]*coef;
+			}
+			sycl::id<DIM> id = it.get_id();
+			out[id][c]=val; 
 		}
-		sycl::id<DIM> id = it.get_id();
-		out[id]=val; 
 	}
 private:
 	InAcc in; OutAcc out; Stencil sten;
 };
 
-template<typename T>
 struct SimpleStencil {
-	BufferData<T> apply(BufferData<T> &in) {
+	template<typename T, size_t C>
+	static BufferData<T,C> apply(BufferData<T,C> &in) {
 		Point lo(in.box().low()+Point::Ones());
 		Point hi(in.box().high()-Point::Ones());
 		Box bx(lo,hi);
-		BufferData<T> out(bx);
+		BufferData<T,C> out(bx);
 		size_t length = in.buff.get_range()[0]; // assumes symmetric
 		vector<pair<int,T>> coefs(2*DIM+1); // only using neighbors in each dimension
 		coefs[0] = make_pair(0,-2*DIM);
@@ -181,17 +251,16 @@ struct SimpleStencil {
 			coefs[i]  = make_pair(-pow(length,i/2),1);
 			coefs[i+1]= make_pair( pow(length,i/2),1);
 		}
-		for (auto it : coefs) cout << it.first << ',' << it.second << '|'; cout << endl;
 		sycl::queue q(sycl::gpu_selector_v);
 		typedef pair<int,T> vec_t;
 		size_t width=coefs.size();
 		sycl::buffer<vec_t> stencil(coefs.data(),sycl::range<1>(width));
 		q.submit([&](sycl::handler &cgh) { 
-			sycl::accessor<T,DIM,sycl::access_mode::read> in_acc(in.buff, cgh);
-			sycl::accessor<T,DIM,sycl::access_mode::write> out_acc(out.buff, cgh);
-			sycl::accessor<vec_t,1,sycl::access_mode::read> vec_acc(stencil, cgh);
+			auto in_acc = in.buff.template get_access<sycl::access_mode::read>(cgh);
+			auto out_acc = out.buff.template get_access<sycl::access_mode::write>(cgh);
+			auto vec_acc = stencil.template get_access<sycl::access_mode::read>(cgh);
 			cgh.parallel_for(out.buff.get_range(),
-				Apply<T,decltype(in_acc),decltype(out_acc),decltype(vec_acc)>(in_acc,out_acc,vec_acc));
+				Apply<T,C,decltype(in_acc),decltype(out_acc),decltype(vec_acc)>(in_acc,out_acc,vec_acc));
 		});
 		return out;
 	}
