@@ -53,7 +53,6 @@ Box::define(const int* a_lo, const int* a_hi)
     *this = Box(lo, hi);
 }
 
-
 //=================================================================================================
 // Static Methods ||
 //================++ 
@@ -131,6 +130,18 @@ inline Point Box::sizes() const
 {
     return high() - low() + Point::Ones();
 }
+
+#ifdef PR_SYCL
+inline sycl::range<DIM> Box::range() const { 
+#if DIM==1
+	return sycl::range<1>(size(0));
+#elif DIM==2
+	return sycl::range<2>(size(0),size(1));
+#elif DIM==3
+	return sycl::range<3>(size(0),size(1),size(2));
+#endif
+}
+#endif
 
 ACCEL_DECORATION
 bool Box::contains(const Point& a_pt) const
@@ -379,7 +390,7 @@ Box Box::grow(Centering a_ctr) const
     {
         case PR_FACE:
         case PR_EDGE:
-            MayDay<void>::Abort("Box::grow(Centering) | Error: Operation undefined for FACE / EDGE centering.");
+            //MayDay<void>::Abort("Box::grow(Centering) | Error: Operation undefined for FACE / EDGE centering.");
         case PR_CELL:
             return Box(*this);
         case PR_NODE:

@@ -1,6 +1,5 @@
 #include "Proto_Box.H"
 #include <random>
-#include <sycl/sycl.hpp>
 using namespace std;
 using namespace Proto;
 
@@ -15,84 +14,56 @@ struct struct_##local_name {   \
 };        \
 static struct_##local_name app_name;
 
-sycl::id<DIM> util(const Point pt) {
-#if DIM==1
-	sycl::id<1> base(pt[0]);
-#elif DIM==2
-	sycl::id<2> base(pt[0],pt[1]);
-#elif DIM==3
-	sycl::id<3> base(pt[0],pt[1],pt[2]);
-#endif
-	return base;
-}
-
-size_t dim(size_t idx, sycl::id<DIM> orng, sycl::id<DIM> irng) {
-	sycl::id<DIM> id;
-	id[DIM-1] = idx%orng[DIM-1] + 1;
-#if DIM>1
-	id[DIM-2] = (idx/orng[DIM-1])%orng[DIM-2] + 1;
-#if DIM>2
-	id[0] = (idx/orng[2])/orng[1] + 1;
-#endif
-#endif
-	size_t ret = id[DIM-1];
-#if DIM>1
-	ret += id[DIM-2]*irng[DIM-1];
-#if DIM>2
-	ret += id[0]*irng[DIM-1]*irng[DIM-2];
-#endif
-#endif
-	return ret;
-}
-
 template<typename T, size_t C=1>
 class BufferData;
 
 template<typename T, size_t C=1>
 struct Idx {
-	Idx(T* const (&arr)[C], size_t offset) {
-		for (size_t c=0; c<C; c++) buff[c] = arr[c]+offset;
+	Idx(T* ptr, size_t size) {
+		buff[0] = ptr;
+		for (size_t c=1; c<C; c++)
+			buff[c] = buff[c-1]+size;
 	}
-
+	Idx(const Idx &base, size_t offset) {
+		for (size_t c=0; c<C; c++) this->buff[c] = base.buff[c]+offset;
+	}
 	T& operator()(size_t c=0) { return *(buff[c]); }
-
 	T* buff[C];
 };
 
-template<typename T, size_t C=1>
-inline void setup(T* (&ptrs)[C], T *buff, size_t size) {
-	ptrs[0] = buff;
-	for (size_t c=1; c<C; c++)
-		ptrs[c] = ptrs[c-1]+size;
-}
-
-const sycl::range<DIM> range(const Box &bx) { 
-#if DIM==1
-	return sycl::range<1>(bx.size(0));
-#elif DIM==2
-	return sycl::range<2>(bx.size(0),bx.size(1));
-#elif DIM==3
-	return sycl::range<3>(bx.size(0),bx.size(1),bx.size(2));
-#endif
+inline size_t linear(const sycl::id<DIM> &id, const sycl::range<DIM> range) {
+	size_t ret=0, factor=1;
+	for (int d=DIM-1; d>=0; d--) {
+		ret+=id[d]*factor;
+		factor*=range[d];
 	}
+	return ret;
+}
 
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreachIP(const Func &f, BufferData<T,C> &b, Args... arg) {
-	T* ptrs[C]; setup(ptrs, b.buff, b.bx.size());
+	Idx<T,C> base(b.buff, b.bx.size());
 	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item){
-		Idx<T,C> idx(ptrs, item.get_linear_id());
+		Idx<T,C> idx(base,item.get_linear_id());
 		f(idx,arg...); 
 	});
 }
 
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreachIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
-	T* iptr[C]; setup(iptr, in.buff, in.bx.size());
-	T* optr[C]; setup(optr, out.buff, out.bx.size());
-	out.queue().parallel_for(range(in.bx&out.bx),[=](sycl::item<DIM> item){ 
-		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
+	Idx<T,C> ibase(in.buff, in.bx.size());
+	Idx<T,C> obase(out.buff, out.bx.size());
+	Box ixn = in.bx&out.bx;
+	Point ipt = in.bx.low(), opt = out.bx.low(), xpt = ixn.low();
+	sycl::id<DIM> iset = ipt.offset(xpt), oset = opt.offset(xpt);
+	sycl::range<DIM> irng = in.range(), orng = out.range();
+	out.queue().parallel_for(ixn.range(),[=](sycl::id<DIM> id){ 
+		sycl::id<DIM> i,o;
+		for (size_t d=0; d<DIM; d++) {
+			i[d] = iset[d]+id[d]; o[d] = oset[d]+id[d];
+		}
+		Idx<T,C> idx(ibase,linear(i,irng));
+		Idx<T,C> odx(obase,linear(o,orng));
 		f(idx,odx,arg...); 
 	});
 }
@@ -100,12 +71,12 @@ inline void foreachIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, 
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &in, Args... arg) {
 	BufferData<T,C> out(in.box());
-	T* iptr[C]; setup(iptr, in.buff, in.bx.size());
-	T* optr[C]; setup(optr, out.buff, out.bx.size());
+	Idx<T,C> ibase(in.buff, in.bx.size());
+	Idx<T,C> obase(out.buff, out.bx.size());
 	out.queue().parallel_for(out.range(),[=](sycl::item<DIM> item){ 
 		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
+		Idx<T,C> idx(ibase,id);
+		Idx<T,C> odx(obase,id);
 		f(idx,odx,arg...); 
 	});
 	return out;
@@ -114,14 +85,20 @@ inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &in, Args... arg) 
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
 	BufferData<T,C> ret(left.box()&right.box());
-	T* iptr[C]; setup(iptr, left.buff, left.bx.size());
-	T* optr[C]; setup(optr, right.buff, right.bx.size());
-	T* rptr[C]; setup(rptr, ret.buff, ret.bx.size());
+	Idx<T,C> ibase(left.buff, left.bx.size());
+	Idx<T,C> obase(right.buff, right.bx.size());
+	Idx<T,C> rbase(ret.buff, ret.bx.size());
+	Point lpt = left.bx.low(), rpt = right.bx.low(), xpt = ret.bx.low();
+	sycl::id<DIM> lset = lpt.offset(xpt), rset = rpt.offset(xpt);
+	sycl::range<DIM> lrng = left.range(), rrng = right.range();
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
-		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
-		Idx<T,C> rdx(rptr,id);
+		sycl::id<DIM> i,o, id = item.get_id();
+		for (size_t d=0; d<DIM; d++) {
+			i[d] = lset[d]+id[d]; o[d] = rset[d]+id[d];
+		}
+		Idx<T,C> idx(ibase,linear(lset,lrng));
+		Idx<T,C> odx(obase,linear(rset,rrng));
+		Idx<T,C> rdx(rbase,item.get_linear_id());
 		f(idx,odx,rdx,arg...); 
 	});
 	return ret;
@@ -129,10 +106,10 @@ inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<
 
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
-	sycl::id<DIM> base = util(b.box().low());
-	T* ptr[C]; setup(ptr, b.buff, b.bx.size());
+	sycl::id<DIM> base = b.box().low().util();
+	Idx<T,C> ptr(b.buff, b.bx.size());
 	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item){ 
-		auto pt = base+item.get_id(); 
+		sycl::id<DIM> pt = base+item.get_id(); 
 		Idx<T,C> idx(ptr,item.get_linear_id());
 		f(idx,pt,arg...);
 	});
@@ -141,14 +118,19 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	Box ixn = in.bx&out.bx;
-	sycl::id<DIM> base = util(ixn.low());
-	T* iptr[C]; setup(iptr, in.buff, in.bx.size());
-	T* optr[C]; setup(optr, out.buff, out.bx.size());
-	out.queue().parallel_for(range(ixn),[=](sycl::item<DIM> item){ 
-		auto pt = base+item.get_id(); 
-		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
+	Point ipt = in.bx.low(), opt = out.bx.low(), xpt = ixn.low();
+	sycl::id<DIM> iset = ipt.offset(xpt), oset = opt.offset(xpt),  base = xpt.util();
+	Idx<T,C> ibase(in.buff, in.bx.size());
+	Idx<T,C> obase(out.buff, out.bx.size());
+	sycl::range<DIM> irng = in.range(), orng = out.range();
+	out.queue().parallel_for(ixn.range(),[=](sycl::id<DIM> id){ 
+		sycl::id<DIM> i,o;
+		for (size_t d=0; d<DIM; d++) {
+			i[d] = iset[d]+id[d]; o[d] = oset[d]+id[d];
+		}
+		Idx<T,C> idx(ibase,linear(i,irng));
+		Idx<T,C> odx(obase,linear(o,orng));
+		auto pt = base+id; 
 		f(idx,odx,pt,arg...); 
 	});
 }
@@ -156,14 +138,14 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
 	BufferData<T,C> ret(b.box());
-	sycl::id<DIM> base = util(ret.bx.low());
-	T* iptr[C]; setup(iptr, b.buff, b.bx.size());
-	T* optr[C]; setup(optr, ret.buff, ret.bx.size());
+	sycl::id<DIM> base = ret.bx.low().util();
+	Idx<T,C> ibase(b.buff, b.bx.size());
+	Idx<T,C> obase(ret.buff, ret.bx.size());
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
-		auto pt = base+item.get_id(); 
+		sycl::id<DIM> pt = base+item.get_id(); 
 		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
+		Idx<T,C> idx(ibase,id);
+		Idx<T,C> odx(obase,id);
 		f(idx,odx,pt,arg...); 
 	});
 	return ret;
@@ -172,16 +154,21 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg)
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
 	BufferData<T,C> ret(left.box()&right.box());
-	sycl::id<DIM> base = util(ret.box().low());
-	T* iptr[C]; setup(iptr, left.buff, left.bx.size());
-	T* optr[C]; setup(optr, right.buff, right.bx.size());
-	T* rptr[C]; setup(rptr, ret.buff, ret.bx.size());
+	Point lpt = left.bx.low(), rpt = right.bx.low(), xpt = ret.bx.low();
+	sycl::id<DIM> lset = lpt.offset(xpt), rset = rpt.offset(xpt), base = xpt.util();
+	sycl::range<DIM> lrng = left.range(), rrng = right.range();
+	Idx<T,C> iptr(left.buff, left.bx.size());
+	Idx<T,C> optr(right.buff, right.bx.size());
+	Idx<T,C> rptr(ret.buff, ret.bx.size());
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
-		auto pt = base+item.get_id(); 
-		size_t id = item.get_linear_id();
-		Idx<T,C> idx(iptr,id);
-		Idx<T,C> odx(optr,id);
-		Idx<T,C> rdx(rptr,id);
+		sycl::id<DIM> i,o, id = item.get_id();
+		for (size_t d=0; d<DIM; d++) {
+			i[d] = lset[d]+id[d]; o[d] = rset[d]+id[d];
+		}
+		sycl::id<DIM> pt = base+item.get_id(); 
+		Idx<T,C> idx(iptr,linear(lset,lrng));
+		Idx<T,C> odx(optr,linear(rset,rrng));
+		Idx<T,C> rdx(rptr,item.get_linear_id());
 		f(idx,odx,rdx,pt,arg...);
 	});
 	return ret;
@@ -207,15 +194,7 @@ struct BufferData {
 	
 	sycl::queue& queue() { return q; }
 
-	const sycl::range<DIM> range() const { 
-#if DIM==1
-		return sycl::range<1>(bx.size(0));
-#elif DIM==2
-		return sycl::range<2>(bx.size(0),bx.size(1));
-#elif DIM==3
-		return sycl::range<3>(bx.size(0),bx.size(1),bx.size(2));
-#endif
-	}
+	sycl::range<DIM> range() const { return bx.range(); }
 
 	const Box box() const { return bx; }
 
@@ -271,7 +250,7 @@ public:
 	Apply(T* _in, T* _out, pair<int,T> *_sten, sycl::id<DIM> _ir, sycl::id<DIM> _or)
 		: in(_in), out(_out), sten(_sten), irng(_ir), orng(_or) {}
 	void operator() (sycl::id<1> id) const {
-		size_t idx = dim(id,orng,irng);
+		size_t idx = dim(id);
 		T val = in[idx];
 		for (int i=0; i<2*DIM+1; i++) {
 			int offset = sten[i].first;
@@ -279,7 +258,28 @@ public:
 			val += in[idx+offset]*coef;
 		}
 		out[id] = val;
+	}	
+
+	// helps SimpleStencil go from input range to output range
+	size_t dim(size_t idx) const {
+		sycl::id<DIM> id;
+		id[DIM-1] = idx%orng[DIM-1] + 1;
+	#if DIM>1
+		id[DIM-2] = (idx/orng[DIM-1])%orng[DIM-2] + 1;
+	#if DIM>2
+		id[0] = (idx/orng[2])/orng[1] + 1;
+	#endif
+	#endif
+		size_t ret = id[DIM-1];
+	#if DIM>1
+		ret += id[DIM-2]*irng[DIM-1];
+	#if DIM>2
+		ret += id[0]*irng[DIM-1]*irng[DIM-2];
+	#endif
+	#endif
+		return ret;
 	}
+
 private:
 	T *in, *out;
 	pair<int,T> *sten;
@@ -303,7 +303,7 @@ struct SimpleStencil {
 			}
 		}).wait();
 		size_t inset = in.box().size(), outset = out.box().size();
-		sycl::id<DIM> irng = util(in.box().sizes()), orng = util(out.box().sizes());
+		sycl::id<DIM> irng = in.box().sizes().util(), orng = out.box().sizes().util();
 		for (int c=0; c<C; c++) 
 			in.q.parallel_for(outset,Apply<T,C>(in.buff+c*inset,out.buff+c*outset,coefs,irng,orng)).wait();
 		return out;

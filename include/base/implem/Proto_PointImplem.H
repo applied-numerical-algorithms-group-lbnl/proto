@@ -67,6 +67,19 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     }
 }
 
+#ifdef PR_SYCL
+sycl::id<DIM> Point::util() const {
+#if DIM==1
+	sycl::id<1> base(m_tuple[0]);
+#elif DIM==2
+	sycl::id<2> base(m_tuple[0],m_tuple[1]);
+#elif DIM==3
+	sycl::id<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
+#endif
+	return base;
+}
+#endif
+
 ACCEL_DECORATION
 const int& Point::operator[](unsigned char a_index) const
 {
@@ -388,6 +401,14 @@ int Point::codim() const
     }
     return numZeros;
 }
+
+#ifdef PR_SYCL
+inline sycl::id<DIM> Point::offset(const Point &xpt) {
+	sycl::id<DIM> ret;
+	for (size_t d=0; d<DIM; d++) ret[d] = xpt[d]-m_tuple[d];
+	return ret;
+}
+#endif
 
 std::array<Point, DIM> Point::parallelUnit() const
 {

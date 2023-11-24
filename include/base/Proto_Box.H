@@ -2,7 +2,7 @@
 #ifndef _PROTO_BOX_
 #define _PROTO_BOX_
 
-#include "Proto_MayDay.H"
+//#include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_LoHiSide.H"
 #include "Proto_Centering.H"
@@ -216,6 +216,10 @@ namespace Proto
         */
         ACCEL_DECORATION
         inline Point sizes() const; 
+
+#ifdef PR_SYCL
+		inline sycl::range<DIM> range() const; 
+#endif
 
         /// Contains Point Query
         /**

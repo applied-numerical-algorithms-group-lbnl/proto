@@ -143,6 +143,10 @@ namespace Proto
         ACCEL_DECORATION inline static Point Y() { return Basis(1); }
         ACCEL_DECORATION inline static Point Z() { return Basis(2); }
 
+#ifdef PR_SYCL
+		sycl::id<DIM> util() const; 
+#endif
+
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
         /** @name Accessors */
@@ -416,6 +420,10 @@ namespace Proto
             Returns the codimensionality of *this (e.g. the number of num-zero entries)
         */
         inline int codim() const;
+
+#ifdef PR_SYCL
+		inline sycl::id<DIM> offset(const Point &xpt); 
+#endif
         
         /// Parallel Unit Vectors
         /**
