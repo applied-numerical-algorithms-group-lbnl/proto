@@ -38,11 +38,11 @@ SYCL_KERNEL_END(point_bothF, point_both)
 int main() {
 	typedef BufferData<double,2> BDtype;
 	Box bx = Box::Cube(5);
-cout << "here" << endl;
 	BDtype start(bx);
 	start.random(0.,10.);
 	cout << "start:" << endl;
 	start.print(); 
+cout << "here" << endl;
 	foreachIP(first,start,2.3);
 	cout << "added 2.3:" << endl;
 	start.print(); 
@@ -56,7 +56,7 @@ cout << "here" << endl;
 	cout << "Initial buffer: " << endl;
 	for (int i=0; i<bdvec.size(); i++) 
 		bdvec[i]->print(); 
-/*	foreachIP(both,*bdvec[0],*bdvec[1],4.1);
+	foreachIP(both,*bdvec[0],*bdvec[1],4.1);
 	cout << "adding 4.1:" << endl;
 	bdvec[1]->print();
 	cout << "adding vec[1]+p[0]-3.2 to vec[0]" << endl;
@@ -65,5 +65,5 @@ cout << "here" << endl;
 	auto last = foreach(all,start,2.4,1.3);
 	cout << "final print:" << endl;
 	last.print();
-*/	return 0;
+	return 0;
 }
