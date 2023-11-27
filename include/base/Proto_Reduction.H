@@ -139,7 +139,7 @@ template<typename T, Operation OP>
 __device__ // reduce within a block by storing partial warp reductions in shmem
 void blockOp(T& val, int idx, int size) {
     PR_assert(blockDim.x <= warpSize*warpSize); // otherwise block won't be reduced by end of function
-    extern __shared__ __align__(sizeof(T)) unsigned char shdata[];
+    extern __shared__ __align__(sizeof(T)) unsigned int shdata[];
     T *shmem = reinterpret_cast<T*>(shdata);
     int lane = threadIdx.x % warpSize;
     int wid = threadIdx.x / warpSize;

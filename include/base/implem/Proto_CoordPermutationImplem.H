@@ -197,7 +197,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
     return r;
 }
 
-template< typename T, unsigned int C, unsigned char D, unsigned char E>
+template< typename T, unsigned int C, unsigned int D, unsigned int E>
 void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
         const Box& srcBox, const Box& dstBox) const

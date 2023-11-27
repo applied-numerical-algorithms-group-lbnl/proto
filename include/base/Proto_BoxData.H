@@ -73,10 +73,10 @@ namespace Proto
 {
     // Forward Declarations
     template<typename T> class Stencil;
-    template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     class LazyStencil;
     
-    template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     class LazyInterpStencil;
 
     template<MemType MEM>
@@ -114,7 +114,7 @@ namespace Proto
       \tparam E Number of components in third data index. Defaults to 1.
       */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT,
-        unsigned char D=1, unsigned char E=1>
+        unsigned int D=1, unsigned int E=1>
     class Var
     {
         public:
@@ -122,7 +122,7 @@ namespace Proto
 
 #ifdef PROTO_ACCEL
         __device__
-        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        inline T& getValDevice(unsigned int a_c, unsigned int a_d = 0, unsigned int a_e = 0)
         {
             int idx = threadIdx.x + blockIdx.x*blockDim.x;
             int idy = blockIdx.y;
@@ -136,13 +136,13 @@ namespace Proto
 
     #ifdef PROTO_HIP
         __host__
-        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        inline T& getValDevice(unsigned int a_c, unsigned int a_d = 0, unsigned int a_e = 0)
         {
             return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         }
     #endif
 #else
-        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        inline T& getValDevice(unsigned int a_c, unsigned int a_d = 0, unsigned int a_e = 0)
         {
             return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         }
@@ -158,7 +158,7 @@ namespace Proto
         */
         ACCEL_DECORATION
         __attribute__((always_inline))
-        T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+        T& operator()(unsigned int a_c, unsigned int a_d = 0, unsigned int a_e = 0)  
         {
             PROTO_ASSERT(a_c < C, "Var::operator() | Error: index out of bounds");
             PROTO_ASSERT(a_d < D, "Var::operator() | Error: index out of bounds");
@@ -184,8 +184,8 @@ namespace Proto
         __device__
         inline const T& getValDevice(
                 unsigned int a_c,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const
         {
             int idx = threadIdx.x + blockIdx.x*blockDim.x;
             int idy = blockIdx.y;
@@ -201,8 +201,8 @@ namespace Proto
         __host__
         inline const T& getValDevice(
                 unsigned int a_c,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const
         {
             return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         }
@@ -210,8 +210,8 @@ namespace Proto
 #else
         inline const T& getValDevice(
                 unsigned int a_c,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const
         {
             return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         }
@@ -221,8 +221,8 @@ namespace Proto
         __attribute__((always_inline))
         const T& operator()(
                 unsigned int a_c,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const 
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const 
         {
 #ifdef PROTO_ACCEL
             if(MEM==MemType::DEVICE)
@@ -311,7 +311,7 @@ namespace Proto
       */
     template <class T=double, unsigned int C=1,
     MemType MEM=MEMTYPE_DEFAULT,
-    unsigned char D=1, unsigned char E=1>
+    unsigned int D=1, unsigned int E=1>
     class BoxData 
     {
         public:
@@ -514,7 +514,7 @@ namespace Proto
           \param a_destComps  Components of a_dest to copy into.
         */
         template <unsigned int Cdest, MemType MEM_DEST,
-                 unsigned char Ddest, unsigned char Edest>
+                 unsigned int Ddest, unsigned int Edest>
         void copyTo(
                 BoxData<T,Cdest,MEM_DEST,Ddest,Edest>& a_dest,
                 const Box&      a_srcBox,
@@ -608,8 +608,8 @@ namespace Proto
         inline T& operator()(
                 const Point& a_pt,
                 unsigned int  a_c = 0,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const;
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const;
 
 
         /// Array Accessor
@@ -651,8 +651,8 @@ namespace Proto
         inline const T* data(
                 const Point&  a_p,
                 unsigned int  a_c = 0,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const;
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const;
             
         /// Pointer Accessor (Non-Const)
         /**
@@ -667,8 +667,8 @@ namespace Proto
         inline T* data(
                 const Point&  a_p,
                 unsigned int  a_c = 0,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0);
+                unsigned int a_d = 0,
+                unsigned int a_e = 0);
 
         /// Buffer Accessor (Non-Const)
         /** 
@@ -681,8 +681,8 @@ namespace Proto
         */
         inline T* data(
                 unsigned int  a_c = 0,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0);
+                unsigned int a_d = 0,
+                unsigned int a_e = 0);
 
         /// Buffer Accessor (Const)
         /** 
@@ -691,8 +691,8 @@ namespace Proto
           */
         inline const T* data(
                 unsigned int  a_c = 0,
-                unsigned char a_d = 0,
-                unsigned char a_e = 0) const;
+                unsigned int a_d = 0,
+                unsigned int a_e = 0) const;
 
         /// Shared Buffer Accessor
         /**
@@ -1294,7 +1294,7 @@ namespace Proto
           to the same data buffer. This function also returns true if one array
           is a slice of another.
           */
-        template<unsigned int CC, unsigned char DD, unsigned char EE>
+        template<unsigned int CC, unsigned int DD, unsigned int EE>
         inline bool isAlias(const BoxData<T, CC, MEM, DD, EE>& a_src) const;
 
         /// Print
@@ -1348,22 +1348,22 @@ namespace Proto
         template<class TT>
             friend class Stencil;
 
-        template<class TT, unsigned int CC, unsigned char DD, unsigned char EE,MemType MM>
+        template<class TT, unsigned int CC, unsigned int DD, unsigned int EE,MemType MM>
             friend BoxData<TT,CC,MM,DD,EE> alias(BoxData<TT,CC,MM,DD,EE>& a_original,
                     const Point&              a_shift);
 
-        template<class TT, unsigned int CC, unsigned char DD, unsigned char EE,MemType MM>
+        template<class TT, unsigned int CC, unsigned int DD, unsigned int EE,MemType MM>
             friend const BoxData<TT,CC,MM,DD,EE> alias(const BoxData<TT,CC,MM,DD,EE>& a_original,
                     const Point&                a_shift);
         
-        template<typename _T, unsigned int _C, MemType _MEM, unsigned char _D, unsigned char _E>
+        template<typename _T, unsigned int _C, MemType _MEM, unsigned int _D, unsigned int _E>
             friend BoxData<_T,1,_MEM,1,1> slice(
                     const BoxData<_T,_C,_MEM,_D,_E>& a_src,
                     unsigned int a_c,
                     unsigned int a_d,
                     unsigned int a_e);
 
-        template<typename _T, unsigned int _C, unsigned char _CC, MemType _MEM>
+        template<typename _T, unsigned int _C, unsigned int _CC, MemType _MEM>
             friend BoxData<_T,_CC,_MEM,1,1> slice(
                     const BoxData<_T,_C,_MEM,1,1>& a_src,
                     unsigned int a_nstart);
@@ -1405,7 +1405,7 @@ namespace Proto
     }; // end class BoxData
 
     template<class T = double, unsigned int C=1,
-        MemType MEM=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
+        MemType MEM=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1>
     class FluxBoxData
     {
         public:
@@ -1483,7 +1483,7 @@ namespace Proto
       \param a_original Source data
       \param a_shift    (Optional) Domain shift for the aliased BoxData.
     */
-    template<class T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+    template<class T, unsigned int C=1, unsigned int D=1, unsigned int E=1,
         MemType MEM=MEMTYPE_DEFAULT>
     BoxData<T,C,MEM,D,E> alias(
             BoxData<T,C,MEM,D,E>&   a_original,
@@ -1496,7 +1496,7 @@ namespace Proto
       \param a_original Source data
       \param a_shift    (Optional) Domain shift for the aliased BoxData.
     */
-    template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1,
+    template<class T, unsigned int C = 1, unsigned int D = 1, unsigned int E = 1,
         MemType MEM=MEMTYPE_DEFAULT>
     const BoxData<T,C,MEM,D,E> alias(
             const BoxData<T,C,MEM,D,E>& a_original,
@@ -1512,7 +1512,7 @@ namespace Proto
       \param a_e    (Optional) Third component index (default: 0)
     */
     template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT,
-        unsigned char D=1, unsigned char E=1>
+        unsigned int D=1, unsigned int E=1>
     BoxData<T,1,MEM,1,1> slice(
             const BoxData<T,C,MEM,D,E>& a_src,
             unsigned int a_c,
@@ -1526,7 +1526,7 @@ namespace Proto
       \param a_src          Source data
       \param a_startcomp    First component of the slice
     */
-    template<typename T, unsigned int C, unsigned char CC, MemType MEM=MEMTYPE_DEFAULT>
+    template<typename T, unsigned int C, unsigned int CC, MemType MEM=MEMTYPE_DEFAULT>
     BoxData<T,CC,MEM,1,1> slice(
             const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);

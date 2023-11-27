@@ -1,5 +1,5 @@
 
-template<class T, unsigned int CL,unsigned char DL, unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL, unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E> faceMatrixProductAB(
                      const BoxData<T,CL,MEM,DL,E>& a_ql4,
                      const BoxData<T,CR,MEM,DR,E>& a_qr4,
@@ -27,7 +27,7 @@ BoxData<T,C,MEM,D,E> faceMatrixProductAB(
     }
   return qprod;
 }
-template<class T, unsigned int CL, unsigned int CR, unsigned char DL, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int CR, unsigned int DL, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E> faceMatrixProductATB(
                      const BoxData<T,CL,MEM,DL,E>& a_ql4,
                      const BoxData<T,CR,MEM,DR,E>& a_qr4,
@@ -55,7 +55,7 @@ BoxData<T,C,MEM,D,E> faceMatrixProductATB(
     }
   return qprod;
 }
-template<class T, unsigned int C,unsigned char D, MemType MEM>
+template<class T, unsigned int C,unsigned int D, MemType MEM>
 BoxData<T,C,MEM,D,E> faceMatrixProductFlux(
                      const BoxData<T,C,MEM,D>& a_ql4,
                      const BoxData<T,D,MEM>& a_qr4,
@@ -79,7 +79,7 @@ BoxData<T,C,MEM,D,E> faceMatrixProductFlux(
   return qprod;
 }
 // 4th-order approximation of (1/ql)*qr where ql is a scalar and qr is matrix-valued.
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E> faceMatrixQuotient(
                      const BoxData<T,1,MEM,1.1>& a_ql4,
                      const BoxData<T,C,MEM,D,E>& a_qr4,
@@ -105,7 +105,7 @@ BoxData<T,C,MEM,D,E> faceMatrixQuotient(
     }
   return qq;
 }
-template<class T, unsigned int C,unsigned char DL, unsigned int CR, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C,unsigned int DL, unsigned int CR, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E> matrixProduct2(,
                      const BoxData<T,C,MEM,DL,E>& a_ql,
                      const BoxData<T,CR,MEM,D,E>& a_qr,

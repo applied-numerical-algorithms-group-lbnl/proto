@@ -13,7 +13,7 @@ struct getMemType
     }
 };
 
-template<typename T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
 struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
 {
   static constexpr MemType type()
@@ -26,7 +26,7 @@ struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
   }
 };
 
-template<typename T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
 struct getMemType<Var<T,C,MEMTYPE,D,E>>
 {
   static constexpr MemType type()
@@ -52,7 +52,7 @@ constexpr MemType getMemTypeFromSrcs()
   return (MemType)(getMemType<First>::type() & getMemTypeFromSrcs<Second, Rest...>());
 }
 
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 void forall_parse(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_data)
 {
   // Can do anything you want here later
@@ -81,7 +81,7 @@ void forall_parse_args(Box& a_domain, Last& a_last)
 }
 
 ////
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E,  typename... Rest>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E,  typename... Rest>
 void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first, Rest&&... a_rest)
 {
   forall_parse(a_domain, a_first);
@@ -89,7 +89,7 @@ void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first, R
 }
 
 ////
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first)
 {
   forall_parse(a_domain, a_first);
@@ -173,7 +173,7 @@ inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 //  Frontend Forall Implementation
 //========================================================================
 
-template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
                                   const char* a_timername,
@@ -191,7 +191,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   //
 }
 
 // Main Forall
-template<typename T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE,unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 {
@@ -207,7 +207,7 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 }
 
 // Overload forallOp with Optional Box Argument
-template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,
                           const char* a_timername,
@@ -220,7 +220,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,
 
 
 // Overload forall with Optional Box Argument
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E, 
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E, 
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
@@ -274,7 +274,7 @@ void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 }
 
 // Main forallOp version with Point Access
-template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     std::string a_timername,
@@ -291,7 +291,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 }
 
 // Main forall version with Point Access
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E, 
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E, 
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 {
@@ -306,7 +306,7 @@ BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 }
 
 // Main forallOp version with Point Access and Box Argument
-template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     const char* a_timername,
@@ -318,7 +318,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 }
 
 // Main forall version with Point Access and Box Argument
-template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned int D, unsigned int E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
@@ -417,16 +417,16 @@ struct structIndexer
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
 
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline Var<T,C,MEMTYPE,D,E> p_ref(Var<T,C,MEMTYPE,D,E>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
 
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline Var<T,C,MEMTYPE,D,E> p_ref(const Var<T,C,MEMTYPE,D,E>& a_data, const Point& a_p){a_data += a_p; return a_data;}
 
 template<typename T>
 inline T var_incr(const T& t){return t;}
 
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 Var<T, C, MEMTYPE, D, E>& var_incr(Var<T, C, MEMTYPE, D, E>& t) {return ++t;}
 
 
@@ -767,13 +767,13 @@ template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
 
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
 
-template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(const BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);

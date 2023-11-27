@@ -192,7 +192,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline std::size_t size(unsigned char a_dim) const;
+        inline std::size_t size(unsigned int a_dim) const;
 
         /// Volumetric Size
         /**
