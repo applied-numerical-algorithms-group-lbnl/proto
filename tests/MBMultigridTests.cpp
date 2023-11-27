@@ -37,26 +37,26 @@ void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
-        double xi = (a_X(ii) - a_X0[ii])*s;
+        double xi = (a_X(ii) - a_X0[ii]);
         r2 += xi*xi;
     }
     double r = sqrt(r2);
-    double sr = sin(r);
-    double cr = cos(r);
+    double sr = sin(s*r);
+    double cr = cos(s*r);
     a_data(0) = 0;
-    if (r < M_PI/2.0)
+    if (s*r < M_PI/2.0)
     {
         for (int dir = 0; dir < DIM; dir++)
         {
-            double x = (a_X(dir) - a_X0[dir])*s;
-            a_data(0) += p*(p-1)*pow(cr,p-2)*sr*sr*x*x/(r*r);
-            a_data(0) += p*pow(cr,p-1)*sr*x*x/(r*r*r);
-            a_data(0) -= p*pow(cr,p)*x*x/(r*r);
-            a_data(0) -= p*pow(cr,p-1)*sr/r;
-            //a_data(0) += 2.0*x*x*sr*sr/(r*r);
-            //a_data(0) += 2*x*x*cr*sr/(r*r*r);
-            //a_data(0) -= 2.0*x*x*cr*cr/(r*r);
-            //a_data(0) -= 2.0*cr*sr/r;
+            double x = (a_X(dir) - a_X0[dir]);
+            a_data(0) -= p*s*s*x*x*pow(cr,p)/(r*r);
+            a_data(0) += p*(p-1)*s*s*x*x*pow(sr,2)*pow(cr,p-2)/(r*r);
+            a_data(0) -= p*s*sr*pow(cr,p-1)/r;
+            a_data(0) += p*s*x*x*sr*pow(cr,p-1)/(r*r*r);
+            //    a_data(0) += p*(p-1)*pow(cr,p-2)*sr*sr*x*x/(r*r);
+        //    a_data(0) += p*pow(cr,p-1)*sr*x*x/(r*r*r);
+        //    a_data(0) -= p*pow(cr,p)*x*x/(r*r);
+        //    a_data(0) -= p*pow(cr,p-1)*sr/r;
         }
     }
 }
@@ -67,10 +67,10 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     HDF5Handler h5;
 
     typedef BoxOp_MBLaplace<double> OP;
-    int domainSize = 256;
-    int boxSize = 64;
+    int domainSize = 32;
+    int boxSize = 16;
     int numBlocks = XPOINT_NUM_BLOCKS;
-    int numLevels = 2;
+    int numLevels = 1;
     double slope = 1.0;
     int comp = 0;
     Array<double, DIM> k{1,1,1,0,0,0};

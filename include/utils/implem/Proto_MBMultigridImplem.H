@@ -358,18 +358,23 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         h5.writeMBLevel({"phi"}, m_maps[a_level], a_state,
                 "MBMultigrid_Phi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
 #endif
+        LevelStateData Lphi(m_residual[a_level]->layout(), Point::Zeros());
         for (auto iter : a_state.layout())
         {
             auto& state_i = a_state[iter];
             auto& force_i = a_force[iter];
             auto& res_i = (*m_residual[a_level])[iter];
+            auto& lphi_i = Lphi[iter];
             m_ops[a_level][iter](res_i, state_i, -1);
+            res_i.copyTo(lphi_i);
             res_i += force_i;
             state_i += m_increment[a_level](res_i);
         }
 #if PR_VERBOSE > 1
         h5.writeMBLevel({"residual"}, m_maps[a_level], *m_residual[a_level],
                 "MBMultigrid_Res_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+        h5.writeMBLevel({"-lphi"}, m_maps[a_level], Lphi,
+                "MBMultigrid_Lphi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
     
         auto norm = resnorm(*m_residual[a_level], a_state, a_force, a_level);
         pr_out() << "\tMBMultigrid::relax | iter: " << ii << " | residual: " << norm << std::endl;
