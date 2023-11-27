@@ -73,7 +73,7 @@ inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
 {
     unsigned int factor = 1;
     unsigned int linIndex = a_pt[0] - a_low[0];
-    for (unsigned char i = 1;i < DIM;i++)
+    for (unsigned int i = 1;i < DIM;i++)
     { 
         factor = factor*(a_high[i-1] - a_low[i-1] + 1);
         linIndex = linIndex + (a_pt[i] - a_low[i])*factor;
@@ -88,7 +88,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 {
     int factor = 1;
     int linIndex = a_pt[0];
-    for(unsigned char i=1; i<DIM; i++)
+    for(unsigned int i=1; i<DIM; i++)
     {
         factor = factor*(a_high[i-1] - a_low[i-1] + 1);
         linIndex = linIndex + (a_pt[i])*factor;
@@ -102,7 +102,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 //=======================++ 
 
 ACCEL_DECORATION
-inline std::size_t Box::size(unsigned char a_dim) const
+inline std::size_t Box::size(unsigned int a_dim) const
 {
     PROTO_ASSERT((a_dim < DIM),
         "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
@@ -188,7 +188,7 @@ inline Point Box::operator[](unsigned int a_index) const
             a_index, m_size);
     
     int tuple[DIM];
-    for (unsigned char i = 0;i < DIM; i++)
+    for (unsigned int i = 0;i < DIM; i++)
     {      
         int factor = (m_high[i] - m_low[i] + 1);
         int kred = a_index % factor;

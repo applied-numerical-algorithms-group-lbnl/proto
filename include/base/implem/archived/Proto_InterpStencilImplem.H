@@ -80,7 +80,7 @@ void InterpStencil<T>::print() const
 }
 
 template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
         const BoxData<T,C,MEMTYPE,D,E>& a_src,
         Box                             a_box,
@@ -104,7 +104,7 @@ LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
 }
 
 template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(
         const BoxData<T,C,MEMTYPE,D,E>& a_src,
 		T                               a_scale)

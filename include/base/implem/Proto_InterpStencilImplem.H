@@ -81,7 +81,7 @@ Box InterpStencil<T>::span() const
 
 
 template<typename T>
-template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void InterpStencil<T>::apply(
     BoxData<T, C, MEM, D, E>& a_output,
     const BoxData<T, C, MEM, D, E>& a_input,
@@ -113,7 +113,7 @@ void InterpStencil<T>::apply(
 
 template<typename T>
 template<unsigned int C, MemType MEM,
-    unsigned char D, unsigned char E>
+    unsigned int D, unsigned int E>
 LazyInterpStencil<T, C, MEM, D, E>
 InterpStencil<T>::operator()(
         const BoxData<T, C, MEM, D, E>& a_input,
@@ -125,7 +125,7 @@ InterpStencil<T>::operator()(
 
 template<typename T>
 template<unsigned int C, MemType MEM,
-    unsigned char D, unsigned char E>
+    unsigned int D, unsigned int E>
 LazyInterpStencil<T, C, MEM, D, E>
 InterpStencil<T>::operator()(
         const BoxData<T, C, MEM, D, E>& a_input,
@@ -142,7 +142,7 @@ InterpStencil<T>::operator()(
 }
 
 template<typename T, unsigned int C, MemType MEM,
-    unsigned char D, unsigned char E>
+    unsigned int D, unsigned int E>
 LazyInterpStencil<T,C,MEM,D,E>::LazyInterpStencil(
         const InterpStencil<T>& a_stencil,
         const BoxData<T, C, MEM, D, E>& a_src,
@@ -155,7 +155,7 @@ LazyInterpStencil<T,C,MEM,D,E>::LazyInterpStencil(
 }
 
 template<typename T, unsigned int C, MemType MEM,
-    unsigned char D, unsigned char E>
+    unsigned int D, unsigned int E>
 void LazyInterpStencil<T,C,MEM,D,E>::apply(
     BoxData<T,C,MEM,D,E>& a_dst, bool a_overwrite) const
 {
@@ -163,7 +163,7 @@ void LazyInterpStencil<T,C,MEM,D,E>::apply(
 }
 
 template<typename T, unsigned int C, MemType MEM,
-    unsigned char D, unsigned char E>
+    unsigned int D, unsigned int E>
 Box LazyInterpStencil<T,C,MEM,D,E>::inferredRange() const
 {
     return op->range(srcData->box());

@@ -24,7 +24,7 @@ template<typename T> class FusedStencilGraph
 
   // Apply the stencil kernel on several stencils and boxes on a same in patch and out patch
   // Be carefull that m_stencil and *a_box are filled with the same order
-  template <unsigned int C, unsigned char D, unsigned char E>
+  template <unsigned int C, unsigned int D, unsigned int E>
   void cudaGraph( const Proto::BoxData<T,C,D,E> & a_src,
                              Proto::BoxData<T,C,D,E> & a_dst,
                              Proto::Box         * a_box,
@@ -70,7 +70,7 @@ template<typename T> class FusedStencilGraph
   }
 
   template <typename T> 
-  template <unsigned int C, unsigned char D, unsigned char E>
+  template <unsigned int C, unsigned int D, unsigned int E>
   void FusedStencilGraph<T>::cudaGraph( const Proto::BoxData<T,C,D,E> & a_src,
                             Proto::BoxData<T,C,D,E>  & a_dst,
                             Proto::Box         * a_box,

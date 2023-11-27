@@ -1,6 +1,6 @@
 //==========================================================================================
 // CONVOLVE
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _convolve(
         BoxData<T,C,MEM,D,E>& a_avg,
@@ -19,7 +19,7 @@ _convolve(
     //a_avg += a_ctr;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -33,7 +33,7 @@ _convolve(
     return a_avg;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 convolve(
         BoxData<T,C,MEM,D,E>& a_avg,
@@ -42,7 +42,7 @@ convolve(
     _convolve(a_avg, a_ctr, a_ctr);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
@@ -119,7 +119,7 @@ initConvolve(
 
 //==========================================================================================
 // DECONVOLVE
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _deconvolve(
         BoxData<T,C,MEM,D,E>& a_ctr,
@@ -134,7 +134,7 @@ _deconvolve(
     a_ctr += a_avg;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
@@ -148,7 +148,7 @@ _deconvolve(
     return a_ctr;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 deconvolve(
         BoxData<T,C,MEM,D,E>& a_ctr,
@@ -157,7 +157,7 @@ deconvolve(
     _deconvolve(a_ctr, a_avg, a_avg);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
 {
@@ -192,7 +192,7 @@ deconvolve(
 
 //==========================================================================================
 // CONVOLVE FACE
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _convolveFace(
         BoxData<T,C,MEM,D,E>& a_avg,
@@ -207,7 +207,7 @@ _convolveFace(
     a_avg += a_ctr;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -221,7 +221,7 @@ _convolveFace(
     return avg;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 convolveFace(
         BoxData<T,C,MEM,D,E>& a_avg,
@@ -231,7 +231,7 @@ convolveFace(
     _convolveFace(a_avg, a_ctr, a_ctr, a_dir);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -242,7 +242,7 @@ convolveFace(
 
 //==========================================================================================
 // DECONVOLVE FACE
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _deconvolveFace(
         BoxData<T,C,MEM,D,E>& a_ctr,
@@ -257,7 +257,7 @@ _deconvolveFace(
     a_ctr += a_avg;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
@@ -271,7 +271,7 @@ _deconvolveFace(
     return ctr;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 deconvolveFace(
         BoxData<T,C,MEM,D,E>& a_ctr,
@@ -281,7 +281,7 @@ deconvolveFace(
     _deconvolveFace(a_ctr, a_avg, a_avg, a_dir);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
@@ -292,7 +292,7 @@ deconvolveFace(
 
 //==========================================================================================
 // CELL PRODUCT
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _cellProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -307,7 +307,7 @@ _cellProduct(
     return pq;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -351,7 +351,7 @@ _cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         }, a_product, a_pavg, a_qavg);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 cellProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -360,7 +360,7 @@ cellProduct(
     return _cellProduct(a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -371,7 +371,7 @@ cellProduct(BoxData<T,C,MEM,D,E>& a_product,
 
 //==========================================================================================
 // FACE PRODUCT
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _faceProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -387,7 +387,7 @@ _faceProduct(
     return out;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -437,7 +437,7 @@ _faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         }, a_dest, a_pavg, a_qavg);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 faceProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -447,7 +447,7 @@ faceProduct(
     return _faceProduct(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -459,7 +459,7 @@ faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
 
 //==========================================================================================
 // CELL QUOTIENT
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _cellQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -475,7 +475,7 @@ _cellQuotient(
 
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -532,7 +532,7 @@ _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
     a_quotient += dpdqTerm;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 cellQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -541,7 +541,7 @@ cellQuotient(
     return _cellQuotient(a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -552,7 +552,7 @@ cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 
 //==========================================================================================
 // FACE QUOTIENT
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _faceQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -568,7 +568,7 @@ _faceQuotient(
     return out;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -629,7 +629,7 @@ _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
     a_quotient += dpdqTerm;
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 faceQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -639,7 +639,7 @@ faceQuotient(
     return _faceQuotient(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void
 faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -652,7 +652,7 @@ faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 //==========================================================================================
 // FACE TENSOR PRODUCT
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 _faceTensorProduct(
         const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -682,7 +682,7 @@ _faceTensorProduct(
     return quot;
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 void
 _faceTensorProduct(
         BoxData<T,C,MEM,D,E>&       a_product,
@@ -695,7 +695,7 @@ _faceTensorProduct(
     MayDay<void>::Abort("Operator::_faceTensorProduct | Error: Not Implemented.");
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 faceTensorProduct(
         const BoxData<T,C,MEM,D,E>& a_ql,
@@ -705,7 +705,7 @@ faceTensorProduct(
     MayDay<void>::Abort("Operator::faceTensorProduct | Error: Not Implemented.");
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 void
 faceTensorProduct(
         BoxData<T,C,MEM,D,E>&       a_product,
@@ -719,7 +719,7 @@ faceTensorProduct(
 //==========================================================================================
 // FACE TENSOR QUOTIENT
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 _faceTensorQuotient(
         const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -750,7 +750,7 @@ _faceTensorQuotient(
     return quot;
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 void
 _faceTensorQuotient(
         BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -763,7 +763,7 @@ _faceTensorQuotient(
     MayDay<void>::Abort("Operator::_faceTensorQuotient | Error: Not Implemented.");
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 faceTensorQuotient(
         const BoxData<T,C,MEM,D,E>& a_ql,
@@ -773,7 +773,7 @@ faceTensorQuotient(
     MayDay<void>::Abort("Operator::faceTensorQuotient | Error: Not Implemented.");
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 void
 faceTensorQuotient(
         BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -889,7 +889,7 @@ cofactorMatrix(
 }
 
 // Copy lowest 0-index slice to all the other slices.
-template<class T,unsigned int C,MemType MEM,unsigned char D, unsigned char E>
+template<class T,unsigned int C,MemType MEM,unsigned int D, unsigned int E>
 void spreadSlice(BoxData<T,C,MEM,D,E>& a_bd)
 {
   PR_TIMERS("spreadSlice");
@@ -1541,8 +1541,8 @@ edgeCrossProduct3D(
 
 //==========================================================================================
 // CELL MATRIX PRODUCT
-template<class T, unsigned int CL,unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     BoxData<T,CL,MEM,DR,E>
 _cellMatrixProductAB(
         const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -1576,8 +1576,8 @@ _cellMatrixProductAB(
 
 //==========================================================================================
 // FACE MATRIX PRODUCT
-template<class T, unsigned int CL,unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,CL,MEM,DR,E>
 _faceMatrixProductAB(
         const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -1614,8 +1614,8 @@ _faceMatrixProductAB(
     return prod;
 }
 
-template<class T, unsigned int CL,unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 void
 _faceMatrixProductAB(
         BoxData<T,CL,MEM,DR,E>&       a_product,
@@ -1628,8 +1628,8 @@ _faceMatrixProductAB(
     MayDay<void>::Abort("Operator::_faceMatrixProduct | Error: Not implemented.");
 }
 
-template<class T, unsigned int CL,unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,CL,MEM,DR,E>
 faceMatrixProductAB(
         const BoxData<T,CL,MEM,DL,E>& a_ql,
@@ -1639,8 +1639,8 @@ faceMatrixProductAB(
     MayDay<void>::Abort("Operator::faceMatrixProduct | Error: Not implemented.");
 }
 
-template<class T, unsigned int CL,unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 void
 faceMatrixProductAB(
         BoxData<T,CL,MEM,DR,E>&       a_product,
@@ -1651,8 +1651,8 @@ faceMatrixProductAB(
     MayDay<void>::Abort("Operator::faceMatrixProduct | Error: Not implemented.");
 }
 
-template<class T, unsigned int CL, unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,DL,MEM,DR,E>
 _faceMatrixProductATB(
         const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -1686,8 +1686,8 @@ _faceMatrixProductATB(
     return prod;
 }
 
-template<class T, unsigned int CL, unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 void
 _faceMatrixProductATB(
         BoxData<T,DL,MEM,DR,E>&       a_product,
@@ -1700,8 +1700,8 @@ _faceMatrixProductATB(
     MayDay<void>::Abort("_faceMatrixProductATB | Error: Not Implemented.");
 }
 
-template<class T, unsigned int CL, unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,CL,MEM,CR,E>
 _faceMatrixProductABT(
         const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -1735,8 +1735,8 @@ _faceMatrixProductABT(
     return prod;
 }
 
-template<class T, unsigned int CL, unsigned char DL,
-    unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 void
 _faceMatrixProductABT(
         BoxData<T,CL,MEM,CR,E>&       a_product,
@@ -1751,7 +1751,7 @@ _faceMatrixProductABT(
 
 //==========================================================================================
 // PRODUCT 1D
-template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>
 _product1D(
         const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -1794,7 +1794,7 @@ _product1D(
     return prod;
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 _cellTensorQuotient(
                               const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -1815,8 +1815,8 @@ _cellTensorQuotient(
         }
   return quot;
 }
-template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,CL,MEM,DR,E>
 _matrixProductAB2(
                   const BoxData<T,CL,MEM,DL,E>& a_ql,
@@ -1839,8 +1839,8 @@ _matrixProductAB2(
         }
   return prod;
 }
-template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,DL,MEM,DR,E>
 _matrixProductATB2(
                    const BoxData<T,CL,MEM,DL,E>& a_ql,
@@ -1863,8 +1863,8 @@ _matrixProductATB2(
           }
   return prod;
 }
-template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 BoxData<T,CL,MEM,CR,E>
 _matrixProductABT2(
                    const BoxData<T,CL,MEM,DL,E>& a_ql,

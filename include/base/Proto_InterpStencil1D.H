@@ -47,7 +47,7 @@ public:
         \param a_src    Source data
         \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
     inline LazyStencil<T,C,MEMTYPE,D,E> operator()(
             const BoxData<T,C,MEMTYPE,D,E>& a_src,
             T                               a_scale = 1) const;
@@ -64,7 +64,7 @@ public:
         \param a_box    Iteration box
         \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
     inline LazyStencil<T,C,MEMTYPE,D,E> operator()(
             const BoxData<T,C,MEMTYPE,D,E>& a_src,
             Box                             a_box,

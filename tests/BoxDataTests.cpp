@@ -6,7 +6,7 @@
 using namespace Proto;
 using namespace std;
 
-template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool compareBoxData(
         const BoxData<T, C, MEM, D, E>& a_src,
         const BoxData<T, C, MEM, D, E>& a_dst,
@@ -36,7 +36,7 @@ bool compareBoxData(
     return true;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template<typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool compareBoxData(const BoxData<T,C,MEM,D,E>& a_data, T a_val)
 {
     std::vector<T> buf(a_data.size());
@@ -52,7 +52,7 @@ bool compareBoxData(const BoxData<T,C,MEM,D,E>& a_data, T a_val)
 }
 
 // This is used in lieu of forall (removes dependence on these tests on forall)
-template<typename T, unsigned int C, MemType MEM, unsigned char D=1, unsigned char E=1>
+template<typename T, unsigned int C, MemType MEM, unsigned int D=1, unsigned int E=1>
 void initBoxData_0(BoxData<T, C, MEM, D, E>& a_data)
 {
     BoxData<T, C, HOST, D, E> hostData(a_data.box());
@@ -75,7 +75,7 @@ void initBoxData_0(BoxData<T, C, MEM, D, E>& a_data)
     proto_memcpy<HOST, MEM>(hostData.data(), a_data.data(), a_data.linearSize());
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned char D=1, unsigned char E=1>
+template<typename T, unsigned int C, MemType MEM, unsigned int D=1, unsigned int E=1>
 void initBoxData_1(BoxData<T, C, MEM, D, E>& a_data)
 {
     BoxData<T, C, HOST, D, E> hostData(a_data.box());
@@ -93,7 +93,7 @@ void initBoxData_1(BoxData<T, C, MEM, D, E>& a_data)
 }
 
 // This is used in lieu of forall (removes dependence on these tests on forall)
-template<typename T, unsigned int C, MemType MEM, unsigned char D=1, unsigned char E=1>
+template<typename T, unsigned int C, MemType MEM, unsigned int D=1, unsigned int E=1>
 BoxData<T, C, MEM, D, E> initBoxData(Box& a_box, unsigned int a_func)
 {
     BoxData<T, C, MEM, D, E> data(a_box);
@@ -124,8 +124,8 @@ TEST(BoxData, BoxConstructor) {
 TEST(BoxData, Initializer) {
     Box B = Box(Point(1,2,3,4,5,6,7));
     constexpr unsigned int C = 3;
-    constexpr unsigned char D = 4;
-    constexpr unsigned char E = 5;
+    constexpr unsigned int D = 4;
+    constexpr unsigned int E = 5;
     int value = 1337;
     BoxData<int,C,HOST,D,E> hostData(B,value);
     for (auto p : B)
