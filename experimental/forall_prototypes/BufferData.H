@@ -94,7 +94,7 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item){ 
 		sycl::id<DIM> pt = base+item.get_id(); 
 		Idx<T,C> idx(ptr,item.get_linear_id());
-		f(idx,pt,arg...);
+		f(pt,idx,arg...);
 	});
 }
 
@@ -110,7 +110,7 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out
 		sycl::id<DIM> i = iset+id, o = oset+id, pt = base+id;
 		Idx<T,C> idx(ibase,BufferData<T,C>::linear(i,irng));
 		Idx<T,C> odx(obase,BufferData<T,C>::linear(o,orng));
-		f(idx,odx,pt,arg...); 
+		f(pt,idx,odx,arg...); 
 	});
 }
 
@@ -125,7 +125,7 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg)
 		size_t id = item.get_linear_id();
 		Idx<T,C> idx(ibase,id);
 		Idx<T,C> odx(obase,id);
-		f(idx,odx,pt,arg...); 
+		f(pt,idx,odx,arg...); 
 	});
 	return ret;
 }
@@ -144,7 +144,7 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferDat
 		Idx<T,C> idx(iptr,BufferData<T,C>::linear(i,lrng));
 		Idx<T,C> odx(optr,BufferData<T,C>::linear(o,rrng));
 		Idx<T,C> rdx(rptr,item.get_linear_id());
-		f(idx,odx,rdx,pt,arg...);
+		f(pt,idx,odx,rdx,arg...);
 	});
 	return ret;
 }
