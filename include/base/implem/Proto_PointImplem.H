@@ -22,6 +22,15 @@ Point::Point(const Point& a_pt)
     *this = a_pt;
 }
 
+#ifdef PR_SYCL
+Point::Point(const sycl::id<DIM> id)
+{
+   for (int j = 0; j < DIM; j++)
+	   m_tuple[j]=id[j];
+}
+#endif
+
+
 ACCEL_DECORATION
 Point Point::Ones(int a_scale)
 {
@@ -83,10 +92,12 @@ sycl::id<DIM> Point::util() const {
 ACCEL_DECORATION
 const int& Point::operator[](unsigned char a_index) const
 {
+#ifndef PR_SYCL
     PROTO_ASSERT((a_index < DIM),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
             a_index must be in [0,DIM = %i)",
             a_index, DIM);
+#endif
     return m_tuple[a_index];
 }
 

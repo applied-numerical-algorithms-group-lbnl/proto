@@ -29,7 +29,7 @@ void allF(Idx<double,2> in, Idx<double,2> &out, double a, double b) {
 SYCL_KERNEL_END(allF, all)
 
 SYCL_KERNEL_START
-void point_bothF(Idx<double,2> in, Idx<double,2> &out, sycl::id<DIM> p, double val) { 
+void point_bothF(Idx<double,2> in, Idx<double,2> &out, const Point p, double val) { 
 	for (int i=0; i<2; i++)
 		out(i) = in(i)+p[0]-val; 
 }

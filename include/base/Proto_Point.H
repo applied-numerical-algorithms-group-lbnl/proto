@@ -82,6 +82,10 @@ namespace Proto
         */
         ACCEL_DECORATION inline Point(const Point& a_pt);
 
+#ifdef PR_SYCL
+		inline Point(const sycl::id<DIM> id);
+#endif
+
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
         /** @name Static Methods */

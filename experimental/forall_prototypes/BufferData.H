@@ -31,15 +31,6 @@ struct Idx {
 	T* buff[C];
 };
 
-inline size_t linear(const sycl::id<DIM> &id, const sycl::range<DIM> range) {
-	size_t ret=0, factor=1;
-	for (int d=DIM-1; d>=0; d--) {
-		ret+=id[d]*factor;
-		factor*=range[d];
-	}
-	return ret;
-}
-
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreachIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 	Idx<T,C> base(b.buff, b.bx.size());
@@ -54,16 +45,12 @@ inline void foreachIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, 
 	Idx<T,C> ibase(in.buff, in.bx.size());
 	Idx<T,C> obase(out.buff, out.bx.size());
 	Box ixn = in.bx&out.bx;
-	Point ipt = in.bx.low(), opt = out.bx.low(), xpt = ixn.low();
-	sycl::id<DIM> iset = ipt.offset(xpt), oset = opt.offset(xpt);
+	sycl::id<DIM> iset = ixn.low().util()-in.bx.low().util(), oset = ixn.low().util()-out.bx.low().util();
 	sycl::range<DIM> irng = in.range(), orng = out.range();
 	out.queue().parallel_for(ixn.range(),[=](sycl::id<DIM> id){ 
-		sycl::id<DIM> i,o;
-		for (size_t d=0; d<DIM; d++) {
-			i[d] = iset[d]+id[d]; o[d] = oset[d]+id[d];
-		}
-		Idx<T,C> idx(ibase,linear(i,irng));
-		Idx<T,C> odx(obase,linear(o,orng));
+		sycl::id<DIM> i = iset+id, o = oset+id;
+		Idx<T,C> idx(ibase,BufferData<T,C>::linear(i,irng));
+		Idx<T,C> odx(obase,BufferData<T,C>::linear(o,orng));
 		f(idx,odx,arg...); 
 	});
 }
@@ -88,16 +75,12 @@ inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<
 	Idx<T,C> ibase(left.buff, left.bx.size());
 	Idx<T,C> obase(right.buff, right.bx.size());
 	Idx<T,C> rbase(ret.buff, ret.bx.size());
-	Point lpt = left.bx.low(), rpt = right.bx.low(), xpt = ret.bx.low();
-	sycl::id<DIM> lset = lpt.offset(xpt), rset = rpt.offset(xpt);
+	sycl::id<DIM> lset = ret.bx.low().util()-left.bx.low().util(), rset = ret.bx.low().util()-right.bx.low().util();
 	sycl::range<DIM> lrng = left.range(), rrng = right.range();
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
-		sycl::id<DIM> i,o, id = item.get_id();
-		for (size_t d=0; d<DIM; d++) {
-			i[d] = lset[d]+id[d]; o[d] = rset[d]+id[d];
-		}
-		Idx<T,C> idx(ibase,linear(lset,lrng));
-		Idx<T,C> odx(obase,linear(rset,rrng));
+		sycl::id<DIM> i = lset+item.get_id(), o = rset+item.get_id();
+		Idx<T,C> idx(ibase,BufferData<T,C>::linear(i,lrng));
+		Idx<T,C> odx(obase,BufferData<T,C>::linear(o,rrng));
 		Idx<T,C> rdx(rbase,item.get_linear_id());
 		f(idx,odx,rdx,arg...); 
 	});
@@ -118,19 +101,15 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	Box ixn = in.bx&out.bx;
-	Point ipt = in.bx.low(), opt = out.bx.low(), xpt = ixn.low();
-	sycl::id<DIM> iset = ipt.offset(xpt), oset = opt.offset(xpt),  base = xpt.util();
+	sycl::id<DIM> ipt = in.bx.low().util(), opt = out.bx.low().util(), base = ixn.low().util();
+	sycl::id<DIM> iset = base-ipt, oset = base-opt;
 	Idx<T,C> ibase(in.buff, in.bx.size());
 	Idx<T,C> obase(out.buff, out.bx.size());
 	sycl::range<DIM> irng = in.range(), orng = out.range();
 	out.queue().parallel_for(ixn.range(),[=](sycl::id<DIM> id){ 
-		sycl::id<DIM> i,o;
-		for (size_t d=0; d<DIM; d++) {
-			i[d] = iset[d]+id[d]; o[d] = oset[d]+id[d];
-		}
-		Idx<T,C> idx(ibase,linear(i,irng));
-		Idx<T,C> odx(obase,linear(o,orng));
-		auto pt = base+id; 
+		sycl::id<DIM> i = iset+id, o = oset+id, pt = base+id;
+		Idx<T,C> idx(ibase,BufferData<T,C>::linear(i,irng));
+		Idx<T,C> odx(obase,BufferData<T,C>::linear(o,orng));
 		f(idx,odx,pt,arg...); 
 	});
 }
@@ -138,7 +117,7 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg) {
 	BufferData<T,C> ret(b.box());
-	sycl::id<DIM> base = ret.bx.low().util();
+	sycl::id<DIM> base = ret.bx.low();
 	Idx<T,C> ibase(b.buff, b.bx.size());
 	Idx<T,C> obase(ret.buff, ret.bx.size());
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
@@ -154,20 +133,16 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg)
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
 	BufferData<T,C> ret(left.box()&right.box());
-	Point lpt = left.bx.low(), rpt = right.bx.low(), xpt = ret.bx.low();
-	sycl::id<DIM> lset = lpt.offset(xpt), rset = rpt.offset(xpt), base = xpt.util();
+	sycl::id<DIM> base = ret.bx.low().util();
+	sycl::id<DIM> lset = base-left.bx.low().util(), rset = base-right.bx.low().util();
 	sycl::range<DIM> lrng = left.range(), rrng = right.range();
 	Idx<T,C> iptr(left.buff, left.bx.size());
 	Idx<T,C> optr(right.buff, right.bx.size());
 	Idx<T,C> rptr(ret.buff, ret.bx.size());
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
-		sycl::id<DIM> i,o, id = item.get_id();
-		for (size_t d=0; d<DIM; d++) {
-			i[d] = lset[d]+id[d]; o[d] = rset[d]+id[d];
-		}
-		sycl::id<DIM> pt = base+item.get_id(); 
-		Idx<T,C> idx(iptr,linear(lset,lrng));
-		Idx<T,C> odx(optr,linear(rset,rrng));
+		sycl::id<DIM> i = lset+item.get_id(), o = rset+item.get_id(), pt = base+item.get_id(); 
+		Idx<T,C> idx(iptr,BufferData<T,C>::linear(i,lrng));
+		Idx<T,C> odx(optr,BufferData<T,C>::linear(o,rrng));
 		Idx<T,C> rdx(rptr,item.get_linear_id());
 		f(idx,odx,rdx,pt,arg...);
 	});
@@ -190,6 +165,25 @@ struct BufferData {
 		q.parallel_for(size,[=](sycl::id<1> id){
 			ptr[id] = val;
 		}).wait();
+	}
+
+	inline size_t linear(const sycl::id<DIM> id) const {
+		sycl::range<DIM> r = range();
+		size_t ret=0, factor=1;
+		for (int d=DIM-1; d>=0; d--) {
+			ret+=id[d]*factor;
+			factor*=r[d];
+		}
+		return ret;
+	}
+
+	static inline size_t linear(const sycl::id<DIM> id, const sycl::range<DIM> range) {
+		size_t ret=0, factor=1;
+		for (int d=DIM-1; d>=0; d--) {
+			ret+=id[d]*factor;
+			factor*=range[d];
+		}
+		return ret;
 	}
 	
 	sycl::queue& queue() { return q; }
