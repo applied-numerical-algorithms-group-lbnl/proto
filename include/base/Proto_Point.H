@@ -82,8 +82,9 @@ namespace Proto
         */
         ACCEL_DECORATION inline Point(const Point& a_pt);
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
 		inline Point(const sycl::id<DIM> id);
+		inline Point(const sycl::range<DIM> id);
 #endif
 
         ///@}
@@ -147,8 +148,9 @@ namespace Proto
         ACCEL_DECORATION inline static Point Y() { return Basis(1); }
         ACCEL_DECORATION inline static Point Z() { return Basis(2); }
 
-#ifdef PR_SYCL
-		sycl::id<DIM> util() const; 
+#ifdef PROTO_SYCL
+		sycl::id<DIM> id() const; 
+		sycl::range<DIM> range() const; 
 #endif
 
         ///@}
@@ -184,6 +186,24 @@ namespace Proto
             \param a_rhs    Another Point
         */
         ACCEL_DECORATION inline Point& operator=(const Point& a_rhs);
+
+#ifdef PROTO_SYCL
+        /// Asignment Operator
+        /**
+            Performs copy assignment.
+
+            \param a_rhs    A sycl::id<DIM>
+        */
+        ACCEL_DECORATION inline Point& operator=(const sycl::id<DIM>& a_rhs);
+
+        /// Asignment Operator
+        /**
+            Performs copy assignment.
+
+            \param a_rhs    A sycl::range<DIM>
+        */
+        ACCEL_DECORATION inline Point& operator=(const sycl::range<DIM>& a_rhs);
+#endif
 
         /// Less-Than Operator
         /** 
@@ -425,7 +445,8 @@ namespace Proto
         */
         inline int codim() const;
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
+		// "Overload" of index that returns xpt-this as a sycl::id
 		inline sycl::id<DIM> offset(const Point &xpt); 
 #endif
         

@@ -81,6 +81,26 @@ namespace Proto
           */ 
         inline Box(const Point& a_sizes);
 
+#ifdef PROTO_SYCL
+		/// nd-range Constructor
+		/**
+			Builds the non-trivial Box <code>[get_global_range(), get_local_range()]</code>
+
+			\param a_range sycl::nd_range<DIM> with the low point as the global range and high point as local range
+		 */
+		inline Box(const sycl::nd_range<DIM> &a_range);
+
+		/// range Constructor
+		/**
+			Builds the non-trivial Box <code>[(0,...,0), a_range - (1,...,1)]</code>.
+			This is the box with its low corner at the origin and <code>a_sizes[dir]</code>
+			Points in direction <code>dir</code>.
+
+			\param a_sizes	sizes
+		 */
+		 inline Box(const sycl::range<DIM> &a_sizes);
+#endif
+
         /// Copy Constructor
         ACCEL_DECORATION
         inline Box(const Box& a_box); 
@@ -217,8 +237,11 @@ namespace Proto
         ACCEL_DECORATION
         inline Point sizes() const; 
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
+		// "overload" of sizes() that returns a sycl::range
 		inline sycl::range<DIM> range() const; 
+		// returns low() as global range and high() as local range
+		inline sycl::nd_range<DIM> nd_range() const; 
 #endif
 
         /// Contains Point Query

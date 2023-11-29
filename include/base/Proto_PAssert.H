@@ -40,10 +40,23 @@ namespace ProtoUtils
 #define PR_error(stmt)
 #define PR_warning(stmt)
 
+#elif defined PROTO_HIP
+
+#define PROTO_ASSERT(stmt,args...)
+#define PR_DEBUG_MSG(N, stmt, args...)
+#define PR_assert(stmt) 
+#define PR_error(stmt) 
+#define PR_warning(stmt) 
+
+#elif defined PROTO_SYCL
+
+#define PROTO_ASSERT(stmt,args...)
+#define PR_DEBUG_MSG(N, stmt, args...)
+#define PR_assert(stmt) 
+#define PR_error(stmt) 
+#define PR_warning(stmt) 
+
 #else
-
-
-#ifndef PROTO_HIP
 
 #define PROTO_ASSERT(stmt,args...) \
   assert( (stmt) ||                                         \
@@ -75,13 +88,5 @@ namespace ProtoUtils
 #define PR_warning(stmt) \
   fprintf(stderr,"warning thrown =  `" #stmt "` !!!\n\t");
 
-#else // PROTO_HIP
-#define PROTO_ASSERT(stmt,args...)
-#define PR_DEBUG_MSG(N, stmt, args...)
-#define PR_assert(stmt) 
-#define PR_error(stmt) 
-#define PR_warning(stmt) 
-
-#endif
 #endif
 #endif // end include guard

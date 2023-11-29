@@ -22,8 +22,14 @@ Point::Point(const Point& a_pt)
     *this = a_pt;
 }
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
 Point::Point(const sycl::id<DIM> id)
+{
+   for (int j = 0; j < DIM; j++)
+	   m_tuple[j]=id[j];
+}
+
+Point::Point(const sycl::range<DIM> id)
 {
    for (int j = 0; j < DIM; j++)
 	   m_tuple[j]=id[j];
@@ -76,14 +82,25 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     }
 }
 
-#ifdef PR_SYCL
-sycl::id<DIM> Point::util() const {
+#ifdef PROTO_SYCL
+sycl::id<DIM> Point::id() const {
 #if DIM==1
-	sycl::id<1> base(m_tuple[0]);
+	sycl::range<1> base(m_tuple[0]);
 #elif DIM==2
-	sycl::id<2> base(m_tuple[0],m_tuple[1]);
+	sycl::range<2> base(m_tuple[0],m_tuple[1]);
 #elif DIM==3
-	sycl::id<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
+	sycl::range<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
+#endif
+	return base;
+}
+
+sycl::range<DIM> Point::range() const {
+#if DIM==1
+	sycl::range<1> base(m_tuple[0]);
+#elif DIM==2
+	sycl::range<2> base(m_tuple[0],m_tuple[1]);
+#elif DIM==3
+	sycl::range<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
 #endif
 	return base;
 }
@@ -92,12 +109,10 @@ sycl::id<DIM> Point::util() const {
 ACCEL_DECORATION
 const int& Point::operator[](unsigned char a_index) const
 {
-#ifndef PR_SYCL
     PROTO_ASSERT((a_index < DIM),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
             a_index must be in [0,DIM = %i)",
             a_index, DIM);
-#endif
     return m_tuple[a_index];
 }
 
@@ -122,6 +137,26 @@ Point& Point::operator=(const Point& a_rhs)
     }
     return *this;
 }
+
+#ifdef PROTO_SYCL
+Point& Point::operator=(const sycl::id<DIM>& a_rhs)
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        m_tuple[ii] = a_rhs[ii];
+    }
+    return *this;
+}
+
+Point& Point::operator=(const sycl::range<DIM>& a_rhs)
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        m_tuple[ii] = a_rhs[ii];
+    }
+    return *this;
+}
+#endif
 
 ACCEL_DECORATION
 bool Point::operator<(const Point& a_rhs) const
@@ -413,7 +448,7 @@ int Point::codim() const
     return numZeros;
 }
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
 inline sycl::id<DIM> Point::offset(const Point &xpt) {
 	sycl::id<DIM> ret;
 	for (size_t d=0; d<DIM; d++) ret[d] = xpt[d]-m_tuple[d];

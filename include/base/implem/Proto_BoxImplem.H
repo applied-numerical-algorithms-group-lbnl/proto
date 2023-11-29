@@ -31,6 +31,22 @@ Box::Box(const Point& a_sizes)
     recomputeSize();
 }
 
+#ifdef PROTO_SYCL
+Box::Box(const sycl::nd_range<DIM> &a_range)
+{
+	m_low = a_range.get_global_range();
+	m_high = a_range.get_local_range();
+	recomputeSize();
+}
+
+Box::Box(const sycl::range<DIM> &a_sizes)
+{
+	m_low = Point::Zeros();
+	m_high = Point(a_sizes) - Point::Ones();
+	recomputeSize();
+}
+#endif
+
 void
 Box::recomputeSize()
 {
@@ -131,7 +147,7 @@ inline Point Box::sizes() const
     return high() - low() + Point::Ones();
 }
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
 inline sycl::range<DIM> Box::range() const { 
 #if DIM==1
 	return sycl::range<1>(size(0));
@@ -140,6 +156,10 @@ inline sycl::range<DIM> Box::range() const {
 #elif DIM==3
 	return sycl::range<3>(size(0),size(1),size(2));
 #endif
+}
+
+inline sycl::nd_range<DIM> Box::nd_range() const { 
+	return sycl::nd_range<DIM>(low().range(),high().range());
 }
 #endif
 

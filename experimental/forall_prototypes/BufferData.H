@@ -1,4 +1,5 @@
 #include "Proto_Box.H"
+#include "Proto_Array.H"
 #include <random>
 using namespace std;
 using namespace Proto;
@@ -13,6 +14,9 @@ struct struct_##local_name {   \
     const char* myname = #app_name; \
 };        \
 static struct_##local_name app_name;
+
+template<typename T, size_t N>
+struct sycl::is_device_copyable<Array<T,N>> : std::true_type {};
 
 template<typename T, size_t C=1>
 class BufferData;
@@ -32,6 +36,18 @@ struct Idx {
 };
 
 template<typename Func, typename T, size_t C, typename... Args>
+inline void foreachTest(const Func &f, BufferData<T,C> &b, Args... arg) {
+	Idx<T,C> ptr(b.buff, b.bx.size());
+	sycl::nd_range<DIM> box = b.nd_range();
+	sycl::id<DIM> base = b.bx.low().id();
+	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item) {
+		sycl::id<DIM> pt = base+item.get_id(); 
+		Idx<T,C> idx(ptr,item.get_linear_id());
+		f(pt,box,idx,arg...);
+	}).wait();
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
 inline void foreachIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 	Idx<T,C> base(b.buff, b.bx.size());
 	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item){
@@ -45,7 +61,7 @@ inline void foreachIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, 
 	Idx<T,C> ibase(in.buff, in.bx.size());
 	Idx<T,C> obase(out.buff, out.bx.size());
 	Box ixn = in.bx&out.bx;
-	sycl::id<DIM> iset = ixn.low().util()-in.bx.low().util(), oset = ixn.low().util()-out.bx.low().util();
+	sycl::id<DIM> iset = ixn.low().id()-in.bx.low().id(), oset = ixn.low().id()-out.bx.low().id();
 	sycl::range<DIM> irng = in.range(), orng = out.range();
 	out.queue().parallel_for(ixn.range(),[=](sycl::id<DIM> id){ 
 		sycl::id<DIM> i = iset+id, o = oset+id;
@@ -75,7 +91,7 @@ inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<
 	Idx<T,C> ibase(left.buff, left.bx.size());
 	Idx<T,C> obase(right.buff, right.bx.size());
 	Idx<T,C> rbase(ret.buff, ret.bx.size());
-	sycl::id<DIM> lset = ret.bx.low().util()-left.bx.low().util(), rset = ret.bx.low().util()-right.bx.low().util();
+	sycl::id<DIM> lset = ret.bx.low().id()-left.bx.low().id(), rset = ret.bx.low().id()-right.bx.low().id();
 	sycl::range<DIM> lrng = left.range(), rrng = right.range();
 	ret.queue().parallel_for(ret.range(),[=](sycl::item<DIM> item){ 
 		sycl::id<DIM> i = lset+item.get_id(), o = rset+item.get_id();
@@ -89,7 +105,7 @@ inline BufferData<T,C> foreach(const Func &f, BufferData<T,C> &left, BufferData<
 
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
-	sycl::id<DIM> base = b.box().low().util();
+	sycl::id<DIM> base = b.box().low().id();
 	Idx<T,C> ptr(b.buff, b.bx.size());
 	b.queue().parallel_for(b.range(),[=](sycl::item<DIM> item){ 
 		sycl::id<DIM> pt = base+item.get_id(); 
@@ -101,7 +117,7 @@ inline void foreach_pIP(const Func &f, BufferData<T,C> &b, Args... arg) {
 template<typename Func, typename T, size_t C, typename... Args>
 inline void foreach_pIP(const Func &f, BufferData<T,C> &in, BufferData<T,C> &out, Args... arg) {
 	Box ixn = in.bx&out.bx;
-	sycl::id<DIM> ipt = in.bx.low().util(), opt = out.bx.low().util(), base = ixn.low().util();
+	sycl::id<DIM> ipt = in.bx.low().id(), opt = out.bx.low().id(), base = ixn.low().id();
 	sycl::id<DIM> iset = base-ipt, oset = base-opt;
 	Idx<T,C> ibase(in.buff, in.bx.size());
 	Idx<T,C> obase(out.buff, out.bx.size());
@@ -133,8 +149,8 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &b, Args... arg)
 template<typename Func, typename T, size_t C, typename... Args>
 inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferData<T,C> &right, Args... arg) {
 	BufferData<T,C> ret(left.box()&right.box());
-	sycl::id<DIM> base = ret.bx.low().util();
-	sycl::id<DIM> lset = base-left.bx.low().util(), rset = base-right.bx.low().util();
+	sycl::id<DIM> base = ret.bx.low().id();
+	sycl::id<DIM> lset = base-left.bx.low().id(), rset = base-right.bx.low().id();
 	sycl::range<DIM> lrng = left.range(), rrng = right.range();
 	Idx<T,C> iptr(left.buff, left.bx.size());
 	Idx<T,C> optr(right.buff, right.bx.size());
@@ -157,7 +173,7 @@ struct BufferData {
 	Box bx;
 	size_t size;
 	BufferData() = delete;
-	BufferData(const Box &box) : q{}, bx(box), size(C*box.size()), buff(sycl::malloc_device<T>(C*box.size(),q)) {
+	BufferData(const Box &box) : q{sycl::gpu_selector_v}, bx(box), size(C*box.size()), buff(sycl::malloc_device<T>(C*box.size(),q)) {
 		assert(q.get_device().is_gpu()); } 
 
 	BufferData(const Box &box, T val) : BufferData(box) {
@@ -189,6 +205,7 @@ struct BufferData {
 	sycl::queue& queue() { return q; }
 
 	sycl::range<DIM> range() const { return bx.range(); }
+	sycl::nd_range<DIM> nd_range() const { return bx.nd_range(); }
 
 	const Box box() const { return bx; }
 
@@ -297,7 +314,7 @@ struct SimpleStencil {
 			}
 		}).wait();
 		size_t inset = in.box().size(), outset = out.box().size();
-		sycl::id<DIM> irng = in.box().sizes().util(), orng = out.box().sizes().util();
+		sycl::id<DIM> irng = in.box().sizes().id(), orng = out.box().sizes().id();
 		for (int c=0; c<C; c++) 
 			in.q.parallel_for(outset,Apply<T,C>(in.buff+c*inset,out.buff+c*outset,coefs,irng,orng)).wait();
 		return out;

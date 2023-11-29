@@ -13,7 +13,7 @@
 
 #endif
 
-#ifdef PR_SYCL
+#ifdef PROTO_SYCL
 #include <sycl/sycl.hpp>
 #endif
 
