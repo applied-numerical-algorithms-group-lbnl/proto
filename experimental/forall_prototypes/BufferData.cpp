@@ -2,9 +2,9 @@
 
 template<size_t C>
 SYCL_KERNEL_START
-void f_testF(const Point a_pt, const Box a_bx, Idx<double,C>& a_idx, const Array<double,C> &a_arr) {
+void f_testF(const Point a_pt, const Box a_bx, Idx<double,C>& a_idx, const Array<double,C> a_arr) {
 	for (size_t c=0; c<C; c++) 
-		a_idx(c) = a_bx.index(a_pt) * a_arr[C];
+		a_idx(c) = a_bx.index(a_pt) * a_arr[c];
 }
 SYCL_KERNEL_END(f_testF, f_test)
 
@@ -90,7 +90,7 @@ int main() {
 	Box bx = Box::Cube(5);
 	BDtype start(bx);
 	Array<double,3> arr{1.2,2.3,3.4};
-	foreachTest(f_test,start,arr);
+	foreachTest(f_test,start.bx.low(),start.bx,start,arr);
 	//foreach_pIP(f_eulerInitialize,start,1.2,2.3,3.4);
 //	start.random(0.,10.);
 	cout << "start:" << endl;

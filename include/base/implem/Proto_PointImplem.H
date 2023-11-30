@@ -85,11 +85,11 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
 #ifdef PROTO_SYCL
 sycl::id<DIM> Point::id() const {
 #if DIM==1
-	sycl::range<1> base(m_tuple[0]);
+	sycl::id<1> base(m_tuple[0]);
 #elif DIM==2
-	sycl::range<2> base(m_tuple[0],m_tuple[1]);
+	sycl::id<2> base(m_tuple[0],m_tuple[1]);
 #elif DIM==3
-	sycl::range<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
+	sycl::id<3> base(m_tuple[0],m_tuple[1],m_tuple[2]);
 #endif
 	return base;
 }

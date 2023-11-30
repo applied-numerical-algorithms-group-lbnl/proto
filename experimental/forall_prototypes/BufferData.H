@@ -17,6 +17,10 @@ static struct_##local_name app_name;
 
 template<typename T, size_t N>
 struct sycl::is_device_copyable<Array<T,N>> : std::true_type {};
+template<>
+struct sycl::is_device_copyable<Point> : std::true_type {};
+template<>
+struct sycl::is_device_copyable<Box> : std::true_type {};
 
 template<typename T, size_t C=1>
 class BufferData;
@@ -36,6 +40,16 @@ struct Idx {
 };
 
 template<typename Func, typename T, size_t C, typename... Args>
+inline void foreachTest(const Func &f, Point p, Box b, BufferData<T,C> &bd, Args... arg) {
+	Idx<T,C> ptr(bd.buff, bd.bx.size());
+	bd.queue().parallel_for(b.range(),[=](sycl::item<DIM> item) {
+		Point pt = p+item.get_id(); 
+		Idx<T,C> idx(ptr,item.get_linear_id());
+		f(pt,b,idx,arg...);
+	});
+}
+
+template<typename Func, typename T, size_t C, typename... Args>
 inline void foreachTest(const Func &f, BufferData<T,C> &b, Args... arg) {
 	Idx<T,C> ptr(b.buff, b.bx.size());
 	sycl::nd_range<DIM> box = b.nd_range();
@@ -44,7 +58,7 @@ inline void foreachTest(const Func &f, BufferData<T,C> &b, Args... arg) {
 		sycl::id<DIM> pt = base+item.get_id(); 
 		Idx<T,C> idx(ptr,item.get_linear_id());
 		f(pt,box,idx,arg...);
-	}).wait();
+	});
 }
 
 template<typename Func, typename T, size_t C, typename... Args>
