@@ -91,7 +91,9 @@ namespace Proto
          *  S has a single row with entries equal to size(). Each entry is the coeffcient that
          *  scales the data point from the associated source */
         inline Matrix<double>& SMatrix() {return m_S; }
-     
+
+        inline void print() const; 
+
         private:
        
         std::vector<Point> m_exponents;
@@ -175,6 +177,8 @@ namespace Proto
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
+
+        void print() const;
         private:
        
         Point m_ghost;

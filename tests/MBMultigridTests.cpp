@@ -97,6 +97,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     MBLevelMap<MBMap_XPointRigid, HOST> map(layout, OP::ghost());
 
     auto C2C = Stencil<double>::CornersToCells(4);
+    double J0 = 0;
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
@@ -120,9 +121,13 @@ TEST(MBMultigridTests, LaplaceXPoint) {
         BoxData<double, 1> lphi = forall_p<double, 1>(f_LphiM, block, x_i, k, offset);
 #endif
         phi_i |= C2C(phi0);
-        lphi *= J_i.absMax();
-        rhs_i |= C2C(lphi);
+        //lphi *= J_i.absMax();
+        //rhs_i |= C2C(lphi);
+        J0 = J_i.absMax();
     }
+
+    mg.op(numLevels-1)(rhs, phi, J0);
+
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, phi, "PHI_0");
     h5.writeMBLevel({"rhs"}, map, rhs, "RHS_0");

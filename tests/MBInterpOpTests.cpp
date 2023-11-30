@@ -18,7 +18,7 @@ TEST(MBInterpOp, ShearTest)
     // grid parameters
     int domainSize = 16;
     int boxSize = 16;
-    int ghostSize = 1;
+    int ghostSize = 2;
     
     // interpolation stencil generation kernel
     std::vector<Point> footprint;
@@ -38,11 +38,9 @@ TEST(MBInterpOp, ShearTest)
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        //ghost[0] = Point::Ones(2);
         MBLevelMap<MBMap_Shear, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
 
-        //ghost[0] = Point::Ones(1);
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
@@ -133,19 +131,16 @@ TEST(MBInterpOp, ShearTestStandalone)
     // grid parameters
     int domainSize = 16;
     int boxSize = 16;
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(1);
+    int ghostSize = 2;
   
     // initialize data
     auto domain = buildShear(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
     
-    ghost[0] = Point::Ones(2);
     MBLevelMap<MBMap_Shear, HOST> map;
-    map.define(layout, ghost);
+    map.define(layout, Point::Ones(ghostSize));
     
     for (auto iter : layout)
     {

@@ -181,6 +181,9 @@ class MBLevelMap
     /// Get Operator
     inline MAP<MEM>& op(int a_block) const;
 
+    /// Get Ghost Sizes
+    inline Array<Point, DIM+1> ghost() const { return m_ghost; }
+
     /// Get Mapped Coordinate Values
     /** Given a node-centered box and grid spacing, generate the node centered mapped
      *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
@@ -193,6 +196,7 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
+        Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
         mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators

@@ -35,6 +35,7 @@ void MBLevelMap<MAP,MEM>::define(
         unsigned int               a_focalBlock)
 {
     PR_TIME("MBLevelMap::define");
+    m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
     m_c2c = Stencil<double>::CornersToCells(4);
     m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, a_ghost);

@@ -172,6 +172,15 @@ unsigned int MBPointInterpOp::size() const
     return m_coefs.size();
 }
 
+void MBPointInterpOp::print() const
+{
+    pr_out() << "--------------------------------" << std::endl;
+    pr_out() << m_dst << std::endl;
+    for (int ii = 0; ii < size(); ii++) {
+        pr_out() << "\tcoef: " << m_coefs[ii] << " | " << m_srcs[ii] << std::endl;
+    }
+}
+
 MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
@@ -222,6 +231,7 @@ void MBInterpOp::define(
         const std::vector<Point>&   a_footprint,
         int                         a_block)
 {
+    m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
     {
@@ -302,6 +312,15 @@ void MBInterpOp::coefs(
         {
             a_coefs[op.target()](pi) = poly(pi,0);
         }
+    }
+}
+
+void MBInterpOp::print() const
+{
+    pr_out() << "Number of PointInterpOps: " << m_ops.size() << std::endl;
+    for (auto& op : m_ops)
+    {
+        op.print(); 
     }
 }
 
