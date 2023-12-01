@@ -179,6 +179,20 @@ inline BufferData<T,C> foreach_p(const Func &f, BufferData<T,C> &left, BufferDat
 	return ret;
 }
 
+enum Op { Sum, Max, Min, AbsSum, AbsMax };
+template <typename T, Op op>
+struct Rxn;
+template<typename T>
+struct Rxn<T,Op::Sum> { static constexpr auto f = sycl::plus<T>(); };
+template<typename T>
+struct Rxn<T,Op::Max> { static constexpr auto f = sycl::maximum<T>(); };
+template<typename T>
+struct Rxn<T,Op::Min> { static constexpr auto f = sycl::minimum<T>(); };
+template<typename T>
+struct Rxn<T,Op::AbsSum> { static constexpr auto f = sycl::plus<T>(); };
+template<typename T>
+struct Rxn<T,Op::AbsMax> { static constexpr auto f = sycl::maximum<T>(); };
+
 template <typename T, size_t C>
 struct BufferData {
 	friend class SimpleStencil;
@@ -198,18 +212,59 @@ struct BufferData {
 		}).wait();
 	}
 
+	template<Op op>
 	T reduce() {
-		T *sum = sycl::malloc_device<T>(1,q);
+		T *init = sycl::malloc_device<T>(1,q);
 		T *ptr = buff;
 		q.submit([&](sycl::handler &h) {
-			auto rxn = sycl::reduction(sum,sycl::plus<T>());
+			auto rxn = sycl::reduction(init,Rxn<T,op>::f);
 			h.parallel_for(sycl::range<1>(size),rxn,[=](sycl::id<1> id,auto &r) { 
-				r += ptr[id[0]];
+				r.combine(ptr[id[0]]);
 			});
 		}).wait();
 		T retval=0;
-		q.copy<T>(sum,&retval,1).wait();
-		sycl::free(sum,q);
+		q.copy<T>(init,&retval,1).wait();
+		sycl::free(init,q);
+		return retval;
+	}
+
+	template<>
+	T reduce<Op::AbsSum>() {
+		T *init = sycl::malloc_device<T>(1,q);
+		T *ptr = buff;
+		q.submit([&](sycl::handler &h) {
+			auto rxn = sycl::reduction(init,Rxn<T,Op::AbsSum>::f);
+			h.parallel_for(sycl::range<1>(size),rxn,[=](sycl::id<1> id,auto &r) { 
+				T val = ptr[id[0]];
+				if (val >= 0)
+					r.combine(val);
+				else
+					r.combine(-val);
+			});
+		}).wait();
+		T retval=0;
+		q.copy<T>(init,&retval,1).wait();
+		sycl::free(init,q);
+		return retval;
+	}
+
+	template<>
+	T reduce<Op::AbsMax>() {
+		T *init = sycl::malloc_device<T>(1,q);
+		T *ptr = buff;
+		q.submit([&](sycl::handler &h) {
+			auto rxn = sycl::reduction(init,Rxn<T,Op::AbsMax>::f);
+			h.parallel_for(sycl::range<1>(size),rxn,[=](sycl::id<1> id,auto &r) { 
+				T val = ptr[id[0]];
+				if (val >= 0)
+					r.combine(val);
+				else
+					r.combine(-val);
+			});
+		}).wait();
+		T retval=0;
+		q.copy<T>(init,&retval,1).wait();
+		sycl::free(init,q);
 		return retval;
 	}
 /*

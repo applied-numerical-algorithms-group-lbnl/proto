@@ -95,7 +95,7 @@ int main() {
 //	start.random(0.,10.);
 	cout << "start:" << endl;
 	start.print(); 
-	cout << start.reduce() << endl;
+	cout << start.reduce<Op::Sum>() << endl;
 	double *host = sycl::malloc_host<double>(start.size,start.q);
 	start.q.copy<double>(start.buff,host,start.size);
 	double acc=0;
