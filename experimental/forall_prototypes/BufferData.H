@@ -187,7 +187,8 @@ struct BufferData {
 	Box bx;
 	size_t size;
 	BufferData() = delete;
-	BufferData(const Box &box) : q{sycl::gpu_selector_v}, bx(box), size(C*box.size()), buff(sycl::malloc_device<T>(C*box.size(),q)) {
+	BufferData(const Box &box) : q{sycl::gpu_selector_v}, bx(box), size(C*box.size()), 
+		buff(sycl::malloc_device<T>(C*box.size(),q)) {
 		assert(q.get_device().is_gpu()); } 
 
 	BufferData(const Box &box, T val) : BufferData(box) {
@@ -197,6 +198,64 @@ struct BufferData {
 		}).wait();
 	}
 
+	T reduce() {
+		T *sum = sycl::malloc_device<T>(1,q);
+		T *ptr = buff;
+		q.submit([&](sycl::handler &h) {
+			auto rxn = sycl::reduction(sum,sycl::plus<T>());
+			h.parallel_for(sycl::range<1>(size),rxn,[=](sycl::id<1> id,auto &r) { 
+				r += ptr[id[0]];
+			});
+		}).wait();
+		T retval=0;
+		q.copy<T>(sum,&retval,1).wait();
+		sycl::free(sum,q);
+		return retval;
+	}
+/*
+	T reduce() {
+		size_t max_group_size = min(size,q.get_device().get_info<sycl::info::device::max_work_group_size>());
+		size_t max_groups = q.get_device().get_info<sycl::info::device::max_compute_units>();
+		size_t groups = min(max_groups,(size+max_group_size-1)/max_group_size);
+		sycl::range<1> local(max_group_size);
+		sycl::range<1> global(local[0]*groups);
+		T *temp = sycl::malloc_device<T>(groups,q);
+		size_t sz = size; T *ptr = buff;
+		q.submit([&](sycl::handler &cgh) {
+			sycl::local_accessor<T,1> shared(sycl::range<1>(max_group_size),cgh);
+			cgh.parallel_for(sycl::nd_range<1>(global,local),[=](sycl::nd_item<1> item) {
+				size_t data_per_thread = sz/item.get_global_range(0);
+				if (item.get_global_id(0) < sz%item.get_global_range(0)) data_per_thread++;
+				size_t start = data_per_thread*item.get_global_id(0);
+				if (sz%item.get_global_range(0) && item.get_global_id(0) >= sz%item.get_global_range(0)) 
+					start += sz%item.get_global_range(0);
+				size_t end = start+data_per_thread;
+				T val = ptr[start];
+				for (size_t i=start; i<end; i++) val+=ptr[i];
+				shared[item.get_local_id(0)] = val;
+				if (item.get_local_id(0)<item.get_local_range(0)/2)
+					for (size_t span = item.get_local_range(0)/2; span>0; span/=2)
+						shared[item.get_local_id(0)] += shared[item.get_local_id(0)+span];	
+				if (item.get_local_id(0)==0) temp[item.get_group(0)]=shared[0];
+			});
+			if (groups>1) 
+			cgh.parallel_for(local,[=](sycl::item<1> item) {
+				size_t idx = item.get_linear_id(), dim = item.get_range(0);
+				T val = 0;
+				for (size_t i=idx; i<groups; i+=dim) val+=temp[i];
+				shared[idx] = val;
+				if (idx < dim/2)
+					for (size_t span = dim/2; span>0; span/=2)
+						shared[idx] += shared[idx+span];
+				if (idx==0) temp[0]=shared[0];
+			});
+		});
+		T result;
+		q.copy<T>(temp,&result,1).wait();
+		free(temp,q);
+		return result;
+	}
+*/
 	inline size_t linear(const sycl::id<DIM> id) const {
 		sycl::range<DIM> r = range();
 		size_t ret=0, factor=1;
@@ -224,38 +283,21 @@ struct BufferData {
 	const Box box() const { return bx; }
 
 	void print() { 
-		sycl::queue hq(sycl::cpu_selector_v);
-		T* ptr = sycl::malloc_host<T>(size,hq);
+		T* ptr = sycl::malloc_host<T>(size,q);
 		q.copy<T>(buff,ptr,size).wait();
-		sycl::range<DIM> r = range();
+		size_t I=bx.size(0), J=bx.size(1), K=bx.size(2);
 		for (size_t c=0; c<C; c++) {
-			sycl::buffer<T,DIM> pbuf(ptr,r);
-			sycl::host_accessor<T,DIM,sycl::access_mode::read> acc(pbuf);
-			for (int i=0; i<box().size(0); i++) {
-#if DIM>1
-				for (int j=0; j<box().size(1); j++) {
-#endif
-#if DIM>2
-					for (int k=0; k<box().size(2); k++) {
-						sycl::id<3> id(i,j,k);
-#elif DIM==2
-						sycl::id<2> id(i,j);
-#elif DIM==1
-						sycl::id<1> id(i);
-#endif
-						cout << acc[id] << ' ';
-					}
-#if DIM>1
+			for (size_t i=0; i<I; i++) {
+				for (size_t j=0; j<J; j++) {
+					for (size_t k=0; k<K; k++)
+						cout << ptr[k+j*K+i*K*J+c*I*J*K] << ' ';
 					cout << endl;
 				}
-#endif
-#if DIM>2
 				cout << endl;
 			}
-#endif
-			ptr+=bx.size();
-			cout << endl << "===============" << endl;
+			cout << "===============" << endl;
 		}
+		free(ptr,q);
 	}
 
 	void random(T lo, T hi) {

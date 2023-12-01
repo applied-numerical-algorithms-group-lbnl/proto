@@ -197,9 +197,10 @@ namespace Proto
 
         /// Edge Size
         /**
-          Returns the "edge length" of this Box on a given axis
+          Returns the "edge length" of this Box on a given axis,
+			or 1 if the axis exceeds the Box's dimensionality
 
-          /param a_dim    direction axis in <code>[0,DIM)</code>
+          /param a_dim    direction axis
 
           Example:
           @code
@@ -209,6 +210,7 @@ namespace Proto
           B.print(); //prints [(0,0),(1,3)]
           std::cout << B.size(0) << std::endl; //prints 2
           std::cout << B.size(1) << std::endl; //prints 4
+          std::cout << B.size(2) << std::endl; //prints 1
           @endcode
         */
         ACCEL_DECORATION

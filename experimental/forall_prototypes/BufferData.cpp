@@ -95,6 +95,14 @@ int main() {
 //	start.random(0.,10.);
 	cout << "start:" << endl;
 	start.print(); 
+	cout << start.reduce() << endl;
+	double *host = sycl::malloc_host<double>(start.size,start.q);
+	start.q.copy<double>(start.buff,host,start.size);
+	double acc=0;
+	for (size_t i=0; i<start.size; i++) acc+=host[i];
+	cout << acc << endl;
+	cout << accumulate(host,host+start.size,0) << endl;
+	free(host,start.q);
 /*	foreachIP(first,start,2.3);
 	cout << "added 2.3:" << endl;
 	start.print(); 

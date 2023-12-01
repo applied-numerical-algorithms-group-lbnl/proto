@@ -119,13 +119,9 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 ACCEL_DECORATION
 inline std::size_t Box::size(unsigned char a_dim) const
 {
-    PROTO_ASSERT((a_dim < DIM),
-        "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
-        a_dim, DIM);
-    if (m_high[a_dim] < m_low[a_dim]){return 0;}
-    else {
-        return (m_high[a_dim] - m_low[a_dim] + 1);
-    }
+	if (a_dim >= DIM) return 1;
+    if (m_high[a_dim] < m_low[a_dim]) return 0;
+	return (m_high[a_dim] - m_low[a_dim] + 1);
 }
 
 ACCEL_DECORATION
