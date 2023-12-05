@@ -63,6 +63,7 @@ public:
         {
             arr[ii] = (*this)[ii];
         }
+        return arr; 
     }
 
     ACCEL_DECORATION
