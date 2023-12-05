@@ -575,14 +575,13 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
                         BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
-                        /** looks like all this stuff is unused ---dtg
-                        int srcPencilOffset = srcbd.box().size(0); 
-                        int dstPencilOffset = dstbd.box().size(0); 
-                        int srcStartOffset = srcbd.box().index(srcBox.low());
-                        int dstStartOffset = dstbd.box().index(dstBox.low());
-                        int numPencils = dstBox.flatten(0).size();
-                        **/
+                        //int srcPencilOffset = srcbd.box().size(0); //unused --dtg
+                        //int dstPencilOffset = dstbd.box().size(0); //unused --dtg
                         int pencilLength = dstBox.size(0);
+                        //int srcStartOffset = srcbd.box().index(srcBox.low());
+                        //int dstStartOffset = dstbd.box().index(dstBox.low());
+                        //int numPencils = dstBox.flatten(0).size();
+                        
                         Box srcPencilBox = srcBox.flatten(0);
                         for (auto pi : srcPencilBox)
                         {
@@ -1601,18 +1600,18 @@ bool BoxData<T,C,MEM,D,E>::isAlias(const BoxData<T, CC, MEM, DD, EE>& a_src) con
 template <typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::print() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
 
-    pout() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
-    pout() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
+    pr_out() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
+    pr_out() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
     if (this->size() <= 0){return;}
     for (int ee = 0; ee < E; ee++)
         for (int dd = 0; dd < D; dd++)
             for (int cc = 0; cc < C; cc++)
             {
-                pout() << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
-                pout() << " | Max: " << this->max(cc,dd,ee) << " | Min: " << this->min(cc,dd,ee);
-                pout() << std::endl;
+                pr_out() << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
+                pr_out() << " | Max: " << this->max(cc,dd,ee) << " | Min: " << this->min(cc,dd,ee);
+                pr_out() << std::endl;
             }
 }
 
@@ -1639,7 +1638,7 @@ void BoxData<T,C,MEM,D,E>::printData(
 {
     using std::cout;
     using std::endl;
-    std::ostream& out = Proto::pout();
+    std::ostream& out = Proto::pr_out();
     if (!defined())
     {
         out << "Undefined BoxData: No data to print." << endl;

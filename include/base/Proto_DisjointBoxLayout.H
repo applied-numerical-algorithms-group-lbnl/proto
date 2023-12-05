@@ -295,7 +295,8 @@ namespace Proto
           Returns the problem domain box in patch-space.
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
-
+        
+        inline std::shared_ptr<BoxPartition> partition() {return m_partition; }
         /// Find Index
         /**
           Given a patch Point, return the DataIndex of the associated Box if

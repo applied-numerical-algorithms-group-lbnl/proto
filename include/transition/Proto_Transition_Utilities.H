@@ -112,7 +112,7 @@ namespace Proto_Transition
             const pr_level_data &    a_devi_data)
     {
       auto dit = a_devi_data.dataIterator();
-      for(int ibox = 0; ibox < dit.size(); ibox++)
+      for(int ibox = 0; ibox < dit.localSize(); ibox++)
       {
         const double* devi_ptr = a_devi_data[dit[ibox]].data();
         double      * host_ptr = a_host_data[ibox];
@@ -139,7 +139,7 @@ namespace Proto_Transition
     {
 
       auto dit = a_devi_data.dataIterator();
-      for(int ibox = 0; ibox < dit.size(); ibox++)
+      for(int ibox = 0; ibox < dit.localSize(); ibox++)
       {
         double*       devi_ptr = a_devi_data[dit[ibox]].data();
         const double* host_ptr = a_host_data[ibox];
@@ -236,7 +236,7 @@ namespace Proto_Transition
       auto dombx = grids.domain().box();
       bool initToZero = true;
       int num_ghost = a_devi_data.ghost()[a_domain_face_dir];
-      for(int ibox = 0; ibox < dit.size(); ibox++)
+      for(int ibox = 0; ibox < dit.localSize(); ibox++)
       {
         
         pr_box              valid = grids[dit[ibox]];

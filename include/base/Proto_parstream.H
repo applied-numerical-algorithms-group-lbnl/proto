@@ -1,5 +1,15 @@
-#ifndef _PROTO_PARSTREAM_H_
-#define _PROTO_PARSTREAM_H_
+#ifdef CH_LANG_CC
+/*
+ *      _______              __
+ *     / ___/ /  ___  __ _  / /  ___
+ *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
+ *    \___/_//_/\___/_/_/_/_.__/\___/
+ *    Please refer to Copyright.txt, in Chombo's root directory.
+ */
+#endif
+
+#ifndef _PARSTREAM_H_
+#define _PARSTREAM_H_
 
 #include <iostream>
 #include <iomanip>
@@ -27,20 +37,20 @@ using std::ios;
      and it will only output every nproc processors pout.n files
      (where n%nproc == 0).
 */
-inline std::ostream& pout();
+inline std::ostream& pr_out();
 
-/// Changes the base part of the filename for pout() files.
+/// Changes the base part of the filename for pr_out() files.
 /**
- * When in parallel, changes the base name of the pout() files.  If pout()
+ * When in parallel, changes the base name of the pr_out() files.  If pr_out()
  * has already been called, it closes the current output file and opens a
  * new one (unless the name is the same, in which case it does nothing).
  * In serial, ignores the argument and does nothing.
 */
 inline void setPoutBaseName(const std::string & a_Name);
 
-/// Accesses the filename for the local pout() file.
+/// Accesses the filename for the local pr_out() file.
 /**
- * Returns the name used for the local pout() file.  In parallel this is
+ * Returns the name used for the local pr_out() file.  In parallel this is
  * "<pout_basename>.<procID>", where <pout_basename> defaults to "pout" and
  * can be modified by calling setPoutBaseName(), and <procID> is the local
  * proc number.  In serial, this always returns the string "cout".  It is an

@@ -87,11 +87,6 @@ namespace Proto
          */
         inline unsigned int localSize() const;
 
-      ///deprecated but useful
-      inline int size() const
-      {
-        return localSize();
-      }
         /// Increment 
         inline DataIterator<P>& operator++();
        
@@ -113,12 +108,13 @@ namespace Proto
 
         /// Integer Dereference
         inline const DataIndex<P> operator[](unsigned int a_index) const
-      {
+       {
         PROTO_ASSERT(a_index < localSize(),
                      "DataIterator::operator[] | Error: index out of bounds");
         //return DataIndex<P>(m_partition, m_partition->procStartIndex(procID()) + a_localIndex);
         return DataIndex<P>(m_partition, m_partition->globalIndex(a_index, procID()));
       }
+
 
         /// Dereference
         /**
