@@ -106,14 +106,8 @@ namespace Proto
         inline bool operator!=(const DataIndex<P>& a_rhs) const
         { return m_current != a_rhs; }
 
-        /// Integer Dereference
-        inline const DataIndex<P> operator[](unsigned int a_index) const
-       {
-        PROTO_ASSERT(a_index < localSize(),
-                     "DataIterator::operator[] | Error: index out of bounds");
-        //return DataIndex<P>(m_partition, m_partition->procStartIndex(procID()) + a_localIndex);
-        return DataIndex<P>(m_partition, m_partition->globalIndex(a_index, procID()));
-      }
+        /// Integer Dereference  (code is in implem file)
+        inline const DataIndex<P> operator[](unsigned int a_index) const;
 
         /// Dereference
         /**
