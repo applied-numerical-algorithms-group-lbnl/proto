@@ -755,7 +755,12 @@ namespace Operator {
     cofactor(
             const BoxData<T,DIM,MEM>& a_X,
             int a_dir);
-
+    
+    /// Cofactor Vector On Face
+    /** Ghost cell info: 
+     *  DIM = 2: No ghost cells needed, but a_X must be node centered
+     *  DIM = 3: 2 layers of ghost cells in all directions in addition to node centering
+     */
     template <class T, MemType MEM>
     inline void
     cofactor(
@@ -773,6 +778,9 @@ namespace Operator {
     
     //==========================================================================================
     /// Compute Matrix of Cofactors
+    /** Ghost info:
+     *  For NTFaces[dir] : dir != norm -> 2 ghost cells in norm, 1 in dir, 0 in others
+     */
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     cofactorMatrix(
@@ -849,6 +857,8 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2);
     
     //==========================================================================================
+    
+    // Ghost info: requires one layer in each dir != a_dir
     template<class T, unsigned int CL,unsigned int DL,
            unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,DR,E>

@@ -293,6 +293,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
+    for (int bi = 0; bi < layout().numBlocks(); bi++)
+    {
+        m_data[bi]->exchange();
+    }
     m_exchangeCopier.execute();
 }
 

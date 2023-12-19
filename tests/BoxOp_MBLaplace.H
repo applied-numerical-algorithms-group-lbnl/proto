@@ -43,17 +43,27 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
     // Cache metric terms and Jacobian
     inline void init()
     {
-        m_NT.define(this->x().box().grow(1));
+#if DIM == 2
+        m_NT.define(this->x().box().extrude(Point::Ones(),-1));
+#elif DIM == 3
+        m_NT.define(this->x().box().grow(-2).extrude(Point::Ones(),-1));
+#else
+        MayDay<void>::Error("BoxOp_MBLaplace not implemented for DIM != 2,3");
+#endif
         m_NTMatrix.clear();
         m_Jf.clear();
         for (int dir = 0; dir < DIM; dir++)
         {
             auto C2F = Stencil<double>::CellToFace(dir);
-            m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
+            // In 2D, NT does not require any ghost cells from X
+            // In 3D, NT requires 2 layers of ghost cells from X
+            auto NT_dir = Operator::cofactor(this->x(), dir, this->dx()); 
+            NT_dir.copyTo(m_NT[dir]);
             m_Jf.push_back(C2F(this->jacobian()));
         }
         for (int dir = 0; dir < DIM; dir++)
         {
+            //NT should have (conservative) 2 layers of ghost cells
             m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
     }

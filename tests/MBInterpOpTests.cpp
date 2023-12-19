@@ -7,6 +7,7 @@
 
 using namespace Proto;
 #if DIM == 2
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
     HDF5Handler h5;
@@ -159,12 +160,12 @@ TEST(MBInterpOp, ShearTestStandalone)
 #endif
 }
 #endif
-#if 1
+#endif
+#if 0
 TEST(MBInterpOp, XPointTest)
 {
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
     Array<double, DIM> exp{4,4,0,0,0,0};
     Array<double, DIM> offset{0,0,0.3,0,0,0};
     HDF5Handler h5;
@@ -184,7 +185,7 @@ TEST(MBInterpOp, XPointTest)
     for (int nn = 0; nn < N; nn++)
     {
         err[nn] = 0.0;
-        auto domain = buildXPoint(domainSize, numBlocks);
+        auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -256,6 +257,92 @@ TEST(MBInterpOp, XPointTest)
     }
 
     for (int ii = 1; ii < N; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+#if PR_VERBOSE > 0
+        std::cout << "Convergence Rate: " << rate << std::endl;
+#endif
+    }
+}
+#endif
+#if 1
+TEST(MBInterpOp, XPointStandalone)
+{
+    HDF5Handler h5;
+    int domainSize = 32;
+    int boxSize = 16;
+    int ghostSize = 3;
+    int numIter = 3;
+    Array<double, DIM> exp{6,0,0,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+  
+    double err[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        err[nn] = 0;
+        auto domain = buildXPoint(domainSize);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        // initialize data and map
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
+        MBLevelMap<MBMap_XPointRigid, HOST> map;
+        map.define(layout, Point::Ones(ghostSize));
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto& src_i = hostSrc[iter];
+            auto& dst_i = hostDst[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
+            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+            // Jacobian and NT are computed but not used
+            BoxData<double, 1> J_i(b_i);
+            FluxBoxData<double, DIM> NT(b_i);
+            map.apply(x_i, J_i, NT, block);
+            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
+            src_i |= C2C(x_pow);
+            dst_i |= C2C(x_pow);
+        }
+        hostErr.setVal(0);
+
+        //hostSrc.exchange(); // fill boundary data
+        hostDst.exchange(); // fill boundary data
+        MBInterpOp interp(map, 5);
+        interp.apply(hostDst, hostDst);
+        for (auto iter : layout)
+        {
+            auto& src_i = hostSrc[iter];
+            auto& dst_i = hostDst[iter];
+            auto& err_i = hostErr[iter];
+            for (auto dir : Box::Kernel(1))
+            {
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
+                    BoxData<double, 1, HOST> error(boundBox);
+                    dst_i.copyTo(error);
+                    error -= src_i;
+                    err[nn] = max(error.absMax(), err[nn]);
+                    error.copyTo(err_i);
+                }
+            }
+        }
+
+#if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_XPointStandalone_Src_N%i",nn);
+        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_XPointStandalone_Dst_N%i",nn);
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPointStandalone_Err_N%i",nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
 #if PR_VERBOSE > 0

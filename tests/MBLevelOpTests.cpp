@@ -176,7 +176,7 @@ TEST(MBLevelOp, XPointLaplace) {
     {
         err[nn] = 0.0;
         double dx = 1.0/domainSize;
-        auto domain = buildXPoint(domainSize, numBlocks);
+        auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 

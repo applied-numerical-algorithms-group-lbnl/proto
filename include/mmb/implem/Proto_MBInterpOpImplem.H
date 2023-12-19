@@ -54,6 +54,8 @@ MBPointInterpOp::MBPointInterpOp(
     int N = m_exponents.size();
     int M = m_srcs.size();
 
+    //std::cout << "N: " << N << " | M: " << M << std::endl;
+
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
     // Mp = <(x-xg)^p/Rg>_g   |  p = nomial
@@ -73,7 +75,8 @@ MBPointInterpOp::MBPointInterpOp(
     Rg /= M;
     // Cache Moment Data
     // We cache < J * ((x-xg)/Rg)^p > for each exponent p
-    auto C2C = Stencil<double>::CornersToCells(a_order);
+    //auto C2C = Stencil<double>::CornersToCells(a_order);
+    auto C2C = Stencil<double>::CornersToCells(4);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
     Box B0(a_dst.point, a_dst.point);
@@ -129,7 +132,9 @@ MBPointInterpOp::MBPointInterpOp(
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = m_S(0,ii);
+//        std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
+ //   std::abort();
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -218,17 +223,27 @@ void MBInterpOp::define(
                 }
             }
             break;
+        case 5:
+            for (auto pi : Box::Kernel(2))
+            {
+                if (pi.abs().sum() <= 3)
+                {
+                    footprint.push_back(pi);
+                }
+            }
+            break;
         default:
             MayDay<void>::Error("MBInterpOp::define | Function undefined for order %i", a_order);
             break;
     }
-    define(a_map, footprint, a_block);
+    define(a_map, footprint, a_order, a_block);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
-        const MBLevelMap<MAP,MEM>&            a_map,
+        const MBLevelMap<MAP,MEM>&  a_map,
         const std::vector<Point>&   a_footprint,
+        int                         a_order,
         int                         a_block)
 {
     m_ghost = a_map.ghost()[0];
@@ -263,7 +278,7 @@ void MBInterpOp::define(
                 {
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
                 continue;
             }
@@ -279,7 +294,7 @@ void MBInterpOp::define(
                 {
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, a_order));
                 }
             }
         }

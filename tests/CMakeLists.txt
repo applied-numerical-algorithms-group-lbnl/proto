@@ -140,5 +140,9 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRDataTests COMMAND MBAMRDataTests)
+        blt_add_executable(NAME MBAMRTests SOURCES MBAMRTests.cpp
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBAMRTests COMMAND MBAMRTests)
     endif()
 endif()

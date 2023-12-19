@@ -147,6 +147,7 @@ namespace Proto
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 const std::vector<Point>&   a_footprint,
+                int                         a_order = 4,
                 int block = -1);
         
         /// Apply

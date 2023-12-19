@@ -44,6 +44,8 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
 {
     PR_TIME("MBMultigrid::define");
 
+    m_numLevels = a_numLevels;
+
     // delete any existing data
     m_state_0.clear();
     m_state.clear();
@@ -73,16 +75,6 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         int level = a_numLevels-1;
         while (level >= 0)
         {
-            /*
-            std::cout << "Level: " << level << std::endl;
-            for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
-            {
-                std::cout << "\tBlock: " << bi << std::endl;
-                std::cout << "\tDomain Box: " << nextDomain.getBlock(bi).box() << std::endl;
-                std::cout << "\tBox Size: " << nextBoxSizes[bi] << std::endl;
-            }
-            */
-
             problemDomains[level] = nextDomain;
             boxSizes[level] = nextBoxSizes;
             if (level > 0)
@@ -147,6 +139,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     {
         PR_TIME("MBMultigrid::define::build_maps");
         m_maps[li].define(layouts[li], OP::ghost());
+        
         m_ops[li].define(m_maps[li]);
         m_lambda[li] = 0.5 / m_ops[li].spectralRadius();
         m_increment[li] = (-m_lambda[li])*Shift::Zeros();
@@ -157,7 +150,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     for (int li = 0; li < a_numLevels; li++)
     {
         PR_TIME("MBMultigrid::define::build_interp_ops");
-        m_blockInterp[li] = std::make_shared<MBInterpOp>(m_maps[li]);
+        m_blockInterp[li] = std::make_shared<MBInterpOp>(m_maps[li], 5);
     }
 
     // define the coarse-fine stencil operators
@@ -171,8 +164,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     // define iteration limits
     m_numPreRelax = 4;
     m_numPostRelax = 4;
-    m_numBottomRelax = 20;
-    m_numLevels = a_numLevels;
+    m_numBottomRelax = 2;
 }
 
 template <
@@ -186,6 +178,7 @@ bool MBMultigrid<OPType, MAP, T, BCType, MEM>::validate(
         const std::vector<Point>&   a_refRatios,
         int                         a_numLevels)
 {
+    if (a_numLevels != m_numLevels) {return false;}
     if (m_state.size() != a_numLevels-1) {return false;}
     if (m_state_0.size() != a_numLevels-1) {return false;}
     if (m_force.size() != a_numLevels-1) {return false;}
@@ -224,7 +217,8 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
     T res0 = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
     T res = res0;
 #if PR_VERBOSE > 0
-    pr_out() << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
+    pr_out()  << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
+    std::cout << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
     h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
             "MBMultigrid_Solve_Res_S%i", m_solveIter);
 #endif
@@ -234,8 +228,11 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         res = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
         m_solveIter++;
 #if PR_VERBOSE > 0
-        pr_out() << "MBMultigrid::solve | iter: " << ii << " | residual: " << res << std::endl;
-        std::cout << "MBMultigrid::solve | iter: " << ii << " | residual: " << res << std::endl;
+        if (procID() == 0)
+        {
+            pr_out()  << "MBMultigrid::solve | after iter: " << ii << " | residual: " << res << std::endl;
+            std::cout << "MBMultigrid::solve | after iter: " << ii << " | residual: " << res << std::endl;
+        }
         
         h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
                 "MBMultigrid_Solve_Res_S%i", m_solveIter);
@@ -363,12 +360,6 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
     {
         a_state.exchange();
         m_blockInterp[a_level]->apply(a_state, a_state);
-#if PR_VERBOSE > 1
-    if (a_level == 0) {
-        h5.writeMBLevel({"phi"}, m_maps[a_level], a_state,
-                "MBMultigrid_Phi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
-    }
-#endif
         LevelStateData Lphi(m_residual[a_level]->layout(), Point::Zeros());
         for (auto iter : a_state.layout())
         {
@@ -382,15 +373,17 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
             state_i += m_increment[a_level](res_i);
         }
 #if PR_VERBOSE > 1
-    if (a_level == 0) {
-        h5.writeMBLevel({"residual"}, m_maps[a_level], *m_residual[a_level],
-                "MBMultigrid_Res_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
-        h5.writeMBLevel({"-lphi"}, m_maps[a_level], Lphi,
-                "MBMultigrid_Lphi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
-    
-        auto norm = resnorm(*m_residual[a_level], a_state, a_force, a_level);
-        pr_out() << "\tMBMultigrid::relax | iter: " << ii << " | residual: " << norm << std::endl;
-    }
+        if (a_level == 0) {
+            h5.writeMBLevel({"phi"}, m_maps[a_level], a_state,
+                    "MBMultigrid_Relax_Phi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+            h5.writeMBLevel({"residual"}, m_maps[a_level], *m_residual[a_level],
+                    "MBMultigrid_Relax_Res_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+            h5.writeMBLevel({"-lphi"}, m_maps[a_level], Lphi,
+                    "MBMultigrid_Relax_Lphi_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+
+            auto norm = resnorm(*m_residual[a_level], a_state, a_force, a_level);
+            pr_out() << "\tMBMultigrid::relax | iter: " << ii << " | residual: " << norm << std::endl;
+        }
 #endif
         m_relaxIter++;
     }
@@ -478,6 +471,8 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         const LevelStateData&   a_force,
         int                     a_level)
 {
+    HDF5Handler h5;
+    LevelStateData LPhi(a_state.layout(), Point::Zeros());
     a_state.exchange();
     m_blockInterp[a_level]->apply(a_state, a_state);
     Reduction<T,Abs> rxn;
@@ -486,9 +481,14 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         auto& res_i = a_residual[iter];
         auto& state_i = a_state[iter];
         auto& force_i = a_force[iter];
+        auto& lphi_i = LPhi[iter];
         m_ops[a_level][iter](res_i, state_i, -1);
+        res_i.copyTo(lphi_i);
         res_i += force_i;
         res_i.reduce(rxn);
     }
+    h5.writeMBLevel({"-lphi"}, m_maps[a_level], LPhi, "RESNORM_LPHI");
+    h5.writeMBLevel({"phi"}, m_maps[a_level], a_state, "RESNORM_PHI");
+    h5.writeMBLevel({"force"}, m_maps[a_level], a_force, "RESNORM_RHS");
     return rxn.fetch();
 }

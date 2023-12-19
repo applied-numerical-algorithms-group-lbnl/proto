@@ -54,13 +54,46 @@ public:
             const LevelStateData&   a_force,
             int                     a_level);
     
+    inline void residual(
+            LevelStateData&         a_residual,
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force)
+    {
+        residual(a_residual, a_state, a_force, m_numLevels-1);
+    }
+    
     inline T resnorm(
             LevelStateData&         a_residual,
             LevelStateData&         a_state,
             const LevelStateData&   a_force,
             int                     a_level);
+    
+    inline T resnorm(
+            LevelStateData&         a_residual,
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force)
+    {
+        return resnorm(a_residual, a_state, a_force, m_numLevels-1);
+    }
 
     inline LOP& op(int a_level) { return m_ops[a_level]; }
+    inline LOP& op() { return op(m_numLevels-1); }
+    inline MBInterpOp& interpOp(int a_level) { return *m_blockInterp[a_level]; }
+    inline MBInterpOp& interpOp() { return interpOp(m_numLevels-1); }
+    inline MBLevelMap<MAP>& map(int a_level) { return m_maps[a_level]; }
+    inline MBLevelMap<MAP>& map() { return map(m_numLevels-1); }
+    inline void relax(
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_numIter,
+            int                     a_level);
+    inline void relax(
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force,
+            int                     a_numIter)
+    {
+        relax(a_state, a_force, a_numIter, m_numLevels-1);
+    }
 private:
 
     // V Cycle subroutines
@@ -82,17 +115,17 @@ private:
             LevelStateData&         a_crseState,
             int                     a_level);
 
-    inline void relax(
-            LevelStateData&         a_state,
-            const LevelStateData&   a_force,
-            int                     a_numIter,
-            int                     a_level);
-
     inline void vCycle(
             LevelStateData&         a_state,
             const LevelStateData&   a_force,
             int                     a_level);
-
+    
+    inline void vCycle(
+            LevelStateData&         a_state,
+            const LevelStateData&   a_force)
+    {
+        vCycle(a_state, a_force, m_numLevels-1);
+    }
 
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
