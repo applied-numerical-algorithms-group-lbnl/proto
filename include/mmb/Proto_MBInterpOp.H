@@ -187,9 +187,12 @@ namespace Proto
         std::vector<MBPointInterpOp> m_ops;
     };
 
+    // Interpolate Block Boundaries
     template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
-    inline void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
+    inline void interpBoundaries(
+            MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
     
+    // Interpolate Block Boundaries
     template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(
             MBLevelBoxData<T, C, MEM, CTR>& a_data,

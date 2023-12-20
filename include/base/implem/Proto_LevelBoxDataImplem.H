@@ -975,10 +975,6 @@ void interpBoundaries(
         fine_i.copyTo(fine_0);  // save a copy of non-interior data
         fine_i |= a_interp(crse_i);
         fine_0.copyTo(fine_i);
-        // This method seems like a shortcut / hack, but each interpolation call
-        // results in refRatio^DIM stencil applies, each of which is a kernel
-        // launch for GPU targets. I suspect that two BoxData::copyTo calls
-        // are faster, but this should be tested. -CLG
     }
     a_fine.exchange();
 }

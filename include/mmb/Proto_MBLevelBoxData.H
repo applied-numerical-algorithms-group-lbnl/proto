@@ -373,6 +373,7 @@ namespace Proto
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };
+    
 #include "implem/Proto_MBLevelBoxDataImplem.H"
 } // end namespace Proto
 #endif //end include guard
