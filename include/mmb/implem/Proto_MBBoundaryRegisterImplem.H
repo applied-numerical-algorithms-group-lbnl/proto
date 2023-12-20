@@ -147,7 +147,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::bound(
 {
     for (auto bound : bounds(a_index, a_dir))
     {
-        if (bound.dstBlock = a_adjBlock)
+        if (bound.dstBlock == a_adjBlock)
         {
             return bound;
         }
