@@ -1,0 +1,215 @@
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
+            const MBAMRGrid&            a_grid,
+            Point                       a_refRatio)
+{
+    std::vector<Point> refRatios(a_grid.numBlocks(), a_refRatio);
+    define(a_grid, refRatios);
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
+            const MBAMRGrid&            a_grid,
+            const std::vector<Point>&   a_refRatios)
+{
+    define(a_grid, a_refRatios);
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::define(
+            const MBAMRGrid&            a_grid,
+            const std::vector<Point>&   a_refRatios)
+{
+    PROTO_ASSERT(a_refRatios.size() == a_grid.numBlocks(),
+            "MBAMR::define | Error: must provide a refinement ratio for each block.");
+
+    m_numLevels = a_grid.numLevels(); 
+    m_mg.clear();
+
+    m_residual.clear();
+    m_state.clear();
+    m_state_0.clear();
+    m_force.clear();
+    m_local.clear();
+    
+    m_constInterp.clear();
+    m_BCInterp.clear();
+    m_average.clear();
+    m_localBlockInterp.clear();
+
+    m_residual.resize(m_numLevels);
+    m_state.resize(m_numLevels-1);
+    m_state_0.resize(m_numLevels-1);
+    m_force.resize(m_numLevels-1);
+    m_local.resize(m_numLevels-1);
+    m_localBlockInterp.resize(m_numLevels-1);
+
+    for (int bi = 0; bi < a_grid.numBlocks(); bi++)
+    {
+        m_average.push_back(Stencil<T>::AvgDown(a_refRatios[bi]));
+        m_constInterp.push_back(InterpStencil<T>::Constant(a_refRatios[bi]));
+        m_BCInterp.push_back(InterpStencil<T>::FiniteVolume(a_refRatios[bi], OP::order()+1));
+    }
+   
+    Point localGhost = OP::ghost() + m_BCInterp[0].ghost();
+
+    for (int li = 0; li < m_numLevels; li++)
+    {
+        // build multigrid operators
+        if (li == 0)
+        {
+            //FIXME: assumes uniform block size
+            Box B0 = a_grid.getLevel(0).getBlock(0).domain().box();
+            double L0 = B0.sizes().min();
+            int N0 = log(L0)/log(2.0);
+            m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
+                        a_grid[li], Point::Ones(2), N0));
+        } else {
+            //FIXME: assumes no subcycling
+            m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
+                        a_grid[li], Point::Ones(), 1));
+        }
+
+        // build data holders
+        m_residual[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), Point::Zeros());
+        if (li < m_numLevels-1)
+        {
+            m_state[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), OP::ghost());
+            m_state_0[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li),Point::Zeros());
+            m_force[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), Point::Zeros());
+
+            auto crseFineLayout = a_grid.getLevel(li+1).coarsen(a_refRatios);
+            m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
+            
+            MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
+            m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
+        }
+    }
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
+        AMRStateData&   a_state,
+        AMRStateData&   a_force,
+        int             a_maxIter,
+        T               a_tolerance)
+{
+    PROTO_ASSERT(a_state.numLevels() == m_numLevels,
+            "MBAMR::solve | Error: input does not have the right number of levels");
+    PROTO_ASSERT(a_force.numLevels() == m_numLevels,
+            "MBAMR::solve | Error: input does not have the right number of levels");
+
+    // average down state
+    // compute initial residual
+    auto& crseState = a_state[0];
+    const auto& crseForce = a_force[0];
+    const auto& fineForce = a_force[m_numLevels-1];
+    LevelStateData crseRes(crseState.layout(), Point::Zeros());
+    T r0 = m_mg[0].resnorm(crseRes, crseState, crseForce);
+    T r = r0;
+    for (int ii = 0; ii < a_maxIter; ii++)
+    {
+        vCycle(a_state, a_force, fineForce, m_numLevels-1);
+
+        //average down state
+        r = m_mg[0].resnorm(crseRes, crseState, crseForce);
+        if (r/r0 < a_tolerance) {
+            return r;
+        }
+    }
+    return r;
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
+        AMRStateData&         a_state,
+        const AMRStateData&   a_force,
+        const LevelStateData& a_levelForce,
+        int                   a_level)
+{
+    auto& state = a_state[a_level];
+    const auto& force = a_force[a_level]; 
+    if (a_level == 0)
+    {
+        m_mg[a_level].solve(state, a_levelForce, 1);
+    } else {
+        auto& crseState = a_state[a_level-1];
+        const auto& crseForce = a_force[a_level-1]; 
+        
+        // interpolate BCs of state using crseState
+        m_mg[a_level].solve(state, force, 1);
+        // average state onto coarser level = PhiC
+        // save copy of coarse state = PhiC0
+        // compute coarse residual = RC
+        // compute level force F = RC + L(PhiC)
+        //vCycle(a_state, a_force, F, a_level-1);
+        // correct this level's state
+        // interpolate BCs using updated crseState
+        m_mg[a_level].solve(state, force, 1);
+    }
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
+{
+    PROTO_ASSERT(a_level < m_numLevels,
+            "MBAMR::map | Error: Level index %i is out of bounds", a_level);
+    return m_mg[a_level].map();
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBInterpOp& MBAMR<OPType, MAP, T, BCType, MEM>::interpOp(int a_level)
+{
+    PROTO_ASSERT(a_level < m_numLevels,
+            "MBAMR::interpOp | Error: Level index %i is out of bounds", a_level);
+    return m_mg[a_level].interpOp();
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+MBLevelOp<OPType, MAP, double, BCType, MEM>& MBAMR<OPType, MAP, T, BCType, MEM>::op(int a_level)
+{
+    PROTO_ASSERT(a_level < m_numLevels,
+            "MBAMR::op | Error: Level index %i is out of bounds", a_level);
+    return m_mg[a_level].op();
+}
