@@ -17,6 +17,7 @@ namespace Proto_Transition
   {
   public:
     typedef  Proto::MayDay<void>                     pr_mayday;
+    typedef  Proto::BoxData<double, 1>               pr_boxdata_sca;
     typedef  Proto::Point                            pr_pt;
     typedef  Proto::Box                              pr_box;
     typedef  Proto::DisjointBoxLayout                pr_dbl;
@@ -73,7 +74,8 @@ namespace Proto_Transition
     typedef  Proto::ProblemDomain                    pr_dom;
     typedef  Proto::BoxPartition                     pr_partition;
     typedef  Proto::LevelBoxData<double, ncomp>      pr_level_data;
-    typedef  Proto::BoxData<     double, ncomp>      pr_box_data;
+    typedef  Proto::BoxData<     double, ncomp>      pr_box_data_ncomp;
+    typedef  Proto::BoxData<     double,  1   >      pr_box_data_sca;
     typedef  Proto::Stencil<     double>             pr_sten;
 
 
@@ -246,10 +248,14 @@ namespace Proto_Transition
         getDomainBCReflectionStencils(stencils, appboxes, valid, dombx, num_ghost,
                                       a_domain_face_dir, a_zero_lo_one_hi, a_sten_sign);
         // these vectors are empty away from the domain boundary
-        auto& datafab = a_devi_data[dit[ibox]];
         for(int isten = 0; isten < stencils.size(); isten++)
         {
-          stencils[isten].apply(datafab, datafab, appboxes[isten], initToZero, 1.0);
+          for(int icomp = 0; icomp < ncomp; icomp++)
+          {
+            pr_box_data_ncomp& allphi  = a_devi_data[dit[ibox]];
+            pr_box_data_sca    phicomp = Proto::slice(allphi, icomp);
+            stencils[isten].apply(phicomp, phicomp, appboxes[isten], initToZero, 1.0);
+          }
         }
       }
     }
