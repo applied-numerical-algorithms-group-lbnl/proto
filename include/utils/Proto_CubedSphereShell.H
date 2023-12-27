@@ -1,11 +1,10 @@
 #pragma once
+#ifndef _PROTO_CUBED_SPHERE_SHELL_H_
+#define _PROTO_CUBED_SPHERE_SHELL_H_
 #include "Proto.H"
 
-#define CUBED_SPHERE_SHELL_R0 1.0
-#define CUBED_SPHERE_SHELL_R1 1.1
-#define CUBED_SPHERE_SHELL_RADIAL_COORD 0
-typedef Proto::Array<Proto::Array<double,DIM>,DIM> matType;
-typedef Proto::Array<double,DIM> vecType;
+#include "Proto_CubedSphereKernels.H"
+
 using namespace Proto;
 namespace Proto
 {
@@ -102,45 +101,9 @@ class CubedSphereShell
     static void InterpBoundaries(
             MBLevelBoxData<T,C,MEM,CTR>& a_data,
             unsigned int a_order = 4);
+                                      
 };
-  template <typename T, unsigned int C, MemType MEM>
-  void cellMatrixQuotientMatAndInv(
-                                   BoxData<T,C,MEM,1>& a_quot,
-                                   BoxData<T,C,MEM,1>& a_quotBar,
-                                   const BoxData<T,C,MEM,C>& a_denominator,
-                                   const BoxData<T,C,MEM,C>& a_denomInv,
-                                   const BoxData<T,C,MEM,1>& a_numerator);
-  /*{
-    a_quotBar.define(a_denomInv.box());
-    T one = 1.0;
-    forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
-    BoxData<T,C,MEM,1> corr(a_quotBar.box().grow(-1));
-    corr.setToZero();
-    // need to fix - this is actually a matrix multiplication.
-    for (int dir = 0; dir < DIM; dir++)
-      {
-        BoxData<T,C,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
-        BoxData<T,C,MEM,C> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-        BoxData<T,C,MEM,1> prod(Ddenom.box());
-        T twelveth = -1.0/12.0;
-        forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
-        corr += prod;
-      }
-    a_quot.define(corr.box());
-    forallInPlace([] PROTO_LAMBDA(
-                                  Var<T,C,MEM,1>& a_quot,
-                                  const Var<T,C,MEM,1>& a_quotbar,
-                                  const Var<T,C,MEM,C>& a_denominv,
-                                  const Var<T,C,MEM,1>& a_corr)
-                  {
-                    Var<T,C,MEM,1> prod;
-                    f_matVecProd(prod,a_denominv,a_corr,1.0);
-                    for (int ind0 = 0; ind0 < C; ind0++)
-                      {
-                        a_quot(ind0) = a_quotbar(ind0)+prod(ind0);
-                      }
-                  },a_quot,a_quotBar,a_denomInv,corr);
-                  }*/
+  
   template<typename T,MemType MEM>
   inline void NTRowCS(
                       BoxData<T,DIM,MEM>& a_NTrow,
@@ -229,3 +192,4 @@ class CubedSphereShell
                   unsigned int a_centering);   
 #include "implem/Proto_CubedSphereShellImplem.H"
 } // end namespace Proto
+#endif // end include guard

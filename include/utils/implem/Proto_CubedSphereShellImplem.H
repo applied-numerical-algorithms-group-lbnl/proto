@@ -1,337 +1,4 @@
 //==============================================================
-// FORALL KERNELS
-PROTO_KERNEL_START
-template<typename T, MemType MEM, unsigned int C, unsigned int D>
-void f_matVecProd_F(
-                   Var<T,C,MEM>& a_prod,
-                   const Var<T,C,MEM,D>& a_left,
-                   const Var<T,D,MEM>& a_right,
-                   T a_scale)
-{
-  for (int ind0 = 0; ind0 < C; ind0++)
-    {      
-      a_prod(ind0) =0.;
-      for (int ind = 0; ind < D; ind++)
-        {
-          a_prod(ind0) +=
-            a_left(ind0,ind)*a_right(ind)*a_scale;
-        }
-    }
-}
-PROTO_KERNEL_START
-template<typename T, MemType MEM, unsigned int C, unsigned int D>
-void f_matTransVecProd_F(
-                         Var<T,C,MEM>& a_prod,
-                         const Var<T,D,MEM,C>& a_left,
-                         const Var<T,D,MEM>& a_right,
-                         T a_scale)
-{
-  for (int ind0 = 0; ind0 < C; ind0++)
-    {      
-      a_prod(ind0) =0.;
-      for (int ind = 0; ind < D; ind++)
-        {
-          a_prod(ind0) +=
-            a_left(ind,ind0)*a_right(ind)*a_scale;
-        }
-    }
-}
-PROTO_KERNEL_END(f_matTransVecProd_F, f_matTransVecProd)
-template<typename T>
-void f_matTransVecProd_(
-                         vecType& a_prod,
-                         const matType& a_left,
-                         const vecType& a_right,
-                         T a_scale)
-{
-  for (int ind0 = 0; ind0 < DIM; ind0++)
-    {      
-      a_prod[ind0] =0.;
-      for (int ind = 0; ind < DIM; ind++)
-        {
-          a_prod[ind0] +=
-            a_left[ind][ind0]*a_right[ind]*a_scale;
-        }
-    }
-}
-PROTO_KERNEL_START
-template<typename T, MemType MEM>
-void f_matinv3by3_F(
-                   Var<T,DIM,MEM,DIM>& a_inverse,
-                   const Var<T,DIM,MEM,DIM>& a_matrix)
-{
-  for (int ind0 = 0; ind0 < DIM; ind0++)
-    {
-      int ind0p1 = (ind0+1)%DIM;
-      int ind0p2 = (ind0+2)%DIM;   
-      for (int ind1 = 0; ind1 < DIM; ind1++)
-        {
-          int ind1p1 = (ind1+1)%DIM;
-          int ind1p2 = (ind1+2)%DIM;
-          a_inverse(ind0,ind1) =
-            (a_matrix(ind0p1,ind1p1)*a_matrix(ind0p2*ind1p2) -
-             a_matrix(ind0p1,ind1p2)*a_matrix(ind0p2*ind1p1));
-        }
-    }
-  T detMat = 0.;
-  for (int ind = 0; ind < DIM; ind++)
-    {
-      detMat += a_inverse(0,ind)*a_matrix(ind,0);
-    }
-  for (int ind0 = 0; ind0 < DIM; ind0++)
-    {
-       for (int ind1 = 0; ind1 < DIM; ind1++)
-         {
-           a_inverse(ind0,ind1) /= detMat;
-         }
-    }
-}
-PROTO_KERNEL_END(f_matinv3by3_F, f_matinv3by3)
-PROTO_KERNEL_START
-template<typename T, MemType MEM>
-void f_Amatrix_F(Point a_pt,
-                Var<T,DIM,MEM,DIM>& a_amatrix,
-                T a_h,
-                T a_offseta,
-                T a_offsetb)
-{
-  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
-  T tana = tan(alpha);
-  T seca = 1.0/cos(alpha);
-           
-  T beta =
-    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
-  T tanb = tan(beta);
-  T secb = 1.0/cos(beta);
-  T norm = 1.0/(tana*tana + tanb*tanb + 1.0);
-  T normsq = norm*norm;
-  T norm3 = normsq*norm;               
-  a_amatrix(0,0) = norm;
-  a_amatrix(1,0) = tana*norm;
-  a_amatrix(2,0) = tanb*norm;
-  a_amatrix(0,1) =-seca*seca*tana*norm3;
-  a_amatrix(1,1) = seca*seca*(tanb*tanb+1.0)*norm3;
-  a_amatrix(2,1) =-seca*seca*tana*tanb*norm3;
-  a_amatrix(0,2) =-secb*secb*tanb*norm3;
-  a_amatrix(1,2) =-secb*secb*tana*tanb*norm3;
-  a_amatrix(2,2) = secb*secb*(tana*tana+1.0)*norm3;               
-}
-PROTO_KERNEL_END(f_Amatrix_F,f_Amatrix)
-template<typename T>
-void f_Amatrix_(Point a_pt,
-                matType a_amatrix,
-                T a_h,
-                T a_offseta,
-                T a_offsetb)
-{
-  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
-  T tana = tan(alpha);
-  T seca = 1.0/cos(alpha);
-           
-  T beta =
-    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
-  T tanb = tan(beta);
-  T secb = 1.0/cos(beta);
-  T norm = 1.0/(tana*tana + tanb*tanb + 1.0);
-  T normsq = norm*norm;
-  T norm3 = normsq*norm;               
-  a_amatrix[0][0] = norm;
-  a_amatrix[1][0] = tana*norm;
-  a_amatrix[2][0] = tanb*norm;
-  a_amatrix[0][1] =-seca*seca*tana*norm3;
-  a_amatrix[1][1] = seca*seca*(tanb*tanb+1.0)*norm3;
-  a_amatrix[2][1] =-seca*seca*tana*tanb*norm3;
-  a_amatrix[0][2] =-secb*secb*tanb*norm3;
-  a_amatrix[1][2] =-secb*secb*tana*tanb*norm3;
-  a_amatrix[2][2] = secb*secb*(tana*tana+1.0)*norm3;               
-}
-PROTO_KERNEL_START
-template<typename T,MemType MEM>
-void f_detA_F(Point a_pt,
-              Var<T,1,MEM>& a_detA,
-              T a_h,
-              T a_offseta,
-              T a_offsetb)
-{  
-  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
-  T tana = tan(alpha);
-  T seca = 1.0/cos(alpha);          
-  T beta =
-    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
-  T tanb = tan(beta);
-  T secb = 1.0/cos(beta);
-  T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
-  T norm3 = norm*norm*norm;
-  a_detA(0) = seca*seca*secb*secb*norm3;
-}
-PROTO_KERNEL_END(f_detA_F,f_detA)
-template<typename T>
-void f_detA_(Point a_pt,
-             T& a_detA,
-             T a_h,
-             T a_offseta,
-             T a_offsetb)
-{  
-  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
-  T tana = tan(alpha);
-  T seca = 1.0/cos(alpha);          
-  T beta =
-    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
-  T tanb = tan(beta);
-  T secb = 1.0/cos(beta);
-  T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
-  T norm3 = norm*norm*norm;
-  a_detA = seca*seca*secb*secb*norm3;
-}
-template<MemType MEM>
-void f_cubeSphereMapF(
-    Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
-    Array<double, DIM> a_dx, double a_r0, double a_r1,
-    int a_block, int a_radialCoord)
-{
-    // subscript 0 are at corners
-    Array<double, DIM> x  = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-
-    double r0, xi0, eta0, r, xi, eta;
-    switch (a_radialCoord)
-    {
-        case 0:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[0];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-            break;
-        }
-        case 2:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[2];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
-            break;
-        }
-    }
-    
-    double X0 = tan(xi0);
-    double Y0 = tan(eta0);
-    double d0 = sqrt(1+X0*X0+Y0*Y0);
-    
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = sqrt(1+X*X+Y*Y);
-
-    a_J(0) = r0*r0*(1+X0*X0)*(1+Y0*Y0)/(d0*d0*d0);
-    switch (a_block)
-    {
-        case 0:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0*Y0/d0;
-            a_X(2) = -r0/d0;
-            break;
-        case 1:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = r0*Y0/d0;
-            a_X(2) = r0/d0;
-            break;
-        case 2:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 3:
-            a_X(0) = r0/d0;
-            a_X(1) = r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 4:
-            a_X(0) = -r0*X0/d0;
-            a_X(1) = r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 5:
-            a_X(0) = -r0/d0;
-            a_X(1) = -r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        default:
-            a_X(0) = 0;
-            a_X(1) = 0;
-            a_X(2) = 0;
-            break;
-    }
-}
-PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R, Var<double,1,MEM>& a_J,
-        Var<double, DIM, MEM>& a_X, int a_block, int a_radialCoord)
-{
-    double x0 = a_X(0);
-    double y0 = a_X(1);
-    double z0 = a_X(2);
-
-    double x, y, z;
-    switch (a_block)
-    {
-        case 0:
-        {
-            x = -z0;
-            y = y0;
-            z = x0;
-            break;
-        }
-        case 1:
-        {
-            x = z0;
-            y = y0;
-            z = -x0;
-            break;
-        }
-        case 2:
-        {
-            x = -y0;
-            y = x0;
-            z = z0;
-            break;
-        }
-        case 3:
-        {
-            x = x0;
-            y = y0;
-            z = z0;
-            break;
-        }
-        case 4:
-        {
-            x = y0;
-            y = -x0;
-            z = z0;
-            break;
-        }
-        case 5:
-        {
-            x = -x0;
-            y = -y0;
-            z = z0;
-            break;
-        }
-    }
-
-    double R = sqrt(x*x + y*y + z*z);
-    double r = sqrt(x*x + y*y);
-    double phi = atan2(r,z);
-    double theta = atan2(y,x);
-    // note that this J is at corners
-    a_J(0) = r*r*sin(phi);
-    a_R(a_radialCoord) = R;
-    a_R((a_radialCoord + 1) % 3) = theta;
-    a_R((a_radialCoord + 2) % 3) = phi;
-}
-PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
-
-//==============================================================
 // CUBED SPHERE SHELL MAP
 template<MemType MEM>
 void MBMap_CubedSphereShell<MEM>::apply(
@@ -543,33 +210,19 @@ void cellMatrixQuotientMatAndInv(
 {
   a_quotBar.define(a_denomInv.box());
   T one = 1.0;
-  forallInPlace(f_matVecProd_F,a_quotBar,a_denomInv,a_numerator,one);
+  forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
   BoxData<T,C,MEM,1> corr(a_quotBar.box().grow(-1));
   corr.setToZero();
-  // need to fix - this is actually a matrix multiplication.
   for (int dir = 0; dir < DIM; dir++)
     {
       BoxData<T,C,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
       BoxData<T,C,MEM,C> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
       BoxData<T,C,MEM,1> prod(Ddenom.box());
       T twelveth = -1.0/12.0;
-      forallInPlace(f_matVecProd_F,prod,Ddenom,Dquotbar,twelveth);      
+      forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
       corr += prod;
     }
-  a_quot.define(corr.box());
-  forallInPlace([] PROTO_LAMBDA(
-                                Var<T,C,MEM,1>& a_quot,
-                                const Var<T,C,MEM,1>& a_quotbar,
-                                const Var<T,C,MEM,C>& a_denominv,
-                                const Var<T,C,MEM,1>& a_corr)
-                {
-                  Var<T,C,MEM,1> prod;
-                  f_matVecProd(prod,a_denominv,a_corr,1.0);
-                  for (int ind0 = 0; ind0 < C; ind0++)
-                    {
-                      a_quot(ind0) = a_quotbar(ind0)+prod(ind0);
-                    }
-                },a_quot,a_quotBar,a_denomInv,corr);
+  a_quot = a_quotBar + corr;
 }
 template<typename T, MemType MEM>
 inline void detA_A(
@@ -586,29 +239,25 @@ inline void detA_A(
   Array<Array<uint,DIM>,6>
     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
-    sign = {{-1,1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
   int qnum = 5;
   Point low0 = a_bx.grow(2).low();
   low0[0] = a_bx.low()[0];
   Point high0 = a_bx.grow(2).high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  BoxData<T,DIM,MEM> d1n_x_n;
-  d1nCrossN(d1n_x_n,bx0,a_h,a_block);
-  BoxData<T,DIM,MEM> n_x_d2n;
-  nCrossD2n(n_x_d2n,bx0,a_h,a_block);
+  Box bx2 = a_bx.extrude(Point::Basis(2));
+  Box bx1 = a_bx.extrude(Point::Basis(1));
+  BoxData<T,DIM,MEM> d1n_x_n(bx2);
+  BoxData<T,DIM,MEM> n_x_d2n(bx1);
   Stencil<T> stl1 = Stencil<T>::FluxDivergence(1);
-  Stencil<T> stl2 = Stencil<T>::FluxDivergence(2);
+  Stencil<T> stl2 = Stencil<T>::FluxDivergence(2); 
   Box bxdef = stl1.range(n_x_d2n.box()) & stl2.range(d1n_x_n.box());
-  BoxData<T,DIM,MEM> d1n_x_d2n(bxdef);
-  d1n_x_d2n.setVal(0.0);
-  //d1n_x_d2n += n_x_d2n;
+  BoxData<T,DIM,MEM> d1n_x_d2n(a_bx);
   T dxinv = .5/a_h;
   d1n_x_d2n += stl1(n_x_d2n,dxinv);
   d1n_x_d2n += stl2(d1n_x_n,dxinv);
-  BoxData<T,DIM,MEM,DIM> detA_ASlice(bx0);
-  detA_ASlice.setVal(101.01);
-#if 0
+  BoxData<T,DIM,MEM,DIM> detA_ASlice(a_bx);
   int q1d1 = 5;
   int q1d2 = 5;
   Array<double,5> weight1 = weights;
@@ -623,16 +272,16 @@ inline void detA_A(
       q1d2 = 2;
       weight2 = weights_0;
     }
-  forallInPlace_p([]PROTO_LAMBDA(
-                                 Point a_pt,
-                                 Var<T,DIM,MEM,DIM>& a_deta_aslice,
-                                 T a_h,
-                                 Array<T,5> a_wgt1,
-                                 Array<T,5> a_wgt2,
-                                 int a_q1d1,
-                                 int a_q1d2,
-                                 Array<unsigned int,DIM> a_permute,
-                                 Array<int,DIM> a_sign)
+  forallInPlace_p([ ] PROTO_LAMBDA
+                  (Point a_pt,
+                   Var<T,DIM,MEM,DIM>& a_deta_aslice,
+                   T a_h,
+                   Array<T,5> a_wgt1,
+                   Array<T,5> a_wgt2,
+                   int a_q1d1,
+                   int a_q1d2,
+                   Array<unsigned int,DIM> a_permute,
+                   Array<int,DIM> a_sign)
                   {                       
                     for (int dir0 = 0; dir0 < DIM; dir0++)
                       {
@@ -646,26 +295,31 @@ inline void detA_A(
                         for (int k2 = 0; k2 < a_q1d2;k2++)
                           {
                             T offsetb = (1.0*k2)/(a_q1d2-1);
-                            //Var<T,DIM,MEM,DIM> amat;
-                            //Var<T> deta;
-                            matType amat;
-                            T deta;
-                            f_Amatrix_(a_pt,amat,a_h,offseta,offsetb);
-                            f_detA_(a_pt,deta,a_h,offseta,offsetb);
+                            //Var<T,DIM,MEM,DIM> deta_amat; 
+                            matType deta_amat;
+                            f_detA_A_(a_pt,deta_amat,a_h,offseta,offsetb);
                             for (int dir0=0; dir0 < DIM; dir0++)
                               {
                                 for (int dir1=0; dir1 < DIM; dir1++)
                                   {
-                                    a_deta_aslice(a_permute[dir0],dir1) +=
-                                      a_sign[dir0]*deta*amat[dir0][dir1]
+                                    a_deta_aslice(dir0,dir1) +=
+                                      a_sign[dir0]*deta_amat[a_permute[dir0]][dir1]
                                       *a_wgt1[k1]*a_wgt2[k2];
                                   }
                               }
                           }
                       }
-                  },bx0,detA_ASlice,a_h,weight1,weight2,q1d1,q1d2,
-                      permute[a_block],sign[a_block]);
-  #endif
+                  },a_bx,detA_ASlice,a_h,weight1,weight2,q1d1,q1d2,
+                  permute[a_block],sign[a_block]);
+  d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
+  nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
+  d1n_x_d2n.setToZero();
+  d1n_x_d2n += stl1(n_x_d2n,dxinv);
+  d1n_x_d2n += stl2(d1n_x_n,dxinv);
+  
+  //d1n_x_d2n -= d1n_x_d2n_2;
+  //n_x_d2n -= n_x_d2n_2;
+  //d1n_x_n -= d1n_x_n_2;
   int lowrow = 0;
   if (a_centering == 0)
     {
@@ -673,14 +327,12 @@ inline void detA_A(
       for (int dir0 = 0; dir0 < DIM;dir0++)
         {
           auto slcDest = slice(a_detA_A,dir0,0,0);
-          auto slcSrc = slice(d1n_x_d2n,dir0,0,0);
+          slcDest.setToZero(); 
+          auto slcSrc = slice(d1n_x_d2n,dir0,0,0);          
           slcSrc.copyTo(slcDest);
-          // cout << "Boxes before spreadslice" << a_detA_A.box() << " , "
-          //     << d1n_x_d2n.box() << endl;
         }
     }
-  Operator::spreadSlice(a_detA_A);
-  return;
+  //  Operator::spreadSlice(a_detA_A);
   for (int dir0 = 0; dir0 < DIM;dir0++)
     {
       for (int dir1 = lowrow; dir1 < DIM; dir1++)
@@ -690,7 +342,7 @@ inline void detA_A(
           slcSrc.copyTo(slcDest);          
         }
     }
-  Operator::spreadSlice(a_detA_A);
+  // Operator::spreadSlice(a_detA_A);
 }
 template<typename T,MemType MEM>
 inline void
@@ -847,9 +499,11 @@ inline void NTRowCS(
     {
     case 0:
       {
-        BoxData<T,DIM,MEM> n_x_d2n(a_bx);
+        Box bx2 = a_bx.extrude(Point::Basis(2));
+        Box bx1 = a_bx.extrude(Point::Basis(1));
+        BoxData<T,DIM,MEM> d1n_x_n(bx2);
+        BoxData<T,DIM,MEM> n_x_d2n(bx1);
         nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
-        BoxData<T,DIM,MEM> d1n_x_n(a_bx);
         d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
         a_NTRow |= Stencil<T>::FluxDivergence(1)(n_x_d2n,half);
         a_NTRow += Stencil<T>::FluxDivergence(2)(d1n_x_n,half);
@@ -882,13 +536,15 @@ inline void d1nCrossN(
 {
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
-  Array<Array<uint,DIM>,6>
-    permute = {{2,0,1},{2,0,1},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
+ Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
-    sign = {{-1,1,-1},{1,1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
   int qnum = 5;
-  Box bx = a_bx.extrude(Point::Basis(2));
-  a_d1n_x_n = BoxData<T,DIM,MEM>(bx);
+  int qnum0 = 2;
+  Box bx = a_d1n_x_n.box();
   Point low0 = bx.low();  
   Point high0 = bx.high();
   high0[0] = low0[0];
@@ -909,23 +565,23 @@ inline void d1nCrossN(
        a_d1n_x_n(2) = 0.0;
        T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
        T tanb = tan(beta);
-       
+       Array<T,5> cross = {0.,0.,0.};
        for (int k = 0; k < a_qnum;k++)
          {
            T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + k*a_h/(a_qnum-1));
            T tana = tan(alpha);
-           T seca = 1.0/cos(alpha);
+           T secasq =1.0 + tan(alpha)*tan(alpha);
            T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);       
-           T cross0 = seca*seca*tanb*normsq;
-           T cross2 = -seca*seca*normsq;
-           a_d1n_x_n(a_permute[0]) += a_sign[0]*cross0*a_weights[k];
-           a_d1n_x_n(a_permute[2]) += a_sign[2]*cross2*a_weights[k];
-           //a_d1n_x_n(0) += a_sign[0]*cross0*a_weights[k];
-           //a_d1n_x_n(2) += a_sign[2]*cross2*a_weights[k];
+           cross[0] = secasq*tanb*normsq;
+           cross[1] = 0.;
+           cross[2] = -secasq*normsq;
+           a_d1n_x_n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+           a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+           a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];          
          }       
-     },bx0,a_d1n_x_n,weights,a_h,permute[a_block],sign[a_block],qnum);
+     },bx,a_d1n_x_n,weights,a_h,permute[a_block],sign[a_block],qnum);
   // copy lowest slice to all the other slices. 
-  Operator::spreadSlice(a_d1n_x_n);
+  // Operator::spreadSlice(a_d1n_x_n);
 }
 template<typename T, MemType MEM>
 inline void nCrossD2n(
@@ -936,17 +592,20 @@ inline void nCrossD2n(
 {
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
    Array<Array<uint,DIM>,6>
-    permute = {{2,0,1},{2,0,1},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
-    sign = {{-1,1,-1},{1,1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
   int qnum = 5;
-  Box bx = a_bx.extrude(Point::Basis(1));
+  int qnum0 = 2;
+  Box bx = a_n_x_d2n.box();
   Point low0 = bx.low();  
   Point high0 = bx.high();
   high0[0] = low0[0];
   Box bx0(low0,high0);
-  a_n_x_d2n.define(bx);
+  
   forallInPlace_p
     ([]PROTO_LAMBDA
      (Point a_pt,
@@ -960,23 +619,26 @@ inline void nCrossD2n(
        a_n_x_d2n(0) = 0.0;
        a_n_x_d2n(1) = 0.0;
        a_n_x_d2n(2) = 0.0;
-       T alpha = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
+       T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h ;
        T tana = tan(alpha);
+       Array<T,5> cross = {0.,0.,0.};
        for (int k = 0; k < a_qnum;k++)
          {
            T beta =
-             -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + k*a_h/(a_qnum-1));
+             -.25*M_PI + .5*M_PI*(a_pt[2]*a_h + k*a_h/(a_qnum-1));
            T tanb = tan(beta);
-           T secb = 1.0/cos(beta);
+           T secbsq = 1.0 + tan(beta)*tan(beta);
            T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);       
-           T cross0 = secb*secb*tana*normsq;
-           T cross1 = -secb*secb*normsq;
-           a_n_x_d2n(a_permute[0]) += a_sign[0]*cross0*a_weights[k];
-           a_n_x_d2n(a_permute[1]) += a_sign[1]*cross1*a_weights[k];
+           cross[0] = secbsq*tana*normsq;
+           cross[1] = -secbsq*normsq;
+           cross[2] = 0.;
+           a_n_x_d2n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+           a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+           a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
          }
-     },bx0,a_n_x_d2n,weights,a_h,permute[a_block],sign[a_block],qnum);
+     },bx,a_n_x_d2n,weights,a_h,permute[a_block],sign[a_block],qnum);
   // copy lowest slice to all the other slices. 
-  Operator::spreadSlice(a_n_x_d2n);
+  // Operator::spreadSlice(a_n_x_d2n);
 }
 #if 0
 template<typename T,MemType MEM,unsigned int C, unsigned int D,unsigned int E>

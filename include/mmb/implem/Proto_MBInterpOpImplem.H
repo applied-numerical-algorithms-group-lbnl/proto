@@ -63,12 +63,19 @@ MBPointInterpOp::MBPointInterpOp(
     // This is the approximate radius in physical space of the operator
     // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
-    auto xg = a_map.cellCentered(a_dst);
-    for (int ii = 0; ii < M; ii++)
+    Array<double,DIM> xg;
     {
-        auto xj = a_map.cellCentered(m_srcs[ii]);
-        auto dist = xj - xg;
-        Rg += dist.norm();
+     PR_TIMERS("xg_ii");
+     //auto xg = a_map.cellCentered(a_dst);
+     xg = a_map.analyticCellCentered(a_dst);
+     {
+       for (int ii = 0; ii < M; ii++)
+        {
+          auto xj = a_map.analyticCellCentered(m_srcs[ii]);
+          auto dist = xj - xg;
+          Rg += dist.norm();
+        }
+     }
     }
     Rg /= M;
     // Cache Moment Data
@@ -97,10 +104,14 @@ MBPointInterpOp::MBPointInterpOp(
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
+          PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
-            BoxData<double> Xi_p_avg = C2C(Xi_p);
-            Ji.setVal(1.0);
-            srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
+            {
+              PR_TIMERS("C2C apply");
+              // BoxData<double> Xi_p_avg = C2C(Xi_p);
+              //srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
+              srcData[block].push_back(C2C(Xi_p));
+            }
         }
     }
    
@@ -240,9 +251,10 @@ void MBInterpOp::define(
                 }
                 for (auto bi : boundBox)
                 {
+                  int four=4;
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, four));
                 }
                 continue;
             }
@@ -256,9 +268,10 @@ void MBInterpOp::define(
                 }
                 for (auto bi : boundBox)
                 {
+                   int four=4;
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, four));
                 }
             }
         }

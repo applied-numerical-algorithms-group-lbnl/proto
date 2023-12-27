@@ -131,8 +131,8 @@ consToPrim(
   // Momentum.
 
   // Geometric data.
-  BoxData<T,1,MEM> J;
   Box bx = a_JU.box();
+  BoxData<T,1,MEM> J(bx.grow(1));
   scaledDetA(J,a_dVolr,bx,a_h,a_block,0,true);
   BoxData<T,1,MEM> Jinv(bx);
   forallInPlace([] PROTO_LAMBDA
@@ -146,8 +146,10 @@ consToPrim(
 
   // Set up storage for radial variables.
   BoxData<T,NUMCOMPS,MEM> UrBar(bx);
+  a_WBar.define(bx);
   Box bx4 = bx.grow(-1);
-  BoxData<T,NUMCOMPS,MEM> Ur(bx4); 
+  BoxData<T,NUMCOMPS,MEM> Ur(bx4);
+  a_W.define(bx);
 
   //Momentum, radial coordinates, second and fourth order.
   BoxData<T,DIM,MEM> UrMomBar = slice<T,NUMCOMPS,DIM,MEM>(UrBar,1);
@@ -170,7 +172,7 @@ consToPrim(
   Operator::deconvolve(Ur,UrBar);
   forallInPlace(f_consToPrim,a_W,Ur,a_gamma);
   forallInPlace(f_consToPrim,a_WBar,UrBar,a_gamma);
-  State W = Operator::_convolve(a_W,a_WBar);
+  a_W = Operator::_convolve(a_W,a_WBar);
 }
 template<typename T,MemType MEM>
 void primToFlux(
@@ -364,7 +366,7 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         // Advective fluxes for Cartesian variables.
         // Scalar fluxes.
         // Geometric quantities.
-        BoxData<T,1,MEM> adjDdetA;
+        BoxData<T,1,MEM> adjDdetA(fluxdir.box().grow(Point::Ones() - Point::Basis(dir)));
         BoxData<T,1,MEM> adjDrDir = slice(a_adjDr,dir);
         scaledDetA(adjDdetA,adjDrDir,bx,a_dx,a_block,dir);
         BoxData<T,1,MEM> fluxRho = slice(fluxdir,0);
@@ -373,7 +375,7 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         Operator::faceProduct(fluxRhoE,slice(physFlux,NUMCOMPS-1),adjDdetA,dir);
         
         // Advective fluxes for momentum.
-        BoxData<T,DIM,MEM,DIM> adjDdetA_A;         
+        BoxData<T,DIM,MEM,DIM> adjDdetA_A(fluxdir.box().grow(Point::Ones() - Point::Basis(dir)));         
         scaledDetA_A(adjDdetA_A,adjDrDir,bx,a_dx,a_block,dir);
         BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
         BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
@@ -383,7 +385,9 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         fluxMom.copyTo(fluxdirMom);
         // Momentum fluxes - pressure forces.
         BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
-        BoxData<T,DIM,MEM> NTrow;
+        Box bx = W.box();
+        Box bxdir = bx.extrude(Point::Basis(dir));
+        BoxData<T,DIM,MEM> NTrow(bxdir);
         NTRowCS<T,MEM>(NTrow,adjDrDir,fluxdir.box(),a_dx,a_block,dir);
         BoxData<T,DIM,MEM> tmp =
           Operator::_faceMatrixProductAB(NTrow,pslice,NTrow,pslice,dir);

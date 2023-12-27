@@ -251,7 +251,8 @@ _deconvolveFace(
         int a_dir)
 {
     PR_TIME("Operator::deconvolveFace");
-    PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1).grow(a_dir,1)),
+    PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).contains(a_ctr.box()) &&
+                 a_avg.box().contains(a_ctr.box()),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
     a_ctr += a_avg;

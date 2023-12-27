@@ -104,8 +104,8 @@ PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 int main(int argc, char* argv[])
 {   
   HDF5Handler h5;
-  int domainSize = 32;
-  int boxSize = 32;
+  int domainSize = 16;
+  int boxSize = 16;
   int thickness = 8;
   Array<double,DIM> offset = {0.,0.,0.};
   Array<double,DIM> exp = {1.,1.,1.};
@@ -143,8 +143,7 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, ghost+Point::Ones());
   WPoint.setVal(0.);
   for (auto dit : layout)
-    {
-      
+    {      
       BoxData<double> radius(layout[dit].grow(ghost[0]));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
       double r0 = CUBED_SPHERE_SHELL_R0;
@@ -157,7 +156,6 @@ int main(int argc, char* argv[])
       radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       Box b_i = C2C.domain(layout[dit]).grow(ghost[0]);
       BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
-
       // BoxData<double, 1> J_i(layout[dit].grow(Point::Ones() + ghost[0]));
       // FluxBoxData<double, DIM> NT(layout[dit]);
       // map.apply(x_i, J_i, NT,block);
@@ -171,12 +169,10 @@ int main(int argc, char* argv[])
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrim");
   cout << "Setup done" << endl;
-  // U.exchange(); // fill boundary data
+  U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
-  
-#if 0
   CubedSphereShell::InterpBoundaries(U);
-  
+ #if 1
   for (auto dit :U.layout())
     {
       auto& rhs_i = rhs[dit];
