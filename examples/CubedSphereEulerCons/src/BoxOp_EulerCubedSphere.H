@@ -116,64 +116,6 @@ void f_geomA_(
     }
 }
 PROTO_KERNEL_END(f_geomA_, f_geomA)
-template<typename T, MemType MEM>
-inline void
-consToPrim(
-           State& a_W,
-           State& a_WBar,
-           const State& a_JU,
-           const BoxData<T,1,MEM>& a_dVolr,
-           T a_gamma,
-           T a_h,
-           uint a_block)
-{
-  // Get radial conserved variables.
-  // Momentum.
-
-  // Geometric data.
-  Box bx = a_JU.box();
-  BoxData<T,1,MEM> J(bx.grow(1));
-  scaledDetA(J,a_dVolr,bx,a_h,a_block,0,true);
-  BoxData<T,1,MEM> Jinv(bx);
-  forallInPlace([] PROTO_LAMBDA
-                (Var<T,1,MEM>& a_jinv,
-                 const Var<T,1,MEM>& a_j) {a_jinv(0) = 1.0/a_j(0);},J,Jinv);
-  
-  BoxData<T,DIM,MEM,DIM> dVolrDetA_A(bx);
-  scaledDetA_A(dVolrDetA_A,a_dVolr,bx,a_h,a_block,0);
-  BoxData<T,DIM,MEM,DIM> invcoef(bx);
-  forallInPlace(f_matinv3by3,invcoef,dVolrDetA_A);
-
-  // Set up storage for radial variables.
-  BoxData<T,NUMCOMPS,MEM> UrBar(bx);
-  a_WBar.define(bx);
-  Box bx4 = bx.grow(-1);
-  BoxData<T,NUMCOMPS,MEM> Ur(bx4);
-  a_W.define(bx);
-
-  //Momentum, radial coordinates, second and fourth order.
-  BoxData<T,DIM,MEM> UrMomBar = slice<T,NUMCOMPS,DIM,MEM>(UrBar,1);
-  BoxData<T,DIM,MEM> UrMom = slice<T,NUMCOMPS,DIM,MEM>(Ur,1);
-  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-  cellMatrixQuotientMatAndInv<T,DIM,MEM>(UrMom,UrMomBar,dVolrDetA_A,invcoef,JUMom);
-  
-  //Density, energy; second and fourth order.
-  BoxData<T,1,MEM> rho = slice(Ur,0);
-  BoxData<T,1,MEM> rhoE = slice(Ur,NUMCOMPS-1);
-  BoxData<T,1,MEM> rhoBar = slice(UrBar,0);
-  BoxData<T,1,MEM> rhoEBar = slice(UrBar,NUMCOMPS-1);
-  BoxData<T,1,MEM> JRho = slice(a_JU,1);
-  BoxData<T,1,MEM> JRhoE = slice(a_JU,NUMCOMPS-1);
-   
-  cellMatrixQuotientMatAndInv(rho,rhoBar,JRho,J,Jinv);
-  cellMatrixQuotientMatAndInv(rhoE,rhoEBar,JRhoE,J,Jinv);
-  
-  // transform fron conserved variables to primitive variables.
-  Operator::deconvolve(Ur,UrBar);
-  forallInPlace(f_consToPrim,a_W,Ur,a_gamma);
-  forallInPlace(f_consToPrim,a_WBar,UrBar,a_gamma);
-  a_W = Operator::_convolve(a_W,a_WBar);
-}
 template<typename T,MemType MEM>
 void primToFlux(
                 State& a_physFlux,
@@ -201,12 +143,72 @@ void primToFlux(
        a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
        T ke = a_wface(0)*(velnorm*velnorm + veltan1*veltan1 + veltan2*veltan2)/2;
        a_flux(NUMCOMPS - 1) =
-      velnorm*(ke + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0));
+       velnorm*(ke + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0));
      },a_WFacePoint,a_gamma,a_block,a_centering);
 
   // Compute Average fluxes from pointwise values.
   a_physFlux = (1.0*Shift(Point::Zeros()) +
-                (1.0/12.0)*Stencil<T>::LaplacianFace(a_centering))(pointflux);
+                (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(pointflux);
+}
+template<typename T,MemType MEM>
+void consToPrim(
+                State& a_W,
+                State& a_WBar,
+                const State& a_JU,
+                const BoxData<T,1,MEM>& a_dVolr,
+                T a_gamma,
+                T a_h,
+                uint a_block)
+{
+  // Get radial conserved variables.
+  // Momentum.
+
+  // Geometric data.
+  Box bx = a_JU.box();
+  BoxData<T,1,MEM> J(bx.grow(1));
+  scaledDetA(J,a_dVolr,bx,a_h,a_block,0,true);
+  BoxData<T,1,MEM> Jinv(bx);
+  forallInPlace([] PROTO_LAMBDA
+                (Var<T,1,MEM>& a_jinv,
+                 const Var<T,1,MEM>& a_j) {a_jinv(0) = 1.0/a_j(0);},J,Jinv);
+  
+  BoxData<T,DIM,MEM,DIM> dVolrDetA_A(bx);
+  scaledDetA_A(dVolrDetA_A,a_dVolr,bx,a_h,a_block,0);
+  BoxData<T,DIM,MEM,DIM> invcoef(bx);
+  forallInPlace(f_matinv3by3,invcoef,dVolrDetA_A);
+   // DEBUG
+  a_JU.copyTo(a_W);
+  return;
+  // Set up storage for radial variables.
+  BoxData<T,NUMCOMPS,MEM> UrBar(bx);
+  a_WBar.define(bx);
+  Box bx4 = bx.grow(-1);
+  BoxData<T,NUMCOMPS,MEM> Ur(bx4);
+  a_W.define(bx);
+
+  //Momentum, radial coordinates, second and fourth order.
+  BoxData<T,DIM,MEM> UrMomBar = slice<T,NUMCOMPS,DIM,MEM>(UrBar,1);
+  BoxData<T,DIM,MEM> UrMom = slice<T,NUMCOMPS,DIM,MEM>(Ur,1);
+  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
+  //JUMom.copyTo(UrMom);
+  //cellMatrixQuotientMatAndInv<T,DIM,MEM>(UrMom,UrMomBar,dVolrDetA_A,invcoef,JUMom);
+  
+  //Density, energy; second and fourth order.
+  BoxData<T,1,MEM> rho = slice(Ur,0);
+  BoxData<T,1,MEM> rhoE = slice(Ur,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoBar = slice(UrBar,0);
+  BoxData<T,1,MEM> rhoEBar = slice(UrBar,NUMCOMPS-1);
+  BoxData<T,1,MEM> JRho = slice(a_JU,1);
+  BoxData<T,1,MEM> JRhoE = slice(a_JU,NUMCOMPS-1);
+   
+  //cellMatrixQuotientMatAndInv(rho,rhoBar,J,Jinv,JRho);
+  //cellMatrixQuotientMatAndInv(rhoE,rhoEBar,J,Jinv,JRhoE);
+ 
+  // transform fron conserved variables to primitive variables.
+  //Operator::deconvolve(Ur,UrBar);
+  //forallInPlace(f_consToPrim,a_W,Ur,a_gamma);
+  //forallInPlace(f_consToPrim,a_WBar,UrBar,a_gamma);
+  //a_W = Operator::_convolve(a_W,a_WBar);
 }
 template<typename T,MemType MEM>
 void primToCons(
@@ -221,37 +223,35 @@ void primToCons(
   Box bx = a_JU.box().grow(1);
   
   // Compute Cartesian UPoint.
-  BoxData<T,NUMCOMPS> UPoint(bx);
-  forallInPlace_p
-    ([ ] PROTO_LAMBDA
-     (Point a_pt,
-      Var<T,NUMCOMPS,MEM>& a_upoint,
-      const Var<T,NUMCOMPS>& a_wpoint,
-      T a_gamma,
-      T a_h)
-     {
-       vecType velSph;
-       vecType velCart;
-       //cout << a_pt << " , "<< a_wpoint(0) << " , " << a_wpoint(1) << " , " << a_wpoint(2) << endl;
-       velSph[0] = a_wpoint(1);       
-       velSph[1] = a_wpoint(2);
-       velSph[2] = a_wpoint(3);
-       matType amat;
-       T half = .5;
-       T one = 1.0;
-       f_Amatrix_(a_pt,amat,a_h,half,half);
-       f_matTransVecProd_(velCart,amat,velSph,one);
-       T ke = (velCart[0]*velCart[0] + velCart[1]*velCart[1] + velCart[2]*velCart[2])/2;
-       a_upoint(0) = a_wpoint(0);
-       a_upoint(1) = a_wpoint(0)*velSph[0];
-       a_upoint(2) = a_wpoint(0)*velSph[1];
-       a_upoint(3) = a_wpoint(0)*velSph[2];
-       a_upoint(4) = a_wpoint(4)/(a_gamma- 1.0) + a_wpoint(0)*ke; 
-     },bx,UPoint,a_WPoint,a_gamma,a_h);
-
-  BoxData<T,NUMCOMPS,MEM> U = (1.0*Shift(Point::Zeros()) +
-                               (1.0/12.0)*Stencil<T>::Laplacian())(UPoint);
-  //DEBUG U.copyTo(a_JU);
+  BoxData<T,NUMCOMPS,MEM> UPoint =
+    forall_p<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
+                (Point a_pt,
+                 Var<T,NUMCOMPS,MEM>& a_upoint,
+                 const Var<T,NUMCOMPS>& a_wpoint,
+                 T a_gamma,
+                 T a_h,
+                 int a_block)
+                {
+                  vecType velSph;
+                  vecType velCart;
+                  //cout << a_pt << " , "<< a_wpoint(1) << " , " << a_wpoint(2) << " , " << a_wpoint(3) << endl;
+                  velSph[0] = a_wpoint(1);       
+                  velSph[1] = a_wpoint(2);
+                  velSph[2] = a_wpoint(3);
+                  matType amat,amat2;
+                  T half = .5;
+                  T one = 1.0;
+                  f_cofAmatrix_(a_pt,amat,a_h,half,half,a_block);
+                  f_matVecProd_<T,DIM,MEM,DIM>(velCart,amat,velSph,one);
+                  T ke = (velCart[0]*velCart[0] + velCart[1]*velCart[1] + velCart[2]*velCart[2])/2;              
+                  a_upoint(0) = a_wpoint(0);
+                  a_upoint(1) = a_wpoint(0)*velSph[0];
+                  a_upoint(2) = a_wpoint(0)*velSph[1];
+                  a_upoint(3) = a_wpoint(0)*velSph[2];
+                  a_upoint(4) = a_wpoint(4)/(a_gamma- 1.0) + a_wpoint(0)*ke;
+                },bx,a_WPoint,a_gamma,a_h,a_block);
+  BoxData<T,NUMCOMPS,MEM> U = (1.0*Shift(Point::Zeros())
+                               + (1.0/24.0)*Stencil<T>::Laplacian())(UPoint);
   // U (spherical) -> JU (cartesian).
   // Momentum.
   //a_JU.define(U.box().grow(-1));
@@ -259,8 +259,7 @@ void primToCons(
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
   BoxData<T,DIM,MEM,DIM> dVolrDetA_A(bx);
   scaledDetA_A(dVolrDetA_A,a_dVolr,bx,a_h,a_block,0,true);
-  // DEBUG
-#if 1
+#if 0
   unsigned int col = 0;
   forallInPlace_p
     ([ ] PROTO_LAMBDA
@@ -276,7 +275,8 @@ void primToCons(
          }
      },dVolrDetA_A,JUMom,col);
 #endif
-  //Operator::matrixProductATB<T,3,3,3,1,1,HOST>(JUMom,dVolrDetA_A,UMom);
+  
+  Operator::matrixProductATB<T,3,3,3,1,1,HOST>(JUMom,dVolrDetA_A,UMom);
   // Density, energy.
   BoxData<T> J(U.box());
   scaledDetA(J,a_dVolr,bx,a_h,a_block,0,true);
@@ -285,10 +285,12 @@ void primToCons(
   BoxData<T,1,MEM> Jrho = slice(a_JU,0);
   BoxData<T,1,MEM> rho = slice(U,0);
   Operator::cellProduct(Jrho,J,rho);
+  
   //J.copyTo(Jrho);
   BoxData<T,1,MEM> JrhoE = slice(a_JU,NUMCOMPS-1);
   BoxData<T,1,MEM> rhoE = slice(U,NUMCOMPS-1);
   Operator::cellProduct(JrhoE,J,rhoE);
+  
 }
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
@@ -313,8 +315,8 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
     // Initialization
     inline void init()
     {
-    };
-   
+    };  
+  
     // Apply BCs by filling ghost cells in stage values. For Euler, this is done by calling
     // exchange. For the MHD code, it will be more complicated.
     // The interface is very provisional. We expect it to evolve as we d more real problems.
@@ -339,17 +341,17 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
     State W;
     State WBar;
     consToPrim(W,WBar,a_JU,a_dVolr,m_gamma,a_dx,a_block);
-    
+    a_JU.copyTo(a_Rhs);
     // Compute Fluxes, rhs.
-    a_Rhs.setVal(0.0);
+    // a_Rhs.setVal(0.0);
     // Loop over directions.
     
-    for (int dir = 0; dir < DIM; dir++)
+    for (int dir = 0; dir < 1; dir++)
       {
+#if 0
         PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
         State WFace = Stencil<T>::CellToFace(dir)(W);
         State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
-          
         // Fluxes on dir face.
 
         // Physical fluxes.
@@ -396,6 +398,7 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         // Save fluxes, update RHS.
         fluxdir.copyTo(a_fluxes[dir]);
         a_Rhs += Stencil<T>::FluxDivergence(dir)(a_fluxes[dir]);
+#endif
       }
     a_Rhs *= (a_scale); 
   };

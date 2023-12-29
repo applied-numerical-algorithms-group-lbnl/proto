@@ -237,7 +237,7 @@ inline void detA_A(
   Array<T,5>
     weights_0={1.,0.,0.,0.,0.};
   Array<Array<uint,DIM>,6>
-    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
     sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
   int qnum = 5;
@@ -317,9 +317,6 @@ inline void detA_A(
   d1n_x_d2n += stl1(n_x_d2n,dxinv);
   d1n_x_d2n += stl2(d1n_x_n,dxinv);
   
-  //d1n_x_d2n -= d1n_x_d2n_2;
-  //n_x_d2n -= n_x_d2n_2;
-  //d1n_x_n -= d1n_x_n_2;
   int lowrow = 0;
   if (a_centering == 0)
     {

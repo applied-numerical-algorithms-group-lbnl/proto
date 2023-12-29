@@ -80,10 +80,10 @@ void f_radialInit_F(
 {
   // Compute spherical initial data.
   T p0 = a_gamma;
-  T rho0 = 2.0;
-  T eps = 0.0;
+  T rho0 = 1.0;
+  T eps = 0.01;
   T amplitude;
-  T arg = (a_pt[0] - a_nradius/2)/(a_nradius*1.0);
+  T arg = (1.0*a_pt[0] - 1.0*a_nradius/2)/(a_nradius*1.0);
   if (abs(arg) < .5)
     {
       amplitude = eps*pow(cos(M_PI*arg),6);
@@ -94,7 +94,7 @@ void f_radialInit_F(
   T rho = rho0*(1.0 + amplitude);
   T p = p0*pow(rho/rho0,a_gamma);  
   a_W(0) = rho;
-  a_W(1) = -1.0;
+  a_W(1) = amplitude;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
   a_W(NUMCOMPS-1) = p;
@@ -104,8 +104,8 @@ PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 int main(int argc, char* argv[])
 {   
   HDF5Handler h5;
-  int domainSize = 16;
-  int boxSize = 16;
+  int domainSize = 32;
+  int boxSize = 32;
   int thickness = 8;
   Array<double,DIM> offset = {0.,0.,0.};
   Array<double,DIM> exp = {1.,1.,1.};
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
   bool use2DFootprint = true;
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   Array<Point, DIM+1> ghost;
-  ghost.fill(Point::Ones(4));
+  ghost.fill(Point::Ones(5));
   ghost[0] = Point::Ones(2);
   ghost[0][radialDir] = 2;
    Array<Array<uint,DIM>,6> permute = {{2,1,0},{2,1,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
@@ -141,7 +141,9 @@ int main(int argc, char* argv[])
   double dx = 1.0/domainSize;  
   auto C2C = Stencil<double>::CornersToCells(4);
   MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, ghost+Point::Ones());
+  MBLevelBoxData<double, NUMCOMPS, HOST> WNew(layout, ghost+Point::Ones());
   WPoint.setVal(0.);
+  WNew.setVal(0.);
   for (auto dit : layout)
     {      
       BoxData<double> radius(layout[dit].grow(ghost[0]));
@@ -162,21 +164,26 @@ int main(int argc, char* argv[])
      auto block = layout.block(dit);
      auto& JU_i = U[dit];
      auto& WPoint_i = WPoint[dit];
+     auto& WNew_i = WNew[dit];
      cout << WPoint_i.box() << endl;
+     BoxData<double,NUMCOMPS> WBar_i(JU_i.box());
      //BoxData<double,NUMCOMPS,HOST> WPoint(JU_i.box().grow(1));
      forallInPlace_p(f_radialInit,WPoint_i,radius,dx,gamma,thickness);
-     primToCons<double,HOST>(JU_i,WPoint_i,dVolr,gamma,dx,block);     
+     primToCons<double,HOST>(JU_i,WPoint_i,dVolr,gamma,dx,block);
+     consToPrim(WNew_i,WBar_i,JU_i,dVolr,gamma,dx,block);
     }
-  h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrim");
+  h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
+  h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrim");
   cout << "Setup done" << endl;
-  U.exchange(); // fill boundary data
+  //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
-  CubedSphereShell::InterpBoundaries(U);
- #if 1
+  //CubedSphereShell::InterpBoundaries(U);
+  return 0;
   for (auto dit :U.layout())
     {
       auto& rhs_i = rhs[dit];
-      auto& U_i = U[dit];      
+      auto& U_i = U[dit];
+      auto& WPoint_i = WPoint[dit];
       BoxData<double> radius(layout[dit].grow(ghost[0]));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
       double r0 = CUBED_SPHERE_SHELL_R0;
@@ -189,10 +196,14 @@ int main(int argc, char* argv[])
       radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       int block_i = layout.block(dit);
       Array<BoxData<double,NUMCOMPS>, DIM> fluxes;     
-      double dx = .5*M_PI/domainSize;      
+      double dx = 1.0/domainSize;      
       eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
+      State WBar_i;
+      State W_i;
+      consToPrim<double,HOST>(W_i,WBar_i,rhs_i,dVolr,gamma,dx,block_i);
+      W_i.copyTo(WPoint_i);
     }
-#endif
-  
+  h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSphereRHSTransform");
+  h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
   PR_TIMER_REPORT();
 }

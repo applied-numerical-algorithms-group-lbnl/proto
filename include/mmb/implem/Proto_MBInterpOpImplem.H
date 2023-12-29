@@ -29,6 +29,12 @@ MBPointInterpOp::MBPointInterpOp(
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
+    Stencil<double> av2 = 1.0*Shift::Zeros();
+    Stencil<double> HOCorners = (1.0*Shift::Zeros() + (-1./12.)*(Stencil<double>::Laplacian()));
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
+    }
     
     // Compute Exponents
     Box spanBox;
@@ -95,6 +101,7 @@ MBPointInterpOp::MBPointInterpOp(
             srcBoxes[bi] &= si.point;
         }
     }
+    
     for (auto& [block, box] : srcBoxes)
     {
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
@@ -108,13 +115,15 @@ MBPointInterpOp::MBPointInterpOp(
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             {
               PR_TIMERS("C2C apply");
-              // BoxData<double> Xi_p_avg = C2C(Xi_p);
-              //srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
-              srcData[block].push_back(C2C(Xi_p));
+              BoxData<double> temp = HOCorners(Xi_p);
+              {
+                 PR_TIMERS("av2 apply");
+              BoxData<double> Xi_p_avg = av2(temp);
+              srcData[block].push_back(std::move(Xi_p_avg));
+              }
             }
         }
-    }
-   
+    }  
     // Compute Matrices
     m_C.define(M,N);
     for (int ii = 0; ii < M; ii++)
