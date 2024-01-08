@@ -292,22 +292,95 @@ namespace Proto_Transition
                             a_zero_lo_one_hi, sten_sign);
     }
 
+    /// also calls exchange
+    static void
+    enforceRecflectionBCs(pr_level_data &    a_devi_data,
+                          const pr_box  &    a_domain,
+                          int                a_reflect_sign_lo[DIM],
+                          int                a_reflect_sign_hi[DIM])
+    {
+      const int zero_lo = 0;  const int one_hi = 1; 
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        domainGhostReflection(a_devi_data, a_domain, idir, zero_lo, a_reflect_sign_lo[idir]);
+        domainGhostReflection(a_devi_data, a_domain, idir,  one_hi, a_reflect_sign_hi[idir]);
+      }
+      a_devi_data.exchange();
+    }
+
     ///
     /**
      *  \param a_fine_data - data whose ghost is getting filled
      *  \param a_coar_data - data   at the next coarser level
-     *  \param a_domain    - domain at the next coarser level
+     *  \param a_domain_coar    - domain at the next coarser level
      *  \param ref_ratio   - refrat to the next coarser level
-     **/
+     *  \param reflect_sign_lo - reflection sign for the low side of the domain.
+     *  \param reflect_sign_hi - reflection sign for the high side of the domain.
+
+     
+    Important caveats:
+     *  --- For now, I am  only dealing with second order operators.
+     *  --- Also, I need to  fill only one ghost cell over the coarse-fine interface.  
+     *  --- These special cases make this process a lot easier.
+     *  --- The BC stuff is in here because it is an easy way for me to get
+     *      off the ground and know that interpolation stencil will always
+     *      have valid data.  This is probably a bad idea for the long term
+     *      as we may have convergence problems for interpolation order > 2.
+     * --- A lower dimension extrapolation stencil at each domain face is
+     *      probably a better idea and (with some work) could be automated.
+     * --- I am ignoring  interpolation_order for now since I will just be using Quadratic.
+     *     Higher order operators should do something higher order at coarse-fine interfaces.
+     * --- Implementing higher order coarse-fine interpolation requires that the data 
+     *     has at least enough ghost cells to satisfy the span of the stencil.
+     *     The only way I can think of unmaking this ghost-cell/order connection is 
+     *     by using an awful lot of communications (repeated exchanges).   
+     * --- Yes, that would be complicated (but in a good way) by the refinement ratio.
+     dtg 1-4-2024
+    **/
     template <int interpolation_order>
     static void
     fillGhostOverCoarseFineBoundaries(
-            pr_level_data             &    a_fine_data,
-            const pr_level_data       &    a_coar_data,
-            const pr_box              &    a_domain,
-            const pr_pt               &    a_ref_ratio)
+            pr_level_data        & a_data_fine,
+            const pr_level_data  & a_data_coar,
+            const pr_box         & a_domain_coar,
+            const pr_pt          & a_ref_ratio,
+            int                    a_reflect_sign_lo[DIM],
+            int                    a_reflect_sign_hi[DIM])  
     {
-      pr_mayday::Error("Doh!  fillGhostOverCoarseFineBoundaries not implemented");
+      ///always
+      const bool overwrite = true; const double applyScale = 1.;
+      
+      /**
+         Get coarse data on coarsened fine layout.
+      **/
+      typedef Proto::InterpolationStencil<double, ncomp> pr_interp;
+      pr_pt ref_rat_pt    = pr_pt::Ones(a_ref_ratio);
+      pr_interp quad_sten = pr_interp::Quadratic(ref_rat_pt);
+      
+      pr_dbl  dbl_fine = a_fine_data.layout();
+      pr_dbl  dbl_cofi = dbl_fine.coarsen();
+      pr_pt ghost = a_fine_data.ghost();
+      pr_level_data cofi_data(dbl_cofi, ghost);
+      pr_level_data data_copy(dbl_fine, pr_pt::Zeros());///just valid data
+      a_data_fine.copyTo(data_copy)
+      a_coar_data.copyTo(cofi_data);
+      //this also does exchange
+      enforceReflectionBCs(cofi_data, a_domain_coar, a_reflect_sign_lo, a_reflect_sign_hi);
+
+      auto dit   = a_fine_data.dataIterator();
+      for(int ibox = 0; ibox < dit.localSize(); ibox++)
+      {
+        auto         & fab_fine = a_data_fine[dit[ibox]];
+        const auto   & fab_cofi =   data_cofi[dit[ibox]];
+        pr_box  valid_fine      =    dbl_fine[dit[ibox]];
+        pr_box  grown_fine = valid_fine.grow(pr_pt::Ones());
+        ///interp_stencil follows the chombo standard of dest, src so fab_fine is the output
+        quad_sten.apply(fab_fine, fab_cofi, grown_fine, overwrite, applyScale);
+      }
+      /**
+         Copy back valid data.   This has no ghost cells so C/F cells should not be affected.
+      **/
+      data_copy.copyTo(a_fine_data;
     }
     
   };
