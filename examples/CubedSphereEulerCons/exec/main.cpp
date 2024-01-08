@@ -181,7 +181,6 @@ int main(int argc, char* argv[])
   //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
   //CubedSphereShell::InterpBoundaries(U);
-#if 0
   for (auto dit :U.layout())
     {
       auto& rhs_i = rhs[dit];
@@ -208,6 +207,5 @@ int main(int argc, char* argv[])
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSphereRHSTransform");
   h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
-#endif
   PR_TIMER_REPORT();
 }

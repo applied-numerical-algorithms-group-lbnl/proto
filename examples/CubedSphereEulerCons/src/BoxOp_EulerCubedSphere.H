@@ -81,7 +81,7 @@ void primToFlux(
                 State& a_physFlux,
                 const State& a_WFace,
                 const State& a_WFaceBar,
-                const BoxData<T,1,MEM> a_adjDdir,
+                const BoxData<T,1,MEM>& a_adjDdir,
                 T a_h,
                 T a_gamma,
                 uint a_block,
@@ -122,8 +122,8 @@ void primToFlux(
        a_flux((a_centering+1)%DIM + 1) = a_flux(0)*veltan1;
        a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
        a_flux(NUMCOMPS - 1) =
-       velnorm*(a_ke + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjDdir(0);
-     },WFacePoint,kePoint,a_h,a_block,a_centering);
+       velnorm*(a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjDdir(0);
+     },WFacePoint,kePoint,adjDdirPoint,a_h,a_block,a_centering);
 
   // Compute Average fluxes from pointwise values.
   a_physFlux = (1.0*Shift(Point::Zeros()) +
@@ -354,7 +354,7 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         // face center, given point values of W.
         BoxData<T,NUMCOMPS> physFlux;
         BoxData<T,1,MEM> adjDrDir = slice(a_adjDr,dir);  
-        primToFlux<T,MEM>(physFlux,WFace,WFaceBar,adjDrDir,m_gamma,a_block,dir);
+        primToFlux<T,MEM>(physFlux,WFace,WFaceBar,adjDrDir,a_h,m_gamma,a_block,dir);
         Box bxface = physFlux.box(); 
         State fluxdir(bxface);
 
@@ -363,18 +363,19 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         // Geometric quantities.
         
         // Advective fluxes for Cartesian momentum.      
-        matType amat = AMatrix(bxface,a_h,a_block,dir);
+        BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bxface,a_h,a_block,dir);
         BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
         BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
-        fluxdirMom |= forall(f_matVecProd,amat,physFluxMom);
-
+        BoxData<T,DIM,MEM> tmp =
+          Operator::_faceMatrixProductAB(amat,physFluxMom,amat,physFluxMom,dir);
+        tmp.copyTo(fluxdirMom);
         // Scale all advective fluxes by det(A).
-        BoxData<T,1,MEM> deta = detA(bxface,a_h,dir);
+        BoxData<T,1,MEM> deta = detA<T,MEM>(bxface,a_h,dir);
 
-        forallInPlace([ ]PROTO_LAMBDA
+        forallInPlace([ ] PROTO_LAMBDA
                       (Var<T,NUMCOMPS,MEM>& a_advflux,
                        const Var<T,NUMCOMPS,MEM>& a_fluxin,
-                       const Var<T,NUMCOMPS,MEM>& a_deta)
+                       const Var<T,1,MEM>& a_deta)
                       {
                         for (int comp = 0; comp < NUMCOMPS; comp++)
                           {
@@ -386,8 +387,8 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
         Box bx = W.box();
         Box bxdir = bx.extrude(Point::Basis(dir));
-        BoxData<T,DIM,MEM> ntrow = NTRowCS<T,MEM>(fluxdir.box(),a_h,a_block,dir);
-        BoxData<T,DIM,MEM> tmp =
+        BoxData<T,DIM,MEM> ntrow = adjA<T,MEM>(fluxdir.box(),a_h,a_block,dir);
+        BoxData<T,DIM,MEM> tmp2 =
           Operator::_faceMatrixProductAB(ntrow,pslice,ntrow,pslice,dir);
         fluxdirMom += tmp;
         

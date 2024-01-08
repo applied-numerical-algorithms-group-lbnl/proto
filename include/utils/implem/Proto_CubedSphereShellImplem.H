@@ -506,7 +506,7 @@ adjA(
      int a_block,
      int a_centering)
 {
-  BoxData<T,DIM,MEM,DIM> output(a_bx);
+  BoxData<T,DIM,MEM,1> output(a_bx);
   T half = .5;
   switch(a_centering)
     {
