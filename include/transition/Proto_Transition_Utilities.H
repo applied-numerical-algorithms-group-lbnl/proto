@@ -320,7 +320,8 @@ namespace Proto_Transition
      
     Important caveats:
      *  --- For now, I am  only dealing with second order operators.
-     *  --- Also, I need to  fill only one ghost cell over the coarse-fine interface.  
+     *  --- I need to  fill only one ghost cell over the coarse-fine interface.  
+     *  --- To top it all off, I can assume that the grids are properly nested.
      *  --- These special cases make this process a lot easier.
      *  --- The BC stuff is in here because it is an easy way for me to get
      *      off the ground and know that interpolation stencil will always
@@ -334,8 +335,10 @@ namespace Proto_Transition
      *     has at least enough ghost cells to satisfy the span of the stencil.
      *     The only way I can think of unmaking this ghost-cell/order connection is 
      *     by using an awful lot of communications (repeated exchanges).   
-     * --- Yes, that would be complicated (but in a good way) by the refinement ratio.
-     dtg 1-4-2024
+     * --- Yes, the ghost cell computation is complicated (but in a good way) by the refinement ratio.
+     *     (you are guaranteed nref ghost cells because you are guaranteed one coarse cell).
+     dtg 
+     January, 2024
     **/
     template <int interpolation_order>
     static void
@@ -353,34 +356,39 @@ namespace Proto_Transition
       /**
          Get coarse data on coarsened fine layout.
       **/
-      typedef Proto::InterpolationStencil<double, ncomp> pr_interp;
-      pr_pt ref_rat_pt    = pr_pt::Ones(a_ref_ratio);
-      pr_interp quad_sten = pr_interp::Quadratic(ref_rat_pt);
+      typedef Proto::InterpStencil<double> pr_interp;
+      pr_interp quad_sten = pr_interp::Quadratic(a_ref_ratio);
       
-      pr_dbl  dbl_fine = a_fine_data.layout();
-      pr_dbl  dbl_cofi = dbl_fine.coarsen();
-      pr_pt ghost = a_fine_data.ghost();
-      pr_level_data cofi_data(dbl_cofi, ghost);
-      pr_level_data data_copy(dbl_fine, pr_pt::Zeros());///just valid data
-      a_data_fine.copyTo(data_copy)
-      a_coar_data.copyTo(cofi_data);
+      pr_pt ghost       = a_data_fine.ghost();
+      pr_dbl  dbl_fine  = a_data_fine.layout();
+      pr_dbl  dbl_cofi  =    dbl_fine.coarsen(a_ref_ratio);
+      
+      pr_level_data  data_cofi(dbl_cofi, ghost);
+      pr_level_data  copy_fine(dbl_fine, pr_pt::Zeros());///just valid data
+      a_data_fine.copyTo(copy_fine);
+      a_data_coar.copyTo(data_cofi);
       //this also does exchange
-      enforceReflectionBCs(cofi_data, a_domain_coar, a_reflect_sign_lo, a_reflect_sign_hi);
+      enforceReflectionBCs(data_cofi, a_domain_coar, a_reflect_sign_lo, a_reflect_sign_hi);
 
-      auto dit   = a_fine_data.dataIterator();
+      auto dit   = a_data_fine.dataIterator();
       for(int ibox = 0; ibox < dit.localSize(); ibox++)
       {
         auto         & fab_fine = a_data_fine[dit[ibox]];
         const auto   & fab_cofi =   data_cofi[dit[ibox]];
         pr_box  valid_fine      =    dbl_fine[dit[ibox]];
         pr_box  grown_fine = valid_fine.grow(pr_pt::Ones());
-        ///interp_stencil follows the chombo standard of dest, src so fab_fine is the output
-        quad_sten.apply(fab_fine, fab_cofi, grown_fine, overwrite, applyScale);
+        for( int icomp = 0; icomp < ncomp ; icomp++)
+        {
+          pr_box_data_sca sca_fine = Proto::slice(fab_fine, icomp);
+          pr_box_data_sca sca_cofi = Proto::slice(fab_cofi, icomp);
+          ///interp_stencil follows the chombo standard of dest, src so sca_fine is the output
+          quad_sten.apply(sca_fine, sca_cofi, grown_fine, overwrite, applyScale);
+        }
       }
       /**
          Copy back valid data.   This has no ghost cells so C/F cells should not be affected.
       **/
-      data_copy.copyTo(a_fine_data;
+      copy_fine.copyTo(a_data_fine);
     }
     
   };
