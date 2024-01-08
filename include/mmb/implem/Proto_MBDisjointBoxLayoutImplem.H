@@ -114,6 +114,16 @@ unsigned int MBDisjointBoxLayout::numProcs() const
     return m_partition->numProcs();
 }
 
+std::vector<MBPatchID_t> MBDisjointBoxLayout::patches() const
+{
+    std::vector<MBPatchID_t> patchList;
+    for (auto item : m_partition->partition())
+    {
+        patchList.push_back(item.first);
+    }
+    return patchList;
+}
+
 DataIndex<BoxPartition>
 MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
 {
@@ -394,7 +404,17 @@ MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_ref
         crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
     }
     auto crseDomain = m_domain.coarsen(a_refRatios);
-    return MBDisjointBoxLayout(crseDomain, crseBoxSize);
+    return MBDisjointBoxLayout(crseDomain, patches(), crseBoxSize);
+}
+
+void MBDisjointBoxLayout::print() const
+{
+    for (auto iter : *this)
+    {
+        auto bi = block(iter);
+        auto pi = point(iter);
+        pr_out() << "block: " << bi << " | patch: " << pi << " | box: " << (*this)[iter] << std::endl;
+    }
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

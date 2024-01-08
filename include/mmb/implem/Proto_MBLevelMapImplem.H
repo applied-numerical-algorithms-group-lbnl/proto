@@ -23,7 +23,7 @@ void MBLevelMap<MAP,MEM>::define(
         unsigned int               a_focalBlock)
 {
     Array<Point, DIM+1> ghost;
-    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th order interpolation
+    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th-5th order interpolation
     ghost[0] = a_ghost;
     define(a_layout, ghost, a_focalBlock);
 }

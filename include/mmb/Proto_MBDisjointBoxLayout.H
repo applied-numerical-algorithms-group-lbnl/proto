@@ -54,6 +54,7 @@ namespace Proto
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
+        inline std::vector<MBPatchID_t> patches() const;
         inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
         inline Box operator[](const MBIndex& a_index) const;
         inline MBIterator begin() const;
@@ -94,7 +95,7 @@ namespace Proto
         inline std::vector<Point> boxSizes() const;
         inline MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         inline MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
-
+        inline void print() const;
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

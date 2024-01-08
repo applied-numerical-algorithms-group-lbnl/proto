@@ -60,6 +60,8 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
     m_local.resize(m_numLevels-1);
     m_localBlockInterp.resize(m_numLevels-1);
 
+    m_map.define(a_grid, OP::ghost());
+
     for (int bi = 0; bi < a_grid.numBlocks(); bi++)
     {
         m_average.push_back(Stencil<T>::AvgDown(a_refRatios[bi]));
@@ -162,7 +164,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         auto& crseState = a_state[a_level-1];
         const auto& crseForce = a_force[a_level-1]; 
         
-        // interpolate BCs of state using crseState
+        interpBounds(crseState, state, a_level);
         m_mg[a_level].solve(state, force, 1);
         // average state onto coarser level = PhiC
         // save copy of coarse state = PhiC0
@@ -170,8 +172,40 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         // compute level force F = RC + L(PhiC)
         //vCycle(a_state, a_force, F, a_level-1);
         // correct this level's state
-        // interpolate BCs using updated crseState
+      interpBounds(crseState, state, a_level);
         m_mg[a_level].solve(state, force, 1);
+    }
+}
+
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
+        LevelStateData&     a_crseData,
+        LevelStateData&     a_fineData,
+        int                 a_fineLevel)
+{
+    HDF5Handler h5;
+
+    auto& crseTmp = *m_local[a_fineLevel-1];
+    a_crseData.copyTo(crseTmp);
+    crseTmp.exchange();
+    m_localBlockInterp[a_fineLevel-1]->apply(crseTmp, crseTmp);
+
+    auto& layout = a_fineData.layout();
+    for (auto iter : layout)
+    {
+        int block = layout.block(iter);
+        Box box = layout[iter];
+        auto& fine_i = a_fineData[iter];
+        auto& crse_i = crseTmp[iter];
+        StateData fine_0(box);
+        fine_i.copyTo(fine_0);
+        fine_i |= m_BCInterp[block](crse_i);
+        fine_0.copyTo(fine_i);
     }
 }
 
@@ -185,7 +219,8 @@ MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 {
     PROTO_ASSERT(a_level < m_numLevels,
             "MBAMR::map | Error: Level index %i is out of bounds", a_level);
-    return m_mg[a_level].map();
+    //return m_mg[a_level].map();
+    return m_map[a_level];
 }
 
 template <
