@@ -79,22 +79,22 @@ void f_radialInit_F(
                       int                             a_nradius)
 {
   // Compute spherical initial data.
-  T p0 = a_gamma;
+  T p0 = 1.0;
   T rho0 = 1.0;
   T eps = 0.01;
   T amplitude;
   T arg = (1.0*a_pt[0] - 1.0*a_nradius/2)/(a_nradius*1.0);
-  if (abs(arg) < .5)
+  //if (abs(arg) < .5)
     {
-      amplitude = eps*pow(cos(M_PI*arg),6);
-    }else
-    {
-      amplitude = 0.;
-    }
-  T rho = rho0*(1.0 + amplitude);
-  T p = p0*pow(rho/rho0,a_gamma);  
+      amplitude = eps;//*pow(cos(M_PI*arg),6);
+    }//else
+    //{
+    // amplitude = 0.;
+    //}
+  T rho = rho0;//*(1.0 + amplitude);
+  T p = p0;//*pow(rho/rho0,a_gamma);  
   a_W(0) = rho;
-  a_W(1) = amplitude;
+  a_W(1) = 1.0;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
   a_W(NUMCOMPS-1) = p;
@@ -132,9 +132,7 @@ int main(int argc, char* argv[])
   // initialize data and map
   auto map = CubedSphereShell::Map(layout,ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
-  U.setVal(1.0);
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
-  h5.writeMBLevel({},map, U, "MBEulerCubedSphereTest");
   
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
@@ -165,12 +163,17 @@ int main(int argc, char* argv[])
      auto& JU_i = U[dit];
      auto& WPoint_i = WPoint[dit];
      auto& WNew_i = WNew[dit];
-     cout << WPoint_i.box() << endl;
+     BoxData<double,NUMCOMPS,HOST> WNewTemp;
+     BoxData<double,NUMCOMPS,HOST> WBarTemp;
+     BoxData<double,NUMCOMPS,HOST> JUTemp;
      BoxData<double,NUMCOMPS> WBar_i(JU_i.box());
      //BoxData<double,NUMCOMPS,HOST> WPoint(JU_i.box().grow(1));
      forallInPlace_p(f_radialInit,WPoint_i,radius,dx,gamma,thickness);
-     primToCons<double,HOST>(JU_i,WPoint_i,dVolr,gamma,dx,block);
-     consToPrim(WNew_i,WBar_i,JU_i,dVolr,gamma,dx,block);
+     primToCons<double,HOST>(JUTemp,WPoint_i,dVolr,gamma,dx,block);
+     consToPrim<double,HOST>(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
+     WNewTemp -= WPoint_i;
+     WNewTemp.copyTo(WNew_i);
+     JUTemp.copyTo(JU_i);
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
   h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrim");
@@ -178,7 +181,7 @@ int main(int argc, char* argv[])
   //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
   //CubedSphereShell::InterpBoundaries(U);
-  return 0;
+#if 0
   for (auto dit :U.layout())
     {
       auto& rhs_i = rhs[dit];
@@ -205,5 +208,6 @@ int main(int argc, char* argv[])
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSphereRHSTransform");
   h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
+#endif
   PR_TIMER_REPORT();
 }

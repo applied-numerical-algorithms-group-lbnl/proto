@@ -1543,16 +1543,16 @@ edgeCrossProduct3D(
 //==========================================================================================
 // CELL MATRIX PRODUCT
 template<class T, unsigned int CL,unsigned int DL,
-    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
-    BoxData<T,CL,MEM,DR,E>
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
 _cellMatrixProductAB(
-        const BoxData<T,CL,MEM,DL,E>& a_ql4,
-        const BoxData<T,CR,MEM,DR,E>& a_qr4,
-        const BoxData<T,CL,MEM,DL,E>& a_ql2,
-        const BoxData<T,CR,MEM,DR,E>& a_qr2)
+                     const BoxData<T,CL,MEM,DL,E>& a_ql4,
+                     const BoxData<T,CR,MEM,DR,E>& a_qr4,
+                     const BoxData<T,CL,MEM,DL,E>& a_ql2,
+                     const BoxData<T,CR,MEM,DR,E>& a_qr2)
 {
     PR_TIME("Operator::matrixProductAB");
-    PR_assert(uint(DL) == CR);
+    PR_assert(DL == CR);
     Box bx = a_ql4.box()&a_qr4.box();
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -1633,6 +1633,28 @@ matrixProductATB(
             auto prodcomp = slice(a_qprod,i,j,ee);
             auto qr4comp = slice(a_qr4,k,j,ee);              
             auto ql4comp = slice(a_ql4,k,i,ee);              
+            prodcomp+=Operator::cellProduct(ql4comp,qr4comp);
+          }
+}
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+void 
+matrixProductAB(
+                BoxData<T,CL,MEM,DR,E>& a_qprod,
+                const BoxData<T,DL,MEM,CL,E>& a_ql4,
+                const BoxData<T,CR,MEM,DR,E>& a_qr4)
+{
+  PR_TIME("Operator::matrixProductATB");
+  PR_assert(CL == CR);
+  a_qprod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < DL;k++)
+          {
+            auto prodcomp = slice(a_qprod,i,j,ee);
+            auto qr4comp = slice(a_qr4,k,j,ee);              
+            auto ql4comp = slice(a_ql4,i,k,ee);              
             prodcomp+=Operator::cellProduct(ql4comp,qr4comp);
           }
 }

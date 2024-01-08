@@ -113,31 +113,20 @@ class CubedSphereShell
                       int a_block,
                       int a_centering);
   template<typename T,MemType MEM>
-  inline void
+  inline BoxData<T,DIM,MEM,DIM>
   scaledDetA_A(
-               BoxData<T,DIM,MEM,DIM>& a_scaledDetA_A,
                const BoxData<T,1,MEM>& a_radialScale,
                Box a_bx,
                T a_h,
                unsigned int a_block,
-               unsigned int a_centering,
-               bool a_scaled = true);
+               unsigned int a_centering);
+  
   template<typename T,MemType MEM>
-  inline void
-  detA(
-       BoxData<T,DIM,MEM,DIM>& a_detA,
-       Box a_bx,
-       T a_h,
-       unsigned int a_block,
-       unsigned int a_centering);
-  template<typename T,MemType MEM>
-  inline void
-  detA_A(
-         BoxData<T,DIM,MEM,DIM>& a_detA_A,
-         Box a_bx,
-         T a_h,
-         unsigned int a_block,
-         unsigned int a_centering);  
+  BoxData<T,DIM,MEM,DIM> detA_A(
+                                Box a_bx,
+                                T a_h,
+                                unsigned int a_block,
+                                unsigned int a_centering);  
   template <typename T, MemType MEM>
   inline void d1nCrossN(
                         BoxData<T,DIM,MEM>& a_d1n_x_n,
@@ -150,46 +139,35 @@ class CubedSphereShell
                         Box a_bx,
                         T a_h,
                         uint a_block);
-  template <typename T, unsigned int C, MemType MEM>
+  template <typename T, MemType MEM>
   inline
   void cellMatrixQuotientMatAndInv(
-                                   BoxData<T,C,MEM,1>& a_quot,
-                                   BoxData<T,C,MEM,1>& a_quotBar,
-                                   const BoxData<T,C,MEM,C>& a_denominator,
-                                   const BoxData<T,C,MEM,C>& a_denomInv,
-                                   const BoxData<T,C,MEM,1>& a_numerator);
-  template<typename T,MemType MEM,unsigned int C, unsigned int D,unsigned int E>
-  inline void 
-  quadratureTemplate(
-                     BoxData<T,C,MEM,D,E>& a_output,
-                     Box a_bx,
-                     T a_h,
-                     unsigned int a_centering);
-  template<typename T,MemType MEM,unsigned int C, unsigned int D,unsigned int E>
-  inline void scaled2DTo3D_template(
-                                    BoxData<T,C,MEM,D,E>& a_output,
-                                    BoxData<T,1,MEM,1,1>& a_scale,
-                                    Box a_bx,
-                                    T a_h,
-                                    unsigned int a_block,
-                                    unsigned int a_centering,
-                                    bool a_useScaling = false);
-  template<typename T,MemType MEM,unsigned int C, unsigned int D,unsigned int E>
-  inline void scaledDetA(
-                         BoxData<T,C,MEM,D,E>& a_output,
-                         const BoxData<T,1,MEM,1,1>& a_scale,
-                         Box a_bx,
-                         T a_h,
-                         unsigned int a_block,
-                         unsigned int a_centering,
-                         bool a_useScaling = false);
-  template<typename T,MemType MEM,unsigned int C, unsigned int D,unsigned int E>
-  inline void 
-  quadrature_detA(
-                  BoxData<T,C,MEM,D,E>& a_output,
-                  Box a_bx,
-                  T a_h,
-                  unsigned int a_centering);   
+                                   BoxData<T,DIM,MEM,1>& a_quot,
+                                   BoxData<T,DIM,MEM,1>& a_quotBar,
+                                   const BoxData<T,DIM,MEM,DIM>& a_denominator,
+                                   const BoxData<T,DIM,MEM,DIM>& a_denomInv,
+                                   const BoxData<T,DIM,MEM,1>& a_numerator);
+  template <typename T, MemType MEM>
+  inline
+  void cellQuotientValAndInv(
+                             BoxData<T,DIM,MEM,1>& a_quot,
+                             BoxData<T,DIM,MEM,1>& a_quotBar,
+                             const BoxData<T,DIM,MEM,DIM>& a_denominator,
+                             const BoxData<T,DIM,MEM,DIM>& a_denomInv,
+                             const BoxData<T,DIM,MEM,1>& a_numerator);
+  
+  template<typename T,MemType MEM>
+  BoxData<T,1,MEM> scaledDetA(
+                              const BoxData<T,1,MEM,1,1>& a_scale,
+                              Box a_bx,
+                              T a_h,
+                              unsigned int a_centering);
+  template<typename T,MemType MEM>
+  inline BoxData<T,1,MEM>
+  detA(
+       Box a_bx,
+       T a_h,
+       unsigned int a_centering);   
 #include "implem/Proto_CubedSphereShellImplem.H"
 } // end namespace Proto
 #endif // end include guard
