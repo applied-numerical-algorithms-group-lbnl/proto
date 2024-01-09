@@ -338,6 +338,7 @@ AMatrix(
         unsigned int a_block,
         unsigned int a_centering)
 {
+  PR_TIMERS("AMatrix");
   Array<Array<uint,DIM>,6>
     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -453,15 +454,16 @@ detA(
      T a_h,
      unsigned int a_centering)
 {
+  PR_TIMERS("detA");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
     weights_0={1.,0.,0.,0.,0.};
   int qnum = 5;  
-  int q1d1 = 2;
-  int q1d2 = 2;
-  Array<double,5> weight1 = weights_0;
-  Array<double,5> weight2 = weights_0;
+  int q1d1 = 5;
+  int q1d2 = 5;
+  Array<double,5> weight1 = weights;
+  Array<double,5> weight2 = weights;
    if (a_centering == 1)
     {
       q1d1 = 2;
@@ -506,6 +508,7 @@ adjA(
      int a_block,
      int a_centering)
 {
+  PR_TIMERS("adjA");
   BoxData<T,DIM,MEM,1> output(a_bx);
   T half = .5;
   switch(a_centering)
@@ -539,6 +542,7 @@ inline void d1nCrossN(
                T a_h,
                uint a_block)
 {
+  PR_TIMERS("d1nCrossN");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -595,6 +599,7 @@ inline void nCrossD2n(
                       T a_h,
                       uint a_block)
 {
+  PR_TIMERS("nCrossD2n");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>

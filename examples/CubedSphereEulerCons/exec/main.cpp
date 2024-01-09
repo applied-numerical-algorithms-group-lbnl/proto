@@ -84,17 +84,18 @@ void f_radialInit_F(
   T eps = 0.01;
   T amplitude;
   T arg = (1.0*a_pt[0] - 1.0*a_nradius/2)/(a_nradius*1.0);
-  //if (abs(arg) < .5)
+  if (abs(arg) < .25)
     {
-      amplitude = eps;//*pow(cos(M_PI*arg),6);
-    }//else
-    //{
-    // amplitude = 0.;
-    //}
-  T rho = rho0;//*(1.0 + amplitude);
-  T p = p0;//*pow(rho/rho0,a_gamma);  
+      amplitude = eps*pow(cos(M_PI*arg),6);
+    }else
+    {
+      amplitude = 0.;
+    }
+  T rho = rho0*(1.0 + amplitude);
+  T p = p0*pow(rho/rho0,a_gamma);
+  T ur = amplitude*sqrt(a_gamma*p/rho)/rho;
   a_W(0) = rho;
-  a_W(1) = 1.0;
+  a_W(1) = ur;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
   a_W(NUMCOMPS-1) = p;
@@ -106,7 +107,7 @@ int main(int argc, char* argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int boxSize = 32;
-  int thickness = 8;
+  int thickness = 16;
   Array<double,DIM> offset = {0.,0.,0.};
   Array<double,DIM> exp = {1.,1.,1.};
   PR_TIMER_SETFILE(to_string(domainSize) 
@@ -179,9 +180,9 @@ int main(int argc, char* argv[])
   //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
   //CubedSphereShell::InterpBoundaries(U);
-  return 0;
   for (auto dit :U.layout())
     {
+      PR_TIMERS("RHS Calculation");
       auto& rhs_i = rhs[dit];
       auto& U_i = U[dit];
       auto& WPoint_i = WPoint[dit];

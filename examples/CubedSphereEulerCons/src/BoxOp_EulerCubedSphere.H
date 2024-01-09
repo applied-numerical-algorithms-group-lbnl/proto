@@ -36,6 +36,7 @@ BoxData<T,1,MEM> kineticEnergyW(
                                 T a_h,
                                 uint a_block)
 {
+  PR_TIMERS("kineticEnergyW");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -88,6 +89,7 @@ void primToFlux(
                 uint a_centering)
 {
   // Compute fluxes at face centers.
+  PR_TIMERS("primToFlux");
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                     - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   // Deconvolve W to obtain point values.
@@ -140,7 +142,7 @@ void consToPrim(
                 uint a_block)
 {
   // Get radial conserved variables.
-  // Momentum.
+  PR_TIMERS("ConsToPrim");
   a_W.define(a_JU.box().grow(-1));
   a_WBar.define(a_JU.box());
   a_W.setToZero();
@@ -237,6 +239,7 @@ void primToCons(
                 T a_h,
                 uint a_block)
 {
+  PR_TIMERS("primToCons");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
