@@ -458,10 +458,10 @@ detA(
   Array<T,5>
     weights_0={1.,0.,0.,0.,0.};
   int qnum = 5;  
-  int q1d1 = qnum;
-  int q1d2 = qnum;
-  Array<double,5> weight1 = weights;
-  Array<double,5> weight2 = weights;
+  int q1d1 = 2;
+  int q1d2 = 2;
+  Array<double,5> weight1 = weights_0;
+  Array<double,5> weight2 = weights_0;
    if (a_centering == 1)
     {
       q1d1 = 2;
@@ -491,7 +491,7 @@ detA(
                                 {
                                   T offsetb = (1.0*k2)/(a_q1d2-1);
                                   T outPoint;
-                                  f_detA_(a_pt,outPoint,a_h,offseta,offsetb);  
+                                  f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
                                   a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
                                 }
                             }

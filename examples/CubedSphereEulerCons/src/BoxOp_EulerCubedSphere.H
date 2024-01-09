@@ -51,7 +51,7 @@ BoxData<T,1,MEM> kineticEnergyW(
     forall<T,1,MEM>([ ] PROTO_LAMBDA
                     (                
                      Var<T,1,MEM> a_ke,
-                     const Var<T,DIM,MEM,DIM>& a_Amat,
+                     const Var<T,DIM,MEM,DIM>& a_amat,
                      const Var<T,NUMCOMPS>& a_wpoint)
                     {
                       vecType velSph;
@@ -68,7 +68,7 @@ BoxData<T,1,MEM> kineticEnergyW(
                           velCart[dir0] = 0.;
                           for (int dir1 = 0; dir1 < DIM; dir1++)
                             {
-                              velCart[dir0] += a_Amat(dir0,dir1)*velSph[dir1];
+                              velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
                             }
                           a_ke(0) += velCart[dir0]*velCart[dir0]/2;
                         }
@@ -163,54 +163,58 @@ void consToPrim(
        a_output(0) = 1.0/a_deta(0);
      }
      ,deta); 
-  BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bx.grow(2),a_h,a_block,0); 
-  BoxData<T,DIM,MEM,DIM> invcoef(bx.grow(2));
+  BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bx,a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,amat);
-  
+ 
   // Set up storage for radial variables.
-  BoxData<T,NUMCOMPS,MEM> UrBar(bx);
+  a_W.define(bx);
   Box bx4 = bx.grow(-1);
-  BoxData<T,NUMCOMPS,MEM> Ur(bx4);
-  
+  BoxData<T,NUMCOMPS,MEM> U(bx4);
   // JU -> V_r*(rho,rho*vel_cart,rho*E) = JU / det(A);
+  BoxData<T,1,MEM> tmp(a_JU.box());
   for (int comp = 0; comp < NUMCOMPS; comp++)
-    {
-      BoxData<T,1,MEM> JUcomp = slice(a_JU,1);
-      BoxData<T,1,MEM> Ucomp = slice(Ur,1);
-      Ucomp = JUcomp/deta;
+    {      
+      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
+      BoxData<T,1,MEM> Ucomp = slice(U,comp);
+      tmp = JUcomp*detaInv;
+      tmp.copyTo(Ucomp);
     }
+  U.copyTo(a_W);
   // V_r*rho*v_cart -> V_r*rho*v_sphere = A^{-1} V_r*rho*v_cart;
-  BoxData<T,DIM,MEM> UrMomBar = slice<T,NUMCOMPS,DIM,MEM>(UrBar,1);
-  BoxData<T,DIM,MEM> UrMom = slice<T,NUMCOMPS,DIM,MEM>(Ur,1);
-  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-  
+  BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
+  BoxData<T,DIM,MEM> tmpmom(UMom.box());
   T one = 1.0;
   
-  forallInPlace(f_matVecProd,UrMom,invcoef,JUMom,one);
-  forallInPlace(f_matVecProd,UrMomBar,invcoef,JUMom,one);
-  
+  forallInPlace(f_matVecProd,tmpmom,invcoef,UMom,one);
+  tmpmom.copyTo(UMom);
   
   // Deconvolve-pointvise-convolve to go from volr rho Ur to W.
-  // Deconvolve.
-  BoxData<T,NUMCOMPS,MEM> UrPoint = Operator::_deconvolve(Ur,UrBar);  
-  BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
-  
-  // Pointwise UrPoint -> WPoint density, momenta.
+  // divide by dVolr and deconvolve.
+  BoxData<T> tmp2(U.box());
+  for (int comp = 0; comp < NUMCOMPS;comp++)
+    {      
+      BoxData<T> Ucomp = slice(U,comp);
+      tmp2 = Ucomp/a_dVolr;
+      tmp2.copyTo(Ucomp);
+    }
+ BoxData<T,NUMCOMPS,MEM> UPoint = deconvolveStencil(U);    
+  // Pointwise UrPoint -> WPoint.
   BoxData<T,NUMCOMPS,MEM> WPoint =
     forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
                            (Var<T,NUMCOMPS,MEM>& a_wpoint,
-                            Var<T,NUMCOMPS,MEM>& a_upoint,
-                            const Var<T,1,MEM>& a_dVolPoint)
+                            Var<T,NUMCOMPS,MEM>& a_upoint)                           
                            {
                              Var<T,NUMCOMPS,MEM> wpoint;
-                             a_wpoint(0) = a_upoint(0)/a_dVolPoint(0);
+                             a_wpoint(0) = a_upoint(0);
                              a_wpoint(1) = a_upoint(1)/a_upoint(0);
                              a_wpoint(2) = a_upoint(2)/a_upoint(0);
                              a_wpoint(3) = a_upoint(3)/a_upoint(0);
-                             a_wpoint(4) /= a_dVolPoint(0);
-                           },UrPoint,dVolPoint);
+                             a_wpoint(4) = a_upoint(4);                             
+                           },UPoint);
 
+  
   // Compute pressure.
   BoxData<T,1,MEM> kePoint = kineticEnergyW<T,MEM>(WPoint,a_h,a_block); 
   forallInPlace([ ] PROTO_LAMBDA
@@ -219,7 +223,7 @@ void consToPrim(
                  T a_gamma)
                 {
                   a_wpoint(NUMCOMPS-1) = (a_wpoint(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
-                },WPoint,kePoint,a_gamma);
+                },WPoint,kePoint,a_gamma);  
   a_W = convolveStencil(WPoint);
   WPoint.copyTo(a_WBar);
 }
@@ -249,42 +253,53 @@ void primToCons(
   
   // Primitive variables -> V_r*(rho,vel_sph,rho*E).                                     
   BoxData<T,1,MEM> ke = kineticEnergyW<T,MEM>(a_WPoint,a_h,a_block);
-  BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
   BoxData<T,NUMCOMPS,MEM> UPoint =
     forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
                            (Var<T,NUMCOMPS,MEM>& a_upoint,
                             const Var<T,NUMCOMPS>& a_wpoint,
                             const Var<T,1,MEM>& a_ke,
-                            const Var<T,1,MEM>& a_dvolpoint,
                             T a_gamma)
                            {
-                             a_upoint(0) = a_wpoint(0)*a_dvolpoint(0);
+                             a_upoint(0) = a_wpoint(0);
                              a_upoint(1) = a_wpoint(1)*a_upoint(0);
                              a_upoint(2) = a_wpoint(2)*a_upoint(0);
                              a_upoint(3) = a_wpoint(3)*a_upoint(0);
-                             a_upoint(4) =
-                             (a_wpoint(4)/(a_gamma- 1.0) + a_ke(0))*a_dvolpoint(0);
-                           },a_WPoint,ke,dVolPoint,a_gamma);
+                             a_upoint(4) = a_wpoint(4)/(a_gamma - 1.0) + a_ke(0);
+                           },a_WPoint,ke,a_gamma);
   
   BoxData<T,NUMCOMPS,MEM> U = convolveStencil(UPoint);
-  
-  // spherical velocities -> Cartesian velocities.
 
+  // U -> U*dVolr.
+  
+  for (int comp = 0; comp < NUMCOMPS;comp++)
+    {
+      BoxData<T> tmp;
+      BoxData<T> Ucomp = slice(U,comp);
+      tmp = a_dVolr*Ucomp;
+      tmp.copyTo(Ucomp);
+    }
+
+  // spherical velocities -> Cartesian velocities.
   a_JU.define(U.box().grow(-1));
-  a_JU.setToZero();
   BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
   BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bx,a_h,a_block,0);
+  
   T one = 1.0;
   forallInPlace(f_matVecProd,JUMom,amat,UMom,one);
+  JUMom.copyTo(UMom);
 
-  // Density, energy.
+  // scale by det(A)
+
   BoxData<T,1,MEM> deta = detA<T,MEM>(bx,a_h,0);
   for (int comp = 0; comp < NUMCOMPS;comp++)
     {
       BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
       BoxData<T,1,MEM> Ucomp = slice(U,comp);
-      Operator::cellProduct(JUcomp,deta,Ucomp);
+      BoxData<T,1,MEM> tmp;
+      tmp = Ucomp * deta;
+      tmp.copyTo(JUcomp);
+      
     }
 }
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
@@ -436,7 +451,7 @@ inline void radialMetrics(
                     T rlow = a_rad(0);
                     T rhigh = a_rad(0)+a_dr;
                     a_rad(0) = rlow;
-                    a_dVolr(0) = (rhigh*rhigh*rhigh - rlow*rlow*rlow)/3.0;
+                    a_dVolr(0) = (rhigh*rhigh*rhigh - rlow*rlow*rlow)/3.0/a_dr;
                     a_diagr(0) = (rhigh - rlow)/a_dr;
                     a_diagr(1) = (rhigh + rlow)/2.0;
                     a_diagr(2) = (rhigh + rlow)/2.0;

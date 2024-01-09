@@ -118,9 +118,7 @@ int main(int argc, char* argv[])
   bool use2DFootprint = true;
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   Array<Point, DIM+1> ghost;
-  ghost.fill(Point::Ones(5));
-  ghost[0] = Point::Ones(2);
-  ghost[0][radialDir] = 2;
+  ghost.fill(Point::Ones(4));
    Array<Array<uint,DIM>,6> permute = {{2,1,0},{2,1,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6> sign = {{-1,1,1},{1,1,-1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};     
   auto domain =
@@ -171,7 +169,7 @@ int main(int argc, char* argv[])
      forallInPlace_p(f_radialInit,WPoint_i,radius,dx,gamma,thickness);
      primToCons<double,HOST>(JUTemp,WPoint_i,dVolr,gamma,dx,block);
      consToPrim<double,HOST>(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
-     WNewTemp -= WPoint_i;
+     //WNewTemp -= WPoint_i;
      WNewTemp.copyTo(WNew_i);
      JUTemp.copyTo(JU_i);
     }
@@ -181,6 +179,7 @@ int main(int argc, char* argv[])
   //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
   //CubedSphereShell::InterpBoundaries(U);
+  return 0;
   for (auto dit :U.layout())
     {
       auto& rhs_i = rhs[dit];

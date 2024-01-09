@@ -326,7 +326,7 @@ void f_detA_F(Point a_pt,
   a_detA(0) = secasq*secbsq*norm3;
 }
 PROTO_KERNEL_END(f_detA_F,f_detA)
-template<typename T>
+template<typename T,MemType MEM>
 void f_detA_(Point a_pt,
              T& a_detA,
              T a_h,
