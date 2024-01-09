@@ -294,10 +294,10 @@ namespace Proto_Transition
 
     /// also calls exchange
     static void
-    enforceRecflectionBCs(pr_level_data &    a_devi_data,
-                          const pr_box  &    a_domain,
-                          int                a_reflect_sign_lo[DIM],
-                          int                a_reflect_sign_hi[DIM])
+    enforceReflectionBCs(pr_level_data &    a_devi_data,
+                         const pr_box  &    a_domain,
+                         int                a_reflect_sign_lo[DIM],
+                         int                a_reflect_sign_hi[DIM])
     {
       const int zero_lo = 0;  const int one_hi = 1; 
       for(int idir = 0; idir < DIM; idir++)
