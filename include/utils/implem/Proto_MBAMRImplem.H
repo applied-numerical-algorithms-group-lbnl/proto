@@ -166,13 +166,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         
         interpBounds(crseState, state, a_level);
         m_mg[a_level].solve(state, force, 1);
-        // average state onto coarser level = PhiC
-        // save copy of coarse state = PhiC0
+        averageDown(crseState, state, a_level);
+        crseState.copyTo(*(m_state_0[a_level-1]));
         // compute coarse residual = RC
         // compute level force F = RC + L(PhiC)
         //vCycle(a_state, a_force, F, a_level-1);
         // correct this level's state
-      interpBounds(crseState, state, a_level);
+        interpBounds(crseState, state, a_level);
         m_mg[a_level].solve(state, force, 1);
     }
 }
@@ -215,11 +215,32 @@ template <
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
+        LevelStateData&     a_crseData,
+        LevelStateData&     a_fineData,
+        int                 a_fineLevel)
+{
+    auto& crseTmp = *m_local[a_fineLevel-1];
+    auto& layout = a_fineData.layout();
+    for (auto iter : layout)
+    {
+        int block = layout.block(iter);
+        auto& fine_i = a_fineData[iter];
+        auto& crse_i = crseTmp[iter];
+        crse_i |= m_average[block](fine_i);
+    }
+    crseTmp.copyTo(a_crseData);
+}
+template <
+    template<typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
 MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 {
     PROTO_ASSERT(a_level < m_numLevels,
             "MBAMR::map | Error: Level index %i is out of bounds", a_level);
-    //return m_mg[a_level].map();
     return m_map[a_level];
 }
 

@@ -49,6 +49,11 @@ public:
             LevelStateData&     a_fineData,
             int                 a_fineLevel);
 
+    inline void averageDown(
+            LevelStateData&     a_crseData,
+            LevelStateData&     a_fineData,
+            int                 a_fineLevel);
+
     inline MBLevelMap<MAP>& map(int a_level);
     inline MBInterpOp& interpOp(int a_level);
     inline MBLevelOp<OPType, MAP, double, BCType, MEM>& op(int a_level);

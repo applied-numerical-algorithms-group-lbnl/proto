@@ -13,7 +13,7 @@ PROTO_KERNEL_START
 void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
     double p = 6.0;
-    double s = 2.0;
+    double s = 1.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -29,7 +29,7 @@ PROTO_KERNEL_START
 void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
     double p = 6.0;
-    double s = 2.0;
+    double s = 1.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {

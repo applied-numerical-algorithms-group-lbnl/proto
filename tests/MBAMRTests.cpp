@@ -42,6 +42,8 @@ TEST(MBAMR, Construction) {
 
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> phi(grid, ghost);
+    MBAMRData<double, 1, HOST> err(grid, ghost);
+    MBAMRData<double, 1, HOST> phi0(grid, ghost);
     
     auto C2C = Stencil<double>::CornersToCells(4);
     for (int li = 0; li < numLevels; li++)
@@ -50,6 +52,7 @@ TEST(MBAMR, Construction) {
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
+            auto& phi0_i = phi0[li][iter];
             auto& phi_i = phi[li][iter];
             Box b_i = C2C.domain(layout[iter]).grow(numGhost);
             BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
@@ -59,24 +62,33 @@ TEST(MBAMR, Construction) {
             BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
             
             phi_i |= C2C(phi_node);
+            phi0_i |= C2C(phi_node);
         }
 
     }
+    auto& crse = phi[0]; 
+    auto& fine = phi0[1];
+    crse.setVal(0);
+    amr.averageDown(crse, fine, 1);
 #if PR_VERBOSE > 0
-    h5.writeMBAMRData({"phi"}, map, phi, "PHI_0");
-#endif
-    auto& data_0 = phi[0]; 
-    auto& data_1 = phi[1];
-    data_0.setVal(0);
-    data_1.setVal(1);
-#if PR_VERBOSE > 0
+    h5.writeMBAMRData({"phi"}, map, phi0, "PHI_0");
     h5.writeMBAMRData({"phi"}, map, phi, "PHI_1");
-    h5.writeMBLevel({"phi"}, map[1], data_1, "DATA_L1_0");
-    h5.writeMBLevel({"phi"}, amr.map(1), data_1, "DATA_L1_1");
 #endif
-    amr.interpBounds(data_0, data_1, 1);
+    for (int li = 0; li < numLevels; li++)
+    {
+        auto& layout = grid[li];
+        for (auto iter : layout)
+        {
+            auto& phi0_i = phi0[li][iter];
+            auto& phi_i = phi[li][iter];
+            auto& err_i = err[li][iter];
+            phi_i.copyTo(err_i);
+            err_i -= phi0_i;
+            err_i.setVal(0, layout[iter]);
+        }
+    }
 #if PR_VERBOSE > 0
-    h5.writeMBAMRData({"phi"}, map, phi, "PHI_2");
+    h5.writeMBAMRData({"err"}, map, err, "ERR");
 #endif
 }
 
