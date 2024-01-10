@@ -363,7 +363,11 @@ AMatrix(
       q1d2 = 2;
       weight2 = weights_0;
     }
-  BoxData<T,DIM,MEM,DIM> output = forall_p<T,DIM,MEM,DIM>
+  Point low0 = bxCentered.low();
+  Point high0 = bxCentered.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
     ([ ] PROTO_LAMBDA
      (Point a_pt,
       Var<T,DIM,MEM,DIM>& a_amat,
@@ -399,7 +403,10 @@ AMatrix(
                  }
              }
          }
-     },a_bx,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+     },bx0,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  BoxData<T,DIM,MEM,DIM> output(bxCentered);
+  output0.copyTo(output);
+  spreadSlice(output);
   return output;
 }
 template<typename T,MemType MEM>
@@ -464,41 +471,48 @@ detA(
   int q1d2 = 5;
   Array<double,5> weight1 = weights;
   Array<double,5> weight2 = weights;
-   if (a_centering == 1)
+  if (a_centering == 1)
     {
       q1d1 = 2;
       weight1 = weights_0;
     }
-    if (a_centering == 2)
+  if (a_centering == 2)
     {
       q1d2 = 2;
       weight2 = weights_0;
     }
-    BoxData<T,1,MEM> output =
-      forall_p<T,1,MEM>([ ] PROTO_LAMBDA
-                        (                  
-                         Point a_pt,
-                         Var<T,1,MEM>& a_out,
-                         T a_h,
-                         Array<T,5> a_wgt1,
-                         Array<T,5> a_wgt2,
-                         int a_q1d1,
-                         int a_q1d2)
-                        {
-                          a_out(0) = 0.0;
-                          for (int k1 = 0; k1 < a_q1d1; k1++)
-                            {
-                              T offseta = (1.0*k1)/(a_q1d1-1);
-                              for (int k2 = 0; k2 < a_q1d2;k2++)
-                                {
-                                  T offsetb = (1.0*k2)/(a_q1d2-1);
-                                  T outPoint;
-                                  f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
-                                  a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
-                                }
-                            }
-                        },a_bx,a_h,weight1,weight2,q1d1,q1d2);
-    return output;
+  Point low0 = a_bx.low();
+  Point high0 = a_bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  BoxData<T,1,MEM> output0 =
+    forall_p<T,1,MEM>([ ] PROTO_LAMBDA
+                      (                  
+                       Point a_pt,
+                       Var<T,1,MEM>& a_out,
+                       T a_h,
+                       Array<T,5> a_wgt1,
+                       Array<T,5> a_wgt2,
+                       int a_q1d1,
+                       int a_q1d2)
+                      {
+                        a_out(0) = 0.0;
+                        for (int k1 = 0; k1 < a_q1d1; k1++)
+                          {
+                            T offseta = (1.0*k1)/(a_q1d1-1);
+                            for (int k2 = 0; k2 < a_q1d2;k2++)
+                              {
+                                T offsetb = (1.0*k2)/(a_q1d2-1);
+                                T outPoint;
+                                f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
+                                a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
+                              }
+                          }
+                      },bx0,a_h,weight1,weight2,q1d1,q1d2);
+  BoxData<T,1,MEM> output(a_bx);
+  output0.copyTo(output);
+  spreadSlice(output);
+  return output;
 }
 template<typename T,MemType MEM>
 inline BoxData<T,DIM,MEM>
