@@ -203,17 +203,16 @@ void f_Ainv_(Point a_pt,
   T normsq = norm*norm;
   T norm3 = normsq*norm;
 
-  T deta = secasq*secbsq*norm3;
   matType amat2;
   amat2[0][0] = 1.0/norm;
   amat2[0][1] = tana*norm;
   amat2[0][2] = tanb*norm;
-  amat2[1][0] =-tana/(secasq*norm);
-  amat2[1][1] = 1.0/(secasq*norm);
+  amat2[1][0] =-tana/(secasq*norm*M_PI/2);
+  amat2[1][1] = 1.0/(secasq*norm*M_PI/2);
   amat2[1][2] = 0.0;
-  amat2[2][0] = -tanb/(secbsq*norm);
+  amat2[2][0] = -tanb/(secbsq*norm*M_PI/2);
   amat2[2][1] = 0.0;
-  amat2[2][2] = 1.0/(secbsq*norm);
+  amat2[2][2] = 1.0/(secbsq*norm*M_PI/2);
   for (int dir0 = 0; dir0 < DIM ; dir0++)
     {
       for (int dir1 = 0; dir1 < DIM ; dir1++)
@@ -243,18 +242,18 @@ void f_detA_A_(Point a_pt,
   T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
   T normsq = norm*norm;
   T norm3 = normsq*norm;
-  T deta = secasq*secbsq*norm3;
+  T deta = secasq*secbsq*norm3*M_PI*M_PI*.25;
   
    matType amat2;
    amat2[0][0] =  norm;
    amat2[1][0] =  tana*norm;
    amat2[2][0] =  tanb*norm;
-   amat2[0][1] = -tana*secasq*norm3;
-   amat2[1][1] =  secasq*secbsq*norm3;
-   amat2[2][1] = -secasq*tana*tanb*norm3;
-   amat2[0][2] = -tanb*secbsq*norm3;
-   amat2[1][2] = -secbsq*tana*tanb*norm3;
-   amat2[2][2] =  secbsq*secasq*norm3;
+   amat2[0][1] = -tana*secasq*norm3*M_PI/2;
+   amat2[1][1] =  secasq*secbsq*norm3*M_PI/2;
+   amat2[2][1] = -secasq*tana*tanb*norm3*M_PI/2;
+   amat2[0][2] = -tanb*secbsq*norm3*M_PI/2;
+   amat2[1][2] = -secbsq*tana*tanb*norm3*M_PI/2;
+   amat2[2][2] =  secbsq*secasq*norm3*M_PI/2;
    
    for (int dir0 = 0; dir0 < DIM ; dir0++)
      {
@@ -342,7 +341,7 @@ void f_detA_(Point a_pt,
   T secbsq = (1.0 + tan(beta)*tan(beta));
   T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
   T norm3 = norm*norm*norm;
-  a_detA = secasq*secbsq*norm3;
+  a_detA = secasq*secbsq*norm3*(M_PI*M_PI)*.25;
 }
 #if 0
 template<typename T, MemType MEM>

@@ -328,6 +328,48 @@ detA_A(
              }
          }
      },a_bx,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  if (a_centering == 0)
+    {
+      BoxData<T,DIM,MEM,1> outcol(a_bx);
+      outcol.setToZero();
+      Box bx2 = a_bx.extrude(Point::Basis(2));
+      Box bx1 = a_bx.extrude(Point::Basis(1));
+      BoxData<T,DIM,MEM> d1n_x_n(bx2);
+      BoxData<T,DIM,MEM> n_x_d2n(bx1);
+      nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
+      d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
+      T halfbyh = .5/a_h;
+      // cout << "block " << a_block <<endl;
+      // cout << output.box() << endl;
+      // cout << n_x_d2n.box() << endl;
+      // cout << d1n_x_n.box() << endl;
+      outcol += Stencil<T>::FluxDivergence(1)(n_x_d2n,halfbyh);
+      outcol += Stencil<T>::FluxDivergence(2)(d1n_x_n,halfbyh);
+      if (a_block == 3)
+        {
+          HDF5Handler h5;
+          T dx = a_h;
+          h5.writePatch(dx,outcol,"outcol");
+        }
+      // cout << outcol.box() << endl << endl;
+      forallInPlace([ ] PROTO_LAMBDA(
+                                     Var<T,DIM,MEM,1>& a_d1n_x_d2n,
+                                     Var<T,DIM,MEM,DIM>& a_deta_amat)
+                    {
+                      for (int dir = 0; dir < DIM; dir++)
+                        {
+                          //a_deta_amat(dir,0) = a_d1n_x_d2n(dir);
+                          a_d1n_x_d2n(dir) = a_deta_amat(dir,0);
+                          //a_d1n_x_d2n(dir) /= a_deta_amat(0,0);
+                        }
+                    },outcol,output);
+      if (a_block == 3)
+        {
+          HDF5Handler h5;
+          T dx = a_h;
+          h5.writePatch(dx,outcol,"outcoldetA_A");
+        }
+    }  
   return output;
 }
 template<typename T, MemType MEM>
@@ -409,6 +451,224 @@ AMatrix(
   spreadSlice(output);
   return output;
 }
+
+template<typename T,MemType MEM>
+inline BoxData<T,1,MEM> 
+detA(
+     Box a_bx,
+     T a_h,
+     unsigned int a_centering)
+{
+  PR_TIMERS("detA");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights_0={1.,0.,0.,0.,0.};
+  int qnum = 5;  
+  int q1d1 = 5;
+  int q1d2 = 5;
+  Array<double,5> weight1 = weights;
+  Array<double,5> weight2 = weights;
+  if (a_centering == 1)
+    {
+      q1d1 = 2;
+      weight1 = weights_0;
+    }
+  if (a_centering == 2)
+    {
+      q1d2 = 2;
+      weight2 = weights_0;
+     }
+  Point low0 = a_bx.low();
+  Point high0 = a_bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  BoxData<T,1,MEM> output0 =
+    forall_p<T,1,MEM>([ ] PROTO_LAMBDA
+                      (                  
+                       Point a_pt,
+                       Var<T,1,MEM>& a_out,
+                       T a_h,
+                       Array<T,5> a_wgt1,
+                       Array<T,5> a_wgt2,
+                       int a_q1d1,
+                       int a_q1d2)
+                      {
+                        a_out(0) = 0.0;
+                        for (int k1 = 0; k1 < a_q1d1; k1++)
+                          {
+                            T offseta = (1.0*k1)/(a_q1d1-1);
+                            for (int k2 = 0; k2 < a_q1d2;k2++)
+                              {
+                                T offsetb = (1.0*k2)/(a_q1d2-1);
+                                T outPoint;
+                                f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
+                                a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
+                              }
+                          }
+                      },bx0,a_h,weight1,weight2,q1d1,q1d2);
+  BoxData<T,1,MEM> output(a_bx);
+  output0.copyTo(output);
+  spreadSlice(output);
+  return output;
+}
+template<typename T,MemType MEM>
+inline BoxData<T,DIM,MEM>
+adjA(
+     Box a_bx,
+     T a_h,
+     int a_block,
+     int a_centering)
+{
+  PR_TIMERS("adjA");
+  BoxData<T,DIM,MEM,1> output(a_bx);
+  T hInvHalf = .5/a_h;
+  switch(a_centering)
+    {
+    case 0:
+      {
+        Box bx2 = a_bx.extrude(Point::Basis(2));
+        Box bx1 = a_bx.extrude(Point::Basis(1));
+        BoxData<T,DIM,MEM> d1n_x_n(bx2);
+        BoxData<T,DIM,MEM> n_x_d2n(bx1);
+        nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
+        d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
+        output |= Stencil<T>::FluxDivergence(1)(n_x_d2n,hInvHalf);
+        output += Stencil<T>::FluxDivergence(2)(d1n_x_n,hInvHalf);
+      }
+      break;
+    case 1:
+      nCrossD2n(output,a_bx,a_h,a_block);
+      output *= -1.0;
+      break;
+    case 2:
+      d1nCrossN(output,a_bx,a_h,a_block);
+      output *= -1.0;
+      break;
+    default:abort();
+    }
+  return output;
+}
+template <typename T, MemType MEM>
+inline void d1nCrossN(
+               BoxData<T,DIM,MEM>& a_d1n_x_n,
+               Box a_bx,
+               T a_h,
+               uint a_block)
+{
+  PR_TIMERS("d1nCrossN");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
+ Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  int qnum = 5;
+  int qnum0 = 2;
+  Box bx = a_d1n_x_n.box();
+  Point low0 = bx.low();  
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  
+  BoxData<T,DIM,MEM> tmp = 
+    forall_p<T,DIM,MEM>
+             ([]PROTO_LAMBDA
+              (
+               Point a_pt,
+               Var<T,DIM,MEM>& a_d1n_x_n,
+               Array<T,5>& a_weights,
+               T a_h,
+               Array<uint,DIM> a_permute,
+               Array<int,DIM> a_sign,
+               int a_qnum)
+              {
+                a_d1n_x_n(0) = 0.0;
+                a_d1n_x_n(1) = 0.0;
+                a_d1n_x_n(2) = 0.0;
+                T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
+                T tanb = tan(beta);
+                Array<T,5> cross = {0.,0.,0.};
+                for (int k = 0; k < a_qnum;k++)
+                  {
+                    T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + (k*a_h)/(a_qnum-1));
+                    T tana = tan(alpha);
+                    T secasq = 1.0 + tana*tana;
+                    T normsq = M_PI*.5/(tana*tana + tanb*tanb + 1.0);       
+                    cross[0] = secasq*tanb*normsq;
+                    cross[1] = 0.;
+                    cross[2] = -secasq*normsq;
+                    a_d1n_x_n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+                    a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+                    a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];          
+                  }       
+              },bx,weights,a_h,permute[a_block],sign[a_block],qnum);
+   tmp.copyTo(a_d1n_x_n);
+  // copy lowest slice to all the other slices. 
+  // Operator::spreadSlice(a_d1n_x_n);
+}
+template<typename T, MemType MEM>
+inline void nCrossD2n(
+                      BoxData<T,DIM,MEM>& a_n_x_d2n,
+                      Box a_bx,
+                      T a_h,
+                      uint a_block)
+{
+  PR_TIMERS("nCrossD2n");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
+   Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  int qnum = 5;
+  int qnum0 = 2;
+  Box bx = a_n_x_d2n.box();
+  Point low0 = bx.low();  
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  
+  BoxData<T,DIM,MEM> tmp =
+    forall_p<T,DIM,MEM>([]PROTO_LAMBDA
+             (
+              Point a_pt,
+              Var<T,DIM,MEM>& a_n_x_d2n,
+              Array<T,5>& a_weights,
+              T a_h,
+              Array<uint,DIM> a_permute,
+              Array<int,DIM> a_sign,
+              int a_qnum)
+             {
+               a_n_x_d2n(0) = 0.0;
+               a_n_x_d2n(1) = 0.0;
+               a_n_x_d2n(2) = 0.0;
+               T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h ;
+               T tana = tan(alpha);
+               Array<T,5> cross = {0.,0.,0.};
+               for (int k = 0; k < a_qnum;k++)
+                 {
+                   T beta =
+                     -.25*M_PI + .5*M_PI*(a_pt[2]*a_h+ (k*a_h)/(a_qnum-1));
+                   T tanb = tan(beta);
+                   T secbsq = 1.0 + tanb*tanb;
+                   T normsq = M_PI*.5/(tana*tana + tanb*tanb + 1.0);       
+                   cross[0] = secbsq*tana*normsq;
+                   cross[1] = -secbsq*normsq;
+                   cross[2] = 0.;
+                   a_n_x_d2n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+                   a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+                   a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
+                 }
+             },bx,weights,a_h,permute[a_block],sign[a_block],qnum);
+  tmp.copyTo(a_n_x_d2n);
+  // copy lowest slice to all the other slices. 
+  // Operator::spreadSlice(a_n_x_d2n);
+}
 template<typename T,MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>
 scaledDetA_A(             
@@ -454,214 +714,3 @@ scaledDetA(
   output *= a_scale;           
   return output;
 }
-template<typename T,MemType MEM>
-inline BoxData<T,1,MEM> 
-detA(
-     Box a_bx,
-     T a_h,
-     unsigned int a_centering)
-{
-  PR_TIMERS("detA");
-  Array<T,5>
-    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
-  Array<T,5>
-    weights_0={1.,0.,0.,0.,0.};
-  int qnum = 5;  
-  int q1d1 = 5;
-  int q1d2 = 5;
-  Array<double,5> weight1 = weights;
-  Array<double,5> weight2 = weights;
-  if (a_centering == 1)
-    {
-      q1d1 = 2;
-      weight1 = weights_0;
-    }
-  if (a_centering == 2)
-    {
-      q1d2 = 2;
-      weight2 = weights_0;
-    }
-  Point low0 = a_bx.low();
-  Point high0 = a_bx.high();
-  high0[0] = low0[0];
-  Box bx0(low0,high0);
-  BoxData<T,1,MEM> output0 =
-    forall_p<T,1,MEM>([ ] PROTO_LAMBDA
-                      (                  
-                       Point a_pt,
-                       Var<T,1,MEM>& a_out,
-                       T a_h,
-                       Array<T,5> a_wgt1,
-                       Array<T,5> a_wgt2,
-                       int a_q1d1,
-                       int a_q1d2)
-                      {
-                        a_out(0) = 0.0;
-                        for (int k1 = 0; k1 < a_q1d1; k1++)
-                          {
-                            T offseta = (1.0*k1)/(a_q1d1-1);
-                            for (int k2 = 0; k2 < a_q1d2;k2++)
-                              {
-                                T offsetb = (1.0*k2)/(a_q1d2-1);
-                                T outPoint;
-                                f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
-                                a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
-                              }
-                          }
-                      },bx0,a_h,weight1,weight2,q1d1,q1d2);
-  BoxData<T,1,MEM> output(a_bx);
-  output0.copyTo(output);
-  spreadSlice(output);
-  return output;
-}
-template<typename T,MemType MEM>
-inline BoxData<T,DIM,MEM>
-adjA(
-     Box a_bx,
-     T a_h,
-     int a_block,
-     int a_centering)
-{
-  PR_TIMERS("adjA");
-  BoxData<T,DIM,MEM,1> output(a_bx);
-  T half = .5;
-  switch(a_centering)
-    {
-    case 0:
-      {
-        Box bx2 = a_bx.extrude(Point::Basis(2));
-        Box bx1 = a_bx.extrude(Point::Basis(1));
-        BoxData<T,DIM,MEM> d1n_x_n(bx2);
-        BoxData<T,DIM,MEM> n_x_d2n(bx1);
-        nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
-        d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
-        output |= Stencil<T>::FluxDivergence(1)(n_x_d2n,half);
-        output += Stencil<T>::FluxDivergence(2)(d1n_x_n,half);
-      }
-      break;
-    case 1:
-      nCrossD2n(output,a_bx,a_h,a_block);
-      break;
-    case 2:
-      d1nCrossN(output,a_bx,a_h,a_block);
-      break;
-    default:abort();
-    }
-  return output;
-}
-template <typename T, MemType MEM>
-inline void d1nCrossN(
-               BoxData<T,DIM,MEM>& a_d1n_x_n,
-               Box a_bx,
-               T a_h,
-               uint a_block)
-{
-  PR_TIMERS("d1nCrossN");
-  Array<T,5>
-    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
-  Array<T,5>
-    weights0={1.0,0.,0.,0.,0.};
- Array<Array<uint,DIM>,6>
-     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6>
-    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
-  int qnum = 5;
-  int qnum0 = 2;
-  Box bx = a_d1n_x_n.box();
-  Point low0 = bx.low();  
-  Point high0 = bx.high();
-  high0[0] = low0[0];
-  Box bx0(low0,high0);
-  
-  forallInPlace_p
-    ([]PROTO_LAMBDA
-     (Point a_pt,
-      Var<T,DIM,MEM>& a_d1n_x_n,
-      Array<T,5>& a_weights,
-      T a_h,
-      Array<uint,DIM> a_permute,
-      Array<int,DIM> a_sign,
-      int a_qnum)
-     {
-       a_d1n_x_n(0) = 0.0;
-       a_d1n_x_n(1) = 0.0;
-       a_d1n_x_n(2) = 0.0;
-       T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
-       T tanb = tan(beta);
-       Array<T,5> cross = {0.,0.,0.};
-       for (int k = 0; k < a_qnum;k++)
-         {
-           T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + k*a_h/(a_qnum-1));
-           T tana = tan(alpha);
-           T secasq =1.0 + tan(alpha)*tan(alpha);
-           T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);       
-           cross[0] = secasq*tanb*normsq;
-           cross[1] = 0.;
-           cross[2] = -secasq*normsq;
-           a_d1n_x_n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
-           a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
-           a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];          
-         }       
-     },bx,a_d1n_x_n,weights,a_h,permute[a_block],sign[a_block],qnum);
-  // copy lowest slice to all the other slices. 
-  // Operator::spreadSlice(a_d1n_x_n);
-}
-template<typename T, MemType MEM>
-inline void nCrossD2n(
-                      BoxData<T,DIM,MEM>& a_n_x_d2n,
-                      Box a_bx,
-                      T a_h,
-                      uint a_block)
-{
-  PR_TIMERS("nCrossD2n");
-  Array<T,5>
-    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
-  Array<T,5>
-    weights0={1.0,0.,0.,0.,0.};
-   Array<Array<uint,DIM>,6>
-     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6>
-    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
-  int qnum = 5;
-  int qnum0 = 2;
-  Box bx = a_n_x_d2n.box();
-  Point low0 = bx.low();  
-  Point high0 = bx.high();
-  high0[0] = low0[0];
-  Box bx0(low0,high0);
-  
-  forallInPlace_p
-    ([]PROTO_LAMBDA
-     (Point a_pt,
-      Var<T,DIM,MEM>& a_n_x_d2n,
-      Array<T,5>& a_weights,
-      T a_h,
-      Array<uint,DIM> a_permute,
-      Array<int,DIM> a_sign,
-      int a_qnum)
-     {
-       a_n_x_d2n(0) = 0.0;
-       a_n_x_d2n(1) = 0.0;
-       a_n_x_d2n(2) = 0.0;
-       T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h ;
-       T tana = tan(alpha);
-       Array<T,5> cross = {0.,0.,0.};
-       for (int k = 0; k < a_qnum;k++)
-         {
-           T beta =
-             -.25*M_PI + .5*M_PI*(a_pt[2]*a_h + k*a_h/(a_qnum-1));
-           T tanb = tan(beta);
-           T secbsq = 1.0 + tan(beta)*tan(beta);
-           T normsq = 1.0/(tana*tana + tanb*tanb + 1.0);       
-           cross[0] = secbsq*tana*normsq;
-           cross[1] = -secbsq*normsq;
-           cross[2] = 0.;
-           a_n_x_d2n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
-           a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
-           a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
-         }
-     },bx,a_n_x_d2n,weights,a_h,permute[a_block],sign[a_block],qnum);
-  // copy lowest slice to all the other slices. 
-  // Operator::spreadSlice(a_n_x_d2n);
-}
-

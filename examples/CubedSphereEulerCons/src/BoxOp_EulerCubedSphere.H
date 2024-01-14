@@ -165,31 +165,31 @@ void consToPrim(
        a_output(0) = 1.0/a_deta(0);
      }
      ,deta); 
-  BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bx,a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> deta_amat = detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
-  forallInPlace(f_matinv3by3,invcoef,amat);
+  forallInPlace(f_matinv3by3,invcoef,deta_amat);
  
   // Set up storage for radial variables.
   a_W.define(bx);
   Box bx4 = bx.grow(-1);
   BoxData<T,NUMCOMPS,MEM> U(bx4);
   // JU -> V_r*(rho,rho*vel_cart,rho*E) = JU / det(A);
-  BoxData<T,1,MEM> tmp(a_JU.box());
-  for (int comp = 0; comp < NUMCOMPS; comp++)
-    {      
-      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
-      BoxData<T,1,MEM> Ucomp = slice(U,comp);
-      tmp = JUcomp*detaInv;
-      tmp.copyTo(Ucomp);
-    }
-  U.copyTo(a_W);
-  // V_r*rho*v_cart -> V_r*rho*v_sphere = A^{-1} V_r*rho*v_cart;
+  BoxData<T,1,MEM> tmp(a_JU.box()); 
+  BoxData<T,1,MEM> JURho = slice(a_JU,0);
+  BoxData<T,1,MEM> rho = slice(U,0);
+  tmp = JURho*detaInv;
+  tmp.copyTo(rho);
+  BoxData<T,1,MEM> JURhoE = slice(a_JU,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoE = slice(U,NUMCOMPS-1);
+  tmp = JURhoE*detaInv;
+  tmp.copyTo(rhoE);
+  // V_r*rho*v_cart -> V_r*rho*v_sphere = (detA A)^{-1} V_r*rho*v_cart;
+  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
-  BoxData<T,DIM,MEM> tmpmom(UMom.box());
-  T one = 1.0;
-  
-  forallInPlace(f_matVecProd,tmpmom,invcoef,UMom,one);
+  BoxData<T,DIM,MEM> tmpmom(JUMom.box());
+  T one = 1.0;  
+  forallInPlace(f_matVecProd,tmpmom,invcoef,JUMom,one);
   tmpmom.copyTo(UMom);
   
   // Deconvolve-pointvise-convolve to go from volr rho Ur to W.
@@ -380,42 +380,57 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         // Scalar fluxes.
         // Geometric quantities.
         
-        // Advective fluxes for Cartesian momentum.      
-        BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bxface,a_h,a_block,dir);
+        // Advective fluxes for Cartesian momentum.
+        T one = 1.0;
+        BoxData<T,DIM,MEM,DIM> deta_a = detA_A<T,MEM>(bxface,a_h,a_block,dir);
         BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
         BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
-        BoxData<T,DIM,MEM> tmp =
-          Operator::_faceMatrixProductAB(amat,physFluxMom,amat,physFluxMom,dir);
-        tmp.copyTo(fluxdirMom);
+        forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
+        //BoxData<T,DIM,MEM> tmp =
+        //  Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
+        //tmp.copyTo(fluxdirMom);
         // Scale all advective fluxes by det(A).
         BoxData<T,1,MEM> deta = detA<T,MEM>(bxface,a_h,dir);
-
+        
         forallInPlace([ ] PROTO_LAMBDA
                       (Var<T,NUMCOMPS,MEM>& a_advflux,
                        const Var<T,NUMCOMPS,MEM>& a_fluxin,
-                       const Var<T,1,MEM>& a_deta)
-                      {
-                        for (int comp = 0; comp < NUMCOMPS; comp++)
-                          {
-                            a_advflux(comp) = a_deta(0)*a_fluxin(comp);
-                          }
-                      },fluxdir,physFlux,deta);
+                       const Var<T,1,MEM>& a_deta,
+                       const Var<T,1,MEM>& a_adjddir)
+                      {                    
+                            a_advflux(0) = a_deta(0)*a_fluxin(0);
+                            a_advflux(NUMCOMPS-1) = a_deta(0)*a_fluxin(NUMCOMPS-1);
+                            for (int comp = 0; comp < NUMCOMPS;comp++)
+                              {
+                                a_advflux(comp) *= a_adjddir(0);
+                              }
+                      },fluxdir,physFlux,deta,adjDrDir);
  
         // Momentum fluxes - pressure forces.
-        BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
-        Box bx = W.box();
-        Box bxdir = bx.extrude(Point::Basis(dir));
-        BoxData<T,DIM,MEM> ntrow = adjA<T,MEM>(fluxdir.box(),a_h,a_block,dir);
-        BoxData<T,DIM,MEM> tmp2 =
-          Operator::_faceMatrixProductAB(ntrow,pslice,ntrow,pslice,dir);
-        fluxdirMom += tmp;
+        {
+          BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
+          Box bx = W.box();
+          Box bxdir = bx.extrude(Point::Basis(dir));
+          BoxData<T,DIM,MEM> ntrow = adjA<T,MEM>(bx,a_h,a_block,dir);
+          BoxData<T,DIM,MEM> tmp2(ntrow.box());
+          BoxData<T,1,MEM> tmp3 = faceProduct(adjDrDir,pslice,dir);         
+        for (int dirvec = 0; dirvec < DIM; dirvec++)
+          {
+            BoxData<T> ntslice = slice(ntrow,dirvec);          
+            ntslice *= pslice;
+          }
+        fluxdirMom += ntrow;
         
         // Save fluxes, update RHS.
         fluxdir.copyTo(a_fluxes[dir]);
         a_Rhs += Stencil<T>::FluxDivergence(dir)(a_fluxes[dir]);
+        }
+        a_Rhs *= (a_scale);
       }
-    a_Rhs *= (a_scale);
   };
+  private:
+  
+};
 #ifdef PR_AMR
 static inline void generateTags(
                                 TagData& a_tags,
@@ -424,9 +439,7 @@ static inline void generateTags(
   forallInPlace(f_threshold, a_tags, a_state);
 }
 #endif
-private:
- 
-};
+
 template<typename T, MemType MEM>
 inline void radialMetrics(
                           BoxData<T, 1, MEM>& a_radius,
