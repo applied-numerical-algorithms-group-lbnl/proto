@@ -165,12 +165,12 @@ void f_Amatrix_F(Point a_pt,
   amat2[0][0] =  norm;
   amat2[1][0] =  tana*norm;
   amat2[2][0] =  tanb*norm;
-  amat2[0][1] = -tana*secasq*norm3;
-  amat2[1][1] =  secasq*secbsq*norm3;
-  amat2[2][1] = -secasq*tana*tanb*norm3;
-  amat2[0][2] = -tanb*secbsq*norm3;
-  amat2[1][2] = -secbsq*tana*tanb*norm3;
-  amat2[2][2] =  secbsq*secasq*norm3;
+  amat2[0][1] = -tana*secasq*norm3*M_PI/2;
+  amat2[1][1] =  secasq*secbsq*norm3*M_PI/2;
+  amat2[2][1] = -secasq*tana*tanb*norm3*M_PI/2;
+  amat2[0][2] = -tanb*secbsq*norm3*M_PI/2;
+  amat2[1][2] = -secbsq*tana*tanb*norm3*M_PI/2;
+  amat2[2][2] =  secbsq*secasq*norm3*M_PI/2;
   for (int dir0 = 0; dir0 < DIM; dir0++)
     {
       for (int dir1 = 0; dir1 < DIM; dir1++)

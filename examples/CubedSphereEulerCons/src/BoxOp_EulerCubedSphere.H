@@ -12,6 +12,7 @@ using namespace Proto;
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> State;
 typedef BoxData<double, DIM> Vector;
+#define blocktest -1
 
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
@@ -111,25 +112,60 @@ void primToFlux(
       Var<T,NUMCOMPS>& a_flux,
       const Var<T,NUMCOMPS>& a_wface,      
       const Var<T,1>& a_ke,
-      const Var<T>& a_adjDdir,
+      const Var<T>& a_adjddir,
       const T a_gamma,
       uint a_block,
       uint a_centering)
      {
        T velnorm = a_wface(a_centering+1);
-       a_flux(0) = a_wface(0)*velnorm*a_adjDdir(0);
+       a_flux(0) = a_wface(0)*velnorm*a_adjddir(0);
        T veltan1 = a_wface((a_centering+1)%DIM + 1);
        T veltan2 = a_wface((a_centering+2)%DIM + 1);
        a_flux(a_centering+1) = a_flux(0)*velnorm;
        a_flux((a_centering+1)%DIM + 1) = a_flux(0)*veltan1;
        a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
        a_flux(NUMCOMPS - 1) =
-       velnorm*(a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjDdir(0);
+       (a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
      },WFacePoint,kePoint,adjDdirPoint,a_h,a_block,a_centering);
 
   // Compute Average fluxes from pointwise values.
   a_physFlux = (1.0*Shift(Point::Zeros()) +
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
+}
+template<typename T,MemType MEM>
+BoxData<T,NUMCOMPS,MEM> checkRadial(State& a_inputs,
+                                    T a_h,
+                                    unsigned int a_block)
+{
+  BoxData<T,NUMCOMPS,MEM> outputs(a_inputs.box());
+  outputs.setToZero();
+  Box bx = a_inputs.box();
+  BoxData<T,1,MEM> deta = detA<T,MEM>(bx.grow(2),a_h,0); 
+  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+     {
+       a_output(0) = 1.0/a_deta(0);
+     }
+     ,deta);
+  BoxData<T,1,MEM> rho = slice(outputs,0);
+  BoxData<T,1,MEM> rhoIn = slice(a_inputs,0);
+  rho += rhoIn*detaInv;
+  BoxData<T,1,MEM> rhoE = slice(outputs,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoEIn = slice(a_inputs,NUMCOMPS-1);
+  rhoE += rhoEIn*detaInv;
+  
+  BoxData<T,DIM,MEM,DIM> deta_amat = detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> invcoef(bx);
+  invcoef.setToZero();
+  forallInPlace(f_matinv3by3,invcoef,deta_amat);
+  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(outputs,1);
+  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_inputs,1);
+  BoxData<T,DIM,MEM> tmpmom(outputs.box());
+  T one = 1.0;  
+  forallInPlace(f_matVecProd,tmpmom,invcoef,MomIn,one);
+  tmpmom.copyTo(Mom);
+  return outputs;
 }
 template<typename T,MemType MEM>
 void consToPrim(
@@ -157,14 +193,15 @@ void consToPrim(
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                         - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   Box bx = a_JU.box();
-  BoxData<T,1,MEM> deta = detA<T,MEM>(bx.grow(2),a_h,0);
+  BoxData<T,1,MEM> deta = detA<T,MEM>(bx.grow(2),a_h,0); 
   BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
      {
        a_output(0) = 1.0/a_deta(0);
      }
-     ,deta); 
+     ,deta);
+  
   BoxData<T,DIM,MEM,DIM> deta_amat = detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
@@ -173,61 +210,73 @@ void consToPrim(
   // Set up storage for radial variables.
   a_W.define(bx);
   Box bx4 = bx.grow(-1);
-  BoxData<T,NUMCOMPS,MEM> U(bx4);
+  BoxData<T,NUMCOMPS,MEM> U(a_JU.box());
   // JU -> V_r*(rho,rho*vel_cart,rho*E) = JU / det(A);
-  BoxData<T,1,MEM> tmp(a_JU.box()); 
-  BoxData<T,1,MEM> JURho = slice(a_JU,0);
-  BoxData<T,1,MEM> rho = slice(U,0);
-  tmp = JURho*detaInv;
-  tmp.copyTo(rho);
-  BoxData<T,1,MEM> JURhoE = slice(a_JU,NUMCOMPS-1);
-  BoxData<T,1,MEM> rhoE = slice(U,NUMCOMPS-1);
-  tmp = JURhoE*detaInv;
-  tmp.copyTo(rhoE);
-  // V_r*rho*v_cart -> V_r*rho*v_sphere = (detA A)^{-1} V_r*rho*v_cart;
-  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-  BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
-  BoxData<T,DIM,MEM> tmpmom(JUMom.box());
-  T one = 1.0;  
-  forallInPlace(f_matVecProd,tmpmom,invcoef,JUMom,one);
-  tmpmom.copyTo(UMom);
-  
-  // Deconvolve-pointvise-convolve to go from volr rho Ur to W.
-  // divide by dVolr and deconvolve.
-  BoxData<T> tmp2(U.box());
-  for (int comp = 0; comp < NUMCOMPS;comp++)
-    {      
-      BoxData<T> Ucomp = slice(U,comp);
-      tmp2 = Ucomp/a_dVolr;
-      tmp2.copyTo(Ucomp);
+  {
+    PR_TIMERS("ConsToRadialCons");
+    BoxData<T,1,MEM> tmp(a_JU.box()); 
+    BoxData<T,1,MEM> JRho = slice(a_JU,0);
+    BoxData<T,1,MEM> rho = slice(U,0);
+    tmp = JRho*detaInv;
+    tmp.copyTo(rho);
+    BoxData<T,1,MEM> JRhoE = slice(a_JU,NUMCOMPS-1);
+    BoxData<T,1,MEM> rhoE = slice(U,NUMCOMPS-1);
+    tmp = JRhoE*detaInv;
+    tmp.copyTo(rhoE);
+    // V_r*rho*v_cart -> V_r*rho*v_sphere = (detA A)^{-1} V_r*rho*v_cart;
+    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
+    BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
+    BoxData<T,DIM,MEM> tmpmom(JUMom.box());
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,tmpmom,invcoef,JUMom,one);
+    tmpmom.copyTo(UMom);
+    // Deconvolve-pointvise-convolve to go from volr rho Ur to W.
+    // divide by dVolr and deconvolve.
+    BoxData<T> tmp2(U.box());
+    for (int comp = 0; comp < NUMCOMPS;comp++)
+      {      
+        BoxData<T> Ucomp = slice(U,comp);
+        tmp2 = cellQuotient(Ucomp,a_dVolr);
+        tmp2.copyTo(Ucomp);
     }
- BoxData<T,NUMCOMPS,MEM> UPoint = deconvolveStencil(U);    
-  // Pointwise UrPoint -> WPoint.
-  BoxData<T,NUMCOMPS,MEM> WPoint =
-    forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
-                           (Var<T,NUMCOMPS,MEM>& a_wpoint,
-                            Var<T,NUMCOMPS,MEM>& a_upoint)                           
-                           {
-                             Var<T,NUMCOMPS,MEM> wpoint;
-                             a_wpoint(0) = a_upoint(0);
-                             a_wpoint(1) = a_upoint(1)/a_upoint(0);
-                             a_wpoint(2) = a_upoint(2)/a_upoint(0);
-                             a_wpoint(3) = a_upoint(3)/a_upoint(0);
-                             a_wpoint(4) = a_upoint(4);                             
-                           },UPoint);
+  }
+  {
+    PR_TIMERS("Cons Spherical to W, Wbar");
+    BoxData<T,NUMCOMPS,MEM> UPoint = deconvolveStencil(U);    
+    // Pointwise UrPoint -> WPoint.
+    BoxData<T,NUMCOMPS,MEM> WPoint =
+      forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
+                             (Var<T,NUMCOMPS,MEM>& a_wpoint,
+                              Var<T,NUMCOMPS,MEM>& a_upoint)                           
+                             {
+                               Var<T,NUMCOMPS,MEM> wpoint;
+                               a_wpoint(0) = a_upoint(0);
+                               a_wpoint(1) = a_upoint(1)/a_upoint(0);
+                               a_wpoint(2) = a_upoint(2)/a_upoint(0);
+                               a_wpoint(3) = a_upoint(3)/a_upoint(0);
+                               a_wpoint(4) = a_upoint(4);                             
+                             },UPoint);
 
   
-  // Compute pressure.
-  BoxData<T,1,MEM> kePoint = kineticEnergyW<T,MEM>(WPoint,a_h,a_block); 
-  forallInPlace([ ] PROTO_LAMBDA
-                (Var<T,NUMCOMPS>& a_wpoint,
-                 const Var<T,1,MEM>& a_ke,
-                 T a_gamma)
-                {
-                  a_wpoint(NUMCOMPS-1) = (a_wpoint(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
-                },WPoint,kePoint,a_gamma);  
-  a_W = convolveStencil(WPoint);
-  WPoint.copyTo(a_WBar);
+    // Compute pressure.
+    BoxData<T,1,MEM> kePoint = kineticEnergyW<T,MEM>(WPoint,a_h,a_block); 
+    forallInPlace([ ] PROTO_LAMBDA
+                  (Var<T,NUMCOMPS>& a_wpoint,
+                   const Var<T,1,MEM>& a_ke,
+                   T a_gamma)
+                  {
+                    a_wpoint(NUMCOMPS-1) = (a_wpoint(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                  },WPoint,kePoint,a_gamma);
+    if (a_block == blocktest)
+          {
+            HDF5Handler h5;
+            BoxData<T,NUMCOMPS,MEM> tmpPlot(WPoint.box().grow(-2));
+            WPoint.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"ConsToPrim::WPoint");
+          }
+    a_W = convolveStencil(WPoint);
+    WPoint.copyTo(a_WBar);
+  }
 }
 
 template<typename T,MemType MEM>
@@ -286,7 +335,7 @@ void primToCons(
   a_JU.define(U.box().grow(-1));
   BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
-  BoxData<T,DIM,MEM,DIM> amat = AMatrix<T,MEM>(bx,a_h,a_block,0);
+  BoxData<T,DIM,MEM,DIM> amat = detA_A<T,MEM>(bx,a_h,a_block,0);
   
   T one = 1.0;
   forallInPlace(f_matVecProd,JUMom,amat,UMom,one);
@@ -295,15 +344,20 @@ void primToCons(
   // scale by det(A)
 
   BoxData<T,1,MEM> deta = detA<T,MEM>(bx,a_h,0);
-  for (int comp = 0; comp < NUMCOMPS;comp++)
-    {
-      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
-      BoxData<T,1,MEM> Ucomp = slice(U,comp);
-      BoxData<T,1,MEM> tmp;
-      tmp = Ucomp * deta;
-      tmp.copyTo(JUcomp);
-      
-    }
+  {
+    BoxData<T,1,MEM> JUcomp = slice(a_JU,0);
+    BoxData<T,1,MEM> Ucomp = slice(U,0);
+    BoxData<T,1,MEM> tmp;
+    tmp = Ucomp * deta;
+    tmp.copyTo(JUcomp);
+  }
+  {
+    BoxData<T,1,MEM> JUcomp = slice(a_JU,NUMCOMPS-1);
+    BoxData<T,1,MEM> Ucomp = slice(U,NUMCOMPS-1);
+    BoxData<T,1,MEM> tmp;
+    tmp = Ucomp * deta;
+    tmp.copyTo(JUcomp);
+  }
 }
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
@@ -353,10 +407,20 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
     Box bx = a_JU.box();
     State W;
     State WBar;
+    if (a_block == blocktest)
+          {
+            HDF5Handler h5;           
+            h5.writePatch(a_h,a_JU,"JU");
+          }
     consToPrim(W,WBar,a_JU,a_dVolr,m_gamma,a_h,a_block);
-    a_JU.copyTo(a_Rhs);
+    if (a_block == blocktest)
+          {
+            HDF5Handler h5;           
+            h5.writePatch(a_h,W,"W");
+            h5.writePatch(a_h,WBar,"WBar");
+          }
     // Compute Fluxes, rhs.
-    // a_Rhs.setVal(0.0);
+    a_Rhs.setVal(0.0);
     // Loop over directions.
     
     for (int dir = 0; dir < DIM; dir++)
@@ -364,6 +428,15 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
         State WFace = Stencil<T>::CellToFace(dir)(W);
         State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
+        if (a_block == blocktest)
+          {
+            HDF5Handler h5;
+            BoxData<T,NUMCOMPS,MEM> tmpPlot(a_Rhs.box().extrude(Point::Basis(dir)));
+            WFace.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"WFace"+std::to_string(dir));
+            WFaceBar.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"WFaceBar"+std::to_string(dir));
+          }
         // Fluxes on dir face.
 
         // Physical fluxes.
@@ -375,7 +448,13 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
         primToFlux<T,MEM>(physFlux,WFace,WFaceBar,adjDrDir,a_h,m_gamma,a_block,dir);
         Box bxface = physFlux.box(); 
         State fluxdir(bxface);
-
+        if (a_block == blocktest)
+          {
+            HDF5Handler h5;
+            BoxData<T,NUMCOMPS,MEM> tmpPlot(a_Rhs.box().extrude(Point::Basis(dir)));
+            physFlux.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"physFlux"+std::to_string(dir));
+          }
         // Advective fluxes for Cartesian variables.
         // Scalar fluxes.
         // Geometric quantities.
@@ -405,7 +484,14 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
                                 a_advflux(comp) *= a_adjddir(0);
                               }
                       },fluxdir,physFlux,deta,adjDrDir);
- 
+        if (a_block == blocktest)
+          {
+            HDF5Handler h5;
+            BoxData<T,NUMCOMPS,MEM> tmpPlot(a_Rhs.box().extrude(Point::Basis(dir)));
+            fluxdir.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"advectiveFlux"+std::to_string(dir));
+            h5.writePatch(a_h,adjDrDir,"AdjDrDir"+std::to_string(dir));
+          }
         // Momentum fluxes - pressure forces.
         {
           BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
@@ -413,20 +499,46 @@ class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
           Box bxdir = bx.extrude(Point::Basis(dir));
           BoxData<T,DIM,MEM> ntrow = adjA<T,MEM>(bx,a_h,a_block,dir);
           BoxData<T,DIM,MEM> tmp2(ntrow.box());
-          BoxData<T,1,MEM> tmp3 = faceProduct(adjDrDir,pslice,dir);         
+          BoxData<T,1,MEM> tmp3 = faceProduct(adjDrDir,pslice,dir);
         for (int dirvec = 0; dirvec < DIM; dirvec++)
           {
             BoxData<T> ntslice = slice(ntrow,dirvec);          
-            ntslice *= pslice;
+            ntslice *= tmp3;
           }
+       
         fluxdirMom += ntrow;
-        
+         if (a_block == blocktest)
+          {
+            HDF5Handler h5;
+            BoxData<T,NUMCOMPS,MEM> tmpPlot(a_Rhs.box().extrude(Point::Basis(dir)));
+            fluxdir.copyTo(tmpPlot);
+            h5.writePatch(a_h,tmpPlot,"totalFlux"+std::to_string(dir));
+            if (dir < DIM)
+              {
+                BoxData<T,NUMCOMPS,MEM> tmpPlot2
+                  = checkRadial<T,MEM>(tmpPlot,a_h,a_block);
+                h5.writePatch(a_h,tmpPlot2,"radialTotalFlux"+std::to_string(dir));
+              }           
+          }
         // Save fluxes, update RHS.
-        fluxdir.copyTo(a_fluxes[dir]);
-        a_Rhs += Stencil<T>::FluxDivergence(dir)(a_fluxes[dir]);
+         fluxdir.copyTo(a_fluxes[dir]);
+         BoxData<T,NUMCOMPS,MEM> rhsIncr(a_Rhs.box());
+         rhsIncr.setToZero();
+         T hdirInv;
+         hdirInv = 1.0*a_Rhs.box().size(dir);         
+         rhsIncr += Stencil<T>::FluxDivergence(dir)(fluxdir,hdirInv);
+         a_Rhs += rhsIncr;       
         }
-        a_Rhs *= (a_scale);
       }
+    if (a_block == blocktest)
+      {
+        HDF5Handler h5;
+        BoxData<T,NUMCOMPS,MEM> tmpPlot
+          = checkRadial<T,MEM>(a_Rhs,a_h,a_block);
+        h5.writePatch(a_h,tmpPlot,"radialRHS");
+        h5.writePatch(a_h,a_Rhs,"RHS");
+      }                 
+    a_Rhs *= (a_scale);
   };
   private:
   

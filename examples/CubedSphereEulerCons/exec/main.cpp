@@ -94,11 +94,11 @@ void f_radialInit_F(
   T rho = rho0*(1.0 + amplitude);
   T p = p0*pow(rho/rho0,a_gamma);
   T ur = amplitude*sqrt(a_gamma*p/rho)/rho;
-  a_W(0) = rho;
-  a_W(1) = ur;
+  a_W(0) = rho0;
+  a_W(1) = 1.0;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
-  a_W(NUMCOMPS-1) = p;
+  a_W(NUMCOMPS-1) = p0;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
   bool use2DFootprint = true;
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   Array<Point, DIM+1> ghost;
-  ghost.fill(Point::Ones(4));
+  ghost.fill(Point::Ones(5));
    Array<Array<uint,DIM>,6> permute = {{2,1,0},{2,1,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6> sign = {{-1,1,1},{1,1,-1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};     
   auto domain =
@@ -170,16 +170,21 @@ int main(int argc, char* argv[])
      forallInPlace_p(f_radialInit,WPoint_i,radius,dx,gamma,thickness);
      primToCons<double,HOST>(JUTemp,WPoint_i,dVolr,gamma,dx,block);
      consToPrim<double,HOST>(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
-     //WNewTemp -= WPoint_i;
+     WNewTemp -= WPoint_i;    
      WNewTemp.copyTo(WNew_i);
      JUTemp.copyTo(JU_i);
+     //if (block == 3)  h5.writePatch(dx,dVolr,"dVolr");
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
-  h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrim");
+  h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
   cout << "Setup done" << endl;
   //U.exchange(); // fill boundary data
   h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
   //CubedSphereShell::InterpBoundaries(U);
+  // Testing Cubed-sphere single-patch operations.
+  MBLevelBoxData<double, NUMCOMPS, HOST> flux0(layout, Point::Ones());
+  MBLevelBoxData<double, NUMCOMPS, HOST> flux1(layout, Point::Ones());
+  MBLevelBoxData<double, NUMCOMPS, HOST> flux2(layout, Point::Ones());
   for (auto dit :U.layout())
     {
       PR_TIMERS("RHS Calculation");
@@ -197,15 +202,21 @@ int main(int argc, char* argv[])
       BoxData<double,1,HOST> dVolr(layout[dit].grow(ghost[0]));
       radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       int block_i = layout.block(dit);
-      Array<BoxData<double,NUMCOMPS>, DIM> fluxes;     
+      Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
+      fluxes[0].define(rhs_i.box().extrude(0));
+      fluxes[1].define(rhs_i.box().extrude(1));
+      fluxes[2].define(rhs_i.box().extrude(2));
       double dx = 1.0/domainSize;      
       eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
       State WBar_i;
       State W_i;
-      consToPrim<double,HOST>(W_i,WBar_i,rhs_i,dVolr,gamma,dx,block_i);
+      fluxes[0].copyTo(flux0[dit]);
+      fluxes[1].copyTo(flux1[dit]);
+      fluxes[2].copyTo(flux2[dit]);
       W_i.copyTo(WPoint_i);
     }
-  h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSphereRHSTransform");
+  h5.writeMBLevel({ }, map, flux0, "MBEulerCubedSphereFlux0");
+  h5.writeMBLevel({ }, map, flux1, "MBEulerCubedSphereFlux1");
   h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
   PR_TIMER_REPORT();
 }

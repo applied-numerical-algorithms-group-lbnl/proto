@@ -267,6 +267,7 @@ detA_A(
        unsigned int a_block,
        unsigned int a_centering)
 {
+  PR_TIMERS("detA_A");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -291,7 +292,12 @@ detA_A(
       q1d2 = 2;
       weight2 = weights_0;
     }
-  BoxData<T,DIM,MEM,DIM> output = forall_p<T,DIM,MEM,DIM>
+  Point low0 = a_bx.low();
+  Point high0 = a_bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);  
+  BoxData<T,DIM,MEM,DIM> output(a_bx);
+  BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
     ([ ] PROTO_LAMBDA
      (Point a_pt,
       Var<T,DIM,MEM,DIM>& a_deta_amat,
@@ -327,7 +333,9 @@ detA_A(
                  }
              }
          }
-     },a_bx,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+     },bx0,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  output0.copyTo(output);
+  Operator::spreadSlice(output);
   if (a_centering == 0)
     {
       BoxData<T,DIM,MEM,1> outcol(a_bx);
@@ -339,36 +347,17 @@ detA_A(
       nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
       d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
       T halfbyh = .5/a_h;
-      // cout << "block " << a_block <<endl;
-      // cout << output.box() << endl;
-      // cout << n_x_d2n.box() << endl;
-      // cout << d1n_x_n.box() << endl;
       outcol += Stencil<T>::FluxDivergence(1)(n_x_d2n,halfbyh);
       outcol += Stencil<T>::FluxDivergence(2)(d1n_x_n,halfbyh);
-      if (a_block == 3)
-        {
-          HDF5Handler h5;
-          T dx = a_h;
-          h5.writePatch(dx,outcol,"outcol");
-        }
-      // cout << outcol.box() << endl << endl;
       forallInPlace([ ] PROTO_LAMBDA(
                                      Var<T,DIM,MEM,1>& a_d1n_x_d2n,
                                      Var<T,DIM,MEM,DIM>& a_deta_amat)
                     {
                       for (int dir = 0; dir < DIM; dir++)
                         {
-                          //a_deta_amat(dir,0) = a_d1n_x_d2n(dir);
-                          a_d1n_x_d2n(dir) = a_deta_amat(dir,0);
-                          //a_d1n_x_d2n(dir) /= a_deta_amat(0,0);
+                          a_deta_amat(dir,0) = a_d1n_x_d2n(dir);
                         }
-                    },outcol,output);
-      if (a_block == 3)
-        {
-          HDF5Handler h5;
-          T dx = a_h;
-          h5.writePatch(dx,outcol,"outcoldetA_A");
-        }
+                    },outcol,output);     
     }  
   return output;
 }
@@ -465,19 +454,19 @@ detA(
   Array<T,5>
     weights_0={1.,0.,0.,0.,0.};
   int qnum = 5;  
-  int q1d1 = 5;
-  int q1d2 = 5;
-  Array<double,5> weight1 = weights;
-  Array<double,5> weight2 = weights;
+  int q1d1 = 2;
+  int q1d2 = 2;
+  Array<double,5> weight1 = weights_0;
+  Array<double,5> weight2 = weights_0;
   if (a_centering == 1)
     {
-      q1d1 = 2;
-      weight1 = weights_0;
+      q1d1 = 5;
+      weight1 = weights;
     }
   if (a_centering == 2)
     {
-      q1d2 = 2;
-      weight2 = weights_0;
+      q1d2 = 5;
+      weight2 = weights;
      }
   Point low0 = a_bx.low();
   Point high0 = a_bx.high();
@@ -506,6 +495,8 @@ detA(
                                 a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
                               }
                           }
+
+                        
                       },bx0,a_h,weight1,weight2,q1d1,q1d2);
   BoxData<T,1,MEM> output(a_bx);
   output0.copyTo(output);
@@ -604,10 +595,10 @@ inline void d1nCrossN(
                     a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
                     a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];          
                   }       
-              },bx,weights,a_h,permute[a_block],sign[a_block],qnum);
+              },bx0,weights,a_h,permute[a_block],sign[a_block],qnum);
    tmp.copyTo(a_d1n_x_n);
   // copy lowest slice to all the other slices. 
-  // Operator::spreadSlice(a_d1n_x_n);
+  Operator::spreadSlice(a_d1n_x_n);
 }
 template<typename T, MemType MEM>
 inline void nCrossD2n(
@@ -664,10 +655,10 @@ inline void nCrossD2n(
                    a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
                    a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
                  }
-             },bx,weights,a_h,permute[a_block],sign[a_block],qnum);
+             },bx0,weights,a_h,permute[a_block],sign[a_block],qnum);
   tmp.copyTo(a_n_x_d2n);
   // copy lowest slice to all the other slices. 
-  // Operator::spreadSlice(a_n_x_d2n);
+  Operator::spreadSlice(a_n_x_d2n);
 }
 template<typename T,MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>
