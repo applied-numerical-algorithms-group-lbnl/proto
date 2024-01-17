@@ -113,7 +113,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     auto & fineLayout = lfr.m_fineLayout;
     auto & crseLayout = lfr.m_crseLayout;
     auto & crseRegisters = lfr.m_crseRegisters;
-    auto & crseIncrement = lfr.m_crseIncrement;
+    //auto & crseIncrement = lfr.m_crseIncrement;
     auto & fineRegisters = lfr.m_fineRegisters;
     auto & fineIndices = lfr.m_fineIndices;
 
@@ -157,7 +157,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     } // end for coarse patch
 
     // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
-    int destProcID = procID();
+    //int destProcID = procID();
     // std::cout << "Building Source Motion Items" << std::endl;
     for (auto fiter = fineLayout.begin(); fiter.ok(); ++fiter)
     {
@@ -384,7 +384,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         //std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
         for (int ii = 0; ii < numRegisters; ii++)
         {
-            auto& reg = m_crseRegisters[*iter][ii];
+          //auto& reg = m_crseRegisters[*iter][ii]; //unused --dtg
             //std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
         }
     }
@@ -392,11 +392,11 @@ void LevelFluxRegister<T,C,MEM>::define (
     for (auto iter = m_fineLayout.begin(); iter.ok(); ++iter)
     {
       //std::cout << "\tFine Box: " << m_fineLayout[*iter] << std::endl;
-        int numRegisters = m_fineRegisters[*iter].size();
+      // int numRegisters = m_fineRegisters[*iter].size(); //unused --dtg
         //std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
         for (int ii = 0; ii < m_fineRegisters[*iter].size(); ii++)
         {
-            auto& reg = m_fineRegisters[*iter][ii];
+          //auto& reg = m_fineRegisters[*iter][ii]; //unused -dtg
             //std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
         }
     }
