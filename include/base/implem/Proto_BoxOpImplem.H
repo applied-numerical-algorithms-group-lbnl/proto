@@ -443,16 +443,64 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::define(
     define(a_box, a_dx);
     m_isMapped = true;
 }
+
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 const BoxData<double, DIM, MEM>& BoxOp<T, C_STATE, C_AUX, MEM>::x() const
 {
     return *m_x;
 }
+
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 const BoxData<double, 1, MEM>& BoxOp<T, C_STATE, C_AUX, MEM>::jacobian() const
 {
     return *m_J;
 }
+
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::matchFlux(
+            StateData&       a_rhs,
+            const StateData& a_locFlux,
+            const StateData& a_adjFlux,
+            const StateData& a_state,
+            Point            a_localDir) const
+{
+    matchFluxAverage(a_rhs, a_locFlux, a_adjFlux, a_localDir);
+}
+
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::matchFluxAverage(
+            StateData&       a_rhs,
+            const StateData& a_locFlux,
+            const StateData& a_adjFlux,
+            Point            a_localDir) const
+{
+    PROTO_ASSERT(a_localDir.codim() == 1,
+            "BoxOp::matchFluxAverage | Error: direction should be codimension 1");
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (a_localDir[dd] == 0) {continue; }
+        bool side = a_localDir[dd] > 0;
+        //Point growDirs = Point::Ones() - Point::Basis(dd,1);
+        Box B0 = this->box();//.grow(growDirs*this->ghost());
+        Box flxBox = side ? B0.adjacent(a_localDir, 1) : B0.edge(a_localDir, 1);
+        Box slnBox = B0.edge(a_localDir, 1);
+
+        PROTO_ASSERT((slnBox & a_rhs.box()).size() > 0,
+                "BoxOp::matchFluxAverage | Error: RHS not defined on block boundary");
+
+        Shift shift = side ? Shift::Basis(dd,1) : Shift::Zeros();
+        T coef = side*0.5/dx()[dd];
+        Stencil<T> S = coef*shift;
+        StateData tmp(slnBox);
+        tmp |= S(a_adjFlux);
+        tmp -= S(a_locFlux);
+        
+        a_rhs += tmp;
+    }
+}
+
 #endif

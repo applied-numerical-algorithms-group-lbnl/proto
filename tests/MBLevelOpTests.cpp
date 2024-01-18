@@ -222,7 +222,8 @@ TEST(MBLevelOp, XPointLaplace) {
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
-        
+        op.matchFlux(hostDst, hostDst); 
+         
         for (auto iter : layout)
         {
             auto& src_i = hostSrc[iter];    //source data already initialized

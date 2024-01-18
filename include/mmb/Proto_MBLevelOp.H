@@ -69,15 +69,16 @@ class MBLevelOp
     inline unsigned int RKStage() const {return m_rkStage; }
     inline const MBDisjointBoxLayout& layout() const {return m_map->map().layout(); }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
-    
+    inline void matchFlux(LevelStateData& a_state, LevelStateData& a_rhs);
     private:
     
     T m_diagScale;
     T m_fluxScale;
     T m_time;
     unsigned int m_rkStage;
-    
+       
     const MBLevelMap<MAP,MEM>* m_map;
+    mutable MBBoundaryRegister<T, OP::numState(), MEM>  m_boundRegister;
     std::vector<OP> m_ops;
 };
 

@@ -30,6 +30,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map
     m_map = &a_map;
     m_ops.clear();
     m_ops.resize(layout.localSize());
+    m_boundRegister.define(layout,1,Point::Zeros());
     for (auto index : layout)
     {
         auto& x = a_map.map()[index];
@@ -169,3 +170,61 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
     }
 }
 
+template<template<typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
+        LevelStateData& a_state,
+        LevelStateData& a_rhs)
+{
+    auto& layout = m_map->map().layout();
+    PROTO_ASSERT(a_state.layout().compatible(layout),
+            "MBLevelOp::matchFlux | Error: incompatible layouts");
+
+    // compute fluxes and copy them into the register
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                StateData flux(layout[iter].extrude(dir*OP::ghost())); //conservative estimate
+                op.flux(flux, state, dd);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    auto& localFlux = m_boundRegister.local(iter, dd, *siter);
+                    flux.copyTo(localFlux);
+                }
+            }
+        }
+    }
+    // fill adjacent registers
+    m_boundRegister.exchange();
+
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        auto& rhs = a_rhs[iter];
+        auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    auto& adjFlux = m_boundRegister.adjacent(iter, dd, *siter);
+                    auto& locFlux = m_boundRegister.local(iter, dd, *siter);
+                    op.matchFlux(rhs, locFlux, adjFlux, state, dir);
+                }
+            }
+        }
+    }
+}
