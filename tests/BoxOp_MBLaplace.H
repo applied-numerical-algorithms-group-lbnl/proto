@@ -35,8 +35,9 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
                 a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
                 m_Jf[a_dir], m_Jf[a_dir], a_dir);
         // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
-        a_flux = Operator::_faceMatrixProductAB(
+        auto tmp = Operator::_faceMatrixProductAB(
                 faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
+        tmp.copyTo(a_flux);
         a_flux /= this->dx()[a_dir];
     }
 

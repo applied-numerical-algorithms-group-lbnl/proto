@@ -63,6 +63,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         auto& output = a_output[index];
         op(output, state, a_scale);
     }
+    //matchFlux(a_output, a_state);
 }
 
 template<template<typename, MemType> class OPType,
@@ -176,30 +177,36 @@ template<template<typename, MemType> class OPType,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
 void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
-        LevelStateData& a_state,
-        LevelStateData& a_rhs)
+        LevelStateData& a_rhs,
+        const LevelStateData& a_state)
 {
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_state.layout().compatible(layout),
             "MBLevelOp::matchFlux | Error: incompatible layouts");
 
+    pr_out() << "MBLevelOp::matchFlux" << std::endl;
     // compute fluxes and copy them into the register
     for (auto iter : layout)
     {
         auto& op = (*this)[iter];
-        auto& state = a_state[iter];
+        const auto& state = a_state[iter];
         for (int dd = 0; dd < DIM; dd++)
         {
             SideIterator siter;
             for (siter.begin(); siter.ok(); ++siter)
             {
                 Point dir = Point::Basis(dd, *siter);
-                StateData flux(layout[iter].extrude(dir*OP::ghost())); //conservative estimate
-                op.flux(flux, state, dd);
+                Box B0 = layout[iter];
+                Box B1 = B0.grow((Centering)dd);
+                StateData fluxData(B1); //conservative estimate
+                // FIXME: compute local flux from adjacent coordinate system POV
+                op.flux(fluxData, state, dd);
+                pr_out() << "computing flux | base box: " << B0 << " | flux box: " << B1 << " | state box: " << state.box() << std::endl;
                 if (layout.isBlockBoundary(iter, dir))
                 {
                     auto& localFlux = m_boundRegister.local(iter, dd, *siter);
-                    flux.copyTo(localFlux);
+                    fluxData.copyTo(localFlux);
+                    pr_out() << "copying flux from " << fluxData.box() << " into register " << localFlux.box() << std::endl;
                 }
             }
         }
@@ -211,7 +218,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
     {
         auto& op = (*this)[iter];
         auto& rhs = a_rhs[iter];
-        auto& state = a_state[iter];
+        const auto& state = a_state[iter];
         for (int dd = 0; dd < DIM; dd++)
         {
             SideIterator siter;
@@ -220,8 +227,11 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
                 Point dir = Point::Basis(dd, *siter);
                 if (layout.isBlockBoundary(iter, dir))
                 {
+                    // FIXME: local register will have been computed from adjacent POV
+                    // Need to recompute local flux and input to matchFlux function
                     auto& adjFlux = m_boundRegister.adjacent(iter, dd, *siter);
                     auto& locFlux = m_boundRegister.local(iter, dd, *siter);
+                    pr_out() << "matching adj flux at " << adjFlux.box() << " with local flux at  " << locFlux.box() << std::endl;
                     op.matchFlux(rhs, locFlux, adjFlux, state, dir);
                 }
             }
