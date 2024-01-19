@@ -2,7 +2,6 @@
 #ifndef _PROTO_CUBED_SPHERE_SHELL_H_
 #define _PROTO_CUBED_SPHERE_SHELL_H_
 #include "Proto.H"
-
 #include "Proto_CubedSphereKernels.H"
 
 using namespace Proto;

@@ -1763,7 +1763,6 @@ _faceMatrixProductATB(
         auto ql2comp = slice(a_ql2,k,i,ee);
         prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
     }
-    return prod;
 }
 
 template<class T, unsigned int CL, unsigned int DL,
