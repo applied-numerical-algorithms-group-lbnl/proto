@@ -69,8 +69,9 @@ void f_initPatchData_(
 }
 PROTO_KERNEL_END(f_initPatchData_, f_initPatchData)
 #endif
-PROTO_KERNEL_START
+
 template<typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialInit_F(
                       Point                           a_pt,
                       Var<T,NUMCOMPS,MEM>&            a_W,
@@ -138,7 +139,9 @@ int main(int argc, char* argv[])
   auto map = CubedSphereShell::Map(layout,ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
-  
+ 
+  MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
+
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
   double dx = 1.0/domainSize;  
