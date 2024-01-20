@@ -297,7 +297,8 @@ detA_A(
   high0[0] = low0[0];
   Box bx0(low0,high0);  
   BoxData<T,DIM,MEM,DIM> output(a_bx);
-  BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
+  //BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
+  forallInPlace_p
     ([ ] PROTO_LAMBDA
      (Point a_pt,
       Var<T,DIM,MEM,DIM>& a_deta_amat,
@@ -309,11 +310,15 @@ detA_A(
       Array<unsigned int,DIM> a_permute,
       Array<int,DIM> a_sign)
      {
+       matType deta_amatav;
        for (int dir0 = 0; dir0 < DIM; dir0++)
          {
-           a_deta_amat(dir0,0) = 0.;
-           a_deta_amat(dir0,1) = 0.;
-           a_deta_amat(dir0,2) = 0.;
+           //a_deta_amat(dir0,0) = 0.;
+           //a_deta_amat(dir0,1) = 0.;
+           //a_deta_amat(dir0,2) = 0.;
+           deta_amatav[dir0][0] = 0.;
+           deta_amatav[dir0][1] = 0.;
+           deta_amatav[dir0][2] = 0.;
          } 
        for (int k1 = 0; k1 < a_q1d1;k1++)
          {
@@ -322,19 +327,28 @@ detA_A(
              {
                T offsetb = (1.0*k2)/(a_q1d2-1);
                matType deta_amat;
+               
                f_detA_A_(a_pt,deta_amat,a_permute,a_sign,a_h,offseta,offsetb);
                for (int dir0=0; dir0 < DIM; dir0++)
                  {
                    for (int dir1=0; dir1 < DIM; dir1++)
                      {
-                       a_deta_amat(dir0,dir1) +=
+                       //a_deta_amat(dir0,dir1) +=
+                       deta_amatav[dir0][dir1] +=
                          deta_amat[dir0][dir1]*a_wgt1[k1]*a_wgt2[k2];
                      }
                  }
              }
          }
-     },bx0,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
-  output0.copyTo(output);
+       for (int dir0 = 0; dir0 < DIM; dir0++)
+         {
+           a_deta_amat(dir0,0) = deta_amatav[dir0][0];
+           a_deta_amat(dir0,1) = deta_amatav[dir0][1];
+           a_deta_amat(dir0,2) = deta_amatav[dir0][2];          
+         } 
+       
+     },bx0,output,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  //output0.copyTo(output);
   Operator::spreadSlice(output);
   if (a_centering == 0)
     {

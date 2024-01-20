@@ -1,5 +1,6 @@
 //#include <gtest/gtest.h>
 #include "Proto.H"
+#include "InputParser.H"
 //#include "Lambdas.H"
 //#include "MBLevelMap_Shear.H"
 //#include "MBLevelMap_XPointRigid.H"
@@ -81,24 +82,25 @@ void f_radialInit_F(
   // Compute spherical initial data.
   T p0 = 1.0;
   T rho0 = 1.0;
-  T eps = 0.01;
+  T eps = 0.1;
   T amplitude;
-  T arg = (1.0*a_pt[0] - 1.0*a_nradius/2)/(a_nradius*1.0);
+  T arg = (1.0*a_pt[0] + .5 - 1.0*a_nradius/2)/(a_nradius*1.0);
   if (abs(arg) < .25)
     {
-      amplitude = eps*pow(cos(M_PI*arg),6);
+      amplitude = eps*pow(cos(2*M_PI*arg),6);
     }else
     {
       amplitude = 0.;
     }
-  T rho = rho0*(1.0 + amplitude);
+  T rho = rho0 + amplitude*rho0;//rho0*pow(1.0  - eps*arg,2);
   T p = p0*pow(rho/rho0,a_gamma);
-  T ur = amplitude*sqrt(a_gamma*p/rho)/rho;
-  a_W(0) = rho0;
-  a_W(1) = 1.0;
+  T ur =  amplitude*sqrt(a_gamma*p0/rho0)/rho0;
+  //pow(1.0 - eps*arg,4)*sqrt(a_gamma*p/rho0)/rho0;
+  a_W(0) = rho;
+  a_W(1) = ur;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
-  a_W(NUMCOMPS-1) = p0;
+  a_W(NUMCOMPS-1) = p;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
@@ -106,8 +108,12 @@ int main(int argc, char* argv[])
 {   
   HDF5Handler h5;
   int domainSize = 32;
-  int boxSize = 32;
   int thickness = 16;
+  InputArgs args;
+  args.add("nsph", domainSize);
+  args.add("nrad",  thickness);
+  args.parse(argc, argv);
+  args.print();
   Array<double,DIM> offset = {0.,0.,0.};
   Array<double,DIM> exp = {1.,1.,1.};
   PR_TIMER_SETFILE(to_string(domainSize) 
@@ -124,7 +130,7 @@ int main(int argc, char* argv[])
   Array<Array<int,DIM>,6> sign = {{-1,1,1},{1,1,-1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};     
   auto domain =
   CubedSphereShell::Domain(domainSize, thickness, radialDir);
-  Point boxSizeVect = Point::Ones(boxSize);
+  Point boxSizeVect = Point::Ones(domainSize);
   boxSizeVect[radialDir] = thickness;
   MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -143,17 +149,18 @@ int main(int argc, char* argv[])
   WNew.setVal(0.);
   for (auto dit : layout)
     {      
-      BoxData<double> radius(layout[dit].grow(ghost[0]));
+      BoxData<double> radius(layout[dit].grow(6));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
       double r0 = CUBED_SPHERE_SHELL_R0;
       double r1 = CUBED_SPHERE_SHELL_R1;
       double dr = (r1-r0)/thickness;
+      double dxi0 = 1.0/thickness;
       double gamma = 5.0/3.0;
-      BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghost[0]));
-      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghost[0]));
-      BoxData<double,1,HOST> dVolr(layout[dit].grow(ghost[0]));
+      BoxData<double,DIM,HOST> Dr(layout[dit].grow(6));
+      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(6));
+      BoxData<double,1,HOST> dVolr(layout[dit].grow(6));
       radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
-      Box b_i = C2C.domain(layout[dit]).grow(ghost[0]);
+      Box b_i = C2C.domain(layout[dit]).grow(6);
       BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
       // BoxData<double, 1> J_i(layout[dit].grow(Point::Ones() + ghost[0]));
       // FluxBoxData<double, DIM> NT(layout[dit]);
@@ -173,7 +180,7 @@ int main(int argc, char* argv[])
      WNewTemp -= WPoint_i;    
      WNewTemp.copyTo(WNew_i);
      JUTemp.copyTo(JU_i);
-     //if (block == 3)  h5.writePatch(dx,dVolr,"dVolr");
+     if (block == 3)  h5.writePatch(dx,WPoint_i,"WPoint");
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
   h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
@@ -185,29 +192,42 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> flux0(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux1(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux2(layout, Point::Ones());
+  int ghostTest = 8;
   for (auto dit :U.layout())
     {
       PR_TIMERS("RHS Calculation");
       auto& rhs_i = rhs[dit];
       auto& U_i = U[dit];
       auto& WPoint_i = WPoint[dit];
-      BoxData<double> radius(layout[dit].grow(ghost[0]));
+      BoxData<double> radius(layout[dit].grow(ghostTest));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
       double r0 = CUBED_SPHERE_SHELL_R0;
       double r1 = CUBED_SPHERE_SHELL_R1;
       double dr = (r1-r0)/thickness;
       double gamma = 5.0/3.0;
-      BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghost[0]));
-      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghost[0]));
-      BoxData<double,1,HOST> dVolr(layout[dit].grow(ghost[0]));
+      BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
+      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
+      BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
       radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       int block_i = layout.block(dit);
       Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
       fluxes[0].define(rhs_i.box().extrude(0));
       fluxes[1].define(rhs_i.box().extrude(1));
       fluxes[2].define(rhs_i.box().extrude(2));
-      double dx = 1.0/domainSize;      
-      eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
+      double dx = 1.0/domainSize;
+      BoxData<double,NUMCOMPS,HOST> Wfoo(layout[dit].grow(ghostTest));     
+      BoxData<double,NUMCOMPS,HOST> Utemp;
+      forallInPlace_p(f_radialInit,Wfoo,radius,dx,gamma,thickness);
+      //cout << "initial box" << Wfoo.box() << endl;
+      primToCons<double,HOST>(Utemp,Wfoo,dVolr,gamma,dx,block_i);
+      //cout << "JU input box" << Utemp.box() << endl;
+      eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+      double maxpforce = rhs_i.absMax(1,0,0);
+      BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
+      double maxpforceC = rhs_coarse.absMax(1,0,0);
+      cout <<"block "<< block_i << ": " << "absmax of rhs = "
+           << maxpforce << " , " << "absmax of coarsened rhs = "
+           << maxpforceC << endl;
       State WBar_i;
       State W_i;
       fluxes[0].copyTo(flux0[dit]);
