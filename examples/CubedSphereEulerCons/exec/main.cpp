@@ -76,7 +76,7 @@ void f_radialInit_F(
                       Point                           a_pt,
                       Var<T,NUMCOMPS,MEM>&            a_W,
                       Var<T>&                         a_radius,
-                      T                               a_dx,
+                      T                               a_dxradius,
                       T                               a_gamma,
                       int                             a_nradius)
 {
@@ -85,7 +85,7 @@ void f_radialInit_F(
   T rho0 = 1.0;
   T eps = 0.1;
   T amplitude;
-  T arg = (1.0*a_pt[0] + .5 - 1.0*a_nradius/2)/(a_nradius*1.0);
+  T arg = (1.0*a_pt[0] + .5 - 1.0*a_nradius/2)*a_dxradius/2.;
   if (abs(arg) < .25)
     {
       amplitude = eps*pow(cos(2*M_PI*arg),6);
@@ -144,7 +144,8 @@ int main(int argc, char* argv[])
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
-  double dx = 1.0/domainSize;  
+  double dx = 1.0/domainSize;
+  double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
   MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, ghost+Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> WNew(layout, ghost+Point::Ones());
@@ -162,7 +163,7 @@ int main(int argc, char* argv[])
       BoxData<double,DIM,HOST> Dr(layout[dit].grow(6));
       BoxData<double,DIM,HOST> adjDr(layout[dit].grow(6));
       BoxData<double,1,HOST> dVolr(layout[dit].grow(6));
-      radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
+      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       Box b_i = C2C.domain(layout[dit]).grow(6);
       BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
       // BoxData<double, 1> J_i(layout[dit].grow(Point::Ones() + ghost[0]));
@@ -177,13 +178,12 @@ int main(int argc, char* argv[])
      BoxData<double,NUMCOMPS,HOST> JUTemp;
      BoxData<double,NUMCOMPS> WBar_i(JU_i.box());
      //BoxData<double,NUMCOMPS,HOST> WPoint(JU_i.box().grow(1));
-     forallInPlace_p(f_radialInit,WPoint_i,radius,dx,gamma,thickness);
-     primToCons<double,HOST>(JUTemp,WPoint_i,dVolr,gamma,dx,block);
-     consToPrim<double,HOST>(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
+     forallInPlace_p(f_radialInit,WPoint_i,radius,dxradius,gamma,thickness);
+     eulerOp[dit].primToCons(JUTemp,WPoint_i,dVolr,gamma,dx,block);
+     eulerOp[dit].consToPrim(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
      WNewTemp -= WPoint_i;    
      WNewTemp.copyTo(WNew_i);
-     JUTemp.copyTo(JU_i);
-     if (block == 3)  h5.writePatch(dx,WPoint_i,"WPoint");
+     JUTemp.copyTo(JU_i);    
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
   h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
       BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
       BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
       BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
-      radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
+      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
       int block_i = layout.block(dit);
       Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
       fluxes[0].define(rhs_i.box().extrude(0));
@@ -220,9 +220,9 @@ int main(int argc, char* argv[])
       double dx = 1.0/domainSize;
       BoxData<double,NUMCOMPS,HOST> Wfoo(layout[dit].grow(ghostTest));     
       BoxData<double,NUMCOMPS,HOST> Utemp;
-      forallInPlace_p(f_radialInit,Wfoo,radius,dx,gamma,thickness);
+      forallInPlace_p(f_radialInit,Wfoo,radius,dxradius,gamma,thickness);
       //cout << "initial box" << Wfoo.box() << endl;
-      primToCons<double,HOST>(Utemp,Wfoo,dVolr,gamma,dx,block_i);
+      eulerOp[dit].primToCons(Utemp,Wfoo,dVolr,gamma,dx,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
       eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
