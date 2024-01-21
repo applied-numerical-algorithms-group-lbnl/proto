@@ -261,11 +261,11 @@ void cellQuotientValAndInv(
 }
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>
-detA_A(
-       Box a_bx,
-       T a_h,
-       unsigned int a_block,
-       unsigned int a_centering)
+CubedSphereShell::detA_A(
+                         Box a_bx,
+                         T a_h,
+                         unsigned int a_block,
+                         unsigned int a_centering) 
 {
   PR_TIMERS("detA_A");
   Array<Array<uint,DIM>,6>
@@ -376,12 +376,11 @@ detA_A(
   return output;
 }
 template<typename T, MemType MEM>
-inline BoxData<T,DIM,MEM,DIM>
-AMatrix(
-        Box a_bx,
-        T a_h,
-        unsigned int a_block,
-        unsigned int a_centering)
+inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
+                                                        Box a_bx,
+                                                        T a_h,
+                                                        unsigned int a_block,
+                                                        unsigned int a_centering)
 {
   PR_TIMERS("AMatrix");
   Array<Array<uint,DIM>,6>
@@ -454,13 +453,11 @@ AMatrix(
   spreadSlice(output);
   return output;
 }
-
 template<typename T,MemType MEM>
-inline BoxData<T,1,MEM> 
-detA(
-     Box a_bx,
-     T a_h,
-     unsigned int a_centering)
+BoxData<T,1,MEM> CubedSphereShell::detA(
+                                        Box a_bx,
+                                        T a_h,
+                                        unsigned int a_centering)
 {
   PR_TIMERS("detA");
   Array<T,5>
@@ -508,22 +505,19 @@ detA(
                                 f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
                                 a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
                               }
-                          }
-
-                        
+                          }                        
                       },bx0,a_h,weight1,weight2,q1d1,q1d2);
   BoxData<T,1,MEM> output(a_bx);
   output0.copyTo(output);
   spreadSlice(output);
   return output;
 }
-template<typename T,MemType MEM>
-inline BoxData<T,DIM,MEM>
-adjA(
-     Box a_bx,
-     T a_h,
-     int a_block,
-     int a_centering)
+template<typename T, MemType MEM>
+BoxData<T,DIM,MEM> CubedSphereShell::adjA(
+                                          Box a_bx,
+                                          T a_h,
+                                          int a_block,
+                                          int a_centering)
 {
   PR_TIMERS("adjA");
   BoxData<T,DIM,MEM,1> output(a_bx);
@@ -554,12 +548,13 @@ adjA(
     }
   return output;
 }
-template <typename T, MemType MEM>
-inline void d1nCrossN(
-               BoxData<T,DIM,MEM>& a_d1n_x_n,
-               Box a_bx,
-               T a_h,
-               uint a_block)
+template<typename T, MemType MEM>
+inline void
+CubedSphereShell::d1nCrossN(
+                            BoxData<T,DIM,MEM>& a_d1n_x_n,
+                            Box a_bx,
+                            T a_h,
+                            uint a_block)
 {
   PR_TIMERS("d1nCrossN");
   Array<T,5>
@@ -607,7 +602,7 @@ inline void d1nCrossN(
                     cross[2] = -secasq*normsq;
                     a_d1n_x_n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
                     a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
-                    a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];          
+                    a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
                   }       
               },bx0,weights,a_h,permute[a_block],sign[a_block],qnum);
    tmp.copyTo(a_d1n_x_n);
@@ -615,11 +610,12 @@ inline void d1nCrossN(
   Operator::spreadSlice(a_d1n_x_n);
 }
 template<typename T, MemType MEM>
-inline void nCrossD2n(
-                      BoxData<T,DIM,MEM>& a_n_x_d2n,
-                      Box a_bx,
-                      T a_h,
-                      uint a_block)
+inline void
+CubedSphereShell::nCrossD2n(
+                            BoxData<T,DIM,MEM>& a_n_x_d2n,
+                            Box a_bx,
+                            T a_h,
+                            uint a_block)
 {
   PR_TIMERS("nCrossD2n");
   Array<T,5>
@@ -674,48 +670,4 @@ inline void nCrossD2n(
   // copy lowest slice to all the other slices. 
   Operator::spreadSlice(a_n_x_d2n);
 }
-template<typename T,MemType MEM>
-inline BoxData<T,DIM,MEM,DIM>
-scaledDetA_A(             
-             const BoxData<T,1,MEM>& a_radialScale,
-             Box a_bx,
-             T a_h,
-             unsigned int a_block,
-             unsigned int a_centering)
-{
-  BoxData<T,DIM,MEM,DIM> scaleddetA_A = detA_A<T,MEM>(a_bx,a_h,a_block,a_centering);
-  return scaleddetA_A;
-  forallInPlace([] PROTO_LAMBDA
-                (Var<T,DIM,MEM,DIM>& a_scaleddeta_a,
-                 const Var<T,1,MEM>& a_radialscale)
-                {
-                  for (int dir0 = 0; dir0 < DIM; dir0++)
-                    {
-                      for (int dir1 = 0; dir1 < DIM; dir1++)
-                        {
-                          a_scaleddeta_a(dir0,dir1) *= a_radialscale(0);
-                        }
-                    }
-                },scaleddetA_A,a_radialScale);
-  return scaleddetA_A;
-}
-template<typename T,MemType MEM>
-inline BoxData<T,1,MEM>
-scaledDetA(
-           const BoxData<T,1,MEM>& a_scale,
-           Box a_bx,
-           T a_h,
-           unsigned int a_centering)
-{
-  Box bxCentered;
-  if (a_centering == 0)
-    {
-      bxCentered = a_bx.extrude(Point::Basis(0));
-    } else
-    {
-      bxCentered = a_bx.extrude(Point::Basis(0) + Point::Basis(a_centering));
-    }
-  BoxData<T,1,MEM> output = detA<T,MEM>(bxCentered,a_h,a_centering);
-  output *= a_scale;           
-  return output;
-}
+

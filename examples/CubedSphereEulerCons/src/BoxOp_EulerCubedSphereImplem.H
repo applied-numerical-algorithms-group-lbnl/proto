@@ -97,7 +97,7 @@ BoxOp_EulerCubedSphere<T,MEM>::checkRadial(State& a_inputs,
   BoxData<T,NUMCOMPS,MEM> outputs(a_inputs.box());
   outputs.setToZero();
   Box bx = a_inputs.box();
-  BoxData<T,1,MEM> deta = detA<T,MEM>(bx.grow(2),a_h,0); 
+  BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx.grow(2),a_h,0); 
   BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
@@ -112,7 +112,7 @@ BoxOp_EulerCubedSphere<T,MEM>::checkRadial(State& a_inputs,
   BoxData<T,1,MEM> rhoEIn = slice(a_inputs,NUMCOMPS-1);
   rhoE += rhoEIn*detaInv;
   
-  BoxData<T,DIM,MEM,DIM> deta_amat = detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> deta_amat = CubedSphereShell::detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
@@ -174,7 +174,7 @@ BoxOp_EulerCubedSphere<T,MEM>::primToCons(
   Box bx = U.box();
   BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
-  BoxData<T,DIM,MEM,DIM> amat = detA_A<T,MEM>(bx,a_h,a_block,0);
+  BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(bx,a_h,a_block,0);
   
   T one = 1.0;
   forallInPlace(f_matVecProd,JUMom,amat,UMom,one);
@@ -182,7 +182,7 @@ BoxOp_EulerCubedSphere<T,MEM>::primToCons(
 
   // scale by det(A)
 
-  BoxData<T,1,MEM> deta = detA<T,MEM>(bx,a_h,0);
+  BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx,a_h,0);
   {
     BoxData<T,1,MEM> JUcomp = slice(a_JU,0);
     BoxData<T,1,MEM> Ucomp = slice(U,0);
@@ -224,7 +224,7 @@ BoxOp_EulerCubedSphere<T,MEM>::consToPrim(
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                         - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   Box bx = a_JU.box();
-  BoxData<T,1,MEM> deta = detA<T,MEM>(bx.grow(2),a_h,0); 
+  BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx.grow(2),a_h,0); 
   BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
@@ -233,7 +233,8 @@ BoxOp_EulerCubedSphere<T,MEM>::consToPrim(
      }
      ,deta);
   
-  BoxData<T,DIM,MEM,DIM> deta_amat = detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> deta_amat =
+    CubedSphereShell::detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
@@ -413,7 +414,8 @@ BoxOp_EulerCubedSphere<T,MEM>::operator()
       // Multiply momentum fluxes by det(A) A.
       // Advective fluxes for Cartesian momentum.
       T one = 1.0;
-      BoxData<T,DIM,MEM,DIM> deta_a = detA_A<T,MEM>(bxface,a_h,a_block,dir);
+      BoxData<T,DIM,MEM,DIM> deta_a =
+        CubedSphereShell::detA_A<T,MEM>(bxface,a_h,a_block,dir);
       BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
       BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
       forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
@@ -423,7 +425,7 @@ BoxOp_EulerCubedSphere<T,MEM>::operator()
 
       // Scale rho, rho E fluxes by det(A),
         
-      BoxData<T,1,MEM> deta = detA<T,MEM>(bxface,a_h,dir);   
+      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,a_h,dir);   
       forallInPlace([ ] PROTO_LAMBDA
                     (Var<T,NUMCOMPS,MEM>& a_advflux,
                      const Var<T,NUMCOMPS,MEM>& a_fluxin,
@@ -446,7 +448,7 @@ BoxOp_EulerCubedSphere<T,MEM>::operator()
         BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
         Box bx = W.box();
         Box bxdir = bx.extrude(Point::Basis(dir));
-        BoxData<T,DIM,MEM> ntrow = adjA<T,MEM>(bx,a_h,a_block,dir);
+        BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,a_h,a_block,dir);
         BoxData<T,DIM,MEM> tmp2(ntrow.box());
         BoxData<T,1,MEM> tmp3 = faceProduct(adjDrDir,pslice,dir);
         for (int dirvec = 0; dirvec < DIM; dirvec++)

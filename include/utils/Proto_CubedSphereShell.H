@@ -100,44 +100,49 @@ class CubedSphereShell
     static void InterpBoundaries(
             MBLevelBoxData<T,C,MEM,CTR>& a_data,
             unsigned int a_order = 4);
-                                      
-};
-  
+   
   template<typename T,MemType MEM>
-  inline void NTRowCS(
-                      BoxData<T,DIM,MEM>& a_NTrow,
-                      const BoxData<T,1,MEM>& a_adjD,
-                      Box a_bx,
-                      T a_h,
-                      int a_block,
-                      int a_centering);
-  template<typename T,MemType MEM>
-  inline BoxData<T,DIM,MEM,DIM>
-  scaledDetA_A(
-               const BoxData<T,1,MEM>& a_radialScale,
-               Box a_bx,
-               T a_h,
-               unsigned int a_block,
-               unsigned int a_centering);
-  
-  template<typename T,MemType MEM>
-  BoxData<T,DIM,MEM,DIM> detA_A(
-                                Box a_bx,
-                                T a_h,
-                                unsigned int a_block,
-                                unsigned int a_centering);  
-  template <typename T, MemType MEM>
-  inline void d1nCrossN(
-                        BoxData<T,DIM,MEM>& a_d1n_x_n,
-                        Box a_bx,
-                        T a_h,
-                        uint a_block);
-  template <typename T, MemType MEM>
-  inline void nCrossD2n(
+  static void nCrossD2n(
                         BoxData<T,DIM,MEM>& a_n_x_d2n,
                         Box a_bx,
                         T a_h,
                         uint a_block);
+
+  
+  template<typename T,MemType MEM>
+  static void d1nCrossN(
+                        BoxData<T,DIM,MEM>& a_d1n_x_n,
+                        Box a_bx,
+                        T a_h,
+                        uint a_block);
+  
+  template<typename T,MemType MEM>
+  static BoxData<T,DIM,MEM,DIM> AMatrix(
+                                        Box a_bx,
+                                        T a_h,
+                                        unsigned int a_block,
+                                        unsigned int a_centering);
+  
+  template<typename T,MemType MEM>
+  static BoxData<T,DIM,MEM,DIM> detA_A(
+                                       Box a_bx,
+                                       T a_h,
+                                       unsigned int a_block,
+                                       unsigned int a_centering);
+  
+  template<typename T,MemType MEM>
+  static BoxData<T,DIM,MEM> adjA(
+                                 Box a_bx,
+                                 T a_h,
+                                 int a_block,
+                                 int a_centering);
+
+  template<typename T,MemType MEM>  
+  static BoxData<T,1,MEM> detA(
+                               Box a_bx,
+                               T a_h,
+                               unsigned int a_centering);
+}; 
   template <typename T, MemType MEM>
   inline
   void cellMatrixQuotientMatAndInv(
@@ -155,12 +160,6 @@ class CubedSphereShell
                              const BoxData<T,DIM,MEM,DIM>& a_denomInv,
                              const BoxData<T,DIM,MEM,1>& a_numerator);
   
-  template<typename T,MemType MEM>
-  BoxData<T,1,MEM> scaledDetA(
-                              const BoxData<T,1,MEM,1,1>& a_scale,
-                              Box a_bx,
-                              T a_h,
-                              unsigned int a_centering);
   template<typename T,MemType MEM>
   inline BoxData<T,1,MEM>
   detA(
