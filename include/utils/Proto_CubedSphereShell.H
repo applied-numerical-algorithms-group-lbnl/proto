@@ -96,11 +96,14 @@ class CubedSphereShell
     /** Creates and throws away an MBInterpOp. This operator is expensive to build,
      *  so it's usually better to build the operator using InterpOp and keeping it cached.
      */
+  
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void InterpBoundaries(
             MBLevelBoxData<T,C,MEM,CTR>& a_data,
             unsigned int a_order = 4);
-   
+  
+  /// Average of n x \partial_{xi_2} n over the {xi_1 = const.} face.
+  
   template<typename T,MemType MEM>
   static void nCrossD2n(
                         BoxData<T,DIM,MEM>& a_n_x_d2n,
@@ -108,6 +111,7 @@ class CubedSphereShell
                         T a_h,
                         uint a_block);
 
+  /// Average of \partial_{xi_1} n x n over the {xi_2 = const.} face.
   
   template<typename T,MemType MEM>
   static void d1nCrossN(
@@ -115,20 +119,24 @@ class CubedSphereShell
                         Box a_bx,
                         T a_h,
                         uint a_block);
-  
+
+  /// Average of A over faces. 
   template<typename T,MemType MEM>
   static BoxData<T,DIM,MEM,DIM> AMatrix(
                                         Box a_bx,
                                         T a_h,
                                         unsigned int a_block,
                                         unsigned int a_centering);
-  
+
+  /// Average of (det(A) A) over faces. 
   template<typename T,MemType MEM>
   static BoxData<T,DIM,MEM,DIM> detA_A(
                                        Box a_bx,
                                        T a_h,
                                        unsigned int a_block,
                                        unsigned int a_centering);
+
+  /// Average of rows of adj(A) over faces.
   
   template<typename T,MemType MEM>
   static BoxData<T,DIM,MEM> adjA(
@@ -137,11 +145,28 @@ class CubedSphereShell
                                  int a_block,
                                  int a_centering);
 
+  /// Average of determinant(A) over faces.
+  
   template<typename T,MemType MEM>  
   static BoxData<T,1,MEM> detA(
                                Box a_bx,
                                T a_h,
                                unsigned int a_centering);
+  
+  /// Get Array that encodes the permutation matrix relative to block 3.  
+  inline static Array<uint,DIM> perm(uint a_block)
+  {
+    Array<Array<uint,DIM>,6> permvals
+      =  {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    return permvals[a_block];
+  };
+  /// Get Array that encodes the signs of the permuted coordinates, relative to block 3.
+  inline static Array<int,DIM> permsign(uint a_block)
+  {
+    Array<Array<int,DIM>,6> signvals
+      = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+    return signvals[a_block];
+  };
 }; 
   template <typename T, MemType MEM>
   inline

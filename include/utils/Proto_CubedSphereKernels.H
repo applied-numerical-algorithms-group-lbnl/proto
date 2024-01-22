@@ -1,7 +1,7 @@
 #ifndef _PROTO_CUBED_SPHERE_KERNELS_
 #define _PROTO_CUBED_SPHERE_KERNELS_
 #define CUBED_SPHERE_SHELL_R0 1.0
-#define CUBED_SPHERE_SHELL_R1 1.1
+#define CUBED_SPHERE_SHELL_R1 1.5
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
 typedef Proto::Array<Proto::Array<double,DIM>,DIM> matType;
 typedef Proto::Array<double,DIM> vecType;
@@ -9,8 +9,8 @@ using namespace Operator;
 //==============================================================
 // FORALL KERNELS
 
-template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T, MemType MEM>
 void f_matMatProd_F(
                     Var<T,DIM,MEM,DIM>& a_prod,
                     const Var<T,DIM,MEM,DIM>& a_left,
@@ -31,8 +31,8 @@ void f_matMatProd_F(
 }
 PROTO_KERNEL_END(f_matMatProd_F,f_matMatProd)
 
-template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T, MemType MEM>
 void f_matVecProd_F(
                     Var<T,DIM,MEM>& a_prod,
                     const Var<T,DIM,MEM,DIM>& a_left,
@@ -68,9 +68,8 @@ void f_matVecProd_(
         }
     }
 }
-
-template<typename T, MemType MEM, unsigned int C, unsigned int D>
 PROTO_KERNEL_START
+template<typename T, MemType MEM, unsigned int C, unsigned int D>
 void f_matTransVecProd_F(
                          Var<T,C,MEM>& a_prod,
                          const Var<T,D,MEM,C>& a_left,
@@ -88,7 +87,6 @@ void f_matTransVecProd_F(
     }
 }
 PROTO_KERNEL_END(f_matTransVecProd_F, f_matTransVecProd)
-
 template<typename T>
 void f_matTransVecProd_(
                          vecType& a_prod,
@@ -106,9 +104,8 @@ void f_matTransVecProd_(
         }
     }
 }
-
-template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T, MemType MEM>
 void f_matinv3by3_F(
                    Var<T,DIM,MEM,DIM>& a_inverse,
                    const Var<T,DIM,MEM,DIM>& a_matrix)
@@ -142,9 +139,8 @@ void f_matinv3by3_F(
     }
 }
 PROTO_KERNEL_END(f_matinv3by3_F, f_matinv3by3)
-
-template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T, MemType MEM>
 void f_Amatrix_F(Point a_pt,
                  Var<T,DIM,MEM,DIM>& a_amatrix,
                  Array<unsigned int,DIM> a_permute,
@@ -184,7 +180,6 @@ void f_Amatrix_F(Point a_pt,
     }        
 }
 PROTO_KERNEL_END(f_Amatrix_F,f_Amatrix)
-
 template<typename T>
 void f_Ainv_(Point a_pt,
              matType& a_amat,
@@ -226,7 +221,6 @@ void f_Ainv_(Point a_pt,
         }
     }
 }
-
 template<typename T>
 void f_detA_A_(Point a_pt,
                matType& a_deta_amat,
@@ -269,7 +263,6 @@ void f_detA_A_(Point a_pt,
          }
      }
 }
-
 template<typename T>
 void f_Amatrix_(Point a_pt,
                matType& a_deta_amat,
@@ -312,9 +305,8 @@ void f_Amatrix_(Point a_pt,
          }
      }
 }
-
-template<typename T,MemType MEM>
 PROTO_KERNEL_START
+template<typename T,MemType MEM>
 void f_detA_F(Point a_pt,
               Var<T,1,MEM>& a_detA,
               T a_h,
@@ -333,7 +325,6 @@ void f_detA_F(Point a_pt,
   a_detA(0) = secasq*secbsq*norm3;
 }
 PROTO_KERNEL_END(f_detA_F,f_detA)
-
 template<typename T,MemType MEM>
 void f_detA_(Point a_pt,
              T& a_detA,
@@ -379,7 +370,6 @@ void f_consToPrim_F(
 }
 PROTO_KERNEL_END(f_consToPrim_F, f_consToPrim);
 #endif
-
 template<MemType MEM>
 void f_cubeSphereMapF(
     Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
@@ -461,7 +451,6 @@ void f_cubeSphereMapF(
     }
 }
 PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
 template<MemType MEM>
 void f_cubeSphereMapPoint(
     Point& a_pt, vecType& a_X, Array<double, DIM> a_dx, double a_r0, double a_r1,
@@ -540,7 +529,6 @@ void f_cubeSphereMapPoint(
             break;
     }
 }
-
 template<MemType MEM>
 void f_cubeSphereMap2F(
     Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
@@ -668,7 +656,6 @@ void f_cubeSphereMap2F(
     }
 }
 PROTO_KERNEL_END(f_cubeSphereMap2F, f_cubeSphereMap2);
-
 template<MemType MEM>
 PROTO_KERNEL_START
 void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R,

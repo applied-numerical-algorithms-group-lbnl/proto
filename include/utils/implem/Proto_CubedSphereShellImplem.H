@@ -297,7 +297,6 @@ CubedSphereShell::detA_A(
   high0[0] = low0[0];
   Box bx0(low0,high0);  
   BoxData<T,DIM,MEM,DIM> output(a_bx);
-  //BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
   forallInPlace_p
     ([ ] PROTO_LAMBDA
      (Point a_pt,
@@ -312,10 +311,7 @@ CubedSphereShell::detA_A(
      {
        matType deta_amatav;
        for (int dir0 = 0; dir0 < DIM; dir0++)
-         {
-           //a_deta_amat(dir0,0) = 0.;
-           //a_deta_amat(dir0,1) = 0.;
-           //a_deta_amat(dir0,2) = 0.;
+         {         
            deta_amatav[dir0][0] = 0.;
            deta_amatav[dir0][1] = 0.;
            deta_amatav[dir0][2] = 0.;
@@ -333,7 +329,6 @@ CubedSphereShell::detA_A(
                  {
                    for (int dir1=0; dir1 < DIM; dir1++)
                      {
-                       //a_deta_amat(dir0,dir1) +=
                        deta_amatav[dir0][dir1] +=
                          deta_amat[dir0][dir1]*a_wgt1[k1]*a_wgt2[k2];
                      }
@@ -348,7 +343,6 @@ CubedSphereShell::detA_A(
          } 
        
      },bx0,output,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
-  //output0.copyTo(output);
   Operator::spreadSlice(output);
   if (a_centering == 0)
     {
@@ -375,6 +369,7 @@ CubedSphereShell::detA_A(
     }  
   return output;
 }
+#if 0
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
                                                         Box a_bx,
@@ -453,6 +448,7 @@ inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
   spreadSlice(output);
   return output;
 }
+#endif
 template<typename T,MemType MEM>
 BoxData<T,1,MEM> CubedSphereShell::detA(
                                         Box a_bx,
@@ -665,7 +661,7 @@ CubedSphereShell::nCrossD2n(
                    a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
                    a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
                  }
-             },bx0,weights,a_h,permute[a_block],sign[a_block],qnum);
+             },bx0,weights,a_h,perm(a_block),permsign(a_block),qnum);
   tmp.copyTo(a_n_x_d2n);
   // copy lowest slice to all the other slices. 
   Operator::spreadSlice(a_n_x_d2n);

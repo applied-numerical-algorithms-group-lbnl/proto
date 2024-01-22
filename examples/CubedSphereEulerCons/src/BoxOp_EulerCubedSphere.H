@@ -12,7 +12,7 @@ using namespace Proto;
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> State;
 typedef BoxData<double, DIM> Vector;
-#define BLOCKTEST 5
+#define BLOCKTEST -1
 
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
@@ -38,8 +38,6 @@ public:
   using BoxOp<T,NUMCOMPS,1,MEM>::BoxOp;
 
   T m_gamma = 5.0/3.0;
-  Array<Array<uint,DIM>,6> m_permute = {{2,1,0},{2,1,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6> m_sign = {{-1,1,1},{1,1,-1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};
   mutable T umax;
 
   // How many ghost cells does the operator need from the state variables

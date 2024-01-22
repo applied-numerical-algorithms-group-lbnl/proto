@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> flux0(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux1(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux2(layout, Point::Ones());
-  int ghostTest = 8;
+  int ghostTest = 6;
   for (auto dit :U.layout())
     {
       PR_TIMERS("RHS Calculation");
@@ -228,9 +228,11 @@ int main(int argc, char* argv[])
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
       double maxpforceC = rhs_coarse.absMax(1,0,0);
+      cout << std::fixed;
       cout <<"block "<< block_i << ": " << "absmax of rhs = "
            << maxpforce << " , " << "absmax of coarsened rhs = "
            << maxpforceC << endl;
+      h5.writePatch(dx,rhs_i,"rhsPatch"+to_string(block_i));
       State WBar_i;
       State W_i;
       fluxes[0].copyTo(flux0[dit]);
