@@ -106,7 +106,7 @@ namespace Proto
         inline bool operator!=(const DataIndex<P>& a_rhs) const
         { return m_current != a_rhs; }
 
-        /// Integer Dereference
+        /// Integer Dereference  (code is in implem file)
         inline const DataIndex<P> operator[](unsigned int a_index) const;
 
         /// Dereference

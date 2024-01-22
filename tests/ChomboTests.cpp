@@ -56,7 +56,7 @@ TEST(ChomboTests, GetLayout) {
     // Exchange Test
     HDF5Handler h5;
     Point ghost = Point::Ones(2);
-    LevelBoxData<double, DIM> data(layout, ghost);
+    LevelBoxData<double, DIM, HOST> data(layout, ghost);
     data.setVal(0);
     for (auto iter : layout)
     {
@@ -69,10 +69,10 @@ TEST(ChomboTests, GetLayout) {
     EXPECT_TRUE(testExchange(data));    
 
     // Copy Test
-    LevelBoxData<double, DIM> src(layout, ghost);
-    LevelBoxData<double, DIM> dst(layout, ghost);
-    LevelBoxData<double, DIM> sortedSrc(sortedLayout, ghost);
-    LevelBoxData<double, DIM> sortedDst(sortedLayout, ghost);
+    LevelBoxData<double, DIM, HOST> src(layout, ghost);
+    LevelBoxData<double, DIM, HOST> dst(layout, ghost);
+    LevelBoxData<double, DIM, HOST> sortedSrc(sortedLayout, ghost);
+    LevelBoxData<double, DIM, HOST> sortedDst(sortedLayout, ghost);
     src.setVal(0);
     dst.setVal(0);
     for (auto iter : layout)

@@ -122,7 +122,7 @@ void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, Array<T,DIM> a_dx, Array<T,
         }
     }
 }
-PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota);
+PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset)

@@ -7,6 +7,7 @@
 #define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
 #define SHEAR_SLOPE 1.0
+#define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
 
 PROTO_KERNEL_START
@@ -195,7 +196,6 @@ MBProblemDomain buildShear(int a_domainSize)
     }
     return domain;
 }
-#endif
 
 #if DIM > 2
 MBProblemDomain buildRing(Point a_domainSize)
@@ -230,6 +230,7 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     }
     return domain;
 }
+#endif
 #endif
 
 
@@ -740,6 +741,8 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
+#endif
+
 template<typename T, unsigned int C>
 bool compareBoxData(
         const BoxData<T, C, HOST>& a_src,
@@ -809,5 +812,4 @@ bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
     }
     return true;
 }
-#endif //end if PR_AMR
 #endif //end include guard

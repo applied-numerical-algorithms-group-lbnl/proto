@@ -64,6 +64,7 @@ DataIterator<P>::operator++()
     return *this;
 }
 
+
 template<typename P>
 const DataIndex<P>
 DataIterator<P>::operator[](unsigned int a_localIndex) const
