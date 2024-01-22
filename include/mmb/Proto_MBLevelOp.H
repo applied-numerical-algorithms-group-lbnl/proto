@@ -78,7 +78,7 @@ class MBLevelOp
     unsigned int m_rkStage;
        
     const MBLevelMap<MAP,MEM>* m_map;
-    mutable MBBoundaryRegister<T, OP::numState(), MEM>  m_boundRegister;
+   // mutable MBBoundaryRegister<T, OP::numState(), MEM>  m_boundRegister;
     std::vector<OP> m_ops;
 };
 

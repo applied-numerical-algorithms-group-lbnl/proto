@@ -8,8 +8,8 @@ using namespace Proto;
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
@@ -113,8 +113,8 @@ TEST(MBLevelBoxData, Initialization) {
     int domainSize = 64;
     int boxSize = 16;
     int ghostSize = 1;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -145,8 +145,8 @@ TEST(MBLevelBoxData, SetBoundary) {
     int domainSize = 64;
     int boxSize = 16;
     int ghostSize = 1;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -194,8 +194,8 @@ TEST(MBLevelBoxData, FillBoundaries) {
     int domainSize = 32;
     int boxSize = 16;
     int ghostSize = 4;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     std::vector<MBPatchID_t> patches;
     std::vector<Point> boxSizes(numBlocks, boxSizeVect);
@@ -247,8 +247,8 @@ TEST(MBLevelBoxData, CopyTo) {
     int domainSize = 32;
     int boxSize = 16;
     int ghostSize = 1;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -282,8 +282,8 @@ TEST(MBLevelBoxData, OnDomainBoundary)
     
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -347,8 +347,8 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
 
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -428,8 +428,8 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -503,8 +503,8 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -627,8 +627,8 @@ TEST(MBLevelBoxData, MBDataPointOperator)
 
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 

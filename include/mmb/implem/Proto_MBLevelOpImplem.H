@@ -30,7 +30,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map
     m_map = &a_map;
     m_ops.clear();
     m_ops.resize(layout.localSize());
-    m_boundRegister.define(layout,1,Point::Zeros());
+    //m_boundRegister.define(layout,1,Point::Zeros());
     for (auto index : layout)
     {
         auto& x = a_map.map()[index];
@@ -170,7 +170,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
         m_ops[iter].setRKStage(a_stage);
     }
 }
-
+/*
 template<template<typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
@@ -248,3 +248,4 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
         }
     }
 }
+*/

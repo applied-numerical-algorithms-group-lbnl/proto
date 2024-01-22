@@ -48,13 +48,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
     m_force.clear();
     m_local.clear();
 
-    m_boundRegisters.clear();
+    //m_boundRegisters.clear();
     m_constInterp.clear();
     m_BCInterp.clear();
     m_average.clear();
     m_localBlockInterp.clear();
 
-    m_boundRegisters.resize(m_numLevels);
+    //m_boundRegisters.resize(m_numLevels);
     m_residual.resize(m_numLevels);
     m_state.resize(m_numLevels-1);
     m_state_0.resize(m_numLevels-1);
@@ -92,7 +92,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 
         // build data holders
         m_residual[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), Point::Zeros());
-        m_boundRegisters[li].define(a_grid.getLevel(li), 1, Point::Zeros());
+        //m_boundRegisters[li].define(a_grid.getLevel(li), 1, Point::Zeros());
         if (li < m_numLevels-1)
         {
             m_state[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), OP::ghost());

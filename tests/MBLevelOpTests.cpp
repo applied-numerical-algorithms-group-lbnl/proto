@@ -11,7 +11,7 @@ using namespace Proto;
 
 
 #if DIM==2
-#if 0
+#if 1
 TEST(MBLevelOp, Iteration) {
     HDF5Handler h5;
     int domainSize = 32;
@@ -43,7 +43,7 @@ TEST(MBLevelOp, Iteration) {
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBLevelOp, ShearLaplace) {
 
     HDF5Handler h5;

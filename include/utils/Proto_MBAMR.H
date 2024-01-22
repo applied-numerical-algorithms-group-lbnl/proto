@@ -75,7 +75,7 @@ private:
     std::vector<std::shared_ptr<LevelStateData>> m_force;
     std::vector<std::shared_ptr<LevelStateData>> m_local;
 
-    std::vector<MBBoundaryRegister<T, OP::numState(), MEM>> m_boundRegisters;
+    //std::vector<MBBoundaryRegister<T, OP::numState(), MEM>> m_boundRegisters;
     std::vector<std::shared_ptr<MBInterpOp>>     m_localBlockInterp;
     std::vector<Stencil<T>> m_average; 
     std::vector<InterpStencil<T>> m_constInterp; 
