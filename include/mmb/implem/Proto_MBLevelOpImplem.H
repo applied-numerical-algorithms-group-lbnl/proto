@@ -181,6 +181,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
         const LevelStateData& a_state)
 {
     auto& layout = m_map->map().layout();
+    auto& graph = layout.domain().graph();
     PROTO_ASSERT(a_state.layout().compatible(layout),
             "MBLevelOp::matchFlux | Error: incompatible layouts");
 
@@ -196,14 +197,23 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
             for (siter.begin(); siter.ok(); ++siter)
             {
                 Point dir = Point::Basis(dd, *siter);
-                Box B0 = layout[iter];
-                Box B1 = B0.grow((Centering)dd);
-                StateData fluxData(B1); //conservative estimate
-                // FIXME: compute local flux from adjacent coordinate system POV
-                op.flux(fluxData, state, dd);
-                pr_out() << "computing flux | base box: " << B0 << " | flux box: " << B1 << " | state box: " << state.box() << std::endl;
                 if (layout.isBlockBoundary(iter, dir))
                 {
+                    //FIXME: Do we need the adjacent block info or not?
+                    auto locBlock = layout.block(iter);
+                    auto adjBlock = graph.adjacent(locBlock, dd, *siter);
+                    PROTO_ASSERT(graph.connectivity(locBlock, adjBlock) == dir,
+                            "MBLevelOp::matchFlux | Error: Graph corruption");
+                    auto adjDir = graph.connectivity(adjBlock, locBlock);
+                    int adjFluxDir = 0;
+                    for (int ii = 0; ii < DIM; ii++) { if (adjDir[ii] != 0) {adjFluxDir = ii;} }
+
+                    Box B0 = layout[iter];
+                    Box B1 = B0.grow((Centering)dd);
+                    StateData fluxData(B1);
+                    // FIXME: Is this the right flux?
+                    op.flux(fluxData, state, dd);
+                    pr_out() << "computing flux | base box: " << B0 << " | flux box: " << B1 << " | state box: " << state.box() << std::endl;
                     auto& localFlux = m_boundRegister.local(iter, dd, *siter);
                     fluxData.copyTo(localFlux);
                     pr_out() << "copying flux from " << fluxData.box() << " into register " << localFlux.box() << std::endl;
