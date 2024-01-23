@@ -211,5 +211,5 @@ class MBLevelMap
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"
-  //} // end namespace Proto
+} // end namespace Proto
 #endif // end include guard
