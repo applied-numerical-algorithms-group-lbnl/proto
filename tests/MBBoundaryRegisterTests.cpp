@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
+#include "MBMap_XPointRigid.H"
 #include "Lambdas.H"
 
 using namespace Proto;
@@ -7,11 +8,11 @@ using namespace Proto;
 TEST(MBBoundaryRegister, Construction) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
+    int numBlocks = XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
     std::vector<MBPatchID_t> patches;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -159,11 +160,11 @@ TEST(MBBoundaryRegister, Construction) {
 TEST(MBBoundaryRegister, Exchange) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
+    int numBlocks = XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
     std::vector<MBPatchID_t> patches;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -207,13 +208,13 @@ TEST(MBBoundaryRegister, Exchange) {
         {
             for (auto bi : boundRegister.bounds(iter))
             {
-                //pr_out() << "\n======================================================" << std::endl;
-                //pr_out() << "BOUNDARY: " << std::endl;
+                pr_out() << "\n======================================================" << std::endl;
+                pr_out() << "BOUNDARY: " << std::endl;
                 auto b1 = layout.block(bi.localIndex);
                 auto b2 = layout.block(bi.adjIndex);
                 auto p1 = layout.point(bi.localIndex);
                 auto p2 = layout.point(bi.adjIndex);
-                //pr_out() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
+                pr_out() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
                 Box dstBox = bi.adjData->box();
                 auto R = bi.adjToLocal;
                 Box srcBox = layout.domain().convert(dstBox, b1, b2);
@@ -223,13 +224,15 @@ TEST(MBBoundaryRegister, Exchange) {
                 forallInPlace_p(f_MBPointID, adjSln, b2);
                 adjSln.copyTo(locSln, R);
                 EXPECT_EQ(locSln.box(), bi.adjData->box());
-                //pr_out() << "Local Solution (Computed): " << std::endl;
-                //locSln.printData();
-                //pr_out() << "Copied Data: " << std::endl;
-                //bi.adjData->printData();
+                pr_out() << "Local Data" << std::endl;
+                bi.localData->printData();
+                pr_out() << "Adjacent Data: " << std::endl;
+                bi.adjData->printData();
+                pr_out() << "Adjacent Solution (Computed): " << std::endl;
+                locSln.printData();
                 locSln -= (*bi.adjData);
-                //std::cout << "Error: " << locSln.absMax() << std::endl;
-                //locSln.printData();
+                std::cout << "Error: " << locSln.absMax() << std::endl;
+                locSln.printData();
                 EXPECT_LT(locSln.absMax(), 1e-12);
             }
         }

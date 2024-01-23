@@ -25,10 +25,12 @@ template<template<typename, MemType> class OPType,
     MemType MEM>
 void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map)
 {
+    PR_TIME("MBLevelOp::define");
     auto& layout = a_map.map().layout();
     m_map = &a_map;
     m_ops.clear();
     m_ops.resize(layout.localSize());
+    //m_boundRegister.define(layout,1,Point::Zeros());
     for (auto index : layout)
     {
         auto& x = a_map.map()[index];
@@ -48,6 +50,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelStateData&   a_state,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");
@@ -60,6 +63,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         auto& output = a_output[index];
         op(output, state, a_scale);
     }
+    //matchFlux(a_output, a_state);
 }
 
 template<template<typename, MemType> class OPType,
@@ -73,6 +77,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelAuxData&     a_aux,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");
@@ -165,4 +170,82 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
         m_ops[iter].setRKStage(a_stage);
     }
 }
+/*
+template<template<typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
+        LevelStateData& a_rhs,
+        const LevelStateData& a_state)
+{
+    auto& layout = m_map->map().layout();
+    auto& graph = layout.domain().graph();
+    PROTO_ASSERT(a_state.layout().compatible(layout),
+            "MBLevelOp::matchFlux | Error: incompatible layouts");
 
+    pr_out() << "MBLevelOp::matchFlux" << std::endl;
+    // compute fluxes and copy them into the register
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        const auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    //FIXME: Do we need the adjacent block info or not?
+                    auto locBlock = layout.block(iter);
+                    auto adjBlock = graph.adjacent(locBlock, dd, *siter);
+                    PROTO_ASSERT(graph.connectivity(locBlock, adjBlock) == dir,
+                            "MBLevelOp::matchFlux | Error: Graph corruption");
+                    auto adjDir = graph.connectivity(adjBlock, locBlock);
+                    int adjFluxDir = 0;
+                    for (int ii = 0; ii < DIM; ii++) { if (adjDir[ii] != 0) {adjFluxDir = ii;} }
+
+                    Box B0 = layout[iter];
+                    Box B1 = B0.grow((Centering)dd);
+                    StateData fluxData(B1);
+                    // FIXME: Is this the right flux?
+                    op.flux(fluxData, state, dd);
+                    pr_out() << "computing flux | base box: " << B0 << " | flux box: " << B1 << " | state box: " << state.box() << std::endl;
+                    auto& localFlux = m_boundRegister.local(iter, dd, *siter);
+                    fluxData.copyTo(localFlux);
+                    pr_out() << "copying flux from " << fluxData.box() << " into register " << localFlux.box() << std::endl;
+                }
+            }
+        }
+    }
+    // fill adjacent registers
+    m_boundRegister.exchange();
+
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        auto& rhs = a_rhs[iter];
+        const auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    // FIXME: local register will have been computed from adjacent POV
+                    // Need to recompute local flux and input to matchFlux function
+                    auto& adjFlux = m_boundRegister.adjacent(iter, dd, *siter);
+                    auto& locFlux = m_boundRegister.local(iter, dd, *siter);
+                    pr_out() << "matching adj flux at " << adjFlux.box() << " with local flux at  " << locFlux.box() << std::endl;
+                    op.matchFlux(rhs, locFlux, adjFlux, state, dir);
+                }
+            }
+        }
+    }
+}
+*/

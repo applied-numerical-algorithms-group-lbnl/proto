@@ -4,11 +4,11 @@
 
 namespace Proto
 {
-  template<CENTERING Center, typename T, unsigned int C, unsigned char D, unsigned char E>
+  template<CENTERING Center, typename T, unsigned int C, unsigned int D, unsigned int E>
   EBData<Center,T,C,D,E>::EBData(const Box& a_box, const Irreg<Center>& a_irreg)
   :BoxData<T,C,D,E>{a_box},m_geom{a_irreg} { }
   
-template<CENTERING Center, typename T, unsigned int C, unsigned char D, unsigned char E>
+template<CENTERING Center, typename T, unsigned int C, unsigned int D, unsigned int E>
 EBData<Center,T,C,D,E>::EBData(const Box& a_box, shared_ptr<GeometryService>& a_embeddedBoundary)
   :BoxData<T,C,D,E>{a_box},m_geom{a_embeddedBoundary->irreg<Center>(a_box)} { }
 

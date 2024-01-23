@@ -7,7 +7,7 @@
 namespace Proto
 {
     template<typename T, unsigned int C, MemType MEM,
-        unsigned char D, unsigned char E>
+        unsigned int D, unsigned int E>
     struct LazyInterpStencil;
 
     template<typename T>
@@ -30,7 +30,7 @@ namespace Proto
         inline Box span() const;
         inline Point ratio() const {return m_ratio; } 
 
-        template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT, unsigned int D, unsigned int E>
         inline void apply(
                 BoxData<T,C,MEM,D,E>& a_output,
                 const BoxData<T,C,MEM,D,E>& a_input,
@@ -38,12 +38,12 @@ namespace Proto
                 bool a_overwrite,
                 T a_scale = 1.0) const;
 
-        template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
         inline LazyInterpStencil<T, C, MEM, D, E> operator()(
                 const BoxData<T, C, MEM, D, E>& a_input,
                 T a_scale = 1.0) const;
 
-        template<unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
         inline LazyInterpStencil<T, C, MEM, D, E> operator()(
                 const BoxData<T, C, MEM, D, E>& a_input,
                 Box a_range,
@@ -57,7 +57,7 @@ namespace Proto
     }; //end class InterpStencil
     
     template<typename T, unsigned int C, MemType MEM,
-        unsigned char D, unsigned char E>
+        unsigned int D, unsigned int E>
     struct LazyInterpStencil
     {
         inline LazyInterpStencil(){}
@@ -80,7 +80,7 @@ namespace Proto
     
     // Increment operator
     template<typename T, unsigned int C, MemType MEM,
-        unsigned char D, unsigned char E>
+        unsigned int D, unsigned int E>
     BoxData<T,C,MEM,D,E>& operator += (
             BoxData<T,C,MEM,D,E>& a_dst,
             const LazyInterpStencil<T,C,MEM,D,E>&& a_op)
@@ -90,7 +90,7 @@ namespace Proto
     }
     // Replace operator 
     template<typename T, unsigned int C, MemType MEM,
-        unsigned char D, unsigned char E>
+        unsigned int D, unsigned int E>
     BoxData<T,C,MEM,D,E>& operator |= (
             BoxData<T,C,MEM,D,E>& a_dst,
             const LazyInterpStencil<T,C,MEM,D,E>&& a_op)

@@ -108,7 +108,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
     {
         Point dir_ij = Point::Basis(0);
         unsigned int bj = graph.adjacent(bi, dir_ij);
-        Box box_0 = domain.blockDomain(bi).box();
+        Box box_0 = domain.getBlock(bi).box();
         Box box_i = box_0.shift(dir_ij*(a_domainSize / 2));
         Point dir_ji = graph.connectivity(bj, bi);
         Box box_j = box_0.shift(dir_ji*(a_domainSize / 2));

@@ -23,7 +23,7 @@ class PolarExchangeCopier
      * \param a_azimuthal   The azimuthal coordinate (0 - 360)
      * \param a_elevation   The elevation coordinate (0 - 180)
     */
-    inline PolarExchangeCopier(unsigned char a_azimuthal, unsigned char a_elevation)
+    inline PolarExchangeCopier(unsigned int a_azimuthal, unsigned int a_elevation)
     {
         m_azimuthal = a_azimuthal;
         m_elevation = a_elevation;
@@ -33,8 +33,8 @@ class PolarExchangeCopier
     inline void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
 
     private:
-    unsigned char m_azimuthal;
-    unsigned char m_elevation;
+    unsigned int m_azimuthal;
+    unsigned int m_elevation;
 };
 
 

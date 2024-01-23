@@ -41,7 +41,7 @@ TEST(InterpStencil, BoxInference)
 TEST(InterpStencil, Constant) {
     
     constexpr unsigned int C = 3;
-    constexpr unsigned char D = 1;
+    constexpr unsigned int D = 1;
 
     int domainSize = 2;
     Point refRatio(2,4,2,4,2,4);
@@ -117,7 +117,7 @@ TEST(InterpStencil, Linear) {
 #endif
 
     constexpr unsigned int C = 3;
-    constexpr unsigned char D = 1;
+    constexpr unsigned int D = 1;
 
     int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);
@@ -173,7 +173,7 @@ TEST(InterpStencil, Quadratic) {
 #endif
 
     constexpr unsigned int C = 3;
-    constexpr unsigned char D = 1;
+    constexpr unsigned int D = 1;
 
     int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);
@@ -233,7 +233,7 @@ TEST(InterpStencil, FiniteVolume) {
 #endif
 
     constexpr unsigned int C = 3;
-    constexpr unsigned char D = 1;
+    constexpr unsigned int D = 1;
 
     int domainSize = 128;
     Point refRatio(2,4,2,4,2,4);

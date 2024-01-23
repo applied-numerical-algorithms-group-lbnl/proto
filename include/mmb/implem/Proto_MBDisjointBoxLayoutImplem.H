@@ -41,7 +41,7 @@ void MBDisjointBoxLayout::define(
     std::vector<MBPatchID_t> patches;
     for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
     {
-        Box patchBox = a_domain.blockDomain(bi).box().coarsen(a_boxSizes[bi]);
+        Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
         {
             patches.push_back(MBPatchID_t(pi, bi));
@@ -112,6 +112,16 @@ unsigned int MBDisjointBoxLayout::numBoxes(unsigned int a_proc) const
 unsigned int MBDisjointBoxLayout::numProcs() const
 {
     return m_partition->numProcs();
+}
+
+std::vector<MBPatchID_t> MBDisjointBoxLayout::patches() const
+{
+    std::vector<MBPatchID_t> patchList;
+    for (auto item : m_partition->partition())
+    {
+        patchList.push_back(item.first);
+    }
+    return patchList;
 }
 
 DataIndex<BoxPartition>
@@ -235,6 +245,52 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     return true;
 }
 
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
+    }
+    return false;
+}
+
+bool MBDisjointBoxLayout::isDomainBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    if (a_dir == Point::Zeros()) { return false; }
+    else if (isBlockBoundary(a_index, a_dir)) {return false; }
+    auto block = this->block(a_index);
+    auto patchID = this->point(a_index);
+    Box domainBox = domain().getBlock(block).box();
+    Box patchDomain = domainBox.coarsen(boxSizes()[block]);
+    PROTO_ASSERT(patchDomain.contains(patchID),
+            "MBDisjointBoxLayout::isDomainBoundary | Error: data corruption");
+    
+    Point neighborID = patchID + a_dir;
+    if (patchDomain.contains(neighborID)) { return false; }
+    return true;
+}
+
+bool MBDisjointBoxLayout::isInteriorBoundary(
+        const MBIndex&  a_index,
+        Point           a_dir) const
+{
+    if (a_dir == Point::Zeros()) { return false; } // not a boundary
+    auto block = this->block(a_index);
+    auto patchID = this->point(a_index);
+    Box domainBox = domain().getBlock(block).box();
+    Box patchDomain = domainBox.coarsen(boxSizes()[block]);
+    PROTO_ASSERT(patchDomain.contains(patchID),
+            "MBDisjointBoxLayout::isInteriorBoundary | Error: data corruption");
+    Point neighborID = patchID + a_dir;
+    if (!patchDomain.contains(neighborID)) { return false; } // not interior
+    auto neighborIndex = find(neighborID, block);
+    if (neighborIndex == *end()) { return true; } // neighbor patch is not in the layout
+    return false;
+}
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const
 {
@@ -317,6 +373,48 @@ unsigned int MBDisjointBoxLayout::size() const
 unsigned int MBDisjointBoxLayout::localSize() const
 {
     return m_partition->numBoxes(Proto::procID());
+}
+
+std::vector<Point> MBDisjointBoxLayout::boxSizes() const
+{
+    std::vector<Point> ret;
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        ret.push_back(m_layouts[bi].boxSize());
+    }
+    return ret;
+}
+
+MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
+{
+    std::vector<Point> refRatios(numBlocks(), a_refRatio);
+    return this->coarsen(refRatios);
+}
+
+MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
+{
+    PROTO_ASSERT(a_refRatios.size() == numBlocks(),
+            "MBDisjointBoxLayout::coarsen | Error: Wrong number of ref ratios");
+    std::vector<Point> crseBoxSize;
+    std::vector<Point> fineBoxSize = this->boxSizes();
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        PROTO_ASSERT(fineBoxSize[bi] % a_refRatios[bi] == Point::Zeros(),
+            "MBDisjointBoxLayout::coarsen | Error: Layout is not coarsenable by ref ratio.");
+        crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
+    }
+    auto crseDomain = m_domain.coarsen(a_refRatios);
+    return MBDisjointBoxLayout(crseDomain, patches(), crseBoxSize);
+}
+
+void MBDisjointBoxLayout::print() const
+{
+    for (auto iter : *this)
+    {
+        auto bi = block(iter);
+        auto pi = point(iter);
+        pr_out() << "block: " << bi << " | patch: " << pi << " | box: " << (*this)[iter] << std::endl;
+    }
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

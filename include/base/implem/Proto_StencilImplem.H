@@ -294,7 +294,7 @@ Stencil<T>::invert(int a_dir)
 
 template <typename T>
 void
-Stencil<T>::transpose(unsigned char a, unsigned char b)
+Stencil<T>::transpose(unsigned int a, unsigned int b)
 {
     PR_TIME("Stencil::transpose");
     PROTO_ASSERT((a < DIM) && (b < DIM),
@@ -404,7 +404,7 @@ Stencil<T>::print() const
 
 // Apply Stencil
 template <typename T>
-template <unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
                        BoxData<T,C,MEMTYPE,D,E>&        a_dest,
                        const Box&               a_box,
@@ -424,7 +424,7 @@ void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
 }
 
 template <typename T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 LazyStencil<T,C,MEMTYPE,D,E>
 Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src, T a_scale) const
 {
@@ -432,7 +432,7 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src, T a_scale) const
     return LazyStencil<T,C,MEMTYPE,D,E>(this, &a_src, Box(), a_scale);
 }
 template <typename T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 LazyStencil <T,C,MEMTYPE,D,E>
 Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_scale) const
 {
@@ -446,7 +446,7 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_sc
     return LazyStencil<T, C, MEMTYPE, D, E>(this, &a_src, a_box, a_scale);
 }
 
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 BoxData<T,C,MEMTYPE,D,E>&
 operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op)
 {
@@ -462,7 +462,7 @@ operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op
     return a_dest; 
 }
 
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <class T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 BoxData<T,C,MEMTYPE,D,E>&
 operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op)
 {
@@ -482,7 +482,7 @@ operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op
 // LazyStencil ||
 //=============++ 
 
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 LazyStencil<T,C,MEMTYPE,D,E>::LazyStencil(const Stencil<T>* a_stencil,
                                   const BoxData<T,C,MEMTYPE,D,E>* a_src,
                                   Box a_box,
@@ -501,7 +501,7 @@ LazyStencil<T,C,MEMTYPE,D,E>::LazyStencil(const Stencil<T>* a_stencil,
     "LazyStencil data corrupted; m_stencil and m_scale have different sizes.");
 }
 
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
 					 bool a_overwrite)
 {
@@ -512,7 +512,7 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
     }
 }
 
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 Box LazyStencil<T,C,MEMTYPE,D,E>::inferredRange() const
 {
     if (size() == 0) {return Box(); }
@@ -716,7 +716,7 @@ struct sIndexer3 {
 
 
 template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
+template <unsigned int C, unsigned int D, unsigned int E>
 void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
         BoxData<T,C,MemType::HOST,D,E>&        a_dest,
         const Box&               a_box,
@@ -810,7 +810,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
 }
 
 template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
+template <unsigned int C, unsigned int D, unsigned int E>
 void Stencil<T>::protoApply( const BoxData<T,C,HOST,D,E> &  a_src,
                             BoxData<T,C,HOST,D,E> &  a_dst,
                             const Box              &  a_box,
@@ -824,7 +824,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,HOST,D,E> &  a_src,
 }
 
 template <typename T>
-    template <unsigned int C, unsigned char D, unsigned char E>
+    template <unsigned int C, unsigned int D, unsigned int E>
 void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
         BoxData<T,C,DEVICE,D,E> &  a_dst,
         const Box              &  a_box,

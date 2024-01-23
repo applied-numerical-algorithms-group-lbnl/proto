@@ -25,7 +25,7 @@ void MBAMRGrid::define(
     std::vector<MBPatchID_t> patches;
     for (unsigned int bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
     {
-        Box patchBox = a_coarseDomain.blockDomain(bi).box().coarsen(a_coarseBoxSizes[bi]);
+        Box patchBox = a_coarseDomain.getBlock(bi).box().coarsen(a_coarseBoxSizes[bi]);
         for (auto pi : patchBox)
         {
             patches.push_back(MBPatchID_t(pi, bi));

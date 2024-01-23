@@ -2,12 +2,58 @@
 #define TEST_LAMBDAS
 #include <cmath>
 #include "Proto.H"
+#include "MBMap_XPointRigid.H"
 
 #define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
 #define SHEAR_SLOPE 1.0
 #define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
+
+PROTO_KERNEL_START
+void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
+{
+    double p = 6.0;
+    double s = 1.0;
+    double r2 = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        double xi = (a_X(ii) - a_X0[ii])*s;
+        r2 += xi*xi;
+    }
+    double r = sqrt(r2);
+    a_data(0) = (r < M_PI/2.0) ? pow(cos(r),p) : 0.0;
+}
+PROTO_KERNEL_END(f_bellF, f_bell)
+
+PROTO_KERNEL_START
+void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
+{
+    double p = 6.0;
+    double s = 1.0;
+    double r2 = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        double xi = (a_X(ii) - a_X0[ii]);
+        r2 += xi*xi;
+    }
+    double r = sqrt(r2);
+    double sr = sin(s*r);
+    double cr = cos(s*r);
+    a_data(0) = 0;
+    if (s*r < M_PI/2.0)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            double x = (a_X(dir) - a_X0[dir]);
+            a_data(0) -= p*s*s*x*x*pow(cr,p)/(r*r);
+            a_data(0) += p*(p-1)*s*s*x*x*pow(sr,2)*pow(cr,p-2)/(r*r);
+            a_data(0) -= p*s*sr*pow(cr,p-1)/r;
+            a_data(0) += p*s*x*x*sr*pow(cr,p-1)/(r*r*r);
+        }
+    }
+}
+PROTO_KERNEL_END(f_LbellF, f_Lbell)
 
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
@@ -119,15 +165,16 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize, int a_numBlocks)
+MBProblemDomain buildXPoint(int a_domainSize)
 {
-    MBProblemDomain domain(a_numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < a_numBlocks; ii++)
+    for (int ii = 0; ii < numBlocks; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % a_numBlocks, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
     }
-    for (int bi = 0; bi < a_numBlocks; bi++)
+    for (int bi = 0; bi < numBlocks; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
@@ -341,6 +388,45 @@ void cosxFuncF(Point p, Var<double> v, double dx)
   v(0) = cos(x);
 }
 PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_polyF(Var<double, C, MEM>& a_data, Var<double, DIM, MEM>& a_X,
+        Array<double, DIM> a_exp, Array<double, DIM> a_offset)
+{
+    double phi = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (a_exp[dir] != 0)
+        {
+            phi += pow(a_X(dir) - a_offset[dir], a_exp[dir]);
+        }
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_polyF, f_poly);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_LpolyF(Var<double, C, MEM>& a_data, Var<double, DIM, MEM>& a_X,
+        Array<double, DIM> a_exp, Array<double, DIM> a_offset)
+{
+    double phi = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (a_exp[dir] < 2) {continue; }
+        double e = a_exp[dir]*(a_exp[dir]-1);
+        phi += e*pow(a_X(dir) - a_offset[dir], a_exp[dir]-2);
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_LpolyF, f_Lpoly);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START

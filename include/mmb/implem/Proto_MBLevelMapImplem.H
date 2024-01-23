@@ -8,11 +8,34 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+MBLevelMap<MAP,MEM>::MBLevelMap(
+        const MBDisjointBoxLayout&  a_layout,
+        Point                       a_ghost,
+        unsigned int                a_focalBlock)
+{
+    define(a_layout, a_ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBLevelMap<MAP,MEM>::define(
+        const MBDisjointBoxLayout& a_layout,
+        Point                      a_ghost,
+        unsigned int               a_focalBlock)
+{
+    Array<Point, DIM+1> ghost;
+    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th-5th order interpolation
+    ghost[0] = a_ghost;
+    define(a_layout, ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
         const MBDisjointBoxLayout& a_layout,
         const Array<Point, DIM+1>& a_ghost,
         unsigned int               a_focalBlock)
 {
+    PR_TIME("MBLevelMap::define");
+    m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
     m_c2c = Stencil<double>::CornersToCells(4);
     m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, a_ghost);
@@ -23,7 +46,7 @@ void MBLevelMap<MAP,MEM>::define(
     m_ops.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
-        Box domainBox = a_layout.domain().blockDomain(bi).box();
+        Box domainBox = a_layout.domain().getBlock(bi).box();
         for (int dir = 0; dir < DIM; dir++)
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);
@@ -49,6 +72,7 @@ void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_block) const
 {
+    PR_TIME("MBLevelMap::apply");
     m_ops[a_block]._apply(a_X, a_J);
 }
 
@@ -59,6 +83,7 @@ void MBLevelMap<MAP,MEM>::apply(
         FluxBoxData<double, DIM, MEM>& a_NT,
         unsigned int a_block) const
 {
+    PR_TIME("MBLevelMap::apply");
     m_ops[a_block]._apply(a_X, a_J, a_NT);
 }
 
@@ -71,6 +96,7 @@ void MBLevelMap<MAP,MEM>::doApply(
 {
     if (a_computeBlock != a_outBlock)
     {
+        PR_TIME("MBLevelMap::doApply");
         const auto& domain = layout().domain();
         Box BX = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
         Box BJ = domain.convert(a_J.box(), a_outBlock, a_computeBlock, PR_CELL);
@@ -92,6 +118,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellAveraged(
         unsigned int a_computeBlock,
         unsigned int a_outBlock) const
 {
+    PR_TIME("MBLevelMap::cellAveraged(Box)");
     Box B0 = m_c2c.domain(a_box);
     BoxData<double, DIM, MEM> X0(B0);
     BoxData<double, 1, MEM> J0(B0.extrude(Point::Ones(), -1)); //unused
@@ -105,6 +132,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellCentered(
         unsigned int a_computeBlock,
         unsigned int a_outBlock) const
 {
+    PR_TIME("MBLevelMap::cellCentered(Box)");
     auto X0 = cellAveraged(a_box.grow(1), a_computeBlock, a_outBlock);
     return Operator::deconvolve(X0);
 }
@@ -112,6 +140,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellCentered(
 template<template<MemType> typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point) const
 {
+    PR_TIME("MBLevelMap::cellAveraged(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
@@ -122,6 +151,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
 template<template<MemType> typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point) const
 {
+    PR_TIME("MBLevelMap::cellCentered(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
     Box B0(a_point.point, a_point.point);
@@ -150,6 +180,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
         const Box& a_box,
         const Array<double, DIM>& a_dx) const
 {
+    PR_TIME("MBLevelMap::X");
     BoxData<double, DIM, MEM> XOut(a_box);
     forallInPlace_p(
         [] PROTO_LAMBDA (Point& a_pt, Var<double, DIM, MEM>& a_x, Array<double, DIM> a_dx)

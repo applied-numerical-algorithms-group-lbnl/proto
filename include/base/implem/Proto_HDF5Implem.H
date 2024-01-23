@@ -1135,6 +1135,21 @@ void HDF5Handler::writePatch(
 #ifdef PR_MMB
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
+        const MBLevelMap<MAP, MEM>& a_map,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
+}
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1161,6 +1176,20 @@ void HDF5Handler::writeMBLevel(
     writeMBLevel(a_varNames, a_data, a_filename, a_params...);
 }
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_data, a_filename, a_params...);
+    
+}
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,

@@ -15,7 +15,9 @@ namespace Proto
     {
         public:
         typedef DataIndex<MBBoxPartition> MBIndex;
-        
+
+        inline MBDisjointBoxLayout(){}
+
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
                 Point a_boxSize);
@@ -52,6 +54,7 @@ namespace Proto
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
+        inline std::vector<MBPatchID_t> patches() const;
         inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
         inline Box operator[](const MBIndex& a_index) const;
         inline MBIterator begin() const;
@@ -74,12 +77,25 @@ namespace Proto
                 const MBIndex&  a_i2) const;
         inline bool isBlockBoundary(
                 const MBIndex&  a_index,
+                Point           a_dir) const;
+        inline bool isBlockBoundary(
+                const MBIndex&  a_index,
                 Point           a_dir,
                 unsigned int    a_block) const;
+        inline bool isDomainBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir) const;
+        inline bool isInteriorBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir) const;
         inline std::vector<MBIndex> bounds(
                 const MBIndex&  a_index) const;
         inline unsigned int size() const;
         inline unsigned int localSize() const;
+        inline std::vector<Point> boxSizes() const;
+        inline MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
+        inline MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+        inline void print() const;
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

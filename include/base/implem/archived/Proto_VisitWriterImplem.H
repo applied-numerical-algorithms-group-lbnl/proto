@@ -169,14 +169,14 @@ void close_file(void)
  *
  * ************************************************************************* */
  
-inline void force_big_endian(unsigned char *bytes)
+inline void force_big_endian(unsigned int *bytes)
 {
     static int doneTest = 0;
     static int shouldSwap = 0;
     if (!doneTest)
     {
         int tmp1 = 1;
-        unsigned char *tmp2 = (unsigned char *) &tmp1;
+        unsigned int *tmp2 = (unsigned int *) &tmp1;
         if (*tmp2 != 0)
             shouldSwap = 1;
         doneTest = 1;
@@ -184,7 +184,7 @@ inline void force_big_endian(unsigned char *bytes)
  
     if (shouldSwap & VISIT_USE_BINARY)
     {
-        unsigned char tmp = bytes[0];
+        unsigned int tmp = bytes[0];
         bytes[0] = bytes[7];
         bytes[7] = tmp;
         tmp = bytes[1];
@@ -253,7 +253,7 @@ inline void write_int( int val, FILE* fp, int& numInColumn)
 {
     if (VISIT_USE_BINARY)
     {
-        force_big_endian((unsigned char *) &val);
+        force_big_endian((unsigned int *) &val);
         fwrite(&val, sizeof(int), 1, fp);
     }
     else
@@ -292,7 +292,7 @@ inline void write_double(double val, FILE* fp, int& numInColumn)
 {
     if (VISIT_USE_BINARY)
     {
-        force_big_endian((unsigned char *) &val);
+        force_big_endian((unsigned int *) &val);
         fwrite(&val, sizeof(double), 1, fp);
     }
     else

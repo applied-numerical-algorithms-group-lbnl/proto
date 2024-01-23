@@ -54,6 +54,8 @@ MBPointInterpOp::MBPointInterpOp(
     int N = m_exponents.size();
     int M = m_srcs.size();
 
+    //std::cout << "N: " << N << " | M: " << M << std::endl;
+
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
     // Mp = <(x-xg)^p/Rg>_g   |  p = nomial
@@ -73,7 +75,8 @@ MBPointInterpOp::MBPointInterpOp(
     Rg /= M;
     // Cache Moment Data
     // We cache < J * ((x-xg)/Rg)^p > for each exponent p
-    auto C2C = Stencil<double>::CornersToCells(a_order);
+    //auto C2C = Stencil<double>::CornersToCells(a_order);
+    auto C2C = Stencil<double>::CornersToCells(4);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
     Box B0(a_dst.point, a_dst.point);
@@ -129,7 +132,9 @@ MBPointInterpOp::MBPointInterpOp(
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = m_S(0,ii);
+//        std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
+ //   std::abort();
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -172,12 +177,32 @@ unsigned int MBPointInterpOp::size() const
     return m_coefs.size();
 }
 
+void MBPointInterpOp::print() const
+{
+    pr_out() << "--------------------------------" << std::endl;
+    pr_out() << m_dst << std::endl;
+    for (int ii = 0; ii < size(); ii++) {
+        pr_out() << "\tcoef: " << m_coefs[ii] << " | " << m_srcs[ii] << std::endl;
+    }
+}
+
 MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
     m_order = a_order;
     m_ghost = a_ghost;
     m_ops.clear();
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+MBInterpOp::MBInterpOp(
+        const MBLevelMap<MAP,MEM>&    a_map,
+        int                           a_order)
+{
+    for (int bi = 0; bi < a_map.layout().numBlocks(); bi++)
+    {
+        define(a_map, a_order, bi);
+    }
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -198,25 +223,36 @@ void MBInterpOp::define(
                 }
             }
             break;
+        case 5:
+            for (auto pi : Box::Kernel(2))
+            {
+                if (pi.abs().sum() <= 3)
+                {
+                    footprint.push_back(pi);
+                }
+            }
+            break;
         default:
             MayDay<void>::Error("MBInterpOp::define | Function undefined for order %i", a_order);
             break;
     }
-    define(a_map, footprint, a_block);
+    define(a_map, footprint, a_order, a_block);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
-        const MBLevelMap<MAP,MEM>&            a_map,
+        const MBLevelMap<MAP,MEM>&  a_map,
         const std::vector<Point>&   a_footprint,
+        int                         a_order,
         int                         a_block)
 {
+    m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
         if ((a_block >= 0) && (block != a_block)) {continue; }
-        Box blockDomainBox = layout.domain().blockDomain(block).box(); 
+        Box blockDomainBox = layout.domain().getBlock(block).box(); 
         Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
@@ -242,7 +278,7 @@ void MBInterpOp::define(
                 {
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
                 continue;
             }
@@ -258,7 +294,7 @@ void MBInterpOp::define(
                 {
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, 4));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, a_order));
                 }
             }
         }
@@ -291,6 +327,15 @@ void MBInterpOp::coefs(
         {
             a_coefs[op.target()](pi) = poly(pi,0);
         }
+    }
+}
+
+void MBInterpOp::print() const
+{
+    pr_out() << "Number of PointInterpOps: " << m_ops.size() << std::endl;
+    for (auto& op : m_ops)
+    {
+        op.print(); 
     }
 }
 

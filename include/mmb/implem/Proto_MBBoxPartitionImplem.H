@@ -22,7 +22,7 @@ void MBBoxPartition::define(
     {
         for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
         {
-            const auto& domain = a_patchDomain.blockDomain(bi);
+            const auto& domain = a_patchDomain.getBlock(bi);
             m_blockPartitions.push_back(std::make_shared<BoxPartition>(domain));
         }
     }
@@ -41,7 +41,7 @@ void MBBoxPartition::define(
     
     for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
     {
-        m_blockPartitions[bi]->define(m_patchDomain.blockDomain(bi), blockPatches[bi], 0, numProc());
+        m_blockPartitions[bi]->define(m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
 }
@@ -177,7 +177,7 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int
 
 uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 {
-    auto blockDomain = m_patchDomain.blockDomain(a_block);
+    auto blockDomain = m_patchDomain.getBlock(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),
             "MBBoxPartition::find | Error: \
             Patch is not contained within the problem domain.");

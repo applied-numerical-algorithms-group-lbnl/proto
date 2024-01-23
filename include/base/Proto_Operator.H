@@ -19,7 +19,7 @@ namespace Operator {
         \param a_ctr    4th  order cell centered quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _convolve(
             const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -34,7 +34,7 @@ namespace Operator {
         \param a_ctr    4th  order cell centered quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void _convolve(
             BoxData<T,C,MEM,D,E>& a_avg,
             const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -47,7 +47,7 @@ namespace Operator {
 
         \param a_ctr    4th  order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     convolve(
             const BoxData<T,C,MEM,D,E>& a_ctr);
@@ -60,7 +60,7 @@ namespace Operator {
         \param a_avg    4th  order cell averaged quantity (output)
         \param a_ctr    4th  order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     convolve(
             BoxData<T,C,MEM,D,E>& a_avg,
@@ -120,7 +120,7 @@ namespace Operator {
         \param a_avg    4th  order cell averaged quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _deconvolve(
             const BoxData<T,C,MEM,D,E>& a_avg,
@@ -135,7 +135,7 @@ namespace Operator {
         \param a_avg    4th  order cell averaged quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _deconvolve(
             BoxData<T,C,MEM,D,E>& a_ctr,
@@ -149,7 +149,7 @@ namespace Operator {
             
         \param a_avg    4th  order cell averaged quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     deconvolve(
             const BoxData<T,C,MEM,D,E>& a_avg);
@@ -162,7 +162,7 @@ namespace Operator {
         \param a_ctr    4th  order cell centered quantity (output)
         \param a_avg    4th  order cell averaged quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     deconvolve(
             BoxData<T,C,MEM,D,E>& a_ctr,
@@ -209,7 +209,7 @@ namespace Operator {
         \param a_2nd    2nd+ order face centered quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _convolveFace(
             const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -226,7 +226,7 @@ namespace Operator {
         \param a_2nd    2nd+ order face centered quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _convolveFace(
             BoxData<T,C,MEM,D,E>& a_avg,
@@ -242,7 +242,7 @@ namespace Operator {
         \param a_ctr    4th  order face centered quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     convolveFace(
             const BoxData<T,C,MEM,D,E>& a_ctr,
@@ -257,7 +257,7 @@ namespace Operator {
         \param a_ctr    4th  order face centered quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     convolveFace(
             BoxData<T,C,MEM,D,E>& a_avg,
@@ -274,7 +274,7 @@ namespace Operator {
         \param a_2nd    2nd+ order face averaged quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _deconvolveFace(
             const BoxData<T,C,MEM,D,E>& a_avg,
@@ -291,7 +291,7 @@ namespace Operator {
         \param a_2nd    2nd+ order face averaged quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _deconvolveFace(
             BoxData<T,C,MEM,D,E>& a_ctr,
@@ -307,7 +307,7 @@ namespace Operator {
         \param a_avg    4th  order face averaged quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     deconvolveFace(
             const BoxData<T,C,MEM,D,E>& a_avg,
@@ -322,7 +322,7 @@ namespace Operator {
         \param a_avg    4th  order face averaged quantity
         \param a_dir    Face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     deconvolveFace(
             BoxData<T,C,MEM,D,E>& a_ctr,
@@ -340,7 +340,7 @@ namespace Operator {
         \param a_p2nd   2nd+ order cell centered quantity P
         \param a_q2nd   2nd+ order cell centered quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _cellProduct(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -359,7 +359,7 @@ namespace Operator {
         \param a_p2nd   2nd+ order cell centered quantity P
         \param a_q2nd   2nd+ order cell centered quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _cellProduct(
             BoxData<T,C,MEM,D,E>& a_prod,
@@ -376,7 +376,7 @@ namespace Operator {
         \param a_pavg   4th  order cell averaged quantity P
         \param a_qavg   4th  order cell averaged quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     cellProduct(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -391,7 +391,7 @@ namespace Operator {
         \param a_pavg   4th  order cell averaged quantity P
         \param a_qavg   4th  order cell averaged quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     cellProduct(
             BoxData<T,C,MEM,D,E>& a_product,
@@ -411,7 +411,7 @@ namespace Operator {
         \param a_q2nd   2nd+ order face centered quantity Q
         \param a_dir    face normal 
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _faceProduct(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -432,7 +432,7 @@ namespace Operator {
         \param a_q2nd   2nd+ order face centered quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _faceProduct(
             BoxData<T,C,MEM,D,E>& a_prod,
@@ -451,7 +451,7 @@ namespace Operator {
         \param a_qavg   4th  order face averaged quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     faceProduct(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -468,7 +468,7 @@ namespace Operator {
         \param a_qavg   4th  order face averaged quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     faceProduct(
             BoxData<T,C,MEM,D,E>&       a_prod,
@@ -487,7 +487,7 @@ namespace Operator {
         \param a_p2nd   2nd+ order cell centered quantity P
         \param a_q2nd   2nd+ order cell centered quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _cellQuotient(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -506,7 +506,7 @@ namespace Operator {
         \param a_p2nd   2nd+ order cell centered quantity P
         \param a_q2nd   2nd+ order cell centered quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _cellQuotient(
             BoxData<T,C,MEM,D,E>&       a_quot,
@@ -523,7 +523,7 @@ namespace Operator {
         \param a_pavg   4th  order cell averaged quantity P
         \param a_qavg   4th  order cell averaged quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     cellQuotient(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -538,7 +538,7 @@ namespace Operator {
         \param a_pavg   4th  order cell averaged quantity P
         \param a_qavg   4th  order cell averaged quantity Q
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     cellQuotient(
             BoxData<T,C,MEM,D,E>&       a_quot,
@@ -557,7 +557,7 @@ namespace Operator {
         \param a_q2nd   2nd+ order face centered quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _faceQuotient(
             const BoxData<T,C,MEM,D,E>& a_pavg,
@@ -578,7 +578,7 @@ namespace Operator {
         \param a_q2nd   2nd+ order face centered quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     _faceQuotient(
             BoxData<T,C,MEM,D,E>& a_quotient,
@@ -597,14 +597,14 @@ namespace Operator {
         \param a_qavg   4th  order face averaged quantity Q
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     faceQuotient(
             const BoxData<T,C,MEM,D,E>& a_pavg,
             const BoxData<T,C,MEM,D,E>& a_qavg,
             int a_dir);
     
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline void
     faceQuotient(
             BoxData<T,C,MEM,D,E>& a_quotient,
@@ -625,7 +625,7 @@ namespace Operator {
         \param a_qr2    2nd+ order face centered quantity QR
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     _faceTensorProduct(
             const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -634,7 +634,7 @@ namespace Operator {
             const BoxData<T,1,MEM,1,1>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     _faceTensorProduct(
             BoxData<T,C,MEM,D,E>&       a_product,
@@ -644,14 +644,14 @@ namespace Operator {
             const BoxData<T,1,MEM,1,1>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     faceTensorProduct(
             const BoxData<T,C,MEM,D,E>& a_ql,
             const BoxData<T,1,MEM,1,1>& a_qr,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     faceTensorProduct(
             BoxData<T,C,MEM,D,E>&       a_product,
@@ -672,7 +672,7 @@ namespace Operator {
         \param a_qr2    2nd+ order face centered quantity QR
         \param a_dir    face normal
     */
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     _faceTensorQuotient(
             const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -681,7 +681,7 @@ namespace Operator {
             const BoxData<T,1,MEM,1,1>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     _faceTensorQuotient(
             BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -691,14 +691,14 @@ namespace Operator {
             const BoxData<T,1,MEM,1,1>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     faceTensorQuotient(
             const BoxData<T,C,MEM,D,E>& a_ql,
             const BoxData<T,1,MEM,1,1>& a_qr,
             int a_dir);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     faceTensorQuotient(
             BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -718,7 +718,7 @@ namespace Operator {
         \param a_ql2    2nd+ order cell centered quantity QL
         \param a_qr2    2nd+ order cell centered quantity QR
     */
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     _cellTensorQuotient(                    
             const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -726,7 +726,7 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_ql2,
             const BoxData<T,1,MEM,1,1>& a_qr2);
 
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     _cellTensorQuotient(                    
             BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -735,13 +735,13 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_ql2,
             const BoxData<T,1,MEM,1,1>& a_qr2);
 
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline BoxData<T,C,MEM,D,E>
     cellTensorQuotient(                    
             const BoxData<T,C,MEM,D,E>& a_ql,
             const BoxData<T,1,MEM,1,1>& a_qr);
     
-    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
     inline void
     cellTensorQuotient(                    
             BoxData<T,C,MEM,D,E>&       a_quotient,
@@ -755,7 +755,12 @@ namespace Operator {
     cofactor(
             const BoxData<T,DIM,MEM>& a_X,
             int a_dir);
-
+    
+    /// Cofactor Vector On Face
+    /** Ghost cell info: 
+     *  DIM = 2: No ghost cells needed, but a_X must be node centered
+     *  DIM = 3: 2 layers of ghost cells in all directions in addition to node centering
+     */
     template <class T, MemType MEM>
     inline void
     cofactor(
@@ -773,6 +778,9 @@ namespace Operator {
     
     //==========================================================================================
     /// Compute Matrix of Cofactors
+    /** Ghost info:
+     *  For NTFaces[dir] : dir != norm -> 2 ghost cells in norm, 1 in dir, 0 in others
+     */
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     cofactorMatrix(
@@ -838,8 +846,8 @@ namespace Operator {
             int a_edgedir);
 
     //==========================================================================================
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,DR,E>
     _cellMatrixProductAB
            (
@@ -849,8 +857,10 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2);
     
     //==========================================================================================
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    
+    // Ghost info: requires one layer in each dir != a_dir
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,DR,E>
     _faceMatrixProductAB(
             const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -859,8 +869,8 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _faceMatrixProductAB(
             BoxData<T,CL,MEM,DR,E>&       a_product,
@@ -870,16 +880,16 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,DR,E>
     faceMatrixProductAB(
             const BoxData<T,CL,MEM,DL,E>& a_ql,
             const BoxData<T,CR,MEM,DR,E>& a_qr,
             int a_dir);
     
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     faceMatrixProductAB(
             BoxData<T,CL,MEM,DR,E>&       a_product,
@@ -888,8 +898,8 @@ namespace Operator {
             int a_dir);
 
     //==========================================================================================
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,DL,MEM,DR,E>
     _faceMatrixProductATB(
             const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -898,8 +908,8 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
     
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _faceMatrixProductATB(
             BoxData<T,DL,MEM,DR,E>&       a_product,
@@ -910,8 +920,8 @@ namespace Operator {
             int a_dir);
     
     //==========================================================================================
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,CR,E>
     _faceMatrixProductABT(
             const BoxData<T,CL,MEM,DL,E>& a_ql4,
@@ -920,8 +930,8 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
   
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _faceMatrixProductABT(
             BoxData<T,CL,MEM,CR,E>&       a_product,
@@ -932,15 +942,15 @@ namespace Operator {
             int a_dir);
   
     //==========================================================================================
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,DR,E>
     _matrixProductAB(
             const BoxData<T,CL,MEM,DL,E>& a_ql,
             const BoxData<T,CR,MEM,DR,E>& a_qr);
 
-    template<class T, unsigned int CL,unsigned char DL,
-           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL,unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _matrixProductAB(
             BoxData<T,CL,MEM,DR,E>&       a_product,
@@ -948,15 +958,15 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr);
 
     //==========================================================================================
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,DL,MEM,DR,E>
     _matrixProductATB(
             const BoxData<T,CL,MEM,DL,E>& a_ql,
             const BoxData<T,CR,MEM,DR,E>& a_qr);
     
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _matrixProductATB(
             BoxData<T,DL,MEM,DR,E>&       a_product,
@@ -964,15 +974,15 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr);
     
     //==========================================================================================
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,CL,MEM,CR,E>
     _matrixProductABT(
             const BoxData<T,CL,MEM,DL,E>& a_ql,
             const BoxData<T,CR,MEM,DR,E>& a_qr);
   
-    template<class T, unsigned int CL, unsigned char DL,
-         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    template<class T, unsigned int CL, unsigned int DL,
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
     _matrixProductABT(
             BoxData<T,CL,MEM,CR,E>&       a_product,
@@ -980,7 +990,7 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr);
   
     //==========================================================================================
-    template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+    template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
     inline BoxData<T,C,MEM,D,E>
     _product1D(
             const BoxData<T,C,MEM,D,E>& a_ql4,
@@ -1035,7 +1045,7 @@ namespace Operator {
                 int a_dir);
 
   /// Spreads a slice.
-   template<class T,unsigned int C,MemType MEM,unsigned char D, unsigned char E>
+   template<class T,unsigned int C,MemType MEM,unsigned int D, unsigned int E>
   inline void
   spreadSlice(BoxData<T,C,MEM,D,E>& a_bd);
   
