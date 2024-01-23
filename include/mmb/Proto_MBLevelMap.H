@@ -6,6 +6,7 @@
 #include "Proto_MBLevelBoxData.H"
 #include "Proto_MBMapOp.H"
 #include "Proto_Operator.H"
+//#include "Proto_CubedSphereKernels.H"
 
 namespace Proto
 {
@@ -167,7 +168,11 @@ class MBLevelMap
     /// Compute Cell Centered Coordinates
     /** Computes the cell-centered coodinate values at a specified MBDataPoint */
     inline Array<double, DIM> cellCentered(const MBDataPoint& a_point) const;
-    
+
+    /// Compute Cell Centered Coordinates, analytic case.
+    /** Computes the cell-centered coodinate valuesas a specified analytic function, */
+    inline Array<double, DIM> analyticCellCentered(const MBDataPoint& a_point) const;
+  
     /// Compute Cell Averaged Coordinates
     /** Computes the cell-averaged coodinate values at a specified MBDataPoint */
     inline Array<double, DIM> cellAveraged(const MBDataPoint& a_point) const;
@@ -206,5 +211,5 @@ class MBLevelMap
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"
-} // end namespace Proto
+  //} // end namespace Proto
 #endif // end include guard

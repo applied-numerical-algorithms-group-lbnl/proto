@@ -159,6 +159,24 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
     return X.array(a_point.point);
 }
 
+template<template<MemType> typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& a_point) const
+{
+    return cellCentered(a_point);
+    // TODO: We need to do this, but this isn't the right way. Turning this off 
+    // until we get MBBoxOp online.
+    /**
+    auto computeBlock = a_point.srcBlock();
+    Array<double,DIM> X;
+    Array<double,DIM> thisDx = this->dx(a_point.srcBlock());
+    Point pt = a_point.point;
+    f_cubeSphereMapPoint<MEM>(pt,X,thisDx,CUBED_SPHERE_SHELL_R0,
+                         CUBED_SPHERE_SHELL_R1,a_point.srcBlock(),
+                         CUBED_SPHERE_SHELL_RADIAL_COORD);
+    return X;
+  }
+  */
+}
 
 template<template<MemType> typename MAP, MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }

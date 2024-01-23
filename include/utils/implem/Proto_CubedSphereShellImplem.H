@@ -1,156 +1,4 @@
 //==============================================================
-// FORALL KERNELS
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cubeSphereMapF(
-    Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
-    Array<double, DIM> a_dx, double a_r0, double a_r1,
-    int a_block, int a_radialCoord)
-{
-    // subscript 0 are at corners
-    Array<double, DIM> x  = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-
-    double r0, xi0, eta0, r, xi, eta;
-    switch (a_radialCoord)
-    {
-        case 0:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[0];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-            break;
-        }
-        case 2:
-        {
-            r0   = a_r0 + (a_r1-a_r0)*x0[2];
-            xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
-            eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
-            break;
-        }
-    }
-    
-    double X0 = tan(xi0);
-    double Y0 = tan(eta0);
-    double d0 = sqrt(1+X0*X0+Y0*Y0);
-    
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = sqrt(1+X*X+Y*Y);
-
-    a_J(0) = r0*r0*(1+X0*X0)*(1+Y0*Y0)/(d0*d0*d0);
-    switch (a_block)
-    {
-        case 0:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0*Y0/d0;
-            a_X(2) = -r0/d0;
-            break;
-        case 1:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = r0*Y0/d0;
-            a_X(2) = r0/d0;
-            break;
-        case 2:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 3:
-            a_X(0) = r0/d0;
-            a_X(1) = r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 4:
-            a_X(0) = -r0*X0/d0;
-            a_X(1) = r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 5:
-            a_X(0) = -r0/d0;
-            a_X(1) = -r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        default:
-            a_X(0) = 0;
-            a_X(1) = 0;
-            a_X(2) = 0;
-            break;
-    }
-}
-PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R, Var<double,1,MEM>& a_J,
-        Var<double, DIM, MEM>& a_X, int a_block, int a_radialCoord)
-{
-    double x0 = a_X(0);
-    double y0 = a_X(1);
-    double z0 = a_X(2);
-
-    double x, y, z;
-    switch (a_block)
-    {
-        case 0:
-        {
-            x = -z0;
-            y = y0;
-            z = x0;
-            break;
-        }
-        case 1:
-        {
-            x = z0;
-            y = y0;
-            z = -x0;
-            break;
-        }
-        case 2:
-        {
-            x = -y0;
-            y = x0;
-            z = z0;
-            break;
-        }
-        case 3:
-        {
-            x = x0;
-            y = y0;
-            z = z0;
-            break;
-        }
-        case 4:
-        {
-            x = y0;
-            y = -x0;
-            z = z0;
-            break;
-        }
-        case 5:
-        {
-            x = -x0;
-            y = -y0;
-            z = z0;
-            break;
-        }
-    }
-
-    double R = sqrt(x*x + y*y + z*z);
-    double r = sqrt(x*x + y*y);
-    double phi = atan2(r,z);
-    double theta = atan2(y,x);
-    // note that this J is at corners
-    a_J(0) = r*r*sin(phi);
-    a_R(a_radialCoord) = R;
-    a_R((a_radialCoord + 1) % 3) = theta;
-    a_R((a_radialCoord + 2) % 3) = phi;
-}
-PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
-
-//==============================================================
 // CUBED SPHERE SHELL MAP
 template<MemType MEM>
 void MBMap_CubedSphereShell<MEM>::apply(
@@ -273,7 +121,7 @@ MBProblemDomain CubedSphereShell::Domain(
     return domain;
 }
     
-template<MemType MEM = MEMTYPE_DEFAULT>
+template<MemType MEM>
 MBLevelMap<MBMap_CubedSphereShell, MEM>
 CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
@@ -296,7 +144,7 @@ CubedSphereShell::Map(
 
 template<template<typename, MemType> class OpType,
     typename T,
-    MemType MEM = MEMTYPE_DEFAULT>
+    MemType MEM>
 MBLevelOp<OpType, MBMap_CubedSphereShell, T>
 CubedSphereShell::Operator(
     MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map)
@@ -352,3 +200,470 @@ CubedSphereShell::InterpBoundaries(
     auto op = InterpOp(a_data, a_order);
     op.apply(a_data, a_data);
 }
+template <typename T, MemType MEM>
+void cellMatrixQuotientMatAndInv(
+                                 BoxData<T,DIM,MEM,1>& a_quot,
+                                 BoxData<T,DIM,MEM,1>& a_quotBar,
+                                 const BoxData<T,DIM,MEM,DIM>& a_denominator,
+                                 const BoxData<T,DIM,MEM,DIM>& a_denomInv,
+                                 const BoxData<T,DIM,MEM,1>& a_numerator)
+{
+  T one = 1.0;
+  forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
+  BoxData<T,DIM,MEM,1> corr(a_quotBar.box().grow(-1));
+  corr.setToZero();
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      BoxData<T,DIM,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
+      BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
+      BoxData<T,DIM,MEM,1> prod(Ddenom.box());
+      T twelveth = -1.0/12.0;
+      forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
+      corr += prod;
+    }
+  BoxData<T,DIM,MEM> temp2 = forall<T,DIM,MEM>
+    ([ ] PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
+                      const Var<T,DIM,MEM>& a_num,
+                      const Var<T,DIM,MEM>& a_corr)
+     {
+       for (int dir = 0; dir < DIM; dir++)
+         {
+           a_output(dir) = a_num(dir) + a_corr(dir);
+         }
+     },a_numerator,corr);
+  forallInPlace(f_matVecProd,a_quot,a_denomInv,temp2,one);
+}
+template <typename T, MemType MEM>
+void cellQuotientValAndInv(
+                           BoxData<T,1,MEM>& a_quot,
+                           BoxData<T,1,MEM>& a_quotBar,
+                           const BoxData<T,1,MEM>& a_denominator,
+                           const BoxData<T,1,MEM>& a_denomInv,
+                           const BoxData<T,1,MEM>& a_numerator)
+{
+  a_quot.setToZero();
+  a_quotBar.setToZero();
+  auto temp = a_denomInv*a_numerator;
+  temp.copyTo(a_quotBar);
+  BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1));
+  corr.setToZero();
+  T twelveth = -1.0/12.0;
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      BoxData<T,1,MEM> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
+      BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
+      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
+      corr += prod;
+    }
+  corr *= twelveth;
+  a_quotBar.copyTo(a_quot);
+  a_quot += corr;
+}
+template<typename T, MemType MEM>
+inline BoxData<T,DIM,MEM,DIM>
+CubedSphereShell::detA_A(
+                         Box a_bx,
+                         T a_h,
+                         unsigned int a_block,
+                         unsigned int a_centering) 
+{
+  PR_TIMERS("detA_A");
+  Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights_0={1.,0.,0.,0.,0.};
+  int qnum = 5;
+  Box bxCentered = a_bx.extrude(Point::Basis(a_centering));
+  int q1d1 = 5;
+  int q1d2 = 5;
+  Array<double,5> weight1 = weights;
+  Array<double,5> weight2 = weights;
+  if (a_centering == 1)
+    {
+      q1d1 = 2;
+      weight1 = weights_0;
+    }
+  if (a_centering == 2)
+    {
+      q1d2 = 2;
+      weight2 = weights_0;
+    }
+  Point low0 = a_bx.low();
+  Point high0 = a_bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);  
+  BoxData<T,DIM,MEM,DIM> output(a_bx);
+  forallInPlace_p
+    ([ ] PROTO_LAMBDA
+     (Point a_pt,
+      Var<T,DIM,MEM,DIM>& a_deta_amat,
+      T a_h,
+      Array<T,5> a_wgt1,
+      Array<T,5> a_wgt2,
+      int a_q1d1,
+      int a_q1d2,
+      Array<unsigned int,DIM> a_permute,
+      Array<int,DIM> a_sign)
+     {
+       matType deta_amatav;
+       for (int dir0 = 0; dir0 < DIM; dir0++)
+         {         
+           deta_amatav[dir0][0] = 0.;
+           deta_amatav[dir0][1] = 0.;
+           deta_amatav[dir0][2] = 0.;
+         } 
+       for (int k1 = 0; k1 < a_q1d1;k1++)
+         {
+           T offseta = (1.0*k1)/(a_q1d1-1);
+           for (int k2 = 0; k2 < a_q1d2;k2++)
+             {
+               T offsetb = (1.0*k2)/(a_q1d2-1);
+               matType deta_amat;
+               
+               f_detA_A_(a_pt,deta_amat,a_permute,a_sign,a_h,offseta,offsetb);
+               for (int dir0=0; dir0 < DIM; dir0++)
+                 {
+                   for (int dir1=0; dir1 < DIM; dir1++)
+                     {
+                       deta_amatav[dir0][dir1] +=
+                         deta_amat[dir0][dir1]*a_wgt1[k1]*a_wgt2[k2];
+                     }
+                 }
+             }
+         }
+       for (int dir0 = 0; dir0 < DIM; dir0++)
+         {
+           a_deta_amat(dir0,0) = deta_amatav[dir0][0];
+           a_deta_amat(dir0,1) = deta_amatav[dir0][1];
+           a_deta_amat(dir0,2) = deta_amatav[dir0][2];          
+         } 
+       
+     },bx0,output,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  Operator::spreadSlice(output);
+  if (a_centering == 0)
+    {
+      BoxData<T,DIM,MEM,1> outcol(a_bx);
+      outcol.setToZero();
+      Box bx2 = a_bx.extrude(Point::Basis(2));
+      Box bx1 = a_bx.extrude(Point::Basis(1));
+      BoxData<T,DIM,MEM> d1n_x_n(bx2);
+      BoxData<T,DIM,MEM> n_x_d2n(bx1);
+      nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
+      d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
+      T halfbyh = .5/a_h;
+      outcol += Stencil<T>::FluxDivergence(1)(n_x_d2n,halfbyh);
+      outcol += Stencil<T>::FluxDivergence(2)(d1n_x_n,halfbyh);
+      forallInPlace([ ] PROTO_LAMBDA(
+                                     Var<T,DIM,MEM,1>& a_d1n_x_d2n,
+                                     Var<T,DIM,MEM,DIM>& a_deta_amat)
+                    {
+                      for (int dir = 0; dir < DIM; dir++)
+                        {
+                          a_deta_amat(dir,0) = a_d1n_x_d2n(dir);
+                        }
+                    },outcol,output);     
+    }  
+  return output;
+}
+#if 0
+template<typename T, MemType MEM>
+inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
+                                                        Box a_bx,
+                                                        T a_h,
+                                                        unsigned int a_block,
+                                                        unsigned int a_centering)
+{
+  PR_TIMERS("AMatrix");
+  Array<Array<uint,DIM>,6>
+    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights_0={1.,0.,0.,0.,0.};
+  int qnum = 5;
+  Box bxCentered = a_bx.extrude(Point::Basis(a_centering));
+  int q1d1 = 5;
+  int q1d2 = 5;
+  Array<double,5> weight1 = weights;
+  Array<double,5> weight2 = weights;
+  if (a_centering == 1)
+    {
+      q1d1 = 2;
+      weight1 = weights_0;
+    }
+  if (a_centering == 2)
+    {
+      q1d2 = 2;
+      weight2 = weights_0;
+    }
+  Point low0 = bxCentered.low();
+  Point high0 = bxCentered.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  BoxData<T,DIM,MEM,DIM> output0 = forall_p<T,DIM,MEM,DIM>
+    ([ ] PROTO_LAMBDA
+     (Point a_pt,
+      Var<T,DIM,MEM,DIM>& a_amat,
+      T a_h,
+      Array<T,5> a_wgt1,
+      Array<T,5> a_wgt2,
+      int a_q1d1,
+      int a_q1d2,
+      Array<unsigned int,DIM> a_permute,
+      Array<int,DIM> a_sign)
+     {
+       for (int dir0 = 0; dir0 < DIM; dir0++)
+         {
+           a_amat(dir0,0) = 0.;
+           a_amat(dir0,1) = 0.;
+           a_amat(dir0,2) = 0.;
+         } 
+       for (int k1 = 0; k1 < a_q1d1;k1++)
+         {
+           T offseta = (1.0*k1)/(a_q1d1-1);
+           for (int k2 = 0; k2 < a_q1d2;k2++)
+             {
+               T offsetb = (1.0*k2)/(a_q1d2-1);
+               matType amat2;
+               f_Amatrix_(a_pt,amat2,a_permute,a_sign,a_h,offseta,offsetb);
+               for (int dir0=0; dir0 < DIM; dir0++)
+                 {
+                   for (int dir1=0; dir1 < DIM; dir1++)
+                     {
+                       a_amat(dir0,dir1) +=
+                         amat2[dir0][dir1]*a_wgt1[k1]*a_wgt2[k2];
+                     }
+                 }
+             }
+         }
+     },bx0,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+  BoxData<T,DIM,MEM,DIM> output(bxCentered);
+  output0.copyTo(output);
+  spreadSlice(output);
+  return output;
+}
+#endif
+template<typename T,MemType MEM>
+BoxData<T,1,MEM> CubedSphereShell::detA(
+                                        Box a_bx,
+                                        T a_h,
+                                        unsigned int a_centering)
+{
+  PR_TIMERS("detA");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights_0={1.,0.,0.,0.,0.};
+  int qnum = 5;  
+  int q1d1 = 2;
+  int q1d2 = 2;
+  Array<double,5> weight1 = weights_0;
+  Array<double,5> weight2 = weights_0;
+  if (a_centering == 1)
+    {
+      q1d1 = 5;
+      weight1 = weights;
+    }
+  if (a_centering == 2)
+    {
+      q1d2 = 5;
+      weight2 = weights;
+     }
+  Point low0 = a_bx.low();
+  Point high0 = a_bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  BoxData<T,1,MEM> output0 =
+    forall_p<T,1,MEM>([ ] PROTO_LAMBDA
+                      (                  
+                       Point a_pt,
+                       Var<T,1,MEM>& a_out,
+                       T a_h,
+                       Array<T,5> a_wgt1,
+                       Array<T,5> a_wgt2,
+                       int a_q1d1,
+                       int a_q1d2)
+                      {
+                        a_out(0) = 0.0;
+                        for (int k1 = 0; k1 < a_q1d1; k1++)
+                          {
+                            T offseta = (1.0*k1)/(a_q1d1-1);
+                            for (int k2 = 0; k2 < a_q1d2;k2++)
+                              {
+                                T offsetb = (1.0*k2)/(a_q1d2-1);
+                                T outPoint;
+                                f_detA_<T,MEM>(a_pt,outPoint,a_h,offseta,offsetb);  
+                                a_out(0) += outPoint*a_wgt1[k1]*a_wgt2[k2]; 
+                              }
+                          }                        
+                      },bx0,a_h,weight1,weight2,q1d1,q1d2);
+  BoxData<T,1,MEM> output(a_bx);
+  output0.copyTo(output);
+  spreadSlice(output);
+  return output;
+}
+template<typename T, MemType MEM>
+BoxData<T,DIM,MEM> CubedSphereShell::adjA(
+                                          Box a_bx,
+                                          T a_h,
+                                          int a_block,
+                                          int a_centering)
+{
+  PR_TIMERS("adjA");
+  BoxData<T,DIM,MEM,1> output(a_bx);
+  T hInvHalf = .5/a_h;
+  switch(a_centering)
+    {
+    case 0:
+      {
+        Box bx2 = a_bx.extrude(Point::Basis(2));
+        Box bx1 = a_bx.extrude(Point::Basis(1));
+        BoxData<T,DIM,MEM> d1n_x_n(bx2);
+        BoxData<T,DIM,MEM> n_x_d2n(bx1);
+        nCrossD2n(n_x_d2n,a_bx,a_h,a_block);
+        d1nCrossN(d1n_x_n,a_bx,a_h,a_block);
+        output |= Stencil<T>::FluxDivergence(1)(n_x_d2n,hInvHalf);
+        output += Stencil<T>::FluxDivergence(2)(d1n_x_n,hInvHalf);
+      }
+      break;
+    case 1:
+      nCrossD2n(output,a_bx,a_h,a_block);
+      output *= -1.0;
+      break;
+    case 2:
+      d1nCrossN(output,a_bx,a_h,a_block);
+      output *= -1.0;
+      break;
+    default:abort();
+    }
+  return output;
+}
+template<typename T, MemType MEM>
+inline void
+CubedSphereShell::d1nCrossN(
+                            BoxData<T,DIM,MEM>& a_d1n_x_n,
+                            Box a_bx,
+                            T a_h,
+                            uint a_block)
+{
+  PR_TIMERS("d1nCrossN");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
+ Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  int qnum = 5;
+  int qnum0 = 2;
+  Box bx = a_d1n_x_n.box();
+  Point low0 = bx.low();  
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  
+  BoxData<T,DIM,MEM> tmp = 
+    forall_p<T,DIM,MEM>
+             ([]PROTO_LAMBDA
+              (
+               Point a_pt,
+               Var<T,DIM,MEM>& a_d1n_x_n,
+               Array<T,5>& a_weights,
+               T a_h,
+               Array<uint,DIM> a_permute,
+               Array<int,DIM> a_sign,
+               int a_qnum)
+              {
+                a_d1n_x_n(0) = 0.0;
+                a_d1n_x_n(1) = 0.0;
+                a_d1n_x_n(2) = 0.0;
+                T beta = -.25*M_PI + .5*M_PI*a_pt[2]*a_h ;
+                T tanb = tan(beta);
+                Array<T,5> cross = {0.,0.,0.};
+                for (int k = 0; k < a_qnum;k++)
+                  {
+                    T alpha = -.25*M_PI + .5*M_PI*(a_pt[1]*a_h + (k*a_h)/(a_qnum-1));
+                    T tana = tan(alpha);
+                    T secasq = 1.0 + tana*tana;
+                    T normsq = M_PI*.5/(tana*tana + tanb*tanb + 1.0);       
+                    cross[0] = secasq*tanb*normsq;
+                    cross[1] = 0.;
+                    cross[2] = -secasq*normsq;
+                    a_d1n_x_n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+                    a_d1n_x_n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+                    a_d1n_x_n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
+                  }       
+              },bx0,weights,a_h,permute[a_block],sign[a_block],qnum);
+   tmp.copyTo(a_d1n_x_n);
+  // copy lowest slice to all the other slices. 
+  Operator::spreadSlice(a_d1n_x_n);
+}
+template<typename T, MemType MEM>
+inline void
+CubedSphereShell::nCrossD2n(
+                            BoxData<T,DIM,MEM>& a_n_x_d2n,
+                            Box a_bx,
+                            T a_h,
+                            uint a_block)
+{
+  PR_TIMERS("nCrossD2n");
+  Array<T,5>
+    weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
+  Array<T,5>
+    weights0={1.0,0.,0.,0.,0.};
+   Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  int qnum = 5;
+  int qnum0 = 2;
+  Box bx = a_n_x_d2n.box();
+  Point low0 = bx.low();  
+  Point high0 = bx.high();
+  high0[0] = low0[0];
+  Box bx0(low0,high0);
+  
+  BoxData<T,DIM,MEM> tmp =
+    forall_p<T,DIM,MEM>([]PROTO_LAMBDA
+             (
+              Point a_pt,
+              Var<T,DIM,MEM>& a_n_x_d2n,
+              Array<T,5>& a_weights,
+              T a_h,
+              Array<uint,DIM> a_permute,
+              Array<int,DIM> a_sign,
+              int a_qnum)
+             {
+               a_n_x_d2n(0) = 0.0;
+               a_n_x_d2n(1) = 0.0;
+               a_n_x_d2n(2) = 0.0;
+               T alpha = -.25*M_PI + .5*M_PI*a_pt[1]*a_h ;
+               T tana = tan(alpha);
+               Array<T,5> cross = {0.,0.,0.};
+               for (int k = 0; k < a_qnum;k++)
+                 {
+                   T beta =
+                     -.25*M_PI + .5*M_PI*(a_pt[2]*a_h+ (k*a_h)/(a_qnum-1));
+                   T tanb = tan(beta);
+                   T secbsq = 1.0 + tanb*tanb;
+                   T normsq = M_PI*.5/(tana*tana + tanb*tanb + 1.0);       
+                   cross[0] = secbsq*tana*normsq;
+                   cross[1] = -secbsq*normsq;
+                   cross[2] = 0.;
+                   a_n_x_d2n(0) += a_sign[0]*cross[a_permute[0]]*a_weights[k];
+                   a_n_x_d2n(1) += a_sign[1]*cross[a_permute[1]]*a_weights[k];
+                   a_n_x_d2n(2) += a_sign[2]*cross[a_permute[2]]*a_weights[k];
+                 }
+             },bx0,weights,a_h,perm(a_block),permsign(a_block),qnum);
+  tmp.copyTo(a_n_x_d2n);
+  // copy lowest slice to all the other slices. 
+  Operator::spreadSlice(a_n_x_d2n);
+}
+

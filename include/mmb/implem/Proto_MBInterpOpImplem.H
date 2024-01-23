@@ -29,6 +29,12 @@ MBPointInterpOp::MBPointInterpOp(
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
+    Stencil<double> av2 = 1.0*Shift::Zeros();
+    Stencil<double> HOCorners = (1.0*Shift::Zeros() + (-1./12.)*(Stencil<double>::Laplacian()));
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
+    }
     
     // Compute Exponents
     Box spanBox;
@@ -65,12 +71,19 @@ MBPointInterpOp::MBPointInterpOp(
     // This is the approximate radius in physical space of the operator
     // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
-    auto xg = a_map.cellCentered(a_dst);
-    for (int ii = 0; ii < M; ii++)
+    Array<double,DIM> xg;
     {
-        auto xj = a_map.cellCentered(m_srcs[ii]);
-        auto dist = xj - xg;
-        Rg += dist.norm();
+     PR_TIMERS("xg_ii");
+     //auto xg = a_map.cellCentered(a_dst);
+     xg = a_map.analyticCellCentered(a_dst);
+     {
+       for (int ii = 0; ii < M; ii++)
+        {
+          auto xj = a_map.analyticCellCentered(m_srcs[ii]);
+          auto dist = xj - xg;
+          Rg += dist.norm();
+        }
+     }
     }
     Rg /= M;
     // Cache Moment Data
@@ -91,6 +104,7 @@ MBPointInterpOp::MBPointInterpOp(
             srcBoxes[bi] &= si.point;
         }
     }
+    
     for (auto& [block, box] : srcBoxes)
     {
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
@@ -100,13 +114,19 @@ MBPointInterpOp::MBPointInterpOp(
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
+          PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
-            BoxData<double> Xi_p_avg = C2C(Xi_p);
-            Ji.setVal(1.0);
-            srcData[block].push_back(Operator::cellProduct(Ji, Xi_p_avg));
+            {
+              PR_TIMERS("C2C apply");
+              BoxData<double> temp = HOCorners(Xi_p);
+              {
+                 PR_TIMERS("av2 apply");
+              BoxData<double> Xi_p_avg = av2(temp);
+              srcData[block].push_back(std::move(Xi_p_avg));
+              }
+            }
         }
-    }
-   
+    }  
     // Compute Matrices
     m_C.define(M,N);
     for (int ii = 0; ii < M; ii++)

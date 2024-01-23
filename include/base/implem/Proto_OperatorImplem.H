@@ -251,7 +251,8 @@ _deconvolveFace(
         int a_dir)
 {
     PR_TIME("Operator::deconvolveFace");
-    PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1).grow(a_dir,1)),
+    PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).contains(a_ctr.box()) &&
+                 a_avg.box().contains(a_ctr.box()),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
     a_ctr += a_avg;
@@ -1542,16 +1543,16 @@ edgeCrossProduct3D(
 //==========================================================================================
 // CELL MATRIX PRODUCT
 template<class T, unsigned int CL,unsigned int DL,
-    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
-    BoxData<T,CL,MEM,DR,E>
+         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
 _cellMatrixProductAB(
-        const BoxData<T,CL,MEM,DL,E>& a_ql4,
-        const BoxData<T,CR,MEM,DR,E>& a_qr4,
-        const BoxData<T,CL,MEM,DL,E>& a_ql2,
-        const BoxData<T,CR,MEM,DR,E>& a_qr2)
+                     const BoxData<T,CL,MEM,DL,E>& a_ql4,
+                     const BoxData<T,CR,MEM,DR,E>& a_qr4,
+                     const BoxData<T,CL,MEM,DL,E>& a_ql2,
+                     const BoxData<T,CR,MEM,DR,E>& a_qr2)
 {
     PR_TIME("Operator::matrixProductAB");
-    PR_assert(uint(DL) == CR);
+    PR_assert(DL == CR);
     Box bx = a_ql4.box()&a_qr4.box();
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -1613,7 +1614,50 @@ _faceMatrixProductAB(
     }
     return prod;
 }
-
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+void 
+matrixProductATB(
+                 BoxData<T,DL,MEM,DR,E>& a_qprod,
+                 const BoxData<T,DL,MEM,CL,E>& a_ql4,
+                 const BoxData<T,CR,MEM,DR,E>& a_qr4)
+{
+  PR_TIME("Operator::matrixProductATB");
+  PR_assert(CL == CR);
+  a_qprod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < DL;k++)
+          {
+            auto prodcomp = slice(a_qprod,i,j,ee);
+            auto qr4comp = slice(a_qr4,k,j,ee);              
+            auto ql4comp = slice(a_ql4,k,i,ee);              
+            prodcomp+=Operator::cellProduct(ql4comp,qr4comp);
+          }
+}
+template<class T, unsigned int CL,unsigned int DL,
+    unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+void 
+matrixProductAB(
+                BoxData<T,CL,MEM,DR,E>& a_qprod,
+                const BoxData<T,DL,MEM,CL,E>& a_ql4,
+                const BoxData<T,CR,MEM,DR,E>& a_qr4)
+{
+  PR_TIME("Operator::matrixProductATB");
+  PR_assert(CL == CR);
+  a_qprod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < DL;k++)
+          {
+            auto prodcomp = slice(a_qprod,i,j,ee);
+            auto qr4comp = slice(a_qr4,k,j,ee);              
+            auto ql4comp = slice(a_ql4,i,k,ee);              
+            prodcomp+=Operator::cellProduct(ql4comp,qr4comp);
+          }
+}
 template<class T, unsigned int CL,unsigned int DL,
     unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
 void
@@ -1697,7 +1741,28 @@ _faceMatrixProductATB(
         const BoxData<T,CR,MEM,DR,E>& a_qr2,
         int a_dir)
 {
-    MayDay<void>::Abort("_faceMatrixProductATB | Error: Not Implemented.");
+    PR_TIME("Operator::faceMatrixProductATB");
+    PR_assert(CR == CL);
+    Box bx = a_ql4.box()&a_qr4.box();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir!=a_dir) bx = bx
+            &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
+    }
+    BoxData<T,DL,MEM,DR,E> prod(bx);
+    prod.setToZero();
+    for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < DL; i++)
+    for (int j = 0; j < DR; j++)
+    for (int k = 0; k < CL;k++)
+    {
+        auto prodcomp = slice(prod,i,j,ee);
+        auto qr4comp = slice(a_qr4,k,j,ee);
+        auto qr2comp = slice(a_qr2,k,j,ee);
+        auto ql4comp = slice(a_ql4,k,i,ee);
+        auto ql2comp = slice(a_ql2,k,i,ee);
+        prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
+    }
 }
 
 template<class T, unsigned int CL, unsigned int DL,
