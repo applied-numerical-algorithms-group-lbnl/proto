@@ -3,8 +3,8 @@
 #define _BOX_OP_EULER_
 
 #include "Proto.H"
-#include "Proto_CubedSphereShell.H"
-#include "Proto_CubedSphereKernels.H"
+//#include "Proto_CubedSphereShell.H"
+//#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS DIM+2
 
@@ -119,12 +119,14 @@ private:
 #include "BoxOp_EulerCubedSphereImplem.H"
 
 #ifdef PR_AMR
+/* TODO: this doesn't belong here and it doesn't compile
 static inline void generateTags(
                                 TagData& a_tags,
                                 BoxData<T, NUMCOMPS>& a_state)
 {
   forallInPlace(f_threshold, a_tags, a_state);
 }
+*/
 #endif
 
 

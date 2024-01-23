@@ -1,6 +1,8 @@
 VARS_OLD := $(.VARIABLES)
 DEPXX=clang++
+#DEPXX=g++
 CXX=clang++
+#CXX=g++
 #CXX=mpicxx
 DIM=3
 USE_HDF5=TRUE

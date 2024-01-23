@@ -107,6 +107,9 @@ PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
 int main(int argc, char* argv[])
 {   
+#ifdef PR_MPI
+    MPI_Init (&argc, &argv);
+#endif
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 16;
@@ -244,4 +247,7 @@ int main(int argc, char* argv[])
   h5.writeMBLevel({ }, map, flux1, "MBEulerCubedSphereFlux1");
   h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
   PR_TIMER_REPORT();
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }
