@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
  
-  MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
+  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
