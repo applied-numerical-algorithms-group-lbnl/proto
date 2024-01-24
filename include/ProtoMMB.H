@@ -30,7 +30,9 @@
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
 #include "utils/Proto_MBMultigrid.H"
+#ifdef PR_AMR
 #include "utils/Proto_MBAMR.H"
+#endif
 #if DIM == 3
 #include "utils/Proto_CubedSphereShell.H"
 #endif

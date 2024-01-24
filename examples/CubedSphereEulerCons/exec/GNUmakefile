@@ -1,8 +1,8 @@
 VARS_OLD := $(.VARIABLES)
-DEPXX=clang++
-#DEPXX=g++
-CXX=clang++
-#CXX=g++
+#DEPXX=clang++
+DEPXX=g++
+#CXX=clang++
+CXX=g++
 #CXX=mpicxx
 DIM=3
 USE_HDF5=TRUE
@@ -18,8 +18,11 @@ CXXOPTFLAGS+=-DPR_OPS
 CXXOPTFLAGS+= -DPR_HDF5=TRUE
 #HDF5_LIB=/usr/local/lib
 #HDF5_INC=/usr/local/include
-HDF5_LIB=/usr/lib
-HDF5_INC=/usr/include
+#HDF5_LIB=/usr/lib
+#HDF5_INC=/usr/include
+HDF5_LIB=/usr/lib/x86_64-linux-gnu/hdf5/serial
+HDF5_INC=/usr/include/hdf5/serial
+
 #CXXOPTFLAGS+= -DPR_MPI=TRUE
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=cubedSphereTest.exe
@@ -36,7 +39,7 @@ VPATH=o. ../src  ../../_common
 
 
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
-CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
+CXXFLAGS:= $(CXXOPTFLAGS) --std=c++2a
 
 LIBS += $(LAPACK_LIB)
 
