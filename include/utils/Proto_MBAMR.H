@@ -3,8 +3,6 @@
 #define _PROTO_MB__H_
 
 #include "Proto.H"
-#include "Proto_MBAMRGrid.H"
-#include "Proto_MBAMRData.H"
 namespace Proto {
 
 template <
