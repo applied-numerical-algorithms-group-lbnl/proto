@@ -1,5 +1,5 @@
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -8,7 +8,7 @@ MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp()
 {
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -18,7 +18,7 @@ MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp(const MBLevelMap<MAP,MEM>& a_map)
     define(a_map);
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -29,18 +29,22 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map
     auto& layout = a_map.map().layout();
     m_map = &a_map;
     m_ops.clear();
-    m_ops.resize(layout.localSize());
+    //m_ops.resize(layout.localSize());
     //m_boundRegister.define(layout,1,Point::Zeros());
+    int ii = 0;
     for (auto index : layout)
     {
-        auto& x = a_map.map()[index];
-        auto& J = a_map.jacobian()[index];
-        auto block = layout.block(index);
-        m_ops[index].define(layout[index], a_map.dx(block), x,J);
+        //auto& x = a_map.map()[index];
+        //auto& J = a_map.jacobian()[index];
+        //auto block = layout.block(index);
+        //m_ops[index].define(layout[index], a_map.dx(block), x,J);
+        m_ops.push_back(OP(a_map, index));
+        m_ops[ii].init();
+        ii++;
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -66,7 +70,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
     //matchFlux(a_output, a_state);
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -95,27 +99,27 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
-OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index)
+OPType<T,MAP,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index)
 {
     return m_ops[a_index];
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
-const OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index) const
+const OPType<T,MAP,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index) const
 {
     return m_ops[a_index];
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -129,7 +133,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setDiagScale(T a_value)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -143,7 +147,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setFluxScale(T a_value)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -157,7 +161,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setTime(T a_time)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -171,7 +175,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
     }
 }
 /*
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,

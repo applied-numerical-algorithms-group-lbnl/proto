@@ -6,7 +6,7 @@
 namespace Proto {
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
@@ -14,7 +14,7 @@ template <
 class MBAMR
 {
 public:
-    typedef OPType<T, MEM> OP; 
+    typedef OPType<T, MAP, MEM> OP; 
     typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef BoxData<T, OP::numState(), MEM> StateData;
