@@ -227,7 +227,9 @@ int main(int argc, char* argv[])
       //cout << "initial box" << Wfoo.box() << endl;
       eulerOp[dit].primToCons(Utemp,Wfoo,dVolr,gamma,dx,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
-      eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+      //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+
+      eulerOp[dit](rhs_i,fluxes,Utemp,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
       double maxpforceC = rhs_coarse.absMax(1,0,0);

@@ -69,7 +69,7 @@ class CubedSphereShell
     /** 
      *  \param a_map - The map object produced by one of the Map functions above
      */
-    template<template<typename, MemType> class OpType,
+    template<template<typename, template<MemType> typename, MemType> class OpType,
         typename T,
         MemType MEM = MEMTYPE_DEFAULT>
     static MBLevelOp<OpType, MBMap_CubedSphereShell, T>
