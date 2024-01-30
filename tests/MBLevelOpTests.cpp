@@ -14,8 +14,8 @@ using namespace Proto;
 #if 1
 TEST(MBLevelOp, Iteration) {
     HDF5Handler h5;
-    int domainSize = 32;
-    int boxSize = 32;
+    int domainSize = 16;
+    int boxSize = 16;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
@@ -47,8 +47,8 @@ TEST(MBLevelOp, Iteration) {
 TEST(MBLevelOp, ShearLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 32;
-    int boxSize = 32;
+    int domainSize = 16;
+    int boxSize = 16;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};

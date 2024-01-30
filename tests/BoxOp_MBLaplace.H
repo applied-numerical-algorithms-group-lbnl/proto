@@ -60,7 +60,6 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
             auto C2F = Stencil<double>::CellToFace(dir);
             // In 2D, NT does not require any ghost cells from X
             // In 3D, NT requires 2 layers of ghost cells from X
-            this->x().printData();
             auto NT_dir = Operator::cofactor(this->x(), dir, this->dx()); 
             NT_dir.copyTo(m_NT[dir]);
             m_Jf.push_back(C2F(this->jacobian()));

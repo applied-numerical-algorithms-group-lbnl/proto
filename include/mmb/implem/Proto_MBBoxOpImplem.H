@@ -5,6 +5,9 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::MBBoxOp(
         const MBLevelMap<MAP, MEM>& a_map,
         const MBIndex& a_index) : m_map(a_map)
 {
+    auto bi = a_map.layout().block(a_index);
+    auto bx = a_map.layout()[a_index];
+    this->define(bx, a_map.dx(bi));
     m_index = a_index;
     
     this->m_scaleDiag = 0;
