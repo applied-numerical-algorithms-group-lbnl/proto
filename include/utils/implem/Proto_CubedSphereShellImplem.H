@@ -142,7 +142,7 @@ CubedSphereShell::Map(
     return map;
 }
 
-template<template<typename, MemType> class OpType,
+template<template<typename, template<MemType> typename, MemType> class OpType,
     typename T,
     MemType MEM>
 MBLevelOp<OpType, MBMap_CubedSphereShell, T>

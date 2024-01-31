@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cmath>
+#include <climits>
 #include "Proto.H"
 #include "Lambdas.H"
 
@@ -509,6 +510,22 @@ TEST(BoxData, Alias) {
         }
     }
 #endif
+}
+TEST(BoxData, SliceBasic) {
+    int domainSize = 8;
+    Box domainBox = Box::Cube(domainSize).grow(1);
+    BoxData<double, DIM, HOST> hostSrc(domainBox);
+    
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        auto hostSrc_i = slice(hostSrc, ii);
+        EXPECT_TRUE(hostSrc_i.isAlias(hostSrc));
+        EXPECT_EQ(hostSrc_i.data(), hostSrc.data(ii));
+        for (auto pi : domainBox)
+        {
+            EXPECT_EQ(hostSrc_i.data(pi,0), hostSrc.data(pi,ii));
+        }
+    }
 }
 
 TEST(BoxData, Slice) {

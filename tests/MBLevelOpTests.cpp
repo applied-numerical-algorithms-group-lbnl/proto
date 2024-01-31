@@ -14,8 +14,8 @@ using namespace Proto;
 #if 1
 TEST(MBLevelOp, Iteration) {
     HDF5Handler h5;
-    int domainSize = 32;
-    int boxSize = 32;
+    int domainSize = 16;
+    int boxSize = 16;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
@@ -47,8 +47,8 @@ TEST(MBLevelOp, Iteration) {
 TEST(MBLevelOp, ShearLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 32;
-    int boxSize = 32;
+    int domainSize = 16;
+    int boxSize = 16;
     int numGhost = 4;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
@@ -112,9 +112,10 @@ TEST(MBLevelOp, ShearLaplace) {
         {
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
-            dst_i *= domainSize; //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
             dst_i.copyTo(err_i);
+            double J0 = map.jacobian()[iter].absMax(); //J is a constant
+            err_i /= J0;
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);
         }
@@ -157,7 +158,6 @@ TEST(MBLevelOp, XPointLaplace) {
     int domainSize = 32;
     int boxSize = 32;
     int numGhost = 4;
-    int numBlocks = 5;
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
@@ -174,7 +174,8 @@ TEST(MBLevelOp, XPointLaplace) {
     for (int nn = 0; nn < N; nn++)
     {
         err[nn] = 0.0;
-        auto domain = buildXPoint(domainSize, numBlocks);
+        double dx = 1.0/domainSize;
+        auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -182,6 +183,7 @@ TEST(MBLevelOp, XPointLaplace) {
         map.define(layout, mapGhost);
         
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
+        MBLevelBoxData<double, DIM, HOST> hostFlx(layout, srcGhost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
@@ -195,12 +197,14 @@ TEST(MBLevelOp, XPointLaplace) {
             BoxData<double, DIM> x_i(b_i);
             BoxData<double, 1> J_i(b_i);
             map.apply(x_i, J_i, block);
+            double J0 = J_i.absMax(); //J is a constant
             BoxData<double, 1> phi = forall_p<double, 1>(f_phiM, block, x_i, k, offset);
             src_i |= C2C(phi);
        
             BoxData<double, 1> lphi = forall_p<double, 1>(f_LphiM, block, x_i, k, offset);
             auto& sln_i = hostSln[iter];
             sln_i |= C2C(lphi);
+            sln_i *= J0;
         }
 
 #if PR_VERBOSE > 0
@@ -211,19 +215,28 @@ TEST(MBLevelOp, XPointLaplace) {
         hostSrc.exchange();
         hostDst.setVal(0);
         hostErr.setVal(0);
-       
+        hostFlx.setVal(7);
+
         MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         hostDst.exchange();
+         
         for (auto iter : layout)
         {
+            auto& src_i = hostSrc[iter];    //source data already initialized
+            auto& flx_i = hostFlx[iter];    //uninitialized data with DIM components
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                auto fd = slice(flx_i, ii); //alias to a single component(?)
+                op[iter].flux(fd, src_i,ii);              //update fd
+            }
+
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
-            dst_i *= domainSize;    //FIXME: this shouldn't be here, but inserting it yields 4th order accuracy
             auto& sln_i = hostSln[iter];
-            double J0 = map.jacobian()[iter].absMax(); //J is a constant
-            dst_i /= (J0);
+            //double J0 = map.jacobian()[iter].absMax(); //J is a constant
+            //dst_i /= (J0);
             dst_i.copyTo(err_i);
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);
@@ -240,6 +253,7 @@ TEST(MBLevelOp, XPointLaplace) {
         h5.writeMBLevel({"err"}, map, hostErr, "XPoint_Err_%i", nn);
         h5.writeMBLevel({"Lphi"}, map, hostDst, "XPoint_LPhi_%i", nn);
         h5.writeMBLevel({"J"}, map, map.jacobian(), "XPoint_J_%i", nn);
+        h5.writeMBLevel({"F"}, map, hostFlx, "XPoint_Flux_%i", nn);
 #endif
         domainSize *= 2;
         boxSize *= 2;
@@ -255,6 +269,69 @@ TEST(MBLevelOp, XPointLaplace) {
         }
 #endif
     }
+}
+#endif
+#endif
+
+#if 0
+#if DIM==2
+TEST(MBLevelOp, FluxMatching) {
+
+    HDF5Handler h5;
+    int domainSize = 16;
+    int boxSize = 16;
+    int numGhost = 4;
+
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    map.define(layout, Point::Ones(numGhost));
+    
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(numGhost));
+    MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Zeros());
+
+    auto C2C = Stencil<double>::CornersToCells(4);
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        auto& src_i = hostSrc[iter];
+        Box b_i = C2C.domain(layout[iter]).grow(numGhost);
+        BoxData<double, DIM> x_i(b_i);
+        BoxData<double, 1> J_i(b_i);
+        map.apply(x_i, J_i, block);
+        double J0 = J_i.absMax(); //J is a constant
+
+        BoxData<double, 1> phi = forall_p<double, 1>(
+            [] PROTO_LAMBDA (
+                Point& a_pt,
+                Var<double, 1, HOST>& a_data,
+                int a_block,
+                Var<double, DIM, HOST>& a_X)
+            {
+                int coord = a_block % DIM;
+                a_data(0) = pow(a_X(coord), 1);
+            }, block, x_i);
+
+        src_i |= C2C(phi);
+    }
+    hostDst.setVal(0);
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "FluxMatch_Phi_%i",0);
+#endif
+    MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
+    op.define(map);
+    op(hostDst, hostSrc);
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "FluxMatch_Phi_%i",1);
+    h5.writeMBLevel({"lphi"}, map, hostDst, "FluxMatch_LPhi_%i",0);
+#endif
+    op.matchFlux(hostDst, hostSrc);
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, map, hostSrc, "FluxMatch_Phi_%i",2);
+    h5.writeMBLevel({"lphi"}, map, hostDst, "FluxMatch_LPhi_%i",1);
+#endif
 }
 #endif
 #endif

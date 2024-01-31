@@ -91,7 +91,9 @@ namespace Proto
          *  S has a single row with entries equal to size(). Each entry is the coeffcient that
          *  scales the data point from the associated source */
         inline Matrix<double>& SMatrix() {return m_S; }
-     
+
+        inline void print() const; 
+
         private:
        
         std::vector<Point> m_exponents;
@@ -118,6 +120,11 @@ namespace Proto
         /** This function does not create any operators. The user must call define separately */
         inline MBInterpOp(Point a_ghost, unsigned int a_order);
         
+        template<template<MemType> typename MAP, MemType MEM>
+        inline MBInterpOp(
+                const MBLevelMap<MAP, MEM>& a_map,
+                int                         a_order = 4);
+        
         /// Define Block
         /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
          *  implied by the input MBLevelMap and the number of ghost cells this was initialized
@@ -140,6 +147,7 @@ namespace Proto
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 const std::vector<Point>&   a_footprint,
+                int                         a_order = 4,
                 int block = -1);
         
         /// Apply
@@ -170,6 +178,8 @@ namespace Proto
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
+
+        void print() const;
         private:
        
         Point m_ghost;
@@ -177,9 +187,12 @@ namespace Proto
         std::vector<MBPointInterpOp> m_ops;
     };
 
+    // Interpolate Block Boundaries
     template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
-    inline void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
+    inline void interpBoundaries(
+            MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
     
+    // Interpolate Block Boundaries
     template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(
             MBLevelBoxData<T, C, MEM, CTR>& a_data,

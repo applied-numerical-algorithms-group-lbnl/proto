@@ -60,7 +60,6 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
-    using Proto::pout;
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
@@ -124,7 +123,7 @@ int main(int argc, char** argv)
         h5.writeLevel(dx, PhiSln, "SLN_N%i", nn);
         h5.writeLevel(dx, G,       "G_N%i", nn);
 #endif
-        pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
+        pr_out() << "Integral of RHS: " << G.integrate(dx) << std::endl;
 
         solver.solve(Phi, G, solveIter, tolerance);
 
@@ -145,13 +144,13 @@ int main(int argc, char** argv)
         h5.writeLevel(dx, PhiErr,    "ERR_N%i", nn);
 #endif
         err[nn] = PhiErr.absMax();
-        pout() << "Error: " << err[nn] << std::endl;
+        pr_out() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;
     }
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
     }
 
     #ifdef PR_MPI

@@ -9,7 +9,7 @@ using namespace Proto;
 #if 0
 TEST(MBPointInterpOp, Shear) {
 #if PR_VERBOSE > 0
-    pout() << "SHEAR TEST START" << std::endl;
+    pr_out() << "SHEAR TEST START" << std::endl;
 #endif
     int domainSize = 8;
     int boxSize = 8;
@@ -34,7 +34,7 @@ TEST(MBPointInterpOp, Shear) {
     for (int nn = 0; nn < N; nn++)
     {
 #if PR_VERBOSE > 0
-        pout() << "BEGIN_REFINEMENT: domainSize = " << domainSize << std::endl;
+        pr_out() << "BEGIN_REFINEMENT: domainSize = " << domainSize << std::endl;
 #endif
         auto domain = buildShear(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
@@ -111,7 +111,7 @@ TEST(MBPointInterpOp, Shear) {
 #endif
 #if 0
 TEST(MBPointInterpOp, RigidXPoint) {
-    pout() << "RIGID XPOINT TEST START" << std::endl;
+    pr_out() << "RIGID XPOINT TEST START" << std::endl;
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
@@ -208,7 +208,7 @@ TEST(MBPointInterpOp, RigidXPoint) {
 #endif
 #if 0
 TEST(MBPointInterpOp, XPointDisc) {
-    pout() << "XPOINT DISC TEST START" << std::endl;
+    pr_out() << "XPOINT DISC TEST START" << std::endl;
     int domainSize = 32;
     int boxSize = 32;
     HDF5Handler h5;
@@ -305,7 +305,7 @@ TEST(MBPointInterpOp, XPointDisc) {
 #endif
 #if 0
 TEST(MBPointInterpOp, Ring) {
-    pout() << "RING TEST START" << std::endl;
+    pr_out() << "RING TEST START" << std::endl;
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
@@ -325,12 +325,12 @@ TEST(MBPointInterpOp, Ring) {
         }
     }
 #if PR_VERBOSE > 0
-    pout() << "Input footprint: " << std::endl;
+    pr_out() << "Input footprint: " << std::endl;
     for (auto pi : footprint)
     {
-        pout() << pi << ", ";
+        pr_out() << pi << ", ";
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 #endif
     
     constexpr int N = 1;
@@ -388,7 +388,7 @@ TEST(MBPointInterpOp, Ring) {
                         MBPointInterpOp pointInterp(dstDataPoint, ghost[0], map, footprint, 4);
                         pointInterp.apply(hostDst, hostSrc);
 
-                        pout() << "Coefs at point " << bi << std::endl;
+                        pr_out() << "Coefs at point " << bi << std::endl;
                         auto coefs = pointInterp.coefs(hostSrc);
                         coefs.print("%10.2e");
 
@@ -479,12 +479,12 @@ TEST(MBPointInterpOp, SphericalShell) {
     }
    
 #if PR_VERBOSE > 0
-    pout() << "Input footprint: " << std::endl;
+    pr_out() << "Input footprint: " << std::endl;
     for (auto pi : footprint)
     {
-        pout() << pi << ", ";
+        pr_out() << pi << ", ";
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 #endif
     constexpr int N = 3;
     double err[N];
@@ -587,7 +587,7 @@ TEST(MBPointInterpOp, SphericalShell) {
 #endif
 #if 0
 TEST(MBPointInterpOp, PolarShell) {
-    pout() << "PolarShell" << std::endl;
+    pr_out() << "PolarShell" << std::endl;
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
@@ -608,12 +608,12 @@ TEST(MBPointInterpOp, PolarShell) {
     }
    
 #if PR_VERBOSE > 0
-    pout() << "Input footprint: " << std::endl;
+    pr_out() << "Input footprint: " << std::endl;
     for (auto pi : footprint)
     {
-        pout() << pi << ", ";
+        pr_out() << pi << ", ";
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 #endif
     constexpr int N = 2;
     double err[N];
@@ -663,7 +663,7 @@ TEST(MBPointInterpOp, PolarShell) {
                         MBPointInterpOp pointInterp(dstDataPoint, ghost[0], map, footprint, 4);
                         pointInterp.apply(hostDst, hostSrc);
 
-                        //pout() << "Coefs at point " << bi << std::endl;
+                        //pr_out() << "Coefs at point " << bi << std::endl;
                         //auto coefs = pointInterp.coefs(hostSrc);
                         //coefs.print("%10.2e");
 
@@ -863,15 +863,15 @@ TEST(MBPointInterpOp, CheckMatrix)
         SErr = std::max(SErr, (ES.absMax()));
         //M[0].print();
         //M[1].print();
-        pout() << "-----------------------------------------------------" << std::endl;
-        pout() << "Stencil at point: " << pi << std::endl;
-        pout() << "Source data: " << std::endl;
-        pout() << "Sum of stencil coefficients: " << op.MS().sum() << std::endl;
+        pr_out() << "-----------------------------------------------------" << std::endl;
+        pr_out() << "Stencil at point: " << pi << std::endl;
+        pr_out() << "Source data: " << std::endl;
+        pr_out() << "Sum of stencil coefficients: " << op.MS().sum() << std::endl;
         for (auto& si : op.sources())
         {
-            pout() << si.point << ", ";
+            pr_out() << si.point << ", ";
         }
-        pout() << std::endl;
+        pr_out() << std::endl;
         S.print();
     }
     

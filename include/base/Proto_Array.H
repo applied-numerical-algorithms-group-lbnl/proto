@@ -63,6 +63,7 @@ public:
         {
             arr[ii] = (*this)[ii];
         }
+        return arr; 
     }
 
     ACCEL_DECORATION
@@ -151,6 +152,8 @@ public:
     inline T sum() const;
     ACCEL_DECORATION
     inline T dot(const Array<T,N> &a_rhs) const;
+    ACCEL_DECORATION
+    inline T product() const;
     ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
 

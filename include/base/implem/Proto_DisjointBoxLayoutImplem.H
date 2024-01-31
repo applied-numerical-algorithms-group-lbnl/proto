@@ -1,16 +1,15 @@
 using std::shared_ptr;
+using std::array;
 
 // Default Constructor
 DisjointBoxLayout::DisjointBoxLayout()
 {
-    m_partition = std::make_shared<BoxPartition>(); 
 }
 
 // Simple Constructor
 DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                                      const Point           & a_boxSize)
 {
-    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_boxSize);
 }
 
@@ -19,7 +18,6 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                                      const vector<Point>   & a_coarsenedPatches,
                                      const Point           & a_boxSize)
 {
-    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_coarsenedPatches, a_boxSize);
 }
 
@@ -28,7 +26,6 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                                      const Box             & a_region,
                                      const Point           & a_boxSize)
 {
-    m_partition = std::make_shared<BoxPartition>(); 
     define(a_problemDomain, a_region, a_boxSize);
 }
 
@@ -40,6 +37,7 @@ void DisjointBoxLayout::define(
     m_partition = a_partition;
     m_problemDomain = a_partition->domain().refine(a_boxSize);
     m_boxSize = a_boxSize;
+    //m_end = LevelIndex(m_partition, a_partition->numBoxes());
 }
 
 // Copy Constructor
@@ -48,6 +46,7 @@ DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
     m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
+    //m_end = a_input.m_end;
 }
 
 // Define (Simple)
@@ -56,10 +55,11 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Point           & a_boxSize)
 {
     Box bxCoarse = a_problemDomain.box().coarsen(a_boxSize);
+    BoxIterator bxit(bxCoarse);
     vector<Point> allPoints;
-    for (auto pi : bxCoarse)
+    for (bxit.begin();bxit.ok();++bxit)
     {
-        allPoints.push_back(pi);
+        allPoints.push_back(*bxit);
     }
     define(a_problemDomain,allPoints,a_boxSize);
 }
@@ -91,8 +91,17 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
         "DisjointBoxLayout::define | Error: Sub-region cannot be tiled by input box size.");    
     auto patchDomain = a_problemDomain.coarsen(a_boxSize);
     m_problemDomain = a_problemDomain;
-    m_partition->define(patchDomain, a_patches,0,numProc());
+    m_partition = std::make_shared<BoxPartition>(patchDomain, a_patches);
     m_boxSize = a_boxSize;
+    //m_end = LevelIndex(m_partition, a_patches.size());
+}
+
+DisjointBoxLayout
+DisjointBoxLayout::sorted() const
+{
+    DisjointBoxLayout ret;
+    ret.define(m_partition->sortByProc(), m_boxSize);
+    return ret;
 }
 
 void
@@ -232,7 +241,8 @@ DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
     PROTO_ASSERT(a_indexInt < localSize(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return LevelIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
+    //return LevelIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
+    return LevelIndex(m_partition, m_partition->localIndex(a_indexInt, Proto::procID()));
 }
 
 LevelIndex
@@ -273,6 +283,21 @@ DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
         if (!patchDomain().contains(*biter)) { return true; }
     }
     return false;
+}
+
+bool
+DisjointBoxLayout::isDomainBoundary(const LevelIndex& a_patch, const Point& a_dir) const
+{
+
+    PROTO_ASSERT(this->compatible(a_patch),
+            "DisjointBoxLayout::isDomainBoundary | Error: Index is not compatible");
+    PROTO_ASSERT(a_dir.abs().max() <= 1,
+            "DisjointBoxLayout::isDomainBoundary | Error: Dir is not an adjacent patch.");
+    if (a_dir == Point::Zeros()) { return false; }
+    Point patchID = this->point(a_patch); 
+    Point adjPatchID = patchID + a_dir;
+    if (patchDomain().contains(adjPatchID)) { return false; }
+    return true; 
 }
 
 bool
@@ -430,31 +455,31 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 void
 DisjointBoxLayout::print(std::string a_name) const
 {
-    using Proto::pout;
+    using Proto::pr_out;
 
-    pout() << "Disjoint Box Layout: " << a_name << std::endl;
-    pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
-    pout() << std::setfill(' ');
-    pout() << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
-    pout() << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
-    pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
-    pout() << std::setfill(' ');
+    pr_out() << "Disjoint Box Layout: " << a_name << std::endl;
+    pr_out() << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    pr_out() << std::setfill(' ');
+    pr_out() << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
+    pr_out() << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
+    pr_out() << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    pr_out() << std::setfill(' ');
     if (size() == 0)
     {
-        pout() << "( EMPTY LAYOUT ) " << std::endl;
-        pout() << setfill('\0');
+        pr_out() << "( EMPTY LAYOUT ) " << std::endl;
+        pr_out() << setfill('\0');
         return;
     }
-    pout() << std::right;
+    pr_out() << std::right;
     for (int ii = 0; ii < size(); ii++)
     {
         Point p = boxes()[ii].first;
         Box b = Box(p,p).refine(m_boxSize);
-        pout() << std::setw(4) << boxes()[ii].second << " | ";
-        pout() << b << " | ";
-        pout() << p << std::endl;
+        pr_out() << std::setw(4) << boxes()[ii].second << " | ";
+        pr_out() << b << " | ";
+        pr_out() << p << std::endl;
     }
-    pout() << setfill(' ') << std::endl;
+    pr_out() << setfill(' ') << std::endl;
 }
 
 inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
@@ -476,7 +501,7 @@ std::ostream& operator<<(std::ostream& a_os, const LevelIndex& a_di)
     auto& partition = a_di.partition().partition();;
     a_os << "patch: " << partition[a_di.global()].first;
     a_os << " | localIndex: " << a_di.local();
-    a_os << " | globalIndex: " << a_di.global();
+    a_os << " | globalIndex: " << a_di.global() << std::endl;
     return a_os;
 }
 

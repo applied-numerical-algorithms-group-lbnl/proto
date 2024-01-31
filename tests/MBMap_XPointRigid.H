@@ -2,7 +2,7 @@
 
 #include "Proto.H"
 
-#define XPOINT_NUM_BLOCKS 5
+#define XPOINT_NUM_BLOCKS 4
 
 using namespace Proto;
 
@@ -49,6 +49,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
 #endif
             }, a_X, X0, block, numBlocks
         );
+        //a_J.setVal(sin(2.0*M_PI/numBlocks)*dx.product());
         a_J.setVal(sin(2.0*M_PI/numBlocks));
     }
 

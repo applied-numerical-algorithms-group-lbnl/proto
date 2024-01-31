@@ -1397,7 +1397,7 @@ namespace Proto
         }
 
         private:
-
+        bool                    m_alias; ///< was this created as an alias
         bool                    m_stackAlloc;
         Box                     m_box; ///< Box defining the domain of *this
         ::std::shared_ptr<T>    m_data; ///< Data array
@@ -1440,12 +1440,14 @@ namespace Proto
                     m_data[dir] = std::make_shared<BoxData<T,C,MEM,D,E>>(Bd);
                 }
             }
+            
             BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index)
             {
                 PROTO_ASSERT(a_index < DIM,
                         "FluxBoxData::operator[] | Error: index out of bounds");
                 return *(m_data[a_index]);
             }
+            
             const BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index) const
             {
                 PROTO_ASSERT(a_index < DIM,

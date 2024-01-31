@@ -64,16 +64,30 @@ namespace Proto
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
 
+        /// Trivial Constructor
+        inline MBBoundaryRegister(){}
+
+        /// Constructor
+        /** Creates a register from a layout. Depth is the distance in cells from a boundary that
+         *  will be allocated in each MBBoundaryData's base buffer. If depth is negative, the 
+         *  register's base region is inside the problem domain and vice versa. Each of these 
+         *  buffers can optionally be enlarged anisotropically using the ghost parameter.
+         *  If "bothSides" is true, all registers will allocate space on both sides of the
+         *  boundary. In this case, the sign of depth has no effect.
+         */
         inline MBBoundaryRegister(
-                const MBDisjointBoxLayout&  a_layout,   // layout
-                int                         a_depth,    // distance from boundary
-                Point                       a_ghost,    // additional storage in all directions
+                const MBDisjointBoxLayout&  a_layout,           
+                int                         a_depth,            
+                Point                       a_ghost,            
                 bool                        a_bothSides = true);
+        
+        /// Lazy Constructor
         inline void define(
-                const MBDisjointBoxLayout&  a_layout,   // layout
-                int                         a_depth,    // distance from boundary
-                Point                       a_ghost,    // additional storage in all directions
+                const MBDisjointBoxLayout&  a_layout,   
+                int                         a_depth,    
+                Point                       a_ghost,    
                 bool                        a_bothSides = true);
+        
         // Get Boundary Data
         inline MBBoundaryData<T,C,MEM>& bound(
                 MBIndex         a_index,
@@ -87,9 +101,13 @@ namespace Proto
                 Side::LoHiSide  a_side);
         
         // Get All Boundary Data
-        inline std::vector<MBBoundaryData<T,C,MEM>>& bounds(
+        inline std::vector<MBBoundaryData<T,C,MEM>> bounds(
                 MBIndex a_index,
                 Point   a_dir);
+        
+        // Get All Boundary Data
+        inline std::vector<MBBoundaryData<T,C,MEM>> bounds(
+                MBIndex a_index);
 
         // Get Local Data
         inline BoxData<T,C,MEM>& local(
@@ -137,26 +155,22 @@ namespace Proto
                 unsigned int    a_dir,
                 Side::LoHiSide  a_side);
 
-        // Set all data to zero
+        // Zero All Registers
         inline void clear();
 
-        // Set local data to zero
+        // Zero Local Registers
         inline void clearLocal();
         
-        // Set adjacent data to zero
+        // Zero Adjacent Registers
         inline void clearAdjacent();
 
-        // Exchange and fill adjacent data
-        /** Local data is maintained
-         */
+        // Fill Adjacent Registers
         inline void exchange();
         
-        // Exchange and fill local data
-        /** Local data is replaced by adjacent (properly rotated)
-         */
-        inline void exchangeToLocal();
-
+        // Get Layout
         inline const MBDisjointBoxLayout& layout() {return *m_layout; }
+        
+        // Get Ghost Size
         inline Point ghost() {return m_ghost; }
 
         private:

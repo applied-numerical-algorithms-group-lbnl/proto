@@ -15,7 +15,10 @@ static struct_##local_name app_name;
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
-BoxData<T,C,MEM,D,E>::BoxData() : m_rawPtr(nullptr) {}
+BoxData<T,C,MEM,D,E>::BoxData() : m_rawPtr(nullptr)
+{
+    m_alias = false;
+}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
@@ -38,7 +41,10 @@ template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
-      m_rawPtr(a_src.m_rawPtr) {}
+      m_rawPtr(a_src.m_rawPtr)
+{
+    m_alias = false;
+}
 
 // Define
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
@@ -60,6 +66,7 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
+    m_alias = false;
 }
 
 // Alias Define
@@ -73,6 +80,7 @@ void BoxData<T,C,MEM,D,E>::define(
     m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
     m_data   = a_src.aliasData();
+    m_alias  = true;
 }           
 
 // Raw Pointer Constructor
@@ -93,6 +101,7 @@ void BoxData<T,C,MEM,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
     m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata<MEM>));
     m_rawPtr = castPtr;
     m_box = a_box;
+    m_alias = true;
 }
 
 // Stencil Constructor
@@ -122,6 +131,7 @@ BoxData<T,C,MEM,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const
     m_data = a_data;
     m_box = (a_box);
     m_rawPtr = (T*)a_ptr;
+    m_alias = true;
 }
 
 // Destructor
@@ -141,13 +151,18 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator=(BoxData<T,C,MEM,D,E>&& a_s
     PR_TIME("BoxData::operator=(BoxData&& (move assign)");
     if (!a_src.isAlias(*this))
     {
-        std::swap<Box>(m_box,a_src.m_box);
-        std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
-        m_rawPtr = a_src.m_rawPtr;
-        a_src.m_rawPtr = nullptr;
+        if (m_alias)
+        {
+            a_src.copyTo(*this);
+        } else {
+            std::swap<Box>(m_box,a_src.m_box);
+            std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
+            m_rawPtr = a_src.m_rawPtr;
+            a_src.m_rawPtr = nullptr;
 #ifdef PROTO_MEM_CHECK
-        BoxDataMemCheck::numMoveAssign()++;
+            BoxDataMemCheck::numMoveAssign()++;
 #endif
+        }
     }
     return *this;
 }
@@ -575,12 +590,12 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
                         BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
-                        int srcPencilOffset = srcbd.box().size(0);
-                        int dstPencilOffset = dstbd.box().size(0);
+                        //int srcPencilOffset = srcbd.box().size(0); //unused --dtg
+                        //int dstPencilOffset = dstbd.box().size(0); //unused --dtg
                         int pencilLength = dstBox.size(0);
-                        int srcStartOffset = srcbd.box().index(srcBox.low());
-                        int dstStartOffset = dstbd.box().index(dstBox.low());
-                        int numPencils = dstBox.flatten(0).size();
+                        //int srcStartOffset = srcbd.box().index(srcBox.low());
+                        //int dstStartOffset = dstbd.box().index(dstBox.low());
+                        //int numPencils = dstBox.flatten(0).size();
                         
                         Box srcPencilBox = srcBox.flatten(0);
                         for (auto pi : srcPencilBox)
@@ -1600,18 +1615,18 @@ bool BoxData<T,C,MEM,D,E>::isAlias(const BoxData<T, CC, MEM, DD, EE>& a_src) con
 template <typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::print() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
 
-    pout() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
-    pout() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
+    pr_out() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
+    pr_out() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
     if (this->size() <= 0){return;}
     for (int ee = 0; ee < E; ee++)
         for (int dd = 0; dd < D; dd++)
             for (int cc = 0; cc < C; cc++)
             {
-                pout() << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
-                pout() << " | Max: " << this->max(cc,dd,ee) << " | Min: " << this->min(cc,dd,ee);
-                pout() << std::endl;
+                pr_out() << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
+                pr_out() << " | Max: " << this->max(cc,dd,ee) << " | Min: " << this->min(cc,dd,ee);
+                pr_out() << std::endl;
             }
 }
 
@@ -1638,7 +1653,7 @@ void BoxData<T,C,MEM,D,E>::printData(
 {
     using std::cout;
     using std::endl;
-    std::ostream& out = Proto::pout();
+    std::ostream& out = Proto::pr_out();
     if (!defined())
     {
         out << "Undefined BoxData: No data to print." << endl;

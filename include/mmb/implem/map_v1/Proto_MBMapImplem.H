@@ -94,14 +94,14 @@ void MBMap<Func, MEM>::define(
                 Jloc.copyTo(*(JBound.localData));
                 JBound.localData->copyTo(*(JBound.adjData), JBound.adjToLocal.inverse());
                 
-                pout() << "BLOCK " << block << " -> " << dir << " BLOCK " << adjBlock << std::endl;
-                pout() << "J in block " << block << std::endl;
+                pr_out() << "BLOCK " << block << " -> " << dir << " BLOCK " << adjBlock << std::endl;
+                pr_out() << "J in block " << block << std::endl;
                 m_J[iter].printData(4);
-                pout() << "JLoc Computed: " << std::endl;
+                pr_out() << "JLoc Computed: " << std::endl;
                 Jloc.printData(4);
-                pout() << "JLoc Initialized: " << std::endl;
+                pr_out() << "JLoc Initialized: " << std::endl;
                 JBound.localData->printData(4);
-                pout() << "JAdj Initialized: " << std::endl;
+                pr_out() << "JAdj Initialized: " << std::endl;
                 JBound.adjData->printData(4);
             }
         }
@@ -241,7 +241,7 @@ MBMap<Func, MEM>::operator()(
     }
      
 #if PR_VERBOSE == 3
-    //pout() << "MBMap::operator(): Computing X on box: " << domainBox0 << " (converted from " << domainBox << ") in block " << a_computeBlock << std::endl;
+    //pr_out() << "MBMap::operator(): Computing X on box: " << domainBox0 << " (converted from " << domainBox << ") in block " << a_computeBlock << std::endl;
 #endif
 
     BoxData<double, DIM> xLocal(domainBox0);

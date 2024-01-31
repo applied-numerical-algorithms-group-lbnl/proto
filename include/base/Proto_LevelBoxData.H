@@ -437,6 +437,11 @@ namespace Proto
         inline DataIterator<BoxPartition> begin() const;
         inline DataIterator<BoxPartition> end() const;
 
+      /// deprecated  but useful
+      inline DataIterator<BoxPartition> dataIterator() const
+      {
+        return begin();
+      }
         /// For debugging purposes.
         int s_verbosity = 0;
         

@@ -664,6 +664,15 @@ void HDF5Handler::addLevel(hid_t* a_file,
 {
     PR_TIMERS("HDF5Handler::addLevel");
     PR_TIMER("parallel_write", timer);
+    
+    if (!a_data.layout().isSorted())
+    {
+        LevelBoxData<T,C,HOST,CTR> tmp(a_data.layout().sorted(), a_data.ghost());
+        a_data.copyTo(tmp);
+        addLevel(a_file, tmp, a_dx0, a_refRatio, a_level);
+        return;
+    }
+
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
 
@@ -1126,6 +1135,21 @@ void HDF5Handler::writePatch(
 #ifdef PR_MMB
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
+        const MBLevelMap<MAP, MEM>& a_map,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
+}
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1152,6 +1176,20 @@ void HDF5Handler::writeMBLevel(
     writeMBLevel(a_varNames, a_data, a_filename, a_params...);
 }
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_data, a_filename, a_params...);
+    
+}
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,

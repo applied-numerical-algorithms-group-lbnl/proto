@@ -901,9 +901,9 @@ Matrix<T>::printBuffer(std::string a_format) const
     const T* buffer = this->data();
     for (int ii = 0; ii < size(); ii++)
     {
-        Proto::pout() << buffer[ii] << ", ";
+        Proto::pr_out() << buffer[ii] << ", ";
     }
-    Proto::pout() << std::endl;
+    Proto::pr_out() << std::endl;
 }
 
 template<typename T>
@@ -931,7 +931,7 @@ Matrix<T>::print(std::string a_format) const
 #else
     for (int ii = 0; ii < M(); ii++)
     {
-        Proto::pout() << std::endl;
+        Proto::pr_out() << std::endl;
         for (int jj = 0; jj < N(); jj++)
         {
             char buffer[50];
@@ -941,11 +941,11 @@ Matrix<T>::print(std::string a_format) const
             } else {
                 std::sprintf(buffer, a_format.c_str(), get(ii,jj));
             }
-            Proto::pout() << buffer;
-            if (jj != N()-1) {Proto::pout() << ", "; }
+            Proto::pr_out() << buffer;
+            if (jj != N()-1) {Proto::pr_out() << ", "; }
         }
     }
-    Proto::pout() << std::endl;
+    Proto::pr_out() << std::endl;
 #endif
 }
 
@@ -966,15 +966,15 @@ Matrix<T>::checkConditionNumber() const
     double reallysmall = 1.0e-15;
     if(inverse < reallysmall)
     {
-        Proto::pout() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
+        Proto::pr_out() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
     }
     else if(inverse < small)
     {
-        Proto::pout() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
+        Proto::pr_out() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
     }
     else
     {
-        Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        Proto::pr_out() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 

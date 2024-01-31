@@ -127,14 +127,34 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
 
 // Get All Boundary Data
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-std::vector<MBBoundaryData<T,C,MEM>>& MBBoundaryRegister<T,C,MEM,CTR>::bounds(
+std::vector<MBBoundaryData<T,C,MEM>> MBBoundaryRegister<T,C,MEM,CTR>::bounds(
         MBIndex a_index,
         Point   a_dir)
 {
+    std::vector<MBBoundaryData<T,C,MEM>> empty;
     auto block = m_layout->block(a_index);
     auto patch = m_layout->point(a_index);
     boundsKey_t key(patch, block, a_dir);
+    if (m_bounds.find(key) == m_bounds.end())
+    {
+        return empty;
+    }
     return m_bounds[key];
+}
+
+// Get All Boundary Data
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+std::vector<MBBoundaryData<T,C,MEM>>
+MBBoundaryRegister<T,C,MEM,CTR>::bounds(
+        MBIndex a_index)
+{
+    std::vector<MBBoundaryData<T,C,MEM>> ret;
+    for (auto dir : Box::Kernel(1))
+    {
+        auto bi = bounds(a_index, dir);
+        ret.insert(ret.end(), bi.begin(), bi.end());
+    }
+    return ret;
 }
 
 // Get Boundary Data
@@ -356,7 +376,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 
                 Box localBox_to = bound.localData->box();
                 Box adjBox_to = layout.domain().convert(
-                        localBox_to, localBlock, adjBlock);
+                        bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(
                         bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
@@ -367,10 +387,9 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 } else {
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
-                    
-                    Box localBox_from = bound.adjData->box();
-                    Box adjBox_from = layout.domain().convert(
-                            localBox_from, localBlock, adjBlock);
+                  
+                    Box localBox_from = localBox_to;
+                    Box adjBox_from = adjBox_to;
                     
                     MBMotionItem fromMotionItem(
                             bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);

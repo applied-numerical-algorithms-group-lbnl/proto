@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
-    using Proto::pout;
+    using Proto::pr_out;
     HDF5Handler h5;
     InputArgs args;
     args.parse();
@@ -141,13 +141,13 @@ int main(int argc, char** argv)
         }
         h5.writeLevel(fdx, PhiErr,    "ERR");
         err[nn] = PhiErr.absMax();
-        pout() << "Error: " << err[nn] << std::endl;
+        pr_out() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;
     }
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
     }
 
     #ifdef PR_MPI

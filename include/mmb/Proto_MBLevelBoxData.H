@@ -204,6 +204,9 @@ namespace Proto
         /// Constant Initialization
         inline void setVal(T a_value);
 
+        /// Initialize Boundary Ghost Cells
+        inline void setBoundary(T a_val, int a_comp = -1);
+
         /// Initialize with Random Noise
         inline void setRandom(T a_low, T a_high); 
 
@@ -247,7 +250,7 @@ namespace Proto
         inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
        
         /// Get Layout
-        inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
+        inline const MBDisjointBoxLayout& layout() const {return m_layout; }    
      
         /// Get Patch Box
         /** multiblock analog of LevelBoxData::patchBox. Returns the Box which defines the domain
@@ -358,7 +361,7 @@ namespace Proto
         inline void printBounds(const MBIndex& a_index, int a_prec = 4);
         
         /// Get Number of Blocks
-        inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
+        inline unsigned int numBlocks() const { return m_layout.numBlocks(); }
         inline MBIterator begin();
         inline MBIterator end();
         inline const MBIterator begin() const;
@@ -367,10 +370,11 @@ namespace Proto
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
-        const MBDisjointBoxLayout*     m_layout;
+        MBDisjointBoxLayout     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };
+    
 #include "implem/Proto_MBLevelBoxDataImplem.H"
 } // end namespace Proto
 #endif //end include guard

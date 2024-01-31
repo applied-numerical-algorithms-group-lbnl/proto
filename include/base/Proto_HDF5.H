@@ -290,9 +290,23 @@ namespace Proto
                 std::string a_filename,
                 Args... a_params);
 
+        template<template<MemType> typename MAP, typename T, unsigned int C,
+            MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBLevel(
+                const MBLevelMap<MAP, MEM>& a_map,
+                const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
         template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void writeMBLevel(
                 std::vector<std::string> a_varNames,
+                const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBLevel(
                 const MBLevelBoxData<T, C, MEM, CTR>& a_data,
                 std::string a_filename,
                 Args... a_params);

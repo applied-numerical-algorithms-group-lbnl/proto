@@ -41,7 +41,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
     m_ghost = a_ghost;
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_data.clear();
     m_data.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
@@ -247,6 +247,32 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
+{
+    if (ghost()[0] == Point::Zeros()) { return; } //nothing to do
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "MBLevelBoxData::setBoundary | Error: \
+            %i is not a valid component specification.", a_comp);
+    for (auto iter : m_layout)
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == Point::Zeros()) { continue; }
+            if (!layout().isDomainBoundary(iter, dir)) { continue; }
+            auto& patch = (*this)[iter];
+            Box b = layout()[iter].adjacent(dir * ghost()[0]); 
+            if (a_comp == -1)
+            {
+                patch.setVal(a_value, b);
+            } else {
+                BoxData<T,1,MEM> tmp = slice(patch, a_comp);
+                tmp.setVal(a_value, b);
+            }
+        }
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
 {
     for (auto data : m_data)
@@ -267,6 +293,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
+    for (int bi = 0; bi < layout().numBlocks(); bi++)
+    {
+        m_data[bi]->exchange();
+    }
     m_exchangeCopier.execute();
 }
 
@@ -275,8 +305,8 @@ template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
 {
     PR_TIME("MBLevelBoxData::copyTo");
-    PROTO_ASSERT(a_rhs.layout().compatible(layout()),
-                 "MBLevelBoxData::copyTo | Error: Incompatible datasets");
+    //PROTO_ASSERT(a_rhs.layout().compatible(layout()),
+    //             "MBLevelBoxData::copyTo | Error: Incompatible datasets");
     if (SRC_MEM == DST_MEM)
     {
         auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);
@@ -295,8 +325,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -304,8 +334,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -442,8 +472,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -451,8 +481,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -465,7 +495,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     auto &boundaries = bounds(a_index, a_dir);
     for (auto b : boundaries)
     {
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return true;
         }
@@ -486,7 +516,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     {
         auto &b = boundaries[bi];
         // END TEST CODE
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -505,7 +535,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     for (int bi = 0; bi < boundaries.size(); bi++)
     {
         auto &b = boundaries[bi];
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -517,7 +547,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool
 MBLevelBoxData<T, C, MEM, CTR>::compatible(const MBDisjointBoxLayout& a_layout) const
 {
-    return (m_layout->compatible(a_layout));
+    return (m_layout.compatible(a_layout));
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -690,7 +720,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex &a_index, int a_p
         auto boundData = bounds(a_index, dir);
         for (auto bi : boundData)
         {
-            pout() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
+            pr_out() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
             bi.localData->printData(a_prec);
         }
     }
@@ -700,28 +730,28 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end()
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin() const
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end() const
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 //=======================================================================================
@@ -1222,9 +1252,4 @@ BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data
         return a_data[index];
     }
 }
-
-
-
-
-
 

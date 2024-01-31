@@ -64,6 +64,61 @@ TEST(MBDisjointBoxLayout, Iteration) {
     EXPECT_EQ(patchSet.size(), n0);
 }
 
+TEST(MBDisjointBoxLayout, PatchConnectivity)
+{
+    int domainSize = 32;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    Box domainBox = Box::Cube(domainSize / boxSize);
+    Box adjX  = domainBox.adjacent(Point::X(), 1);
+    Box adjY  = domainBox.adjacent(Point::Y(), 1);
+    Box adjXY = domainBox.adjacent(Point::X() + Point::Y(), 1);
+    Box edgX  = domainBox.edge(Point::X(), 1);
+    Box edgY  = domainBox.edge(Point::Y(), 1);
+    Box edgXY = domainBox.edge(Point::X() + Point::Y(), 1);
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+    auto R = CW*CW;
+    for (auto i1 : layout)
+    {
+        for (auto i2 : layout)
+        {
+            auto b1 = layout.block(i1);
+            auto b2 = layout.block(i2);
+            auto p1 = layout.point(i1);
+            auto p2 = layout.point(i2);
+            Point q2 = Point::Zeros();
+
+            Point p = layout.connectivity(i1,i2);
+            if (b1 == b2)
+            {
+                q2 = p2;
+            }
+            else if (b2 == (b1 + 1) % layout.numBlocks())
+            {
+                q2 = CW.rotateCell(p2, edgY, adjX);
+            }
+            else if (b2 == (b1 + layout.numBlocks() - 1) % layout.numBlocks())
+            {
+                q2 = CCW.rotateCell(p2, edgX, adjY);
+            }
+            else {
+                q2 = R.rotateCell(p2, edgXY, adjXY); 
+            }
+
+            if (Box::Kernel(1).shift(p1).contains(q2))
+            {
+                EXPECT_EQ(p, q2 - p1);
+            } else {
+                EXPECT_EQ(p, Point::Zeros());
+            }
+        }
+    }
+}
+
 TEST(MBDisjointBoxLayout, Find) {
     int domainSize = 64;
     int boxSize = 16;
@@ -77,6 +132,30 @@ TEST(MBDisjointBoxLayout, Find) {
         auto block = layout.block(iter);
         auto index = layout.find(patch, block);
         EXPECT_EQ(index, iter);
+    }
+}
+
+TEST(MBDisjointBoxLayout, Coarsen) {
+    int domainSize = 64;
+    int boxSize = 16;
+    int refRatio = 2;
+    int numBlocks = XPOINT_SIZE;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    std::vector<Point> refRatios(numBlocks, Point::Ones(refRatio));
+    auto crseLayout = layout.coarsen(refRatios);
+
+    auto crseDomain = buildXPoint(domainSize/refRatio);
+    MBDisjointBoxLayout crseLayoutSoln(crseDomain, Point::Ones(boxSize/refRatio));
+
+    EXPECT_EQ(crseLayout.numBoxes(), layout.numBoxes());
+    EXPECT_TRUE(crseLayout.compatible(layout));
+    EXPECT_TRUE(crseLayout.compatible(crseLayoutSoln));
+    for (auto iter : crseLayout)
+    {
+        EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
 

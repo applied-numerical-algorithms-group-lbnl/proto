@@ -89,7 +89,7 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-using Proto::pout; 
+using Proto::pr_out; 
     typedef BoxOp_Euler<double> OP;
 
     int domainSize = 64;
@@ -133,7 +133,7 @@ using Proto::pout;
 
         if (boxSize > domainSize)
           {
-            pout() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
+            pr_out() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
             boxSize = domainSize;
           }
         PR_TIMER_SETFILE(to_string(domainSize) 
@@ -207,7 +207,7 @@ using Proto::pout;
               int step = 0;
               sizeout << step << " " << usage.ru_maxrss << endl;
             }
-          // pout() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
+          // pr_out() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
         }
         for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
           {

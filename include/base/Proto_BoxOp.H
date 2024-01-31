@@ -330,12 +330,25 @@ class BoxOp
     /// Get Coordinates
     /** Output is immutable and cell averaged */
     inline const BoxData<double, 1, MEM>& jacobian() const;
+
+    /// Enforce Block Boundary Flux Matching condition
+    inline virtual void matchFlux(
+            StateData&       a_rhs,
+            const StateData& a_locFlux,
+            const StateData& a_adjFlux,
+            const StateData& a_state,
+            Point            a_localDir) const;
+
+    /// Match Block Boundary Fluxes using the average of fluxes
+    inline void matchFluxAverage(
+            StateData&       a_rhs,
+            const StateData& a_locFlux,
+            const StateData& a_adjFlux,
+            Point            a_localDir) const;
 #endif
 
     protected:
-
-    private:
-
+    bool m_isMapped;
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
@@ -346,6 +359,8 @@ class BoxOp
     mutable bool m_definedFlux;
 
     Array<T, DIM> m_dx;
+
+    private:
 
 #ifdef PR_MMB
     const BoxData<double, DIM, MEM>* m_x;

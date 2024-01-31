@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 
     if (testNum == 0)
     {
-        pout() << "Testing DisjointBoxLayout::onDomainBoundary" << std::endl;
+        pr_out() << "Testing DisjointBoxLayout::onDomainBoundary" << std::endl;
         Point boxSizeVect = Point::Ones(boxSize);
         Box domainBox = Box::Cube(domainSize);
         ProblemDomain domain(domainBox, periodicity);
@@ -40,11 +40,11 @@ int main(int argc, char** argv)
         std::vector<Point> points = {Point::Zeros(), Point::Basis(0), Point::Basis(1), Point::Ones()};
         for (auto iter = points.begin(); iter != points.end(); ++iter)
         {
-            pout() << "onDomainBoundary(" << *iter << "): " << layout.onDomainBoundary(*iter) << std::endl;
+            pr_out() << "onDomainBoundary(" << *iter << "): " << layout.onDomainBoundary(*iter) << std::endl;
         }
     } else if (testNum == 1)
     {
-        pout() << "Testing DisjointBoxLayout::onDomainBoundary" << std::endl;
+        pr_out() << "Testing DisjointBoxLayout::onDomainBoundary" << std::endl;
         Point boxSizeVect = Point::Ones(boxSize);
         Box domainBox = Box::Cube(domainSize);
         Box patches = (domainBox.shift(Point::Basis(0, boxSize)) & domainBox).coarsen(boxSizeVect);
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         layout.print();
         for (auto iter = patchPoints.begin(); iter != patchPoints.end(); ++iter)
         {
-            pout() << "onLevelBoundary(" << *iter << "): " << layout.onLevelBoundary(*iter) << std::endl;
+            pr_out() << "onLevelBoundary(" << *iter << "): " << layout.onLevelBoundary(*iter) << std::endl;
         }
 
     }

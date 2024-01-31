@@ -50,14 +50,14 @@ void MBProblemDomain::defineBoundary(
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
 }
 
-const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
+const ProblemDomain& MBProblemDomain::getBlock(unsigned int a_blockID) const
 {
     return m_domains[a_blockID];
 }
 
 Point MBProblemDomain::blockSize(unsigned int a_blockID) const
 {
-    return blockDomain(a_blockID).box().sizes();
+    return getBlock(a_blockID).box().sizes();
 }
 
 double MBProblemDomain::dv(unsigned int a_blockID) const
@@ -261,7 +261,7 @@ void MBProblemDomain::close()
         "MBProblemDomain::close | Error: Some blocks have undefined domains.");
     for (unsigned int bi = 0; bi < size(); bi++)
     {
-        Box box_i = blockDomain(bi).box();
+        Box box_i = getBlock(bi).box();
         for (auto dir_ij : Box::Kernel(1))
         {
             if (dir_ij == Point::Zeros()) { continue; }
@@ -270,7 +270,7 @@ void MBProblemDomain::close()
             {
                 unsigned int bj = bound.dstBlock;
                 auto dir_ji = bound.dstToSrc;
-                Box box_j = blockDomain(bj).box();
+                Box box_j = getBlock(bj).box();
 
                 Box box_ij = box_i.edge(dir_ij,1);
                 Box box_ji = box_j.edge(dir_ji,1);

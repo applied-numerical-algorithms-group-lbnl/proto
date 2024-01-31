@@ -50,7 +50,7 @@ namespace Proto
         inline MBGraph& graph() const { return *m_graph; }
         
         // Get Local Problem Domain
-        inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
+        inline const ProblemDomain& getBlock(unsigned int a_blockID) const;
         
         // Get Size of Block
         inline Point blockSize(unsigned int a_blockID) const;

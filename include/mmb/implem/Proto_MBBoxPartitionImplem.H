@@ -22,7 +22,8 @@ void MBBoxPartition::define(
     {
         for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
         {
-            m_blockPartitions.push_back(std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi)));
+            const auto& domain = a_patchDomain.getBlock(bi);
+            m_blockPartitions.push_back(std::make_shared<BoxPartition>(domain));
         }
     }
     define(a_patches);
@@ -40,7 +41,7 @@ void MBBoxPartition::define(
     
     for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
     {
-        m_blockPartitions[bi]->define(m_patchDomain.blockDomain(bi), blockPatches[bi], 0, numProc());
+        m_blockPartitions[bi]->define(m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
 }
@@ -159,6 +160,14 @@ uint64_t MBBoxPartition::procEndIndex(unsigned int a_proc) const
     if (data == m_procMap.end()) { return numBoxes(); }
     return (*data).second.second;
 }
+uint64_t MBBoxPartition::localIndex(uint64_t a_globalIndex, unsigned int a_proc) const
+{
+    return a_globalIndex - procStartIndex(a_proc);
+}
+uint64_t MBBoxPartition::globalIndex(uint64_t a_localIndex, unsigned int a_proc) const
+{
+    return a_localIndex + procStartIndex(a_proc);
+}
 
 
 inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int a_block) const
@@ -168,7 +177,7 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int
 
 uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 {
-    auto blockDomain = m_patchDomain.blockDomain(a_block);
+    auto blockDomain = m_patchDomain.getBlock(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),
             "MBBoxPartition::find | Error: \
             Patch is not contained within the problem domain.");
@@ -182,32 +191,32 @@ uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 
 void MBBoxPartition::print()
 {
-    using Proto::pout;
-    pout() << "MBBoxPartition" << std::endl;
+    using Proto::pr_out;
+    pr_out() << "MBBoxPartition" << std::endl;
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        pout() << "Block " << bi << std::endl;
+        pr_out() << "Block " << bi << std::endl;
         m_blockPartitions[bi]->print();
     }
-    pout() << "Global Partition Data" << std::endl;
-    pout() << "\tNum Boxes:  " << numBoxes() << std::endl;
-    pout() << "\tNum Blocks: " << numBlocks() << std::endl; 
-    pout() << "\tNum Procs:  " << numProcs() << std::endl;
-    pout() << "\tData By Processor: " << std::endl;
+    pr_out() << "Global Partition Data" << std::endl;
+    pr_out() << "\tNum Boxes:  " << numBoxes() << std::endl;
+    pr_out() << "\tNum Blocks: " << numBlocks() << std::endl; 
+    pr_out() << "\tNum Procs:  " << numProcs() << std::endl;
+    pr_out() << "\tData By Processor: " << std::endl;
     for (auto procData : m_procMap)
     {
         unsigned int proc = procData.first;
-        pout() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
-        pout() << " | Start Index: " << procStartIndex(proc);
-        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
+        pr_out() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
+        pr_out() << " | Start Index: " << procStartIndex(proc);
+        pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
     }
-    pout() << "\tData Partition: " << std::endl;
+    pr_out() << "\tData Partition: " << std::endl;
     for (auto patchData : m_partition)
     {
         auto patchID = patchData.first;
         auto proc = patchData.second;
-        pout() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
-        pout() << " | Proc: " << proc << std::endl;
+        pr_out() << "\t\tBlock: " << patchID.second << " | Patch: " << patchID.first;
+        pr_out() << " | Proc: " << proc << std::endl;
     }
 }
 

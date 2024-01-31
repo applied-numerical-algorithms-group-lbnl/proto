@@ -251,15 +251,15 @@ bool CoordPermutation::operator==(const CoordPermutation& a_rhs) const
 
 void CoordPermutation::print() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
     for (int jj = 0; jj < DIM; jj++)
     {
         for (int ii = 0; ii < DIM; ii++)
         {
             if (m_matrix[jj][ii] != 0)
             {
-                pout() << ii << " --> " << jj;
-                pout() << " (" << m_matrix[jj][ii] << ")" << std::endl;
+                pr_out() << ii << " --> " << jj;
+                pr_out() << " (" << m_matrix[jj][ii] << ")" << std::endl;
             }
         }
     }
@@ -268,14 +268,14 @@ void CoordPermutation::print() const
 
 void CoordPermutation::printMatrix() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
     for (auto row : m_matrix)
     {
         for (auto val : row)
         {
-            pout() << val << ", ";
+            pr_out() << val << ", ";
         }
-        pout() << std::endl;
+        pr_out() << std::endl;
     }
 }
 

@@ -399,17 +399,17 @@ bool MBGraph::isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const
 
 void MBGraph::print() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
     for (auto block : m_blocks)
     {
-        pout() << "Block " << block->index << std::endl;
+        pr_out() << "Block " << block->index << std::endl;
         Box K = Box::Kernel(1);
         for (auto dir : K)
         {
-            pout() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
+            pr_out() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
             for (auto arc : block->arcs[dir])
             {
-                pout() << "\t\tBound: Block " << arc.dstBlock << " | Local Dir: " << arc.srcToDst << std::endl;
+                pr_out() << "\t\tBound: Block " << arc.dstBlock << " | Local Dir: " << arc.srcToDst << std::endl;
             }
         }
     }

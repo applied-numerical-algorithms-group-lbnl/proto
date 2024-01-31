@@ -2,6 +2,7 @@
 #define __PROTO_HEADER__
 
 #include <cstdlib>
+#include <limits>
 #include "base/Proto_PAssert.H"
 #include "base/Proto_parstream.H"
 #include "base/Proto_macros.H"
@@ -44,5 +45,7 @@
 #ifdef PR_MMB
 #include "ProtoMMB.H"
 #endif
+
+#include "transition/Proto_Transition_Utilities.H"
 
 #endif

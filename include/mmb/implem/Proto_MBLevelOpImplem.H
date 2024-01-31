@@ -1,5 +1,5 @@
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -8,7 +8,7 @@ MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp()
 {
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -18,27 +18,33 @@ MBLevelOp<OPType,MAP,T,BCType,MEM>::MBLevelOp(const MBLevelMap<MAP,MEM>& a_map)
     define(a_map);
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
 void MBLevelOp<OPType,MAP,T,BCType,MEM>::define(const MBLevelMap<MAP,MEM>& a_map)
 {
+    PR_TIME("MBLevelOp::define");
     auto& layout = a_map.map().layout();
     m_map = &a_map;
     m_ops.clear();
-    m_ops.resize(layout.localSize());
+    //m_ops.resize(layout.localSize());
+    //m_boundRegister.define(layout,1,Point::Zeros());
+    int ii = 0;
     for (auto index : layout)
     {
-        auto& x = a_map.map()[index];
-        auto& J = a_map.jacobian()[index];
-        auto block = layout.block(index);
-        m_ops[index].define(layout[index], a_map.dx(block), x,J);
+        //auto& x = a_map.map()[index];
+        //auto& J = a_map.jacobian()[index];
+        //auto block = layout.block(index);
+        //m_ops[index].define(layout[index], a_map.dx(block), x,J);
+        m_ops.push_back(OP(a_map, index));
+        m_ops[ii].init();
+        ii++;
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -48,6 +54,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelStateData&   a_state,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");
@@ -60,9 +67,10 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         auto& output = a_output[index];
         op(output, state, a_scale);
     }
+    //matchFlux(a_output, a_state);
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -73,6 +81,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         const LevelAuxData&     a_aux,
         T                       a_scale)
 {
+    PR_TIME("MBLevelOp::operator()");
     auto& layout = m_map->map().layout();
     PROTO_ASSERT(a_output.compatible(layout),
             "MBLevelOp::operator() | Error: output layout is incompatible with map layout.");
@@ -90,27 +99,27 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
-OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index)
+OPType<T,MAP,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index)
 {
     return m_ops[a_index];
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
-const OPType<T,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index) const
+const OPType<T,MAP,MEM>& MBLevelOp<OPType,MAP,T,BCType,MEM>::operator[](MBIndex a_index) const
 {
     return m_ops[a_index];
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -124,7 +133,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setDiagScale(T a_value)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -138,7 +147,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setFluxScale(T a_value)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -152,7 +161,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setTime(T a_time)
     }
 }
 
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -165,4 +174,82 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
         m_ops[iter].setRKStage(a_stage);
     }
 }
+/*
+template<template<typename, template<MemType> typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,
+    template<typename, unsigned int, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
+        LevelStateData& a_rhs,
+        const LevelStateData& a_state)
+{
+    auto& layout = m_map->map().layout();
+    auto& graph = layout.domain().graph();
+    PROTO_ASSERT(a_state.layout().compatible(layout),
+            "MBLevelOp::matchFlux | Error: incompatible layouts");
 
+    pr_out() << "MBLevelOp::matchFlux" << std::endl;
+    // compute fluxes and copy them into the register
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        const auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    //FIXME: Do we need the adjacent block info or not?
+                    auto locBlock = layout.block(iter);
+                    auto adjBlock = graph.adjacent(locBlock, dd, *siter);
+                    PROTO_ASSERT(graph.connectivity(locBlock, adjBlock) == dir,
+                            "MBLevelOp::matchFlux | Error: Graph corruption");
+                    auto adjDir = graph.connectivity(adjBlock, locBlock);
+                    int adjFluxDir = 0;
+                    for (int ii = 0; ii < DIM; ii++) { if (adjDir[ii] != 0) {adjFluxDir = ii;} }
+
+                    Box B0 = layout[iter];
+                    Box B1 = B0.grow((Centering)dd);
+                    StateData fluxData(B1);
+                    // FIXME: Is this the right flux?
+                    op.flux(fluxData, state, dd);
+                    pr_out() << "computing flux | base box: " << B0 << " | flux box: " << B1 << " | state box: " << state.box() << std::endl;
+                    auto& localFlux = m_boundRegister.local(iter, dd, *siter);
+                    fluxData.copyTo(localFlux);
+                    pr_out() << "copying flux from " << fluxData.box() << " into register " << localFlux.box() << std::endl;
+                }
+            }
+        }
+    }
+    // fill adjacent registers
+    m_boundRegister.exchange();
+
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        auto& rhs = a_rhs[iter];
+        const auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    // FIXME: local register will have been computed from adjacent POV
+                    // Need to recompute local flux and input to matchFlux function
+                    auto& adjFlux = m_boundRegister.adjacent(iter, dd, *siter);
+                    auto& locFlux = m_boundRegister.local(iter, dd, *siter);
+                    pr_out() << "matching adj flux at " << adjFlux.box() << " with local flux at  " << locFlux.box() << std::endl;
+                    op.matchFlux(rhs, locFlux, adjFlux, state, dir);
+                }
+            }
+        }
+    }
+}
+*/

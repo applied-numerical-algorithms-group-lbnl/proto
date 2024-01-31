@@ -12,6 +12,17 @@ TEST(DisjointBoxLayout, Iteration) {
     ProblemDomain domain(domainBox, periodicity);
     DisjointBoxLayout layout(domain, boxSizeVect);
 
+    auto iterator = layout.begin();
+    int localSize = iterator.localSize();
+    int correctSize = layout.size() / numProc();
+    if (procID() < layout.size() % numProc()) { correctSize++; }
+    EXPECT_EQ(localSize, correctSize);
+    for (int ii = 0; ii < localSize; ii++)
+    {
+        auto index = iterator[ii];
+        EXPECT_EQ((int)index, ii);
+    }
+
     std::set<Box> correctBoxSet;
     Box patches = domainBox.coarsen(boxSizeVect);
     for (auto p : patches)

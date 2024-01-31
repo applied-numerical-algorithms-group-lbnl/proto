@@ -107,6 +107,9 @@ PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
 int main(int argc, char* argv[])
 {   
+#ifdef PR_MPI
+    MPI_Init (&argc, &argv);
+#endif
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 16;
@@ -140,7 +143,7 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
  
-  MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
+  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
@@ -224,7 +227,9 @@ int main(int argc, char* argv[])
       //cout << "initial box" << Wfoo.box() << endl;
       eulerOp[dit].primToCons(Utemp,Wfoo,dVolr,gamma,dx,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
-      eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+      //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+
+      eulerOp[dit](rhs_i,fluxes,Utemp,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
       double maxpforceC = rhs_coarse.absMax(1,0,0);
@@ -244,4 +249,7 @@ int main(int argc, char* argv[])
   h5.writeMBLevel({ }, map, flux1, "MBEulerCubedSphereFlux1");
   h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
   PR_TIMER_REPORT();
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }

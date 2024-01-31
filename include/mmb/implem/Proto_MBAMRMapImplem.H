@@ -11,6 +11,18 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
 template<template<MemType> typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
         const MBAMRGrid&            a_grid,
+        Point                       a_ghost,
+        unsigned int                a_focalBlock)
+{
+    Array<Point, DIM+1> ghost;
+    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th - 5th order interpolation
+    ghost[0] = a_ghost;
+    define(a_grid, ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBAMRMap<MAP,MEM>::define(
+        const MBAMRGrid&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {

@@ -487,6 +487,11 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     a_os << "(" ;
     for (int dir = 0; dir < DIM; dir++) 
     {
+      //keeps positive and negative stuff lined up --dtg
+      if(a_pt[dir] >= 0)
+      {
+        a_os << " ";
+      }
         a_os << a_pt[dir];
         if (dir < DIM-1) 
         {

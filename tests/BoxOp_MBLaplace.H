@@ -3,26 +3,28 @@
 
 using namespace Proto;
 
-template<typename T, MemType MEM = MEMTYPE_DEFAULT>
-class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
+template<typename T,
+    template<MemType> typename MAP,
+    MemType MEM = MEMTYPE_DEFAULT>
+class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 {
     public:
 
     // inherit constructors
-    using BoxOp<T, 1, 0, MEM>::BoxOp;
+    using MBBoxOp<T, MAP, 1, 0, MEM>::MBBoxOp;
     
     // How many ghost cells does the operator need from the state variables
-    inline static Point ghost() { return Point::Ones(1);}
+    inline static Point ghost() { return Point::Ones(3);}
     
     // How many ghost cells does the operator need from the auxiliary variables
-    inline static Point auxGhost() { return Point::Ones(1);}
+    inline static Point auxGhost() { return Point::Zeros();}
     
     // What is the intended order of accuracy of the operator
-    inline static constexpr int order() { return 2; }
+    inline static constexpr int order() { return 4; }
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
-    inline double spectralRadius() const {return 1;}
+    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
    
     inline void flux(
             BoxData<T, 1>& a_flux,
@@ -35,24 +37,36 @@ class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
                 a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
                 m_Jf[a_dir], m_Jf[a_dir], a_dir);
         // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
-        a_flux = Operator::_faceMatrixProductAB(
+        auto tmp = Operator::_faceMatrixProductAB(
                 faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
+        tmp.copyTo(a_flux);
+        a_flux /= this->dx()[a_dir];
     }
 
     // Cache metric terms and Jacobian
     inline void init()
     {
-        m_NT.define(this->x().box());
+#if DIM == 2
+        m_NT.define(this->x().box().extrude(Point::Ones(),-1));
+#elif DIM == 3
+        m_NT.define(this->x().box().grow(-2).extrude(Point::Ones(),-1));
+#else
+        MayDay<void>::Error("BoxOp_MBLaplace not implemented for DIM != 2,3");
+#endif
         m_NTMatrix.clear();
         m_Jf.clear();
         for (int dir = 0; dir < DIM; dir++)
         {
             auto C2F = Stencil<double>::CellToFace(dir);
-            m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
+            // In 2D, NT does not require any ghost cells from X
+            // In 3D, NT requires 2 layers of ghost cells from X
+            auto NT_dir = Operator::cofactor(this->x(), dir, this->dx()); 
+            NT_dir.copyTo(m_NT[dir]);
             m_Jf.push_back(C2F(this->jacobian()));
         }
         for (int dir = 0; dir < DIM; dir++)
         {
+            //NT should have (conservative) 2 layers of ghost cells
             m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
     }

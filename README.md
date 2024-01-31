@@ -22,6 +22,7 @@ Proto requires very little effort to include in an external project. Proto consi
 
 ## Build instructions:
 The following instructions pertain to building applications Proto's native examples and test files. External applications using Proto as a third party library should follow the instructions in the previous section. 
+
 ### CMake version
 * The minumum required CMake version is 3.20. If an older version is the default on your platform, load a `cmake` module with a sufficiently new version. Configuration has been tested through CMake 3.21. Users who are not comfortable with using CMake are invited to use the provided proto_make wrapper script to call CMake using a GNUMake style interface (see the proto_make section below).
 ### Cori Modules
