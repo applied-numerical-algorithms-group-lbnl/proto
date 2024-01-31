@@ -390,6 +390,53 @@ namespace Proto_Transition
       **/
       copy_fine.copyTo(a_data_fine);
     }
+
+    ///
+    /**
+       same as above where all the coarse data is zero
+     **/
+    template <int interpolation_order>
+    static void
+    homogeneousCFInterp(
+            pr_level_data        & a_data_fine,
+            const pr_pt          & a_ref_ratio)
+    {
+      ///always
+      const bool overwrite = true; const double applyScale = 1.;
+      
+      /**
+         Get coarse data on coarsened fine layout.
+      **/
+      typedef Proto::InterpStencil<double> pr_interp;
+      pr_interp quad_sten = pr_interp::Quadratic(a_ref_ratio);
+      
+      pr_pt ghost       = a_data_fine.ghost();
+      pr_dbl  dbl_fine  = a_data_fine.layout();
+      pr_dbl  dbl_cofi  =    dbl_fine.coarsen(a_ref_ratio);
+      
+      pr_level_data  data_cofi(dbl_cofi, ghost);
+      data_cofi.setVal(0.);
+      pr_level_data  copy_fine(dbl_fine, pr_pt::Zeros());///just valid data
+      auto dit   = a_data_fine.dataIterator();
+      for(int ibox = 0; ibox < dit.localSize(); ibox++)
+      {
+        auto         & fab_fine = a_data_fine[dit[ibox]];
+        const auto   & fab_cofi =   data_cofi[dit[ibox]];
+        pr_box  valid_fine      =    dbl_fine[dit[ibox]];
+        pr_box  grown_fine = valid_fine.grow(pr_pt::Ones());
+        for( int icomp = 0; icomp < ncomp ; icomp++)
+        {
+          pr_box_data_sca sca_fine = Proto::slice(fab_fine, icomp);
+          pr_box_data_sca sca_cofi = Proto::slice(fab_cofi, icomp);
+          ///interp_stencil follows the chombo standard of dest, src so sca_fine is the output
+          quad_sten.apply(sca_fine, sca_cofi, grown_fine, overwrite, applyScale);
+        }
+      }
+      /**
+         Copy back valid data.   This has no ghost cells so C/F cells should not be affected.
+      **/
+      copy_fine.copyTo(a_data_fine);
+    }
     
   };
 }
