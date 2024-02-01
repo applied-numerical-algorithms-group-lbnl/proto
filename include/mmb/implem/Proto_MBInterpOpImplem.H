@@ -60,7 +60,7 @@ MBPointInterpOp::MBPointInterpOp(
     int N = m_exponents.size();
     int M = m_srcs.size();
 
-    std::cout << "N: " << N << " | M: " << M << std::endl;
+    //std::cout << "N: " << N << " | M: " << M << std::endl;
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell

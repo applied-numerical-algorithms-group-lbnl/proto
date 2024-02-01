@@ -177,7 +177,7 @@ CubedSphereShell::InterpOp(
     {
         MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
         polarMap.define(a_layout, a_ghost, bi);
-        op.define(polarMap, footprint, bi); 
+        op.define(polarMap, footprint, a_order, bi); 
     }
     return op; 
 }
