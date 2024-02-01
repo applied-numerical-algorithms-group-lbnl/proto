@@ -125,7 +125,7 @@ template<MemType MEM>
 MBLevelMap<MBMap_CubedSphereShell, MEM>
 CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
-        const Array<Point, DIM+1>   a_ghost)
+        Point   a_ghost)
 {
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(a_layout, a_ghost);
@@ -158,7 +158,7 @@ template<MemType MEM>
 MBInterpOp
 CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
-        const Array<Point, DIM+1>& a_ghost,
+        Point a_ghost,
         unsigned int a_order)
 {
     std::vector<Point> footprint;
@@ -172,7 +172,7 @@ CubedSphereShell::InterpOp(
             footprint.push_back(pi);
         }
     }
-    MBInterpOp op(a_ghost[0], a_order);
+    MBInterpOp op(a_ghost, a_order);
     for (int bi = 0; bi < 6; bi++)
     {
         MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
@@ -188,7 +188,7 @@ CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
         unsigned int a_order)
 {
-    return InterpOp<MEM>(a_data.layout(), a_data.ghost(), a_order);
+    return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
     
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

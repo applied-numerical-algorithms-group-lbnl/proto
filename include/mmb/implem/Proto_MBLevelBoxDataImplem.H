@@ -682,21 +682,27 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     for (auto shift : extendedFootprint)
     {
         Point p = a_center + shift;
+        //std::cout << "Attempting to add stencil point " << p << std::endl;
         if (blockDomain.contains(p) && patchDomain.contains(p))
         {
+            //std::cout << "\tPoint is in the patch AND block domains: Adding" << std::endl;
             MBDataPoint data(a_index, p, layout());
             footprint.insert(data);
         }
         else if (!blockDomain.contains(p))
         {
+            //std::cout << "\tPoint is NOT in the block domain. checking bounds" << std::endl;
             for (auto dir : Box::Kernel(1))
             {
                 if (dir == Point::Zeros()) { continue; }
                 auto boundData = bounds(a_index, dir);
                 for (auto bi : boundData)
                 {
+                    //std::cout << "\t\tChecking boundary in direction " << dir << " with box " << bi.localBox() << std::endl;
+                    //std::cout << "\t\tbi.localBox().contains(p) ? " << bi.localBox().contains(p) << std::endl;
                     if (bi.localBox().contains(p))
                     {
+                        //std::cout << "\t\t\tPoint is in the boundary: Adding" << std::endl;
                         MBDataPoint data(a_index, p, layout(), dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }

@@ -80,7 +80,7 @@ class Matrix
             MatrixStorageType a_storage = COL_MAJOR);
 
     /// Copy Assignment
-    inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = delete;
+    inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = default;
 
     /// Move Assignment
     inline Matrix<T>& operator=(const Matrix<T>&& a_matrix);

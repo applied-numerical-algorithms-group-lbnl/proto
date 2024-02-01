@@ -55,7 +55,7 @@ class CubedSphereShell
     template<MemType MEM = MEMTYPE_DEFAULT>
     static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
             const MBDisjointBoxLayout& a_layout,
-            const Array<Point, DIM+1> a_ghost);
+            Point a_ghost);
     
     /// Get Map (Convenient Overload)
     /**
@@ -81,7 +81,7 @@ class CubedSphereShell
     template<MemType MEM>
     static MBInterpOp InterpOp(
             const MBDisjointBoxLayout& a_layout,
-            const Array<Point, DIM+1>& a_ghost,
+            Point a_ghost,
             unsigned int a_order = 4);
     
     /// Get MB Interpolation Operator

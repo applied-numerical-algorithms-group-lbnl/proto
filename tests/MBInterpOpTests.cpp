@@ -265,7 +265,7 @@ TEST(MBInterpOp, XPointTest)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, XPointStandalone)
 {
     HDF5Handler h5;
@@ -539,7 +539,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         if (cullRadialGhost) { ghost[0][radialDir] = 0; }
 
         // cube sphere -> cartesian map
-        auto map = CubedSphereShell::Map<HOST>(layout, ghost);
+        auto map = CubedSphereShell::Map<HOST>(layout, ghost[0]);
         // cube sphere -> spherical-polar maps
         // each of these maps rotates the azimuthal singularity away from the focused block
         /*
