@@ -144,10 +144,9 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
 
-  // build integrator and interpolation operator
+  // FIXME: Commenting this out until the interpOp can be built without SVD failing
   //auto interpOp = CubedSphereShell::InterpOp<HOST>(layout, OP::ghost(), 4);
-  MBInterpOp interpOp = CubedSphereShell::InterpOp(U, 4);
-  MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
+  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  

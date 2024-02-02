@@ -143,27 +143,18 @@ TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
     int domainSize = 16;
-    int boxSize = 8;
+    int boxSize = 16;
     int thickness = 1;
+    int ghostSize = 3;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    Array<double, DIM> exp{4,4,4,0,0,0};
+    Array<double, DIM> exp{1,1,1,0,0,0};
+    exp *= order;
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(1);
-    if (cullRadialGhost) { ghost[0][radialDir] = 0;}
-    std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(3))
-    {
-        if (pi.abs().sum() <= 2)
-        {
-            if (use2DFootprint && (pi[radialDir] != 0)) { continue; }
-            footprint.push_back(pi);
-        }
-    }
+    Point ghost = Point::Ones(ghostSize);
+    if (cullRadialGhost) { ghost[radialDir] = 0;}
     int N = 3;
     double err[N];
     double errL1[N];
@@ -175,12 +166,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         boxSizeVect[radialDir] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-        ghost[0] = Point::Ones(3);
-        if (cullRadialGhost) { ghost[0][radialDir] = 0; }
-
-        auto map = CubedSphereShell::Map<HOST>(layout, ghost[0]);
-        ghost[0] = Point::Ones(1);
-        if (cullRadialGhost) { ghost[0][radialDir] = 0; }
+        auto map = CubedSphereShell::Map<HOST>(layout, ghost);
 
         // initialize data
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
@@ -191,10 +177,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
         {
             auto block = layout.block(iter);
             auto& src_i = hostSrc[iter];
-            Box b_i = C2C.domain(layout[iter]).grow(ghost[0]);
+            Box b_i = C2C.domain(layout[iter]).grow(ghost);
             BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
             // Jacobian and NT are computed but not used
-            BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost[0]));
+            BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost));
             FluxBoxData<double, DIM> NT(layout[iter]);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
@@ -223,11 +209,11 @@ TEST(MBInterpOp, CubedSphereShellTest)
             dst_i.copyTo(err_i);
             err_i -= src_i;
             err_i += tmp;
-            
+            err_i.setVal(0,blockDomain & err_i.box()); 
             for (auto dir : Box::Kernel(1).grow(-Point::Basis(radialDir)))
             {
                 if (dir == Point::Zeros()) {continue; }
-                Box bi = blockDomain.adjacent(dir*ghost[0]);
+                Box bi = blockDomain.adjacent(dir*ghost);
                 BoxData<double> ei(bi);
                 ei.setVal(0);
                 err_i.copyTo(ei);
@@ -260,7 +246,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
         //EXPECT_GT(rate, 3.5);
-        EXPECT_TRUE(err[ii] < 1e-12 || rateL1 >  order - 0.5);
+        EXPECT_TRUE(errL1[ii] < 1e-12 || rateL1 >  order - 0.5);
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {
