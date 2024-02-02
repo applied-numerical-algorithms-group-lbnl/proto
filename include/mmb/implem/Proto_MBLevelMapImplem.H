@@ -160,6 +160,48 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+        const MBDataPoint& a_point,
+        Array<double, DIM>& a_offset) const
+{
+    auto block = a_point.srcBlock();
+    auto dx = this->dx(block);
+    Array<double, DIM> X = a_point.point;
+    X += a_offset;
+    X *= dx;
+    return X;
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+        const MBDataPoint& a_point) const
+{
+    Array<double, DIM> offset;
+    offset.fill(0);
+    return mappedCoords(a_point, offset);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
+        const MBDataPoint& a_point,
+        Array<double, DIM>& a_offset) const
+{
+    auto xi = mappedCoords(a_point, a_offset);
+    auto block = a_point.srcBlock();
+    return op(block).apply(xi); 
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
+        const MBDataPoint& a_point) const
+{
+    Array<double, DIM> offset;
+    offset.fill(0);
+    return apply(a_point, offset);
+}
+
+
+template<template<MemType> typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& a_point) const
 {
     return cellCentered(a_point);

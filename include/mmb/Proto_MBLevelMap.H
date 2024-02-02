@@ -152,7 +152,8 @@ class MBLevelMap
             const Box& a_box,
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
-    
+   
+
     /// Compute Cell Centered Coordinates
     /** Returns the cell-averaged coordinates on a specified range.
      *
@@ -164,6 +165,21 @@ class MBLevelMap
             const Box& a_box,
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
+    
+    /// Compute Mapped Coordinates
+    /** Returns coordinates in mapped space of a given data point. The Coordinates
+     *  are of the cell center of the point plus the offset which is in units of the grid spacing. 
+     */
+    inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point, Array<double, DIM> a_offset) const;
+    
+    /// Compute Mapped Coordinates (No Offset)
+    inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point) const;
+
+    /// Analytic Map (DataPoint Cell Center)
+    inline Array<double, DIM> apply(const MBDataPoint& a_point) const;
+    
+    /// Analytic Map (DataPoint With Offset)
+    inline Array<double, DIM> apply(const MBDataPoint& a_point, Array<double, DIM> a_offset) const;
 
     /// Compute Cell Centered Coordinates
     /** Computes the cell-centered coodinate values at a specified MBDataPoint */
