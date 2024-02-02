@@ -167,6 +167,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
     auto block = a_point.srcBlock();
     auto dx = this->dx(block);
     Array<double, DIM> X = a_point.point;
+    X += 0.5; //default is cell center
     X += a_offset;
     X *= dx;
     return X;
