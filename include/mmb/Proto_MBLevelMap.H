@@ -170,7 +170,9 @@ class MBLevelMap
     /** Returns coordinates in mapped space of a given data point. The Coordinates
      *  are of the cell center of the point plus the offset which is in units of the grid spacing. 
      */
-    inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point, Array<double, DIM> a_offset) const;
+    inline Array<double, DIM> mappedCoords(
+            const MBDataPoint&          a_point,
+            const Array<double, DIM>&   a_offset) const;
     
     /// Compute Mapped Coordinates (No Offset)
     inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point) const;
@@ -179,7 +181,9 @@ class MBLevelMap
     inline Array<double, DIM> apply(const MBDataPoint& a_point) const;
     
     /// Analytic Map (DataPoint With Offset)
-    inline Array<double, DIM> apply(const MBDataPoint& a_point, Array<double, DIM> a_offset) const;
+    inline Array<double, DIM> apply(
+            const MBDataPoint&          a_point,
+            const Array<double, DIM>&   a_offset) const;
 
     /// Compute Cell Centered Coordinates
     /** Computes the cell-centered coodinate values at a specified MBDataPoint */

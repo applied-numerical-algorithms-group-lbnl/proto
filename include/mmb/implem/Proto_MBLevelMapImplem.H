@@ -161,8 +161,8 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
 
 template<template<MemType> typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
-        const MBDataPoint& a_point,
-        Array<double, DIM>& a_offset) const
+        const MBDataPoint&          a_point,
+        const Array<double, DIM>&   a_offset) const
 {
     auto block = a_point.srcBlock();
     auto dx = this->dx(block);
@@ -183,8 +183,8 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
 
 template<template<MemType> typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
-        const MBDataPoint& a_point,
-        Array<double, DIM>& a_offset) const
+        const MBDataPoint&          a_point,
+        const Array<double, DIM>&   a_offset) const
 {
     auto xi = mappedCoords(a_point, a_offset);
     auto block = a_point.srcBlock();

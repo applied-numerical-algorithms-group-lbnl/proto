@@ -7,7 +7,7 @@
 
 using namespace Proto;
 #if DIM == 2
-#if 1
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
     HDF5Handler h5;

@@ -71,7 +71,7 @@ class MBMapOp
     /// Analytic Map
     /** Users should override this function
      */
-    inline virtual Array<double, DIM> apply(const Array<double, DIM>& a_xi);
+    inline virtual Array<double, DIM> apply(const Array<double, DIM>& a_xi) { return a_xi; }
 
     // Used internally to fix inheritance of virtual functions
     inline void _apply(
