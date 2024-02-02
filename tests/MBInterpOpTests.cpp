@@ -11,40 +11,94 @@ using namespace Proto;
 TEST(MBInterpOp, ShearTest)
 {
     HDF5Handler h5;
-    
-    // interplating function parameters
-    Array<double, DIM> exp{4,4,0,0,0,0};
-    Array<double, DIM> offset{0,0,0.3,0,0,0};
-    
     // grid parameters
     int domainSize = 16;
     int boxSize = 16;
-    int ghostSize = 2;
+    int ghostSize = 5;
+    
+    // interplating function parameters
+    double order = 4.0;
+    Array<double, DIM> exp{1,1,0,0,0,0};
+    exp *= order;
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
   
-    // initialize data
-    auto domain = buildShear(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
     
-    MBLevelMap<MBMap_Shear, HOST> map;
-    map.define(layout, Point::Ones(ghostSize));
-    
-    for (auto iter : layout)
+    int numIter = 3;
+    double err[numIter];
+    for (int nn = 0; nn < numIter; nn++)
     {
-        auto& src_i = hostSrc[iter];
-        auto& x_i = map.map()[iter];
-        auto block = layout.block(iter);
-        BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-        src_i |= Stencil<double>::CornersToCells(4)(x_pow);
-    }
+        // initialize data
+        auto domain = buildShear(domainSize);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    // interpolate
-    hostSrc.exchange();
-    interpBoundaries<MBMap_Shear>(hostSrc);
+        // initialize data and map
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
+        MBLevelMap<MBMap_Shear, HOST> map;
+        map.define(layout, Point::Ones(ghostSize));
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto& src_i = hostSrc[iter];
+            auto& dst_i = hostDst[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
+            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+            // Jacobian and NT are computed but not used
+            BoxData<double, 1> J_i(b_i);
+            FluxBoxData<double, DIM> NT(b_i);
+            map.apply(x_i, J_i, NT, block);
+            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
+            src_i |= C2C(x_pow);
+            dst_i |= C2C(x_pow);
+        }
+        hostErr.setVal(0);
+
+        //hostSrc.exchange(); // fill boundary data
+        hostDst.exchange(); // fill boundary data
+        MBInterpOp interp(map, order);
+        interp.apply(hostDst, hostDst);
+        for (auto iter : layout)
+        {
+            auto& src_i = hostSrc[iter];
+            auto& dst_i = hostDst[iter];
+            auto& err_i = hostErr[iter];
+            for (auto dir : Box::Kernel(1))
+            {
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
+                    BoxData<double, 1, HOST> error(boundBox);
+                    dst_i.copyTo(error);
+                    error -= src_i;
+                    err[nn] = max(error.absMax(), err[nn]);
+                    error.copyTo(err_i);
+                }
+            }
+        }
+
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_ShearStandalone");
+        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+        h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_Shear_Src_N%i",nn);
+        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i",nn);
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Shear_Err_N%i",nn);
 #endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+#if PR_VERBOSE > 0
+        std::cout << "Convergence Rate: " << rate << std::endl;
+#endif
+        EXPECT_TRUE(err[ii] < 1e-12 || rate > order - 0.5);
+    }
 }
 #endif
 #if 1
@@ -53,10 +107,11 @@ TEST(MBInterpOp, XPointTest)
     HDF5Handler h5;
     int domainSize = 32;
     int boxSize = 16;
-    int ghostSize = 3;
+    int ghostSize = 5;
     int numIter = 3;
-    double order = 5;
-    Array<double, DIM> exp{6,6,0,0,0,0};
+    double order = 4;
+    Array<double, DIM> exp{1.0,1.0,0,0,0,0};
+    exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
   
