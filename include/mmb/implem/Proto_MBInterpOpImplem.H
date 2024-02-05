@@ -75,7 +75,8 @@ MBPointInterpOp::MBPointInterpOp(
     {
      PR_TIMERS("xg_ii");
      //auto xg = a_map.cellCentered(a_dst);
-     xg = a_map.analyticCellCentered(a_dst);
+     //xg = a_map.analyticCellCentered(a_dst);
+     xg = a_map.apply(a_dst);
      {
        for (int ii = 0; ii < M; ii++)
         {

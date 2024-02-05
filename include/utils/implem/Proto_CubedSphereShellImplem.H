@@ -1,3 +1,4 @@
+#if 0
 //==============================================================
 // CUBED SPHERE SHELL MAP
 template<MemType MEM>
@@ -73,6 +74,7 @@ void MBMap_CubedSphereShellPolar<MEM>::apply(
             a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
 #endif
 }
+#endif
 
 //==============================================================
 // CUBED SPHERE SHELL UTILITY

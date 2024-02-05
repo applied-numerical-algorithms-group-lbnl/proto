@@ -341,9 +341,9 @@ TEST(MBLevelOp, FluxMatching) {
 TEST(MBLevelOp, CubeSphereLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 16;
-    int boxSize = 16;
-    int thickness = 1;
+    int domainSize = 64;
+    int boxSize = 64;
+    int thickness = 32;
     bool cullRadialGhost = false;
     bool use2DFootprint = true;
     int numGhost = 5;
