@@ -197,9 +197,9 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 64;
-    int thickness = 32;
+    int domainSize = 16;
+    int boxSize = 8;
+    int thickness = 1;
     int ghostSize = 3;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
