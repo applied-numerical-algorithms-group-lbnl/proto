@@ -843,6 +843,13 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
     PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),
             a_U.data(), &LDU, a_VT.data(), &LDVT, WORK, &LWORK, &INFO);
 
+    if (INFO > 0)
+    {
+        pr_out() << "Matrix::svd | Error: SVD algorithm failed to converge." << std::endl;
+   
+        pr_out() << "Matrix Input: " << std::endl;
+        this->print();
+    }
     PROTO_ASSERT(INFO <= 0, "Matrix::svd | Error: SVD algorithm failed to converge.");
     proto_free<HOST>(WORK); 
 }
