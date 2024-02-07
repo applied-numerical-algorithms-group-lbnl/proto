@@ -166,6 +166,8 @@ public:
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT)
     {
+        PROTO_ASSERT(a_X.box() == a_J.box(),
+                "MBMap_CubedSphereShell::apply | Error: J and X should both have the same (node centered) box");
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();

@@ -197,7 +197,7 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
-    int domainSize = 8;
+    int domainSize = 16;
     int boxSize = 8;
     int thickness = 1;
     int ghostSize = 1;
@@ -208,6 +208,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> exp{1,1,1,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
+    offset *= 0;
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
     int N = 3;
@@ -236,7 +237,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
             Box b_i = C2C.domain(layout[iter]).grow(ghost);
             BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
             // Jacobian and NT are computed but not used
-            BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + ghost));
+            BoxData<double, 1> J_i(x_i.box());
             FluxBoxData<double, DIM> NT(layout[iter]);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
@@ -247,17 +248,13 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostDst.setVal(0);
         hostErr.setVal(0);
     
-        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_0");
-        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_0");
         MBInterpOp op = CubedSphereShell::InterpOp(hostDst, order);
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
-        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_1");
-        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_1");
-        abort();
         hostDst.exchange();
         for (auto iter : layout)
         {
+            pr_out() << "Computing erron on block: " << layout.block(iter) << std::endl;
             auto block = layout.block(iter);
             Box blockDomain = layout.domain().getBlock(block).box();
 
@@ -270,7 +267,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
             dst_i.copyTo(err_i);
             err_i -= src_i;
             err_i += tmp;
+            err_i.printData();
             err_i.setVal(0,blockDomain & err_i.box()); 
+            err_i.printData();
             for (auto dir : Box::Kernel(1).grow(-Point::Basis(radialDir)))
             {
                 if (dir == Point::Zeros()) {continue; }
