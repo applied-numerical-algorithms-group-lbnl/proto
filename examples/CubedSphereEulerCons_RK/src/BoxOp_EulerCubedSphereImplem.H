@@ -1,6 +1,9 @@
-template<typename T, MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MEM>::radialMetrics(
+BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                                              BoxData<T, 1, MEM>& a_radius,
                                              BoxData<T,DIM,MEM>& a_Diagr,
                                              BoxData<T,DIM,MEM>& a_adjDr,
@@ -37,9 +40,12 @@ BoxOp_EulerCubedSphere<T,MEM>::radialMetrics(
                     a_adjdiagr(2) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
                   },a_bx,a_radius,a_Diagr,a_adjDr,a_dVolr,r0,r1,dr,dxi0,r_dir);
 }
-template<typename T,MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 BoxData<T,1,MEM> 
-BoxOp_EulerCubedSphere<T,MEM>::kineticEnergyW(
+BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                                               const State& a_WPoint,                    
                                               T a_h,
                                               uint a_block,
@@ -88,9 +94,12 @@ BoxOp_EulerCubedSphere<T,MEM>::kineticEnergyW(
                     },Amat,a_WPoint);
   return ke;
 }
-template<typename T,MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline BoxData<T,NUMCOMPS,MEM> 
-BoxOp_EulerCubedSphere<T,MEM>::checkRadial(State& a_inputs,
+BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
                                            T a_h,
                                            unsigned int a_block) const
 {
@@ -124,9 +133,12 @@ BoxOp_EulerCubedSphere<T,MEM>::checkRadial(State& a_inputs,
   tmpmom.copyTo(Mom);
   return outputs;
 }
-template<typename T,MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MEM>::primToCons(
+BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                                           State& a_JU,
                                           const State& a_WPoint,
                                           const BoxData<T>& a_dVolr,
@@ -198,9 +210,12 @@ BoxOp_EulerCubedSphere<T,MEM>::primToCons(
     tmp.copyTo(JUcomp);
   }
 }
-template<typename T,MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MEM>::consToPrim(
+BoxOp_EulerCubedSphere<T,MAP,MEM>::consToPrim(
                                           State& a_W,
                                           State& a_WBar,
                                           const State& a_JU,
@@ -303,9 +318,12 @@ BoxOp_EulerCubedSphere<T,MEM>::consToPrim(
     WPoint.copyTo(a_WBar);
   }
 }
-template<typename T,MemType MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MEM>::primToFlux(
+BoxOp_EulerCubedSphere<T,MAP,MEM>::primToFlux(
                                           State& a_physFlux,
                                           const State& a_WFace,
                                           const State& a_WFaceBar,
@@ -364,9 +382,49 @@ BoxOp_EulerCubedSphere<T,MEM>::primToFlux(
   a_physFlux = (1.0*Shift(Point::Zeros()) +
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
 }
-template<typename T, MemType MEM>
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MEM>::operator()
+BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
+  (
+   State&                          a_Rhs,
+   Array<State, DIM>&              a_fluxes,
+   const State&                    a_JU,
+   T                               a_scale) const
+{
+    auto block = this->block();
+    int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    auto domainBox = this->layout().domain().getBlock(block).box();
+    int thickness = domainBox.sizes()[r_dir];
+    auto B0 = this->box();
+    auto B1 = B0.grow(6);
+    
+    BoxData<double> radius(B1);
+    BoxData<double,DIM,HOST> Dr(B1);
+    BoxData<double,DIM,HOST> adjDr(B1);
+    BoxData<double,1,HOST> dVolr(B1);
+
+    radialMetrics(radius, Dr, adjDr, dVolr, B1, thickness);
+    
+    double dx1 = this->dx()[(r_dir + 1) % DIM];
+    double dx2 = this->dx()[(r_dir + 2) % DIM];
+    PROTO_ASSERT(dx1 == dx2,
+            "BoxOp_EulerCubedSphere | Error: Anisotropic grid spacing detected");
+
+    double dx = dx1;
+
+    this->operator()(a_Rhs, a_fluxes, a_JU, Dr, adjDr, dVolr, dx, block, a_scale);
+}
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,

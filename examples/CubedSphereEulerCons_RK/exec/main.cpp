@@ -103,6 +103,9 @@ PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
 int main(int argc, char* argv[])
 {   
+#ifdef PR_MPI
+    MPI_Init (&argc, &argv);
+#endif
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 16;
@@ -136,7 +139,7 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
  
-  MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
+  // MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
@@ -149,8 +152,7 @@ int main(int argc, char* argv[])
   WNew.setVal(0.);
 
 
-  MBLevelBoxData<double, NUMCOMPS, HOST> WNew_out(layout, ghost+Point::Ones());
-  WNew_out.setVal(0.);
+  MBLevelBoxData<double, NUMCOMPS, HOST> WNew_out(layout, ghost);
 
 
   for (auto dit : layout)
@@ -176,7 +178,7 @@ int main(int argc, char* argv[])
   double time = 0.0;
   for (int iter = 0; iter <= 2; iter++)
   {
-   cout << "iter = " << iter << endl;
+    if (procID() == 0) cout << "iter = " << iter << endl;
     if (iter % 1 == 0)
     {
       for (auto dit :U.layout())
@@ -193,7 +195,7 @@ int main(int argc, char* argv[])
         eulerOp[dit].consToPrim(WNewTemp,WNewTemp,U[dit],dVolr,gamma,dx,block_i);
         WNewTemp.copyTo(WNew_out_i);
       }
-      h5.writeMBLevel({ }, map, WNew_out, "MBEulerCubedSphereWNew_out"+to_string(iter));
+      h5.writeMBLevel({ }, map, WNew_out, "W_"+to_string(iter));
     }
     
 
@@ -216,6 +218,7 @@ int main(int argc, char* argv[])
       fluxes[2].define(rhs_i.box().extrude(2));
       double dx = 1.0/domainSize;
       eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
+      // eulerOp[dit](rhs_i,fluxes,U_i,1.0);
       rhs_i*=dt;
       U[dit]-=rhs_i; 
     }
@@ -223,4 +226,7 @@ int main(int argc, char* argv[])
   }
 
   PR_TIMER_REPORT();
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }
