@@ -519,10 +519,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         
         // Save fluxes, update RHS.
         fluxdir.copyTo(a_fluxes[dir]);
-        BoxData<T,NUMCOMPS,MEM> rhsIncr;
-        T hdirInv;
-        hdirInv = 1.0*a_Rhs.box().size(dir);         
-        rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,hdirInv);
+        BoxData<T,NUMCOMPS,MEM> rhsIncr;   
+        T dx = this->dx()[dir];
+        rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,1.0/dx);
         a_Rhs += rhsIncr;         
       }
     }

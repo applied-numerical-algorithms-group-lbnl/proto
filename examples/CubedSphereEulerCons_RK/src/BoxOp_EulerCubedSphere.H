@@ -7,6 +7,7 @@
 //#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS DIM+2
+#define NGHOST 5
 
 using namespace Proto;
 typedef BoxData<double> Scalar;
