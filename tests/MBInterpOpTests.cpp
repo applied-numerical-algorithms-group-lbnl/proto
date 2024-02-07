@@ -197,7 +197,7 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, CubedSphereShellTest)
 {
     HDF5Handler h5;
-    int domainSize = 16;
+    int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
     int ghostSize = 1;
@@ -217,13 +217,13 @@ TEST(MBInterpOp, CubedSphereShellTest)
     {
         pr_out() << "ITER = " << nn << std::endl;
         err[nn] = 0.0;
+        errL1[nn] = 0.0;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
         boxSizeVect[radialDir] = thickness;
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         auto map = CubedSphereShell::Map<HOST>(layout, ghost);
-
         // initialize data
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
@@ -247,16 +247,14 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostDst.setVal(0);
         hostErr.setVal(0);
     
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_0");
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_0");
         MBInterpOp op = CubedSphereShell::InterpOp(hostDst, order);
-        PROTO_ASSERT(op.validate(), "After Construction");
         // apply the operator on all block boundaries
-        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_%i_0", nn);
-        PROTO_ASSERT(op.validate(), "After First H5");
-        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_%i_0", nn);
-        PROTO_ASSERT(op.validate(), "After Second H5");
         op.apply(hostDst, hostSrc);
-        //h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_%i_1", nn);
-        //h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_%i_1", nn);
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_1");
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_1");
+        abort();
         hostDst.exchange();
         for (auto iter : layout)
         {

@@ -37,6 +37,7 @@ void MBLevelMap<MAP,MEM>::define(
     PR_TIME("MBLevelMap::define");
     m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
+    //FIXME: stencil should take an order parameter
     m_c2c = Stencil<double>::CornersToCells(4);
     m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, a_ghost);
     m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, a_ghost);
@@ -60,7 +61,9 @@ void MBLevelMap<MAP,MEM>::define(
         Box b_i = a_layout[iter];
         auto& X_i = (*m_X)[iter];
         auto& J_i = (*m_J)[iter];
-        apply(X_i, J_i, block);
+        BoxData<double, 1, MEM> J0(X_i.box());
+        apply(X_i, J0, block);
+        J_i |= m_c2c(J0);
     }
     m_X->exchange();
     m_J->exchange();
