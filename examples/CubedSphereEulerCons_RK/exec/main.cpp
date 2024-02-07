@@ -217,8 +217,8 @@ int main(int argc, char* argv[])
       fluxes[1].define(rhs_i.box().extrude(1));
       fluxes[2].define(rhs_i.box().extrude(2));
       double dx = 1.0/domainSize;
-      eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
-      // eulerOp[dit](rhs_i,fluxes,U_i,1.0);
+      // eulerOp[dit](rhs_i,fluxes,U_i,Dr,adjDr,dVolr,dx,block_i,1.0);
+      eulerOp[dit](rhs_i,fluxes,U_i,1.0);
       rhs_i*=dt;
       U[dit]-=rhs_i; 
     }
