@@ -57,6 +57,7 @@ MBPointInterpOp::MBPointInterpOp(
             m_exponents.push_back(bi);
         }
     }
+
     int N = m_exponents.size();
     int M = m_srcs.size();
 
@@ -71,26 +72,21 @@ MBPointInterpOp::MBPointInterpOp(
     // This is the approximate radius in physical space of the operator
     // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
-    Array<double,DIM> xg;
+    //auto xg = a_map.cellCentered(a_dst);
+    auto xg = a_map.apply(a_dst);
+    
+    for (int ii = 0; ii < M; ii++)
     {
-     PR_TIMERS("xg_ii");
-     //auto xg = a_map.cellCentered(a_dst);
-     //xg = a_map.analyticCellCentered(a_dst);
-     xg = a_map.apply(a_dst);
-     {
-       for (int ii = 0; ii < M; ii++)
-        {
-          auto xj = a_map.analyticCellCentered(m_srcs[ii]);
-          auto dist = xj - xg;
-          Rg += dist.norm();
-        }
-     }
+        //auto xj = a_map.analyticCellCentered(m_srcs[ii]);
+        auto xj = a_map.apply(m_srcs[ii]);
+        auto dist = xj - xg;
+        Rg += dist.norm();
     }
     Rg /= M;
     // Cache Moment Data
     // We cache < J * ((x-xg)/Rg)^p > for each exponent p
-    //auto C2C = Stencil<double>::CornersToCells(a_order);
-    auto C2C = Stencil<double>::CornersToCells(4);
+    auto C2C = Stencil<double>::CornersToCells(a_order);
+    //auto C2C = Stencil<double>::CornersToCells(4);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
     Box B0(a_dst.point, a_dst.point);
@@ -109,22 +105,22 @@ MBPointInterpOp::MBPointInterpOp(
     for (auto& [block, box] : srcBoxes)
     {
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
-        BoxData<double, 1, MEM> Ji(box.grow(1));
+        BoxData<double, 1, MEM> Ji(Xi.box());
         a_map.doApply(Xi, Ji, block, dstBlock); 
         Xi -= xg;
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
-          PR_TIMERS("stencil apply");
+            PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             {
-              PR_TIMERS("C2C apply");
-              BoxData<double> temp = HOCorners(Xi_p);
-              {
-                 PR_TIMERS("av2 apply");
-              BoxData<double> Xi_p_avg = av2(temp);
-              srcData[block].push_back(std::move(Xi_p_avg));
-              }
+                PR_TIMERS("C2C apply");
+                BoxData<double> temp = HOCorners(Xi_p);
+                {
+                    PR_TIMERS("av2 apply");
+                    BoxData<double> Xi_p_avg = av2(temp);
+                    srcData[block].push_back(std::move(Xi_p_avg));
+                }
             }
         }
     }  
@@ -150,10 +146,11 @@ MBPointInterpOp::MBPointInterpOp(
     m_S = m_D*m_Cinv;
     m_coefs.clear();
     m_coefs.resize(M);
+    //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = m_S(0,ii);
-//        std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
+        //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
  //   std::abort();
 }
@@ -196,6 +193,15 @@ Matrix<double> MBPointInterpOp::coefs(
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
+}
+
+bool MBPointInterpOp::validate() const
+{
+    for (auto si : m_srcs)
+    {
+        if (!si.grid().defined()) { return false; }
+    }
+    return true;
 }
 
 void MBPointInterpOp::print() const
@@ -358,6 +364,15 @@ void MBInterpOp::print() const
     {
         op.print(); 
     }
+}
+
+bool MBInterpOp::validate() const
+{
+    for (auto& op : m_ops)
+    {
+        if (!op.validate()) { return false; }
+    }
+    return true;
 }
 
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>

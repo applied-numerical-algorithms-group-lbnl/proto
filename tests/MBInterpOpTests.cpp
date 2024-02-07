@@ -200,7 +200,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 1;
-    int ghostSize = 3;
+    int ghostSize = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;
@@ -215,6 +215,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
     {
+        pr_out() << "ITER = " << nn << std::endl;
         err[nn] = 0.0;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
@@ -247,8 +248,15 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostErr.setVal(0);
     
         MBInterpOp op = CubedSphereShell::InterpOp(hostDst, order);
+        PROTO_ASSERT(op.validate(), "After Construction");
         // apply the operator on all block boundaries
+        h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_%i_0", nn);
+        PROTO_ASSERT(op.validate(), "After First H5");
+        h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_%i_0", nn);
+        PROTO_ASSERT(op.validate(), "After Second H5");
         op.apply(hostDst, hostSrc);
+        //h5.writeMBLevel({"phi"}, map, hostSrc, "MBInterpOpTests_CubeSphereShell_S_%i_1", nn);
+        //h5.writeMBLevel({"phi"}, map, hostDst, "MBInterpOpTests_CubeSphereShell_D_%i_1", nn);
         hostDst.exchange();
         for (auto iter : layout)
         {

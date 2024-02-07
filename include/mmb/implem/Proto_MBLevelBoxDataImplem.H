@@ -1159,6 +1159,10 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
 
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout)
 {
+    PROTO_ASSERT(a_layout.defined(),
+            "MBDataPoint::constructor | Error: Undefined layout");
+    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+            "MBDataPoint::constructor | Error: Invalid index / layout pair");
     index = a_index;
     point = a_point;
     block = -1;  // this means the block is the same as implied by a_index
@@ -1169,6 +1173,12 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
         Point a_boundaryDir, int a_block)
 {
+    PROTO_ASSERT(a_layout.defined(),
+            "MBDataPoint::constructor | Error: Undefined layout");
+    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+            "MBDataPoint::constructor | Error: Invalid index / layout pair");
+    PROTO_ASSERT(a_layout.isBlockBoundary(a_index, a_boundaryDir, a_block),
+            "MBDataPoint::constructor | Error: Invalid boundary inputs");
     index = a_index;
     block = a_block;
     boundaryDir = a_boundaryDir;

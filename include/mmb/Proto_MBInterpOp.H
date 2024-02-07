@@ -93,7 +93,9 @@ namespace Proto
         inline Matrix<double>& SMatrix() {return m_S; }
 
         inline void print() const; 
-
+        
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
        
         std::vector<Point> m_exponents;
@@ -180,6 +182,9 @@ namespace Proto
         }
 
         void print() const;
+        
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
        
         Point m_ghost;

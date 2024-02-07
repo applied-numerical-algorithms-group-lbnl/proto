@@ -16,7 +16,7 @@ namespace Proto
         public:
         typedef DataIndex<MBBoxPartition> MBIndex;
 
-        inline MBDisjointBoxLayout(){}
+        inline MBDisjointBoxLayout(){m_defined = false;}
 
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
@@ -96,7 +96,9 @@ namespace Proto
         inline MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         inline MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
         inline void print() const;
+        inline bool defined() const {return m_defined; }
         private:
+        bool                            m_defined;
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;
         std::shared_ptr<MBBoxPartition> m_partition;
