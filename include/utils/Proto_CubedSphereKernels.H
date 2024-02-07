@@ -1,6 +1,6 @@
 #ifndef _PROTO_CUBED_SPHERE_KERNELS_
 #define _PROTO_CUBED_SPHERE_KERNELS_
-#define CUBED_SPHERE_SHELL_R0 1.0
+#define CUBED_SPHERE_SHELL_R0 0.1
 #define CUBED_SPHERE_SHELL_R1 1.5
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
 typedef Proto::Array<Proto::Array<double,DIM>,DIM> matType;
