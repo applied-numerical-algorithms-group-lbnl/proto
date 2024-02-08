@@ -835,7 +835,6 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
     // query and allocate optimal workspace 
     int LWORK = -1;
     double LWORK_OPT;
-    std::cout << "Matrix::svd | LDA: " << LDA << std::endl;
     PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),
             a_U.data(), &LDU, a_VT.data(), &LDVT, &LWORK_OPT, &LWORK, &INFO);
     
@@ -847,7 +846,6 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
     if (INFO > 0)
     {
         pr_out() << "Matrix::svd | Error: SVD algorithm failed to converge." << std::endl;
-   
         pr_out() << "Matrix Input: " << std::endl;
         this->print();
     }

@@ -96,8 +96,8 @@ MBPointInterpOp::MBPointInterpOp(
     Rg /= M;
     // Cache Moment Data
     // We cache < J * ((x-xg)/Rg)^p > for each exponent p
-    auto C2C = Stencil<double>::CornersToCells(a_order);
-    //auto C2C = Stencil<double>::CornersToCells(4);
+    //auto C2C = Stencil<double>::CornersToCells(a_order);
+    auto C2C = Stencil<double>::CornersToCells(4);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
     Box B0(a_dst.point, a_dst.point);

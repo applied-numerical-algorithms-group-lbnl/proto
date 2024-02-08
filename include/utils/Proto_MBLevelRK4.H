@@ -30,8 +30,10 @@ public:
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     
+    /*
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map);
+    */
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
             const MBInterpOp&           a_interp);
@@ -44,9 +46,9 @@ protected:
     LevelStateData      m_delta;
     LOP                 m_f;
     LevelStateData      m_U0;
-    const MBInterpOp*         m_interp;
+    const MBInterpOp&   m_interp;
 };
-
+/*
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
@@ -63,9 +65,9 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost());
     m_U0.define(a_map.layout(), ghost);
-    m_interp->define(a_map);
+    m_interp->define(a_map, 4, -1);
 }
-
+*/
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
@@ -74,7 +76,7 @@ template <
     MemType MEM>
 MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     const MBLevelMap<MAP>&      a_map,
-    const MBInterpOp&           a_interp)
+    const MBInterpOp&           a_interp) : m_interp(a_interp)
 {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
@@ -83,7 +85,7 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost());
     m_U0.define(a_map.layout(), ghost);
-    m_interp = &a_interp;
+    //m_interp = &a_interp;
 }
 
 template <
@@ -104,14 +106,14 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
 
     m_f.setTime(a_time);
     a_state.exchange();
-    m_interp->apply(a_state, a_state);
+    m_interp.apply(a_state, a_state);
     m_f(m_k, a_state, a_dt);    // compute k1*dt
     m_delta.increment(m_k, sixth);
     
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
     m_U0.exchange();
-    m_interp->apply(m_U0, m_U0);
+    m_interp.apply(m_U0, m_U0);
     m_f.setTime(a_time+half*a_dt);
     m_f(m_k, m_U0, a_dt);  // compute k2*dt
     m_delta.increment(m_k, third);
@@ -119,7 +121,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
     m_U0.exchange();
-    m_interp->apply(m_U0, m_U0);
+    m_interp.apply(m_U0, m_U0);
     m_f(m_k, a_state, a_dt);  // compute k3*dt
     m_delta.increment(m_k, third);
     
@@ -127,7 +129,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     a_state.copyTo(m_U0);
     m_U0.increment(m_k);
     m_U0.exchange();
-    m_interp->apply(m_U0, m_U0);
+    m_interp.apply(m_U0, m_U0);
     m_f(m_k, a_state, a_dt); // compute k4*dt
     m_delta.increment(m_k, sixth);
     
