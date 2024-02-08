@@ -1,83 +1,3 @@
-#if 0
-//==============================================================
-// CUBED SPHERE SHELL MAP
-template<MemType MEM>
-void MBMap_CubedSphereShell<MEM>::apply(
-        BoxData<double, DIM, MEM>& a_X,
-        BoxData<double, 1, MEM>& a_J,
-        FluxBoxData<double, DIM, MEM>& a_NT)
-{
-    auto& dx = this->dx();
-    auto block = this->block();
-#if 1
-    auto C2C = Stencil<double>::CornersToCells(4);
-    int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    double r0 = CUBED_SPHERE_SHELL_R0;
-    double r1 = CUBED_SPHERE_SHELL_R1;
-    Box b = C2C.domain(a_X.box());
-    BoxData<double, DIM, MEM> X0(b);
-    BoxData<double, 1, MEM> J0(b);
-    forallInPlace_p(
-            f_cubeSphereMap, X0, J0, dx, r0, r1, block, r_dir);
-    X0.copyTo(a_X);
-    a_J |= C2C(J0);
-#else
-    BoxData<double, 1, MEM> radius(a_X.box());
-    forallInPlace_p(
-            [] PROTO_LAMBDA (
-                Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
-            {
-            a_R(0) = a_pt[0]*a_dx[0] + CUBED_SPHERE_SHELL_R0;
-            }, radius, dx);
-    Operator::cubedSphereGeometry(
-            a_X, a_NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], block);
-#endif
-}
-
-//==============================================================
-// CUBED SPHERE SHELL POLAR MAP
-template<MemType MEM>
-void MBMap_CubedSphereShellPolar<MEM>::apply(
-        BoxData<double, DIM, MEM>& a_X,
-        BoxData<double, 1, MEM>& a_J,
-        FluxBoxData<double, DIM, MEM>& a_NT)
-{
-    auto& dx = this->dx();
-    auto block = this->block();
-#if 1
-    int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    double r0 = CUBED_SPHERE_SHELL_R0;
-    double r1 = CUBED_SPHERE_SHELL_R1;
-    BoxData<double, DIM, MEM> X0(a_X.box().grow(1));
-    BoxData<double, 1, MEM> J0(X0.box());
-    BoxData<double, DIM, MEM> X1(a_X.box().grow(1));
-    BoxData<double, 1, MEM> J1(X1.box());
-    forallInPlace_p(
-            f_cubeSphereMap, X0, J0, dx, r0, r1, block, r_dir);
-    int focalBlock = this->focalBlock();
-    forallInPlace_p(
-            f_cartesianToSphericalMap, X1, J1, X0, focalBlock, r_dir); 
-    J0.copyTo(a_J);
-    a_J *= J1;
-    X1.copyTo(a_X);
-#else
-
-    BoxData<double, 1, MEM> radius(a_X.box());
-    forallInPlace_p(
-            [] PROTO_LAMBDA (
-                Point& a_pt, Var<double, 1, MEM>& a_R, Array<double, DIM> a_dx)
-            {
-            a_R(0) = a_pt[0]*a_dx[0] + CUBED_SPHERE_SHELL_R0;
-            }, radius, dx);
-    Array<BoxData<double,DIM,MEM>, DIM> NT;
-    Operator::cubedSphereGeometry(
-            a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
-#endif
-}
-#endif
-
-//==============================================================
-// CUBED SPHERE SHELL UTILITY
 MBProblemDomain CubedSphereShell::Domain(
     int a_domainSize,
     int a_thickness,
@@ -161,7 +81,7 @@ MBInterpOp
 CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
-        unsigned int a_order)
+        int a_order)
 {
     std::vector<Point> footprint;
     Box K = Box::Kernel(2);
@@ -188,7 +108,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBInterpOp
 CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
-        unsigned int a_order)
+        int a_order)
 {
     return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
@@ -197,7 +117,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 CubedSphereShell::InterpBoundaries(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
-        unsigned int a_order)
+        int a_order)
 {
     auto op = InterpOp(a_data, a_order);
     op.apply(a_data, a_data);
