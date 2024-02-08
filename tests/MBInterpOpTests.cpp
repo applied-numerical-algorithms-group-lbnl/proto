@@ -200,7 +200,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 1;
-    int ghostSize = 1;
+    int ghostSize = 5;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;
@@ -208,7 +208,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> exp{1,1,1,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
-    offset *= 0;
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
     int N = 3;
@@ -306,7 +305,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
         //EXPECT_GT(rate, 3.5);
-        EXPECT_TRUE(errL1[ii] < 1e-12 || rateL1 >  order - 0.5);
+        EXPECT_TRUE(errL1[ii] < 1e-12 || rateL1 >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {

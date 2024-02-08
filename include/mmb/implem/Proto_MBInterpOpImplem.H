@@ -60,7 +60,18 @@ MBPointInterpOp::MBPointInterpOp(
 
     int N = m_exponents.size();
     int M = m_srcs.size();
-
+    
+    if (N > M)
+    {
+        pr_out() << "Underdetermined system detected" << std::endl;
+        pr_out() << "\tN = " << N << ", M = " << M << std::endl;
+        pr_out() << "\tDst Point: " << a_dst << std::endl;
+        pr_out() << "\tSrc Points: " << std::endl;
+        for (auto si : m_srcs)
+        {
+            pr_out() << "\t\t" << si << std::endl;
+        }
+    }
     //std::cout << "N: " << N << " | M: " << M << std::endl;
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
@@ -283,26 +294,27 @@ void MBInterpOp::define(
         Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
+            Box boundBox = patchBox.adjacent(m_ghost*dir);
+            if (blockDomainBox.contains(boundBox))
+            {
+                continue;
+            }
             if (layout.domain().graph().isTriplePoint(block, dir))
             {
-                std::set<Point> fset;
-                auto dirs = dir.split();
-                for (auto fi : a_footprint)
-                {
-                    fset.insert(fi);
-                    for (auto di : dirs)
-                    {
-                        fset.insert(fi-di);
-                    }
-                }
-                std::vector<Point> extFootprint(fset.begin(), fset.end());
-                Box boundBox = patchBox.adjacent(m_ghost*dir);
-                if (blockDomainBox.contains(boundBox))
-                {
-                    continue;
-                }
                 for (auto bi : boundBox)
                 {
+                    Point corner = patchBox.edge(dir,1).low();
+                    std::set<Point> fset;
+                    for (int ii = 0; ii < DIM; ii++)
+                    {
+                        if (dir[ii] == 0) { continue; }
+                        Point s = Point::Basis(ii,-1)*(bi-corner);
+                        for (auto fi : a_footprint)
+                        {
+                            fset.insert(fi + s);
+                        }
+                    }
+                    std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
@@ -310,18 +322,41 @@ void MBInterpOp::define(
                 continue;
             }
             auto bounds = a_map.map().bounds(iter, dir);
+            std::set<Point> fset;
+            for (auto fi : a_footprint)
+            {
+                fset.insert(fi);
+            }
             for (auto bound : bounds)
             {
-                Box boundBox = patchBox.adjacent(m_ghost*dir);
-                if (blockDomainBox.contains(boundBox))
-                {
-                    continue;
-                }
+                //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
+                    for (int ii = 0; ii < DIM; ii++)
+                    {
+                        Point d2 = Point::Basis(ii);
+                        if (dir[ii] != 0) {continue; }
+                        bool onLoEdge = boundBox.edge(-d2).contains(bi);
+                        bool onHiEdge = boundBox.edge( d2).contains(bi);
+                        if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
+                        {
+                            for (auto fi : a_footprint)
+                            {
+                                fset.insert(fi + d2);
+                            }
+                        }
+                        if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
+                        {
+                            for (auto fi : a_footprint)
+                            {
+                                fset.insert(fi - d2);
+                            }
+                        }
+                    }
+                    std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, a_order));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
             }
         }
