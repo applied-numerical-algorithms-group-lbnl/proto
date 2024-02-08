@@ -123,7 +123,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellAveraged(
     PR_TIME("MBLevelMap::cellAveraged(Box)");
     Box B0 = m_c2c.domain(a_box);
     BoxData<double, DIM, MEM> X0(B0);
-    BoxData<double, 1, MEM> J0(B0.extrude(Point::Ones(), -1)); //unused
+    BoxData<double, 1, MEM> J0(B0); //unused
     doApply(X0, J0, a_computeBlock, a_outBlock);
     return m_c2c(X0);
 }
