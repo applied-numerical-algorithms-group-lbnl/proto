@@ -22,13 +22,13 @@ namespace Proto {
 template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelOp
 {
     public:
     typedef OPType<T, MAP, MEM> OP;
-    typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef BoxData<T, OP::numAux(),   MEM>   AuxData;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
