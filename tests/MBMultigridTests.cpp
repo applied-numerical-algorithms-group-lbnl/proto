@@ -18,7 +18,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    typedef BoxOp_MBLaplace<double> OP;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
     int domainSize = 16;
     int boxSize = 8;
     int numBlocks = XPOINT_NUM_BLOCKS;

@@ -17,7 +17,7 @@ namespace Proto {
 */
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
@@ -25,13 +25,15 @@ template <
 class MBLevelRK4
 {
 public:
-    typedef OPType<T, MEM> OP; 
+    typedef OPType<T, MAP, MEM> OP; 
     typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     
+    /*
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map);
+    */
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
             const MBInterpOp&           a_interp);
@@ -44,11 +46,11 @@ protected:
     LevelStateData      m_delta;
     LOP                 m_f;
     LevelStateData      m_U0;
-    MBInterpOp          m_interp;
+    const MBInterpOp&   m_interp;
 };
-
+/*
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
@@ -63,18 +65,18 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost());
     m_U0.define(a_map.layout(), ghost);
-    m_interp.define(a_map);
+    m_interp->define(a_map, 4, -1);
 }
-
+*/
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     const MBLevelMap<MAP>&      a_map,
-    const MBInterpOp&           a_interp)
+    const MBInterpOp&           a_interp) : m_interp(a_interp)
 {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
@@ -83,11 +85,11 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost());
     m_U0.define(a_map.layout(), ghost);
-    m_interp = a_interp;
+    //m_interp = &a_interp;
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, MemType, Centering> class BCType,

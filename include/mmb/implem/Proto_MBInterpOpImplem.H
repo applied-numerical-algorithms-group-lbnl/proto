@@ -57,9 +57,21 @@ MBPointInterpOp::MBPointInterpOp(
             m_exponents.push_back(bi);
         }
     }
+
     int N = m_exponents.size();
     int M = m_srcs.size();
-
+    
+    if (N > M)
+    {
+        pr_out() << "Underdetermined system detected" << std::endl;
+        pr_out() << "\tN = " << N << ", M = " << M << std::endl;
+        pr_out() << "\tDst Point: " << a_dst << std::endl;
+        pr_out() << "\tSrc Points: " << std::endl;
+        for (auto si : m_srcs)
+        {
+            pr_out() << "\t\t" << si << std::endl;
+        }
+    }
     //std::cout << "N: " << N << " | M: " << M << std::endl;
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
@@ -71,19 +83,15 @@ MBPointInterpOp::MBPointInterpOp(
     // This is the approximate radius in physical space of the operator
     // Normalizing by Rg helps keep the matrices well conditioned
     double Rg = 0.0;
-    Array<double,DIM> xg;
+    //auto xg = a_map.cellCentered(a_dst);
+    auto xg = a_map.apply(a_dst);
+    
+    for (int ii = 0; ii < M; ii++)
     {
-     PR_TIMERS("xg_ii");
-     //auto xg = a_map.cellCentered(a_dst);
-     xg = a_map.analyticCellCentered(a_dst);
-     {
-       for (int ii = 0; ii < M; ii++)
-        {
-          auto xj = a_map.analyticCellCentered(m_srcs[ii]);
-          auto dist = xj - xg;
-          Rg += dist.norm();
-        }
-     }
+        //auto xj = a_map.analyticCellCentered(m_srcs[ii]);
+        auto xj = a_map.apply(m_srcs[ii]);
+        auto dist = xj - xg;
+        Rg += dist.norm();
     }
     Rg /= M;
     // Cache Moment Data
@@ -108,22 +116,22 @@ MBPointInterpOp::MBPointInterpOp(
     for (auto& [block, box] : srcBoxes)
     {
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
-        BoxData<double, 1, MEM> Ji(box.grow(1));
+        BoxData<double, 1, MEM> Ji(Xi.box());
         a_map.doApply(Xi, Ji, block, dstBlock); 
         Xi -= xg;
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
-          PR_TIMERS("stencil apply");
+            PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             {
-              PR_TIMERS("C2C apply");
-              BoxData<double> temp = HOCorners(Xi_p);
-              {
-                 PR_TIMERS("av2 apply");
-              BoxData<double> Xi_p_avg = av2(temp);
-              srcData[block].push_back(std::move(Xi_p_avg));
-              }
+                PR_TIMERS("C2C apply");
+                BoxData<double> temp = HOCorners(Xi_p);
+                {
+                    PR_TIMERS("av2 apply");
+                    BoxData<double> Xi_p_avg = av2(temp);
+                    srcData[block].push_back(std::move(Xi_p_avg));
+                }
             }
         }
     }  
@@ -149,10 +157,11 @@ MBPointInterpOp::MBPointInterpOp(
     m_S = m_D*m_Cinv;
     m_coefs.clear();
     m_coefs.resize(M);
+    //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = m_S(0,ii);
-//        std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
+        //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
  //   std::abort();
 }
@@ -195,6 +204,15 @@ Matrix<double> MBPointInterpOp::coefs(
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
+}
+
+bool MBPointInterpOp::validate() const
+{
+    for (auto si : m_srcs)
+    {
+        if (!si.grid().defined()) { return false; }
+    }
+    return true;
 }
 
 void MBPointInterpOp::print() const
@@ -276,26 +294,27 @@ void MBInterpOp::define(
         Box patchBox = layout[iter];
         for (auto dir : Box::Kernel(1))
         {
+            Box boundBox = patchBox.adjacent(m_ghost*dir);
+            if (blockDomainBox.contains(boundBox))
+            {
+                continue;
+            }
             if (layout.domain().graph().isTriplePoint(block, dir))
             {
-                std::set<Point> fset;
-                auto dirs = dir.split();
-                for (auto fi : a_footprint)
-                {
-                    fset.insert(fi);
-                    for (auto di : dirs)
-                    {
-                        fset.insert(fi-di);
-                    }
-                }
-                std::vector<Point> extFootprint(fset.begin(), fset.end());
-                Box boundBox = patchBox.adjacent(m_ghost*dir);
-                if (blockDomainBox.contains(boundBox))
-                {
-                    continue;
-                }
                 for (auto bi : boundBox)
                 {
+                    Point corner = patchBox.edge(dir,1).low();
+                    std::set<Point> fset;
+                    for (int ii = 0; ii < DIM; ii++)
+                    {
+                        if (dir[ii] == 0) { continue; }
+                        Point s = Point::Basis(ii,-1)*(bi-corner);
+                        for (auto fi : a_footprint)
+                        {
+                            fset.insert(fi + s);
+                        }
+                    }
+                    std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
@@ -303,18 +322,41 @@ void MBInterpOp::define(
                 continue;
             }
             auto bounds = a_map.map().bounds(iter, dir);
+            std::set<Point> fset;
+            for (auto fi : a_footprint)
+            {
+                fset.insert(fi);
+            }
             for (auto bound : bounds)
             {
-                Box boundBox = patchBox.adjacent(m_ghost*dir);
-                if (blockDomainBox.contains(boundBox))
-                {
-                    continue;
-                }
+                //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
+                    for (int ii = 0; ii < DIM; ii++)
+                    {
+                        Point d2 = Point::Basis(ii);
+                        if (dir[ii] != 0) {continue; }
+                        bool onLoEdge = boundBox.edge(-d2).contains(bi);
+                        bool onHiEdge = boundBox.edge( d2).contains(bi);
+                        if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
+                        {
+                            for (auto fi : a_footprint)
+                            {
+                                fset.insert(fi + d2);
+                            }
+                        }
+                        if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
+                        {
+                            for (auto fi : a_footprint)
+                            {
+                                fset.insert(fi - d2);
+                            }
+                        }
+                    }
+                    std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, a_footprint, a_order));
+                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
             }
         }
@@ -357,6 +399,15 @@ void MBInterpOp::print() const
     {
         op.print(); 
     }
+}
+
+bool MBInterpOp::validate() const
+{
+    for (auto& op : m_ops)
+    {
+        if (!op.validate()) { return false; }
+    }
+    return true;
 }
 
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>

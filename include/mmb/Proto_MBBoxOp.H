@@ -1,15 +1,18 @@
 #pragma once
-#ifndef _PROTO_BOX_OP_
-#define _PROTO_BOX_OP_
+#ifndef _PROTO_MB_BOX_OP_
+#define _PROTO_MB_BOX_OP_
 
-#include "Proto_BoxData.H"
+#include "Proto_BoxOp.H"
+#include "Proto_MBLevelMap.H"
 namespace Proto {
 
-/// Abstract Box-Scope Operator
+/// Abstract Box-Scope Operator for Mapped Multiblock
 /**
-    BoxOp is the class from which all operators on AMR
-    hierarchies are derived. Representable operators are of the form:
+    MBBoxOp is the class from which all mapped multiblock operators are
+    derived. It is a special case of BoxOp with additional built in
+    capabilities for providing mapped coordinate context.
 
+    //FIXME: update this for mapped
     L(phi, rho) = d*D(phi, rho)*I + f*[Div(F(phi, rho)) + S(phi, rho)]
     L:      Full Operator
     phi:    State Variables
@@ -25,29 +28,19 @@ namespace Proto {
     additional flexibility.  
 
     \tparam T       Datatype of the data holder (e.g. int, double, etc.)
+    \tparam MAP     Datatype of the MBMapOp (this is the same as the MBLevelMap's MAP parameter)
     \tparam C_STATE Number of state variables
     \tparam C_AUX   Number of auxiliary (non-state) variables
     \tparam MEM     Proto::MemType of the data holder
 */
-template <typename T, unsigned int C_STATE, unsigned int C_AUX, MemType MEM = MEMTYPE_DEFAULT>
-class BoxOp
+template <typename T, template<MemType> typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM = MEMTYPE_DEFAULT>
+class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
 {
     public:
     typedef BoxData<T, C_STATE, MEM> StateData;
     typedef BoxData<T, C_AUX,   MEM> AuxData;
-
-    /// Get Number of State Variables
-    /**
-        Allows C_STATE to be known after template parameter binding
-    */
-    inline static constexpr unsigned int numState() { return C_STATE; }
-
-    /// Get Number of Auxiliary Variables
-    /**
-        Allows C_AUX to be known after template parameter binding
-    */
-    inline static constexpr unsigned int numAux()   { return C_AUX; }
-
+    
     //TODO: In addition to the following, the interface requires these
     // static functions. There is no good way to specify necessary static
     // functions in an interface which is extremely awkward...
@@ -55,50 +48,24 @@ class BoxOp
     // static Point ghost() const;      (Needed ghost data in the state variables)
     // static Point auxGhost() const;   (Needed ghost data in the aux variables)
 
-    /// Default Constructor
-    inline BoxOp();
-
-    /// Non-Trivial Isotropic Constructor
-    /**
-        \param dx   Grid spacing
-    */
-    inline BoxOp(const Box& a_box, T a_dx);
+    /// Non-Trivial Constructor
+    inline MBBoxOp(const MBLevelMap<MAP, MEM>& a_map, const MBIndex& a_index);
+    inline MBBoxOp(MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&& a_bop) = default;
+    inline MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>& operator=(MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&& a_bop)=default;
     
-    /// Non-Trivial Anisotropic Constructor
-    /**
-        \param dx   Grid spacing
-    */
-    inline BoxOp(const Box& a_box, Array<T, DIM> a_dx);
-
-    inline BoxOp(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
-    inline BoxOp<T,C_STATE,C_AUX,MEM>& operator=(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
-    /// Lazy Isotropic Constructor
-    /**
-        \param dx   Grid spacing
-    */
-    inline void define(const Box& a_box, T a_dx);
-    
-    /// Lazy Anisotropic Constructor
-    /**
-        \param dx   Grid spacing
-    */
-    inline void define(const Box& a_box, Array<T, DIM> a_dx);
-
-
-
     /// Initialize
     /**
         User defined function that is called inside of define.
         Useful for caching things like Stencil instances.
     */
-    inline virtual void init(){}
+    inline virtual void init() {}
 
     /// Spectral Radius (User Defined)
     /**
         Approximate spectral radius of the operator. Not required, but 
         Needed for iterative solvers. 
     */
-    inline virtual T spectralRadius() const { return 1; }
+    inline virtual T spectralRadius() const  { return 1; }
 
     /// Apply (In Place)
     /**
@@ -113,7 +80,7 @@ class BoxOp
         StateData& a_output,
         const StateData& a_state,
         const AuxData&   a_aux,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
     
     /// Apply (In Place)
     /**
@@ -126,7 +93,7 @@ class BoxOp
     operator()(
         StateData& a_output,
         const StateData& a_state,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
     
     /// Apply (In Place, Flux Output)
     /**
@@ -142,7 +109,7 @@ class BoxOp
         Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         const AuxData&   a_aux,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
     
     /// Apply (In Place, Flux Output)
     /**
@@ -156,7 +123,7 @@ class BoxOp
         StateData& a_output,
         Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
     
     /// Apply (Out of Place)
     /**
@@ -171,7 +138,7 @@ class BoxOp
         const StateData& a_state,
         const AuxData&   a_aux,
         Box              a_range,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
     
     /// Apply (Out of Place)
     /**
@@ -184,8 +151,9 @@ class BoxOp
     operator()(
         const StateData& a_state,
         Box              a_range,
-        T                a_scale = 1.0) const;
+        T                a_scale = 1.0) const ;
 
+#if 0
     /// User Defined Flux
     /**
         Compute F(phi, rho) in the direction dir
@@ -195,11 +163,12 @@ class BoxOp
         \param aux      Auxiliary variables
         \param dir      Direction in [0, DIM)
     */
+    
     inline virtual void flux(
         StateData& a_flux,
         const StateData& a_state,
         const AuxData&   a_aux, 
-        int a_dir) const;
+        int a_dir) const ;
     
     /// User Defined Flux
     /**
@@ -212,7 +181,7 @@ class BoxOp
     inline virtual void flux(
         StateData& a_flux,
         const StateData& a_state,
-        int a_dir) const;
+        int a_dir) const ;
     
     /// User Defined Source
     /**
@@ -225,7 +194,7 @@ class BoxOp
     inline virtual void source(
         StateData&       a_source,
         const StateData& a_state,
-        const AuxData&   a_aux) const; 
+        const AuxData&   a_aux) const ; 
     
     /// User Defined Source
     /**
@@ -236,7 +205,7 @@ class BoxOp
     */
     inline virtual void source(
         StateData&       a_source,
-        const StateData& a_state) const;
+        const StateData& a_state) const ;
     
     /// User Defined Diagonal
     /**
@@ -249,7 +218,7 @@ class BoxOp
     inline virtual void diag(
         StateData&       a_diag,
         const StateData& a_state,
-        const AuxData&   a_aux) const; 
+        const AuxData&   a_aux) const ; 
     
     /// User Defined Diagonal
     /**
@@ -260,69 +229,26 @@ class BoxOp
     */
     inline virtual void diag(
         StateData&       a_diag,
-        const StateData& a_state) const;
+        const StateData& a_state) const ;
+#endif 
+    /// Get Map
+    inline const MBLevelMap<MAP,MEM>& map() const;
     
-    /// Set Diagonal Term Scaling
-    /**
-        Sets the value of d
-    */
-    inline void setDiagScale(T a_value);
-    
-    /// Set Flux Term Scaling
-    /**
-        Sets the value of f
-    */
-    inline void setFluxScale(T a_value);
-   
-    /// Set Time
-    inline void setTime(T a_time);
+    /// Get Index
+    inline MBIndex index() const;
 
-    /// Set Runge Kutta Stage
-    inline void setRKStage(unsigned int a_stage);
+    /// Get Layout
+    inline const MBDisjointBoxLayout& layout() const;
     
-    /// Read Diagonal Term Scaling
-    inline T diagScale() const { return m_scaleDiag; }
-    
-    /// Read Flux Term Scaling
-    inline T fluxScale() const { return m_scaleFlux; }
-    
-    /// Read Flux Term Scaling
-    inline unsigned int RKStage() const { return m_RKStage; }
-    
-    /// Get Time
-    inline T time() const { return m_time; }
-
-    /// Get Grid Spacing
-    inline Array<T, DIM> dx() const;
-
-    /// Get Min Grid Spacing
-    inline T dxMin() const;
-    
-    /// Get Max Grid Spacing
-    inline T dxMax() const;
+    /// Get Block
+    inline unsigned int block() const;
     
     /// Get Box
-    inline const Box& box() const {return m_box; }
+    inline Box box() const;
     
-    /// Mapped Multiblock Utilities
-#ifdef PR_MMB
+    /// Get Grid Spacing (Mapped Coordinates)
+    inline Array<T, DIM> dx() const;
 
-    /// Map Constructor
-    /** a_x is node centered, a_J is cell averaged */
-    inline BoxOp(
-            const Box& a_box,
-            const Array<double, DIM>& a_dx,
-            const BoxData<double, DIM, MEM>& a_x, 
-            const BoxData<double, 1, MEM>& a_J);
-    
-    /// Map Define
-    /** a_x is node centered, a_J is cell averaged */
-    inline void define(
-            const Box& a_box,
-            const Array<double, DIM>& a_dx,
-            const BoxData<double, DIM, MEM>& a_x, 
-            const BoxData<double, 1, MEM>& a_J);
-    
     /// Get Coordinates
     /** Output is immutable and node centered */
     inline const BoxData<double, DIM, MEM>& x() const;
@@ -331,6 +257,7 @@ class BoxOp
     /** Output is immutable and cell averaged */
     inline const BoxData<double, 1, MEM>& jacobian() const;
 
+#if 0
     /// Enforce Block Boundary Flux Matching condition
     inline virtual void matchFlux(
             StateData&       a_rhs,
@@ -346,29 +273,16 @@ class BoxOp
             const StateData& a_adjFlux,
             Point            a_localDir) const;
 #endif
-
     protected:
-    bool m_isMapped;
-    T m_scaleDiag;
-    T m_scaleFlux;
-    T m_time;
-    unsigned int m_RKStage;
-    Box m_box;
-
-    mutable bool m_definedSrce;
-    mutable bool m_definedFlux;
-
-    Array<T, DIM> m_dx;
 
     private:
+    
+    MBIndex m_index;
+    const MBLevelMap<MAP, MEM>& m_map;
 
-#ifdef PR_MMB
-    const BoxData<double, DIM, MEM>* m_x;
-    const BoxData<double, 1, MEM>* m_J;
-#endif
 };
 
-#include "implem/Proto_BoxOpImplem.H"
+#include "implem/Proto_MBBoxOpImplem.H"
 } // end namespace Proto
 
 #endif // end include guard

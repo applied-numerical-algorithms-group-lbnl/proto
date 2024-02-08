@@ -68,6 +68,7 @@ void MBDisjointBoxLayout::define(
     {
         m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
     }
+    m_defined = true;
 }
 
 void MBDisjointBoxLayout::define(
@@ -82,40 +83,48 @@ void MBDisjointBoxLayout::define(
     {
         m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
     }
+    m_defined = true;
 }
 
 const MBProblemDomain& MBDisjointBoxLayout::domain() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::domain | Error: Layout is not defined");
     return m_domain;
 }
 
 unsigned int MBDisjointBoxLayout::procID(const MBIndex& a_index) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::procID | Error: Layout is not defined");
     return m_partition->partition()[a_index.global()].second;
 }
 
 unsigned int MBDisjointBoxLayout::numBlocks() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::numBlocks | Error: Layout is not defined");
     return m_partition->numBlocks();
 }
 
 unsigned int MBDisjointBoxLayout::numBoxes() const 
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::numBoxes | Error: Layout is not defined");
     return m_partition->numBoxes();
 }
 
 unsigned int MBDisjointBoxLayout::numBoxes(unsigned int a_proc) const 
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::numBoxes | Error: Layout is not defined");
     return m_partition->numBoxes(a_proc);
 }
 
 unsigned int MBDisjointBoxLayout::numProcs() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::numProcs | Error: Layout is not defined");
     return m_partition->numProcs();
 }
 
 std::vector<MBPatchID_t> MBDisjointBoxLayout::patches() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::patches | Error: Layout is not defined");
     std::vector<MBPatchID_t> patchList;
     for (auto item : m_partition->partition())
     {
@@ -127,6 +136,7 @@ std::vector<MBPatchID_t> MBDisjointBoxLayout::patches() const
 DataIndex<BoxPartition>
 MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::blockIndex | Error: Layout is not defined");
     Point p = point(a_index);
     unsigned int b = block(a_index);
     return m_layouts[b].find(p); 
@@ -134,23 +144,27 @@ MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
 
 Box MBDisjointBoxLayout::operator[](const MBIndex& a_index) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::operator[] | Error: Layout is not defined");
     return box(a_index);
 }
 
 MBIterator MBDisjointBoxLayout::begin() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::begin | Error: Layout is not defined");
     MBIterator iter(m_partition);
     return iter.begin();
 }
 
 MBIterator MBDisjointBoxLayout::end() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::end | Error: Layout is not defined");
     MBIterator iter(m_partition);
     return iter.end();
 }
 
 Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::point | Error: Layout is not defined");
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
@@ -159,7 +173,8 @@ Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 
 Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 {
-    auto data = m_partition->partition()[a_index.global()];
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::box | Error: Layout is not defined");
+    auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
     auto boxSize = m_layouts[block].boxSize();
@@ -168,13 +183,15 @@ Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
-    auto data = m_partition->partition()[a_index.global()];
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
+    auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     return block;
 }
 
 DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block)
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
             (numBlocks() = %u)", numBlocks());
@@ -183,6 +200,7 @@ DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block)
 
 const DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
             (numBlocks() = %u)", numBlocks());
@@ -196,6 +214,7 @@ DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
 
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::find | Error: Layout is not defined");
     auto patchDomain = m_layouts[a_block].patchDomain();
     if (!patchDomain.contains(a_point))
     {
@@ -212,11 +231,13 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned i
 
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::offset | Error: Layout is not defined");
     return m_partition->procStartIndex(a_proc);
 }
 
 bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::compatible | Error: Layout is not defined");
     return m_partition->compatible(*a_rhs.m_partition);
 }
 
@@ -225,6 +246,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         Point           a_dir,
         unsigned int    a_block) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     unsigned int thisBlock = block(a_index);
     Point thisPatch = point(a_index);
     
@@ -249,6 +271,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     for (int bi = 0; bi < numBlocks(); bi++)
     {
         if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
@@ -260,6 +283,7 @@ bool MBDisjointBoxLayout::isDomainBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
     if (a_dir == Point::Zeros()) { return false; }
     else if (isBlockBoundary(a_index, a_dir)) {return false; }
     auto block = this->block(a_index);
@@ -278,6 +302,7 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
     if (a_dir == Point::Zeros()) { return false; } // not a boundary
     auto block = this->block(a_index);
     auto patchID = this->point(a_index);
@@ -294,6 +319,7 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::bounds | Error: Layout is not defined");
     std::vector<MBIndex> ret;
     auto b0 = block(a_index);
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
@@ -317,6 +343,7 @@ Point MBDisjointBoxLayout::connectivity(
         const MBIndex& a_i1,
         const MBIndex& a_i2) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::connectivity | Error: Layout is not defined");
     unsigned int b1 = block(a_i1);
     unsigned int b2 = block(a_i2);
     Point p1 = point(a_i1);
@@ -360,6 +387,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         const MBIndex& a_i1,
         const MBIndex& a_i2) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     if (block(a_i1) == block(a_i2)) {return false;}
     if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
     return true;
@@ -367,16 +395,19 @@ bool MBDisjointBoxLayout::isBlockBoundary(
 
 unsigned int MBDisjointBoxLayout::size() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::size | Error: Layout is not defined");
     return m_partition->numBoxes();
 }
 
 unsigned int MBDisjointBoxLayout::localSize() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::localSize | Error: Layout is not defined");
     return m_partition->numBoxes(Proto::procID());
 }
 
 std::vector<Point> MBDisjointBoxLayout::boxSizes() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::boxSizes | Error: Layout is not defined");
     std::vector<Point> ret;
     for (int bi = 0; bi < numBlocks(); bi++)
     {
@@ -387,12 +418,14 @@ std::vector<Point> MBDisjointBoxLayout::boxSizes() const
 
 MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
     std::vector<Point> refRatios(numBlocks(), a_refRatio);
     return this->coarsen(refRatios);
 }
 
 MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
     PROTO_ASSERT(a_refRatios.size() == numBlocks(),
             "MBDisjointBoxLayout::coarsen | Error: Wrong number of ref ratios");
     std::vector<Point> crseBoxSize;
@@ -409,6 +442,7 @@ MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_ref
 
 void MBDisjointBoxLayout::print() const
 {
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::print | Error: Layout is not defined");
     for (auto iter : *this)
     {
         auto bi = block(iter);

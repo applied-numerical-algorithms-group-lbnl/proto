@@ -110,6 +110,7 @@ int main(int argc, char* argv[])
 #ifdef PR_MPI
     MPI_Init (&argc, &argv);
 #endif
+  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 16;
@@ -128,30 +129,32 @@ int main(int argc, char* argv[])
   bool cullRadialGhost = true;
   bool use2DFootprint = true;
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-  Array<Point, DIM+1> ghost;
-  ghost.fill(Point::Ones(5));
+  //Array<Point, DIM+1> ghost;
+  //ghost.fill(Point::Ones(5));
    Array<Array<uint,DIM>,6> permute = {{2,1,0},{2,1,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6> sign = {{-1,1,1},{1,1,-1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,1}};     
   auto domain =
-  CubedSphereShell::Domain(domainSize, thickness, radialDir);
+    CubedSphereShell::Domain(domainSize, thickness, radialDir);
   Point boxSizeVect = Point::Ones(domainSize);
   boxSizeVect[radialDir] = thickness;
   MBDisjointBoxLayout layout(domain, boxSizeVect);
 
   // initialize data and map
-  auto map = CubedSphereShell::Map(layout,ghost);
-  MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, ghost);
+  auto map = CubedSphereShell::Map(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
- 
-  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map);
+
+  // FIXME: Commenting this out until the interpOp can be built without SVD failing
+  //auto interpOp = CubedSphereShell::InterpOp<HOST>(layout, OP::ghost(), 4);
+  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
   double dx = 1.0/domainSize;
   double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
-  MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, ghost+Point::Ones());
-  MBLevelBoxData<double, NUMCOMPS, HOST> WNew(layout, ghost+Point::Ones());
+  MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, OP::ghost()+Point::Ones());
+  MBLevelBoxData<double, NUMCOMPS, HOST> WNew(layout, OP::ghost()+Point::Ones());
   WPoint.setVal(0.);
   WNew.setVal(0.);
   for (auto dit : layout)
@@ -227,7 +230,10 @@ int main(int argc, char* argv[])
       //cout << "initial box" << Wfoo.box() << endl;
       eulerOp[dit].primToCons(Utemp,Wfoo,dVolr,gamma,dx,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
-      eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+      //TODO: PREV OPERATOR CALL
+      //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
+      //TODO: NEW OPERATOR CALL
+      eulerOp[dit](rhs_i,fluxes,Utemp,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
       double maxpforceC = rhs_coarse.absMax(1,0,0);

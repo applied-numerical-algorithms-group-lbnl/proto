@@ -1,3 +1,4 @@
+#if 0
 //==============================================================
 // CUBED SPHERE SHELL MAP
 template<MemType MEM>
@@ -73,6 +74,7 @@ void MBMap_CubedSphereShellPolar<MEM>::apply(
             a_X, NT, a_J, radius, a_J.box().grow(Point::Ones()), dx[1], a_block);
 #endif
 }
+#endif
 
 //==============================================================
 // CUBED SPHERE SHELL UTILITY
@@ -125,7 +127,7 @@ template<MemType MEM>
 MBLevelMap<MBMap_CubedSphereShell, MEM>
 CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
-        const Array<Point, DIM+1>   a_ghost)
+        Point   a_ghost)
 {
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(a_layout, a_ghost);
@@ -142,7 +144,7 @@ CubedSphereShell::Map(
     return map;
 }
 
-template<template<typename, MemType> class OpType,
+template<template<typename, template<MemType> typename, MemType> class OpType,
     typename T,
     MemType MEM>
 MBLevelOp<OpType, MBMap_CubedSphereShell, T>
@@ -158,7 +160,7 @@ template<MemType MEM>
 MBInterpOp
 CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
-        const Array<Point, DIM+1>& a_ghost,
+        Point a_ghost,
         unsigned int a_order)
 {
     std::vector<Point> footprint;
@@ -172,12 +174,12 @@ CubedSphereShell::InterpOp(
             footprint.push_back(pi);
         }
     }
-    MBInterpOp op(a_ghost[0], a_order);
+    MBInterpOp op(a_ghost, a_order);
     for (int bi = 0; bi < 6; bi++)
     {
         MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
         polarMap.define(a_layout, a_ghost, bi);
-        op.define(polarMap, footprint, bi); 
+        op.define(polarMap, footprint, a_order, bi); 
     }
     return op; 
 }
@@ -188,7 +190,7 @@ CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
         unsigned int a_order)
 {
-    return InterpOp<MEM>(a_data.layout(), a_data.ghost(), a_order);
+    return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
     
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

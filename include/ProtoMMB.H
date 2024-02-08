@@ -15,6 +15,7 @@
 #include "mmb/Proto_MBLevelBoxData.H"
 #include "mmb/Proto_MBMapOp.H"
 #include "mmb/Proto_MBLevelMap.H"
+#include "mmb/Proto_MBBoxOp.H"
 #include "mmb/Proto_MBLevelOp.H"
 #ifdef PR_OPS 
 #include "mmb/Proto_MBInterpOp.H"

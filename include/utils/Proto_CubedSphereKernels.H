@@ -1,8 +1,8 @@
 #ifndef _PROTO_CUBED_SPHERE_KERNELS_
 #define _PROTO_CUBED_SPHERE_KERNELS_
-#define CUBED_SPHERE_SHELL_R0 1.0
+#define CUBED_SPHERE_SHELL_R0 0.1
 #define CUBED_SPHERE_SHELL_R1 1.5
-#define CUBED_SPHERE_SHELL_RADIAL_COORD 0
+#define CUBED_SPHERE_SHELL_RADIAL_COORD 2
 typedef Proto::Array<Proto::Array<double,DIM>,DIM> matType;
 typedef Proto::Array<double,DIM> vecType;
 using namespace Operator;
@@ -377,7 +377,7 @@ void f_consToPrim_F(
 }
 PROTO_KERNEL_END(f_consToPrim_F, f_consToPrim);
 #endif
-
+#if 0
 template<MemType MEM>
 void f_cubeSphereMapF(
     Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
@@ -459,7 +459,8 @@ void f_cubeSphereMapF(
     }
 }
 PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
+#endif
+#if 0
 template<MemType MEM>
 void f_cubeSphereMapPoint(
     Point& a_pt, vecType& a_X, Array<double, DIM> a_dx, double a_r0, double a_r1,
@@ -538,7 +539,8 @@ void f_cubeSphereMapPoint(
             break;
     }
 }
-
+#endif
+#if 0
 template<MemType MEM>
 void f_cubeSphereMap2F(
     Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
@@ -666,7 +668,8 @@ void f_cubeSphereMap2F(
     }
 }
 PROTO_KERNEL_END(f_cubeSphereMap2F, f_cubeSphereMap2);
-
+#endif
+#if 0
 template<MemType MEM>
 PROTO_KERNEL_START
 void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R,
@@ -735,4 +738,5 @@ void f_cartesianToSphericalMapF(Point& a_pt, Var<double,DIM,MEM>& a_R,
     a_R((a_radialCoord + 2) % 3) = phi;
 }
 PROTO_KERNEL_END(f_cartesianToSphericalMapF, f_cartesianToSphericalMap);
+#endif
 #endif // end include guard.
