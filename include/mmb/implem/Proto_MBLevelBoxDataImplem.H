@@ -682,21 +682,27 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     for (auto shift : extendedFootprint)
     {
         Point p = a_center + shift;
+        //std::cout << "Attempting to add stencil point " << p << std::endl;
         if (blockDomain.contains(p) && patchDomain.contains(p))
         {
+            //std::cout << "\tPoint is in the patch AND block domains: Adding" << std::endl;
             MBDataPoint data(a_index, p, layout());
             footprint.insert(data);
         }
         else if (!blockDomain.contains(p))
         {
+            //std::cout << "\tPoint is NOT in the block domain. checking bounds" << std::endl;
             for (auto dir : Box::Kernel(1))
             {
                 if (dir == Point::Zeros()) { continue; }
                 auto boundData = bounds(a_index, dir);
                 for (auto bi : boundData)
                 {
+                    //std::cout << "\t\tChecking boundary in direction " << dir << " with box " << bi.localBox() << std::endl;
+                    //std::cout << "\t\tbi.localBox().contains(p) ? " << bi.localBox().contains(p) << std::endl;
                     if (bi.localBox().contains(p))
                     {
+                        //std::cout << "\t\t\tPoint is in the boundary: Adding" << std::endl;
                         MBDataPoint data(a_index, p, layout(), dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }
@@ -1153,6 +1159,10 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
 
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout)
 {
+    PROTO_ASSERT(a_layout.defined(),
+            "MBDataPoint::constructor | Error: Undefined layout");
+    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+            "MBDataPoint::constructor | Error: Invalid index / layout pair");
     index = a_index;
     point = a_point;
     block = -1;  // this means the block is the same as implied by a_index
@@ -1163,6 +1173,12 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
         Point a_boundaryDir, int a_block)
 {
+    PROTO_ASSERT(a_layout.defined(),
+            "MBDataPoint::constructor | Error: Undefined layout");
+    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+            "MBDataPoint::constructor | Error: Invalid index / layout pair");
+    PROTO_ASSERT(a_layout.isBlockBoundary(a_index, a_boundaryDir, a_block),
+            "MBDataPoint::constructor | Error: Invalid boundary inputs");
     index = a_index;
     block = a_block;
     boundaryDir = a_boundaryDir;
