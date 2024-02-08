@@ -3,10 +3,11 @@
 #define _BOX_OP_EULER_
 
 #include "Proto.H"
-#include "Proto_CubedSphereShell.H"
-#include "Proto_CubedSphereKernels.H"
+//#include "Proto_CubedSphereShell.H"
+//#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS DIM+2
+#define NGHOST 5
 
 using namespace Proto;
 typedef BoxData<double> Scalar;
@@ -31,11 +32,14 @@ f_thresholdF(
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
 
-template<typename T, MemType MEM = MEMTYPE_DEFAULT>
-class BoxOp_EulerCubedSphere : public BoxOp<T, NUMCOMPS, 1, MEM>
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM = MEMTYPE_DEFAULT>
+class BoxOp_EulerCubedSphere : public MBBoxOp<T, MAP, NUMCOMPS, 0, MEM>
 {
 public:
-  using BoxOp<T,NUMCOMPS,1,MEM>::BoxOp;
+  using MBBoxOp<T, MAP, NUMCOMPS,0,MEM>::MBBoxOp;
 
   T m_gamma = 5.0/3.0;
   mutable T umax;
@@ -59,16 +63,25 @@ public:
   // The interface is very provisional. We expect it to evolve as we d more real problems.
   // Apply Operator
   inline void operator()
-  (
-   State&                          a_Rhs,
-   Array<State, DIM>&              a_fluxes,
-   const State&                    a_JU,
-   const BoxData<T,DIM,MEM>&       a_Dr,
-   const BoxData<T,DIM,MEM>&       a_adjDr,
-   const BoxData<T,1,MEM>&         a_dVolr,
-   T                               a_h,
-   int                             a_block,
-   T                               a_scale = 1.0) const;
+      (
+       State&                          a_Rhs,
+       Array<State, DIM>&              a_fluxes,
+       const State&                    a_JU,
+       const BoxData<T,DIM,MEM>&       a_Dr,
+       const BoxData<T,DIM,MEM>&       a_adjDr,
+       const BoxData<T,1,MEM>&         a_dVolr,
+       T                               a_h,
+       int                             a_block,
+       T                               a_scale = 1.0) const;
+
+  // Same as the above but conforms to Proto's API
+  inline void operator()
+      (
+       State&                          a_Rhs,
+       Array<State, DIM>&              a_fluxes,
+       const State&                    a_JU,
+       T                               a_scale = 1.0) const;
+  
   inline void primToFlux(
                          State& a_physFlux,
                          const State& a_WFace,
@@ -119,12 +132,14 @@ private:
 #include "BoxOp_EulerCubedSphereImplem.H"
 
 #ifdef PR_AMR
+/* TODO: this doesn't belong here and it doesn't compile
 static inline void generateTags(
                                 TagData& a_tags,
                                 BoxData<T, NUMCOMPS>& a_state)
 {
   forallInPlace(f_threshold, a_tags, a_state);
 }
+*/
 #endif
 
 
