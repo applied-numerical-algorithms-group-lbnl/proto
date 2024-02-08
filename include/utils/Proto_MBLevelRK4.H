@@ -20,20 +20,16 @@ template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelRK4
 {
 public:
     typedef OPType<T, MAP, MEM> OP; 
-    typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     
-    /*
-    MBLevelRK4(
-            const MBLevelMap<MAP>&      a_map);
-    */
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
             const MBInterpOp&           a_interp);
@@ -41,38 +37,20 @@ public:
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
     inline void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
     inline LOP& op() { return m_f; }
+    inline BC& bc() {return *m_bc; }
 protected:
     LevelStateData      m_k;
     LevelStateData      m_delta;
     LOP                 m_f;
+    std::shared_ptr<BC> m_bc;
     LevelStateData      m_U0;
     const MBInterpOp&   m_interp;
 };
-/*
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
-    MemType MEM>
-MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
-    const MBLevelMap<MAP>&      a_map)
-{
-    Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Zeros());
-    m_f.define(a_map);
-    m_delta.define(a_map.layout(), ghost);
-    m_k.define(a_map.layout(), ghost);
-    ghost.fill(OP::ghost());
-    m_U0.define(a_map.layout(), ghost);
-    m_interp->define(a_map, 4, -1);
-}
-*/
-template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
-    typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     const MBLevelMap<MAP>&      a_map,
@@ -85,14 +63,14 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost());
     m_U0.define(a_map.layout(), ghost);
-    //m_interp = &a_interp;
+    m_bc = std::make_shared<BC>(a_map);
 }
 
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     LevelStateData& a_state, 
@@ -105,29 +83,40 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     m_delta.setVal(0);
 
     m_f.setTime(a_time);
+    m_bc->setTime(a_time);
+    m_bc->setRKStage(0);
+    m_bc->apply(a_state);
     a_state.exchange();
     m_interp.apply(a_state, a_state);
     m_f(m_k, a_state, a_dt);    // compute k1*dt
     m_delta.increment(m_k, sixth);
     
+    m_f.setTime(a_time+half*a_dt);
+    m_bc->setTime(a_time + half*a_dt);
+    m_bc->setRKStage(1);
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
+    m_bc->apply(m_U0);
     m_U0.exchange();
     m_interp.apply(m_U0, m_U0);
-    m_f.setTime(a_time+half*a_dt);
     m_f(m_k, m_U0, a_dt);  // compute k2*dt
     m_delta.increment(m_k, third);
     
+    m_bc->setRKStage(2);
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
+    m_bc->apply(m_U0);
     m_U0.exchange();
     m_interp.apply(m_U0, m_U0);
     m_f(m_k, a_state, a_dt);  // compute k3*dt
     m_delta.increment(m_k, third);
     
     m_f.setTime(a_time+a_dt);
+    m_bc->setTime(a_time + a_dt);
+    m_bc->setRKStage(3);
     a_state.copyTo(m_U0);
     m_U0.increment(m_k);
+    m_bc->apply(m_U0);
     m_U0.exchange();
     m_interp.apply(m_U0, m_U0);
     m_f(m_k, a_state, a_dt); // compute k4*dt

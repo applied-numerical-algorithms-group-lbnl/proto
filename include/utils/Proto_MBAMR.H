@@ -9,13 +9,13 @@ template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBAMR
 {
 public:
     typedef OPType<T, MAP, MEM> OP; 
-    typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
