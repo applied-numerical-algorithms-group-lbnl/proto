@@ -101,10 +101,9 @@ void MBLevelMap<MAP,MEM>::doApply(
     {
         PR_TIME("MBLevelMap::doApply");
         const auto& domain = layout().domain();
-        Box BX = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
-        Box BJ = domain.convert(a_J.box(), a_outBlock, a_computeBlock, PR_CELL);
-        BoxData<double, DIM, MEM> X_tmp(BX);
-        BoxData<double, 1, MEM> J_tmp(BJ);
+        Box B = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
+        BoxData<double, DIM, MEM> X_tmp(B);
+        BoxData<double, 1, MEM> J_tmp(B);
         apply(X_tmp, J_tmp, a_computeBlock);
         Point conn = domain.graph().connectivity(a_computeBlock, a_outBlock);
         auto R = domain.graph().rotation(a_computeBlock, conn, a_outBlock);

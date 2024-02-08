@@ -28,6 +28,9 @@
 #include "mmb/Proto_MBAMRMap.H"
 #endif
 
+// Maps
+#include "utils/MBMap_CubedSphereShell.H"
+
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
 #include "utils/Proto_MBMultigrid.H"
