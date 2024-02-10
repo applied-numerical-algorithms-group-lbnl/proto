@@ -4,9 +4,9 @@
 -domainSizex                     64
 -domainSizey                     64
 -domainSizez                     64
--maxStep                         200
+-maxStep                         2
 -restartStep                     0
--outputInterval                  10
+-outputInterval                  1
 -CheckpointInterval              100
 -MaxCheckpointFiles              3
 -BoxSize                         64

@@ -99,6 +99,19 @@ public:
                          T a_gamma,
                          uint a_block,
                          uint a_centering) const;
+
+
+  inline void primToMappedFlux(
+                              State& a_fluxdir,
+                              const State& a_WFace,
+                              const State& a_WFaceBar,
+                              const BoxData<T,1,MEM>& a_adjDrDir,
+                              const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                              const BoxData<T,1,MEM>& a_deta,
+                              const BoxData<T,DIM,MEM>& a_ntrow,
+                              T a_h,
+                              uint a_block,
+                              uint a_dir) const;
   
   inline void consToPrim(
                          State& a_W,
