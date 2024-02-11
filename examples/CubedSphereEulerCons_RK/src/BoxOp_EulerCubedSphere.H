@@ -112,7 +112,23 @@ public:
                               T a_h,
                               uint a_block,
                               uint a_dir) const;
-  
+
+  inline void primToMappedRusanovFlux(
+                              State& a_fluxdir,
+                              const State& a_WFace_L,
+                              const State& a_WFaceBar_L,
+                              const State& a_WFace_R,
+                              const State& a_WFaceBar_R,
+                              const BoxData<T,1,MEM>& a_adjDdir,
+                              const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                              const BoxData<T,1,MEM>& a_deta,
+                              const BoxData<T,DIM,MEM,DIM>& a_A,
+                              const BoxData<T,DIM,MEM>& a_ntrow,
+                              T a_h,
+                              uint a_block,
+                              uint a_dir) const;
+
+
   inline void consToPrim(
                          State& a_W,
                          State& a_WBar,

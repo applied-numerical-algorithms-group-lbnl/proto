@@ -457,7 +457,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
     BoxData<T,1,MEM> tmp3 = faceProduct(a_adjDrDir,pslice,a_dir);
     for (int dirvec = 0; dirvec < DIM; dirvec++)
       {
-        // BoxData<T> ntslice = slice(a_ntrow,dirvec);          
+        // BoxData<T> ntslice = slice(a_ntrow,dirvec); // This will edit a_ntrow too. We don't want that.         
         BoxData<T> ntslice = slice(tmp2,dirvec);          
         ntslice *= tmp3;
       }
@@ -468,6 +468,131 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
 }
 
 
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
+                                  State& a_fluxdir,
+                                  const State& a_WFace_L,
+                                  const State& a_WFaceBar_L,
+                                  const State& a_WFace_R,
+                                  const State& a_WFaceBar_R,
+                                  const BoxData<T,1,MEM>& a_adjDdir,
+                                  const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                                  const BoxData<T,1,MEM>& a_deta,
+                                  const BoxData<T,DIM,MEM,DIM>& a_A,
+                                  const BoxData<T,DIM,MEM>& a_ntrow,
+                                  T a_h,
+                                  uint a_block,
+                                  uint a_dir) const
+{
+
+  // Compute fluxes at face centers.
+  PR_TIMERS("primToMappedRusanovFlux");
+  Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
+                                    - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+  // Deconvolve W to obtain point values.
+  BoxData<T,NUMCOMPS,MEM> WFacePoint_L = _deconvolveFace(a_WFace_L,a_WFaceBar_L,a_dir);  
+  BoxData<T,1,MEM> kePoint_L = kineticEnergyW(WFacePoint_L,a_h,a_block,a_dir);
+
+  BoxData<T,1,MEM> adjDdirPoint;
+  if (a_dir != 0)
+  {
+    adjDdirPoint = deconvolveStencilRadial(a_adjDdir);
+  }
+  else
+  {
+    adjDdirPoint.define(a_adjDdir.box());
+    a_adjDdir.copyTo(adjDdirPoint);
+  }
+ 
+  State q_L = forall<T,NUMCOMPS>
+    ([ ] PROTO_LAMBDA
+     (
+      Var<T,NUMCOMPS>& a_u,
+      const Var<T,NUMCOMPS>& a_wface,      
+      const Var<T,1>& a_ke,
+      const Var<T>& a_adjddir,
+      const T a_gamma)
+     {
+       a_u(0) = a_adjddir(0)*a_wface(0);
+       a_u(1) = a_adjddir(0)*a_wface(0)*a_wface(1);
+       a_u(2) = a_adjddir(0)*a_wface(0)*a_wface(2);
+       a_u(3) = a_adjddir(0)*a_wface(0)*a_wface(3);
+       a_u(NUMCOMPS - 1) = a_adjddir(0)*(a_ke(0) + a_wface(NUMCOMPS-1)/(a_gamma - 1.0));
+     },WFacePoint_L,kePoint_L,adjDdirPoint,m_gamma);
+
+  // Compute Average conserved variables from pointwise values.
+  State q_avg_L = (1.0*Shift(Point::Zeros()) +
+                (1.0/24.0)*Stencil<T>::LaplacianFace(a_dir))(q_L);
+
+
+  // Deconvolve W to obtain point values.
+  BoxData<T,NUMCOMPS,MEM> WFacePoint_R = _deconvolveFace(a_WFace_R,a_WFaceBar_R,a_dir);  
+  BoxData<T,1,MEM> kePoint_R = kineticEnergyW(WFacePoint_R,a_h,a_block,a_dir);
+ 
+  State q_R = forall<T,NUMCOMPS>
+    ([ ] PROTO_LAMBDA
+     (
+      Var<T,NUMCOMPS>& a_u,
+      const Var<T,NUMCOMPS>& a_wface,      
+      const Var<T,1>& a_ke,
+      const Var<T>& a_adjddir,
+      const T a_gamma)
+     {
+       a_u(0) = a_adjddir(0)*a_wface(0);
+       a_u(1) = a_adjddir(0)*a_wface(0)*a_wface(1);
+       a_u(2) = a_adjddir(0)*a_wface(0)*a_wface(2);
+       a_u(3) = a_adjddir(0)*a_wface(0)*a_wface(3);
+       a_u(NUMCOMPS - 1) = a_adjddir(0)*(a_ke(0) + a_wface(NUMCOMPS-1)/(a_gamma - 1.0));
+     },WFacePoint_R,kePoint_R,adjDdirPoint,m_gamma);
+
+  // Compute Average conserved variables from pointwise values.
+  State q_avg_R = (1.0*Shift(Point::Zeros()) +
+                (1.0/24.0)*Stencil<T>::LaplacianFace(a_dir))(q_R);
+  
+  // Difference of conserved variables.
+  q_avg_R -= q_avg_L;
+
+  T one = 1.0;
+  BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,1);
+  BoxData<T,DIM,MEM> Con_diff_Mom = slice<T,NUMCOMPS,DIM,MEM>(q_avg_R,1);
+  forallInPlace(f_matVecProd,fluxdirMom,a_deta_a,Con_diff_Mom,one);
+    
+  forallInPlace([ ] PROTO_LAMBDA
+                (Var<T,NUMCOMPS,MEM>& a_Rusflux,
+                  const Var<T,NUMCOMPS,MEM>& a_fluxin,
+                  const Var<T,1,MEM>& a_deta)
+                {                    
+                  a_Rusflux(0) = a_deta(0)*a_fluxin(0);
+                  a_Rusflux(NUMCOMPS-1) = a_deta(0)*a_fluxin(NUMCOMPS-1);  
+                },a_fluxdir,q_avg_R,a_deta);
+
+  // Find (|w_d| + c_fast*||A||_d) and multiply with a_fluxdir.
+  forallInPlace([ ] PROTO_LAMBDA
+               (Var<T,NUMCOMPS,MEM>& a_Rusflux,
+                const Var<T,NUMCOMPS>& a_wface_L,
+                const Var<T,NUMCOMPS>& a_wface_R,
+                const Var<T,DIM,MEM,DIM>& a_Amatrix,
+                const T a_gamma,
+                const int a_d)
+                {        
+                  double rho = 0.5*(a_wface_L(0)+a_wface_R(0));
+                  double w_d = 0.5*(a_wface_L(1+a_d)+a_wface_R(1+a_d));
+                  double B_mag = 0.0;
+                  double p = 0.5*(a_wface_L(NUMCOMPS-1)+a_wface_R(NUMCOMPS-1));
+                  if (p < 0.0) p = 0.0;
+                  double af = sqrt(a_gamma*p/rho + B_mag*B_mag/4.0/M_PI/rho);  
+                  double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
+                  
+                  for (int comp = 0; comp < NUMCOMPS;comp++)
+                  {
+                    a_Rusflux(comp) *= (abs(w_d) + af*A_d_mag);
+                  }
+                },a_fluxdir,a_WFace_L,a_WFace_R,a_A,m_gamma,a_dir);
+}
 
 
 
@@ -549,15 +674,21 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   State W;
   State WBar;    
   consToPrim(W,WBar,a_JU,a_dVolr,m_gamma,a_h,a_block);
+  
   // Compute Fluxes, rhs.
   a_Rhs.setVal(0.0);
-  // Loop over directions.
-    
+
+  // Loop over directions.  
   for (int dir = 0; dir < DIM; dir++)
     {
       PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
-      State WFace = Stencil<T>::CellToFace(dir)(W);
-      State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);       
+      State WFace_L = Stencil<T>::CellToFace(dir)(W);
+      State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);    
+
+      State WFace_R = Stencil<T>::CellToFace(dir)(W);
+      State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
+
+      // To Do: Apply Limiter here.   
 
       //Needed Mapping terms
       Box bx = W.box();
@@ -565,10 +696,20 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,DIM,MEM,DIM> deta_a = CubedSphereShell::detA_A<T,MEM>(bx,a_h,a_block,dir); //Phil had Box bxface = physFlux.box();
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx,a_h,dir); //Phil had Box bxface = physFlux.box();
       BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,a_h,a_block,dir);
+      BoxData<T,DIM,MEM,DIM> A_matrix = CubedSphereShell::AMatrix<T,MEM>(bx,a_h,a_block,dir);
 
       // Fluxes on dir face.
-      State fluxdir(bx); //Phil had Box bxface = physFlux.box();
-      primToMappedFlux(fluxdir,WFace,WFaceBar,adjDrDir,deta_a,deta,ntrow,a_h,a_block,dir);
+      State fluxdir(bx), fluxdir_R(bx), fluxdir_L(bx), fluxdir_Rus(bx); //Phil had Box as bxface = physFlux.box();
+      fluxdir.setVal(0.0);
+      fluxdir_Rus.setVal(0.0);
+      primToMappedFlux(fluxdir_R,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_h,a_block,dir);
+      primToMappedFlux(fluxdir_L,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,ntrow,a_h,a_block,dir);
+      primToMappedRusanovFlux(fluxdir_Rus,WFace_L,WFaceBar_L,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,A_matrix,ntrow,a_h,a_block,dir);
+
+      fluxdir += fluxdir_R;
+      fluxdir += fluxdir_L;
+      fluxdir -= fluxdir_Rus;
+      fluxdir *= 0.5;
 
       // Save fluxes, update RHS.
       fluxdir.copyTo(a_fluxes[dir]);
