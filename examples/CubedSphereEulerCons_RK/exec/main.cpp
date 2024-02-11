@@ -32,11 +32,14 @@ void f_radialInit_F(
   T rho = rho0 + amplitude*rho0;
   T p = p0*pow(rho/rho0,a_gamma);
   T ur =  amplitude*sqrt(a_gamma*p0/rho0)/rho0;
-  a_W(0) = rho;
-  a_W(1) = 0.0;//ur;
-  a_W(2) = 0.0;
-  a_W(3) = 0.0;
-  a_W(NUMCOMPS-1) = p;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.0;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
@@ -149,7 +152,7 @@ int main(int argc, char* argv[])
   //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
 
   
-  double dt = 1e-3;
+  double dt = inputs.CFL;
   double time = 0.0;
   for (int iter = 0; iter <= inputs.maxStep; iter++)
   {

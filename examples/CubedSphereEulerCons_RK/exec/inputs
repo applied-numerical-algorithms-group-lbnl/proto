@@ -1,5 +1,5 @@
 -tstop                           0.5
--CFL                             0.1
+-CFL                             0.001
 -gamma                           1.6666666666666666666667
 -domainSizex                     64
 -domainSizey                     64
