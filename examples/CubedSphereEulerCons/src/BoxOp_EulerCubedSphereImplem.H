@@ -100,8 +100,8 @@ template<
     MemType MEM>
 inline BoxData<T,NUMCOMPS,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
-                                           T a_h,
-                                           unsigned int a_block) const
+                                               T a_h,
+                                               unsigned int a_block) const
 {
   BoxData<T,NUMCOMPS,MEM> outputs(a_inputs.box());
   outputs.setToZero();
@@ -134,21 +134,21 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
   return outputs;
 }
 template<
-    typename T,
-    template<MemType> typename MAP,
-    MemType MEM>
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
-                                          State& a_JU,
-                                          const State& a_WPoint,
-                                          const BoxData<T>& a_dVolr,
-                                          T a_gamma,
-                                          T a_h,
-                                          uint a_block) const
+                                              State& a_JU,
+                                              const State& a_WPoint,
+                                              const BoxData<T>& a_dVolr,
+                                              T a_gamma,
+                                              T a_h,
+                                              uint a_block) const
 {
   PR_TIMERS("primToCons");
   Array<Array<uint,DIM>,6>
-     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
     sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
   Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
@@ -156,7 +156,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
                                   - (1.0/24.0)*Stencil<T>::Laplacian());
   Stencil<T> convolveStencilRadial = (1.0*Shift(Point::Zeros())
-                                + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+                                      + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                         - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   // Primitive variables -> V_r*(rho,vel_sph,rho*E).
