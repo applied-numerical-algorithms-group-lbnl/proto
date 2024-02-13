@@ -109,7 +109,8 @@ public:
       (
        State&                          a_Rhs,
        Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        const BoxData<T,DIM,MEM>&       a_Dr,
        const BoxData<T,DIM,MEM>&       a_adjDr,
        const BoxData<T,1,MEM>&         a_dVolr,
@@ -122,14 +123,16 @@ public:
       (
        State&                          a_Rhs,
        Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        T                               a_scale = 1.0) const;
 
   // Same as the above but without fluxes
   inline void operator()
       (
        State&                          a_Rhs,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        T                               a_dt,
        T                               a_scale = 1.0) const;
   
@@ -176,6 +179,23 @@ public:
                          State& a_W,
                          State& a_WBar,
                          const State& a_JU,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         T a_gamma,
+                         T a_h,
+                         uint a_block) const;
+  
+  inline void consToconsSph(
+                         State& a_Usph,
+                         const State& a_JU,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         T a_gamma,
+                         T a_h,
+                         uint a_block) const;
+
+  inline void consSphToPrim(
+                         State& a_W,
+                         State& a_WBar,
+                         const State& a_Usph,
                          const BoxData<T,1,MEM>& a_dVolr,
                          T a_gamma,
                          T a_h,
