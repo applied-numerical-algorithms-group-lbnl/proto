@@ -459,6 +459,157 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToPrim(
     WPoint.copyTo(a_WBar);
   }
 }
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::consToconsSph(
+                                          State& a_Usph,
+                                          const State& a_JU,
+                                          const BoxData<T,1,MEM>& a_dVolr,
+                                          T a_gamma,
+                                          T a_h,
+                                          uint a_block) const
+{
+  // Get radial conserved variables.
+  PR_TIMERS("ConsToconsSph");
+  a_Usph.define(a_JU.box());
+
+  Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
+                                + (1.0/24.0)*Stencil<T>::Laplacian());
+  Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
+                                  - (1.0/24.0)*Stencil<T>::Laplacian());
+  Stencil<T> convolveStencilRadial = (1.0*Shift(Point::Zeros())
+                                      + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+  Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
+                                        - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+  Box bx = a_JU.box();
+  BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx.grow(2),a_h,0); 
+  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+     {
+       a_output(0) = 1.0/a_deta(0);
+     }
+     ,deta);
+  
+  BoxData<T,DIM,MEM,DIM> deta_amat =
+    CubedSphereShell::detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> invcoef(bx);
+  invcoef.setToZero();
+  forallInPlace(f_matinv3by3,invcoef,deta_amat);
+  
+  BoxData<T,NUMCOMPS,MEM> U(a_JU.box());
+  // JU -> V_r*(rho,rho*vel_cart,rho*E) = JU / det(A);
+  {
+    PR_TIMERS("ConsToRadialCons");
+    BoxData<T,1,MEM> tmp(a_JU.box()); 
+    BoxData<T,1,MEM> JRho = slice(a_JU,iRHO);
+    BoxData<T,1,MEM> rho = slice(a_Usph,iRHO);
+    tmp = JRho*detaInv;
+    tmp.copyTo(rho);
+    BoxData<T,1,MEM> JRhoE = slice(a_JU,iE);
+    BoxData<T,1,MEM> rhoE = slice(a_Usph,iE);
+    tmp = JRhoE*detaInv;
+    tmp.copyTo(rhoE);
+
+    // V_r*rho*v_cart -> V_r*rho*v_sphere = (detA A)^{-1} V_r*rho*v_cart;
+    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iMOMX);
+    BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(a_Usph,iMOMX);
+    BoxData<T,DIM,MEM> tmpmom(JUMom.box());
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,tmpmom,invcoef,JUMom,one);
+    tmpmom.copyTo(UMom);
+
+    BoxData<T,DIM,MEM> JUB = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iBX);
+    BoxData<T,DIM,MEM> UB = slice<T,NUMCOMPS,DIM,MEM>(a_Usph,iBX);
+    BoxData<T,DIM,MEM> tmpB(JUB.box());
+    forallInPlace(f_matVecProd,tmpB,invcoef,JUB,one);
+    tmpB.copyTo(UB);
+    // Deconvolve-pointvise-convolve to go from volr rho Ur to W.
+    // divide by dVolr and deconvolve.
+    BoxData<T> tmp2(U.box());
+    
+    for (int comp = 0; comp < NUMCOMPS;comp++)
+      {      
+        BoxData<T> Ucomp = slice(a_Usph,comp);
+        tmp2 = cellQuotient(Ucomp,a_dVolr);
+        tmp2.copyTo(Ucomp);
+    }
+  }
+  
+}
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::consSphToPrim(
+                                          State& a_W,
+                                          State& a_WBar,
+                                          const State& a_Usph,
+                                          const BoxData<T,1,MEM>& a_dVolr,
+                                          T a_gamma,
+                                          T a_h,
+                                          uint a_block) const
+{
+  
+  PR_TIMERS("Cons Spherical to W, Wbar");
+
+  Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
+                                + (1.0/24.0)*Stencil<T>::Laplacian());
+  Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
+                                  - (1.0/24.0)*Stencil<T>::Laplacian());
+  Stencil<T> convolveStencilRadial = (1.0*Shift(Point::Zeros())
+                                      + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+  Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
+                                        - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
+
+  a_WBar.define(a_Usph.box());
+  
+  a_WBar.setToZero();
+
+  // Set up storage for radial variables.
+  Box bx4 = a_Usph.box().grow(-1);
+  a_W.define(bx4);
+  a_W.setToZero();
+
+  BoxData<T,NUMCOMPS,MEM> UPoint = deconvolveStencil(a_Usph);    
+  // Pointwise UrPoint -> WPoint.
+  BoxData<T,NUMCOMPS,MEM> WPoint =
+    forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
+                            (Var<T,NUMCOMPS,MEM>& a_wpoint,
+                            Var<T,NUMCOMPS,MEM>& a_upoint)                           
+                            {
+                              Var<T,NUMCOMPS,MEM> wpoint;
+                              a_wpoint(iRHO) = a_upoint(iRHO );
+                              a_wpoint(iVX ) = a_upoint(iMOMX)/a_upoint(iRHO);
+                              a_wpoint(iVY ) = a_upoint(iMOMY)/a_upoint(iRHO);
+                              a_wpoint(iVZ ) = a_upoint(iMOMZ)/a_upoint(iRHO);
+                              a_wpoint(iP  ) = a_upoint(iE);     
+                              a_wpoint(iBX ) = a_upoint(iBX);
+                              a_wpoint(iBY ) = a_upoint(iBY);
+                              a_wpoint(iBZ ) = a_upoint(iBZ);                        
+                            },UPoint);
+  // Compute pressure.
+  BoxData<T,1,MEM> kePoint = kineticEnergyW(WPoint,a_h,a_block,-1); 
+  BoxData<T,1,MEM> mePoint = magneticEnergyW(WPoint,a_h,a_block,-1);
+  forallInPlace([ ] PROTO_LAMBDA
+                (Var<T,NUMCOMPS>& a_wpoint,
+                  const Var<T,1,MEM>& a_ke,
+                  const Var<T,1,MEM>& a_me,
+                  T a_gamma)
+                {
+                  a_wpoint(iP) = (a_wpoint(iP) - a_ke(0) - a_me(0))*(a_gamma - 1.0);
+                },WPoint,kePoint,mePoint,a_gamma);
+  a_W = convolveStencil(WPoint);
+  WPoint.copyTo(a_WBar);
+  
+}
+
 template<
     typename T,
     template<MemType> typename MAP,
@@ -777,12 +928,14 @@ inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
-   const State&                    a_JU,
+  //  const State&                    a_JU,
+   const State&                    a_Usph,
    T                               a_dt,
    T                               a_scale) const
 {
     Array<State, DIM> a_fluxes;
-    this->operator()(a_Rhs, a_fluxes, a_JU, a_scale);
+    // this->operator()(a_Rhs, a_fluxes, a_JU, a_scale);
+    this->operator()(a_Rhs, a_fluxes, a_Usph, a_scale);
     a_Rhs *= a_dt;
 }
 
@@ -795,7 +948,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
-   const State&                    a_JU,
+  //  const State&                    a_JU,
+   const State&                    a_Usph,
    T                               a_scale) const
 {
     auto block = this->block();
@@ -819,7 +973,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
     double dx = dx1;
 
-    this->operator()(a_Rhs, a_fluxes, a_JU, Dr, adjDr, dVolr, dx, block, a_scale);
+    // this->operator()(a_Rhs, a_fluxes, a_JU, Dr, adjDr, dVolr, dx, block, a_scale);
+    this->operator()(a_Rhs, a_fluxes, a_Usph, Dr, adjDr, dVolr, dx, block, a_scale);
 }
 
 template<
@@ -831,7 +986,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
-   const State&                    a_JU,
+  //  const State&                    a_JU,
+   const State&                    a_Usph,
    const BoxData<T,DIM,MEM>&       a_Dr,
    const BoxData<T,DIM,MEM>&       a_adjDr,
    const BoxData<T,1,MEM>&         a_dVolr,
@@ -843,10 +999,13 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // Primitive Variables.
 
   // Transform to primitive variables, spherical velocities.
-  Box bx = a_JU.box();
+  // Box bx = a_JU.box();
+  Box bx = a_Usph.box();
   State W;
   State WBar;    
-  consToPrim(W,WBar,a_JU,a_dVolr,m_gamma,a_h,a_block);
+  // State Usph;
+  consSphToPrim(W,WBar,a_Usph,a_dVolr,m_gamma,a_h,a_block);
+  // consToPrim(W,WBar,a_JU,a_dVolr,m_gamma,a_h,a_block);
 
   // Compute Fluxes, rhs.
   a_Rhs.setVal(0.0);
