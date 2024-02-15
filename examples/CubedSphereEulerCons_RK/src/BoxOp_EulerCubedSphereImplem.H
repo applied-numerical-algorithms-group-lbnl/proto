@@ -383,6 +383,24 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToFlux(
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
 }
 
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
+  (
+   State&                          a_Rhs,
+   const State&                    a_JU,
+   T                               a_dt,
+   T                               a_scale) const
+{
+    Array<State, DIM> a_fluxes;
+    this->operator()(a_Rhs, a_fluxes, a_JU, a_scale);
+    a_Rhs *= a_dt;
+}
+
 template<
     typename T,
     template<MemType> typename MAP,

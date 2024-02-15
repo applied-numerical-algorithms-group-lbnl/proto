@@ -81,6 +81,14 @@ public:
        Array<State, DIM>&              a_fluxes,
        const State&                    a_JU,
        T                               a_scale = 1.0) const;
+
+  // Same as the above but without fluxes
+  inline void operator()
+      (
+       State&                          a_Rhs,
+       const State&                    a_JU,
+       T                               a_dt,
+       T                               a_scale = 1.0) const;
   
   inline void primToFlux(
                          State& a_physFlux,
