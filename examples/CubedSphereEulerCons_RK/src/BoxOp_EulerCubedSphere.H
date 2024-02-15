@@ -6,8 +6,51 @@
 //#include "Proto_CubedSphereShell.H"
 //#include "Proto_CubedSphereKernels.H"
 
-#define NUMCOMPS DIM+2
+#define NUMCOMPS 2*DIM+2
 #define NGHOST 5
+
+#if DIM == 2
+#define iRHO 0
+#define iVX 1
+#define iMOMX 1
+#define iVY 2
+#define iMOMY 2
+#define iE 3
+#define iP 3
+#define iBX 4
+#define iBY 5
+#if TURB == 1
+	#define iRHOZ2 6
+	#define iZ2 6
+	#define iRHOZ2SIGMA 7
+	#define iSIGMA 7
+	#define iRHOLAMBDA 8
+	#define iLAMBDA 8
+#endif
+#endif
+
+#if DIM == 3
+#define iRHO 0
+#define iVX 1
+#define iMOMX 1
+#define iVY 2
+#define iMOMY 2
+#define iVZ 3
+#define iMOMZ 3
+#define iE 4
+#define iP 4
+#define iBX 5
+#define iBY 6
+#define iBZ 7
+#if TURB == 1
+	#define iRHOZ2 8
+	#define iZ2 8
+	#define iRHOZ2SIGMA 9
+	#define iSIGMA 9
+	#define iRHOLAMBDA 10
+	#define iLAMBDA 10
+#endif
+#endif
 
 using namespace Proto;
 typedef BoxData<double> Scalar;
@@ -66,7 +109,8 @@ public:
       (
        State&                          a_Rhs,
        Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        const BoxData<T,DIM,MEM>&       a_Dr,
        const BoxData<T,DIM,MEM>&       a_adjDr,
        const BoxData<T,1,MEM>&         a_dVolr,
@@ -79,14 +123,16 @@ public:
       (
        State&                          a_Rhs,
        Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        T                               a_scale = 1.0) const;
 
   // Same as the above but without fluxes
   inline void operator()
       (
        State&                          a_Rhs,
-       const State&                    a_JU,
+      //  const State&                    a_JU,
+       const State&                    a_Usph,
        T                               a_dt,
        T                               a_scale = 1.0) const;
   
@@ -99,11 +145,57 @@ public:
                          T a_gamma,
                          uint a_block,
                          uint a_centering) const;
-  
+
+
+  inline void primToMappedFlux(
+                              State& a_fluxdir,
+                              const State& a_WFace,
+                              const State& a_WFaceBar,
+                              const BoxData<T,1,MEM>& a_adjDrDir,
+                              const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                              const BoxData<T,1,MEM>& a_deta,
+                              const BoxData<T,DIM,MEM>& a_ntrow,
+                              T a_h,
+                              uint a_block,
+                              uint a_dir) const;
+
+  inline void primToMappedRusanovFlux(
+                              State& a_fluxdir,
+                              const State& a_WFace_L,
+                              const State& a_WFaceBar_L,
+                              const State& a_WFace_R,
+                              const State& a_WFaceBar_R,
+                              const BoxData<T,1,MEM>& a_adjDdir,
+                              const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                              const BoxData<T,1,MEM>& a_deta,
+                              const BoxData<T,DIM,MEM,DIM>& a_A,
+                              const BoxData<T,DIM,MEM>& a_ntrow,
+                              T a_h,
+                              uint a_block,
+                              uint a_dir) const;
+
+
   inline void consToPrim(
                          State& a_W,
                          State& a_WBar,
                          const State& a_JU,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         T a_gamma,
+                         T a_h,
+                         uint a_block) const;
+  
+  inline void consToconsSph(
+                         State& a_Usph,
+                         const State& a_JU,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         T a_gamma,
+                         T a_h,
+                         uint a_block) const;
+
+  inline void consSphToPrim(
+                         State& a_W,
+                         State& a_WBar,
+                         const State& a_Usph,
                          const BoxData<T,1,MEM>& a_dVolr,
                          T a_gamma,
                          T a_h,
@@ -122,6 +214,18 @@ public:
                                          T a_h,
                                          uint a_block,
                                          uint a_centering) const;
+
+  inline BoxData<T,1,MEM> magneticEnergyW(
+                                         const State& a_WPoint,                    
+                                         T a_h,
+                                         uint a_block,
+                                         uint a_centering) const;   
+
+  inline BoxData<T,1,MEM> VdotBW(
+                                         const State& a_WPoint,                    
+                                         T a_h,
+                                         uint a_block,
+                                         uint a_centering) const;                                                                             
 
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,

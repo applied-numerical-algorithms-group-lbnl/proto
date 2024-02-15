@@ -291,7 +291,7 @@ CubedSphereShell::detA_A(
     }  
   return output;
 }
-#if 0
+#if 1
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
                                                         Box a_bx,

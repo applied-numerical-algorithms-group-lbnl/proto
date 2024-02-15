@@ -3,7 +3,8 @@
 #include "InputParser.H"
 #include "BoxOp_EulerCubedSphere.H"
 #include "MHD_Input_Parsing.H"
- 
+
+Parsefrominputs inputs;
 
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
@@ -28,15 +29,17 @@ void f_radialInit_F(
     {
       amplitude = 0.;
     }
-  T rho = rho0 + amplitude*rho0;//rho0*pow(1.0  - eps*arg,2);
+  T rho = rho0 + amplitude*rho0;
   T p = p0*pow(rho/rho0,a_gamma);
   T ur =  amplitude*sqrt(a_gamma*p0/rho0)/rho0;
-  //pow(1.0 - eps*arg,4)*sqrt(a_gamma*p/rho0)/rho0;
-  a_W(0) = rho;
-  a_W(1) = 0.0;//ur;
-  a_W(2) = 0.0;
-  a_W(3) = 0.0;
-  a_W(NUMCOMPS-1) = p;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.0;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;//00001;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
@@ -57,7 +60,6 @@ void radialInit(MBLevelBoxData<double,NUMCOMPS,HOST>& a_JU,
   for (auto dit : a_JU.layout())
   {      
     BoxData<double> radius(layout[dit].grow(6));
-    double gamma = 5.0/3.0;
     BoxData<double,DIM,HOST> Dr(layout[dit].grow(6));
     BoxData<double,DIM,HOST> adjDr(layout[dit].grow(6));
     BoxData<double,1,HOST> dVolr(layout[dit].grow(6));
@@ -66,8 +68,8 @@ void radialInit(MBLevelBoxData<double,NUMCOMPS,HOST>& a_JU,
     auto& JU_i = a_JU[dit];
     auto& WPoint_i = WPoint[dit];
     BoxData<double,NUMCOMPS,HOST> JUTemp;
-    forallInPlace_p(f_radialInit,WPoint_i,radius,dxradius,gamma,thickness);
-    eulerOp[dit].primToCons(JUTemp,WPoint_i,dVolr,gamma,dx,block);
+    forallInPlace_p(f_radialInit,WPoint_i,radius,dxradius,inputs.gamma,thickness);
+    eulerOp[dit].primToCons(JUTemp,WPoint_i,dVolr,inputs.gamma,dx,block);
     JUTemp.copyTo(JU_i);    
   }
 }
@@ -88,7 +90,6 @@ void Write_W(MBLevelBoxData<double,NUMCOMPS,HOST>& a_JU,
   for (auto dit :a_JU.layout())
   {
     BoxData<double> radius(layout[dit].grow(ghostTest));
-    double gamma = 5.0/3.0;
     BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
     BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
     BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
@@ -96,7 +97,10 @@ void Write_W(MBLevelBoxData<double,NUMCOMPS,HOST>& a_JU,
     int block_i = layout.block(dit);
     auto& WNew_out_i = WNew_out[dit];
     BoxData<double,NUMCOMPS,HOST> WNewTemp;
-    eulerOp[dit].consToPrim(WNewTemp,WNewTemp,a_JU[dit],dVolr,gamma,dx,block_i);
+    BoxData<double,NUMCOMPS,HOST> Usph;
+    eulerOp[dit].consToconsSph(Usph,a_JU[dit],dVolr,inputs.gamma,dx,block_i);
+    eulerOp[dit].consSphToPrim(WNewTemp,WNewTemp,Usph,dVolr,inputs.gamma,dx,block_i);
+    // eulerOp[dit].consToPrim(WNewTemp,WNewTemp,a_JU[dit],dVolr,inputs.gamma,dx,block_i);
     WNewTemp.copyTo(WNew_out_i);
   }
   h5.writeMBLevel({ }, map, WNew_out, "W_"+to_string(iter));
@@ -109,7 +113,6 @@ int main(int argc, char* argv[])
     MPI_Init (&argc, &argv);
 #endif
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
-  Parsefrominputs inputs;
   inputs.parsenow(argc, argv);
   #ifdef PR_MPI
 	  MPI_Barrier(MPI_COMM_WORLD);
@@ -142,6 +145,7 @@ int main(int argc, char* argv[])
   // initialize data and map
   auto map = CubedSphereShell::Map(layout,OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS, HOST> Usph(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   U.setVal(0.);  
@@ -151,8 +155,9 @@ int main(int argc, char* argv[])
   //auto interpOp = CubedSphereShell::InterpOp<HOST>(layout, OP::ghost(), 4);
   //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
 
+  double dx = 1.0/domainSize;
   
-  double dt = 1e-3;
+  double dt = inputs.CFL;
   double time = 0.0;
   for (int iter = 0; iter <= inputs.maxStep; iter++)
   {
@@ -161,11 +166,22 @@ int main(int argc, char* argv[])
     if (iter % inputs.outputInterval == 0) Write_W(U, eulerOp, domainSize, thickness, iter);
     
     // time step
-    U.exchange();
+    for (auto dit :U.layout())
+    {
+      int ghostTest = 6;
+      BoxData<double> radius(layout[dit].grow(ghostTest));
+      BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
+      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
+      BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
+      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
+      int block_i = layout.block(dit);
+      eulerOp[dit].consToconsSph(Usph[dit],U[dit],dVolr,inputs.gamma,dx,block_i);
+    }
+    Usph.exchange();
     for (auto dit :U.layout())
     {
       PR_TIMERS("RHS Calculation");
-      eulerOp[dit](rhs[dit],U[dit],dt);
+      eulerOp[dit](rhs[dit],Usph[dit],dt);
       U[dit] -= rhs[dit]; 
     }
     time += dt;

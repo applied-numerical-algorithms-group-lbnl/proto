@@ -1,10 +1,10 @@
 -tstop                           0.5
--CFL                             0.1
+-CFL                             0.001
 -gamma                           1.6666666666666666666667
 -domainSizex                     32
 -domainSizey                     32
 -domainSizez                     32
--maxStep                         2
+-maxStep                         5
 -restartStep                     0
 -outputInterval                  1
 -CheckpointInterval              100
