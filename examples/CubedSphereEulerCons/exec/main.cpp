@@ -141,7 +141,8 @@ int main(int argc, char* argv[])
 
   // initialize data and map
   auto map = CubedSphereShell::Map(layout, OP::ghost());
-  MBLevelBoxData<double, NUMCOMPS, HOST> U(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS, HOST> JU(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
 
   // FIXME: Commenting this out until the interpOp can be built without SVD failing
@@ -149,7 +150,7 @@ int main(int argc, char* argv[])
   //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
 
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-  U.setVal(0.);  
+  USph.setVal(0.);  
   double dx = 1.0/domainSize;
   double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
@@ -176,7 +177,7 @@ int main(int argc, char* argv[])
       // FluxBoxData<double, DIM> NT(layout[dit]);
       // map.apply(x_i, J_i, NT,block);
      auto block = layout.block(dit);
-     auto& JU_i = U[dit];
+     auto& JU_i = JU[dit];
      auto& WPoint_i = WPoint[dit];
      auto& WNew_i = WNew[dit];
      BoxData<double,NUMCOMPS,HOST> WNewTemp;
@@ -193,20 +194,23 @@ int main(int argc, char* argv[])
     }
   h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
   h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
-  cout << "Setup done" << endl;
+  
   //U.exchange(); // fill boundary data
-  h5.writeMBLevel({ }, map, U, "MBEulerCubedSphereJU");
+  //MBInterpOp op;// = CubedSphereShell::InterpOp(USph,2);
+  //CubedSphereShell::InterpBoundariesEuler(USph,op,JU,4);
+  //h5.writeMBLevel({ }, map, USph, "MBEulerCubedSphereJU");
+  cout << "Setup done" << endl;
   //CubedSphereShell::InterpBoundaries(U);
   // Testing Cubed-sphere single-patch operations.
   MBLevelBoxData<double, NUMCOMPS, HOST> flux0(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux1(layout, Point::Ones());
   MBLevelBoxData<double, NUMCOMPS, HOST> flux2(layout, Point::Ones());
   int ghostTest = 6;
-  for (auto dit :U.layout())
+  for (auto dit :USph.layout())
     {
       PR_TIMERS("RHS Calculation");
       auto& rhs_i = rhs[dit];
-      auto& U_i = U[dit];
+      auto& USph_i = USph[dit];
       auto& WPoint_i = WPoint[dit];
       BoxData<double> radius(layout[dit].grow(ghostTest));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -228,12 +232,12 @@ int main(int argc, char* argv[])
       BoxData<double,NUMCOMPS,HOST> Utemp;
       forallInPlace_p(f_radialInit,Wfoo,radius,dxradius,gamma,thickness);
       //cout << "initial box" << Wfoo.box() << endl;
-      eulerOp[dit].primToCons(Utemp,Wfoo,dVolr,gamma,dx,block_i);
+      eulerOp[dit].primToSph(USph_i,Wfoo,dVolr,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
       //TODO: PREV OPERATOR CALL
       //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
       //TODO: NEW OPERATOR CALL
-      eulerOp[dit](rhs_i,fluxes,Utemp,1.0);
+      eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
       double maxpforceC = rhs_coarse.absMax(1,0,0);

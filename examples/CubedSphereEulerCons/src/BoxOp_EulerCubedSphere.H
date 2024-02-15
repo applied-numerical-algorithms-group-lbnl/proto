@@ -19,6 +19,24 @@ typedef BoxData<double, DIM> Vector;
 // E = p/(gamma-1) + 0.5*rho*|v|^2
 //template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T,MemType MEM>
+void f_sphToPrim_F(
+                   Var<T,NUMCOMPS,MEM>& a_wpoint,
+                   Var<T,NUMCOMPS,MEM>& a_upoint,
+                   Var<T,1,MEM>& a_dvolrpoint)                           
+{
+  Var<T,NUMCOMPS,MEM> wpoint;
+  a_wpoint(0) = a_upoint(0)/a_dvolrpoint(0);
+  a_wpoint(1) =
+    a_upoint(1)/a_upoint(0)/a_dvolrpoint(0);
+  a_wpoint(2) =
+    a_upoint(2)/a_upoint(0)/a_dvolrpoint(0);
+  a_wpoint(3) =
+    a_upoint(3)/a_upoint(0)/a_dvolrpoint(0);
+  a_wpoint(4) = a_upoint(4)/a_dvolrpoint(0);  
+}
+PROTO_KERNEL_END(f_sphToPrim_F,f_sphToPrim)
+PROTO_KERNEL_START
 void
 f_thresholdF(
              Var<short>& a_tags,
@@ -108,12 +126,74 @@ public:
                          T a_h,
                          uint a_block) const;
   
+  // New factorization of the operator starts here.
+  // New operator - calls RadialMetrics from inside the operator.
+  // Implem added.
+  
+  inline void operator()
+  (
+   State&                          a_Rhs,
+   Array<State, DIM>&              a_fluxes,
+   const State&                    a_USph,
+   int                             a_block,
+   T                               a_scale = 1.0) const;
+  
+  inline void primToFlux(
+                         State& a_physFlux,
+                         const State& a_WFace,
+                         const State& a_WFaceBar,
+                         const BoxData<T,1,MEM>& a_adjDdir,
+                         uint a_block,
+                         uint a_centering) const;
+  // Implemented.
+  inline void sphToPrim(
+                         State& a_W,
+                         State& a_WBar,
+                         const State& a_USph,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         uint a_block) const;
+  // Implemented.
+  inline void primToSph(
+                         State& a_USph,
+                         const State& a_WPoint,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         uint a_block) const;
+  // Implemented.
+  inline BoxData<T,NUMCOMPS,MEM> consToSph(State& a_input,
+                                           Box a_bx,
+                                           unsigned int a_block) const;
+  
+  // Implemented.
+  inline BoxData<T,NUMCOMPS,MEM> sphToCart(State& a_input,
+                                           Box a_bx,
+                                          unsigned int a_block) const;
+  //Implemented.
+  inline void cartToSph(
+                        State& a_USph,
+                        const State& a_JU,
+                        const BoxData<T,1,MEM>& a_dVolr,
+                        uint a_block) const;
+
+  inline BoxData<T,1,MEM> kineticEnergyW(
+                                         const State& a_WPoint,
+                                         uint a_block,
+                                         uint a_centering) const;
+
+  inline void radialMetrics(
+                            BoxData<T, 1, MEM>& a_radius,
+                            BoxData<T,DIM,MEM>& a_Diagr,
+                            BoxData<T,DIM,MEM>& a_adjDr,
+                            BoxData<T, 1, MEM>& a_dVolr,
+                            Box a_bx) const;
+
+  // End new factorization of operator().
+  
   inline BoxData<T,1,MEM> kineticEnergyW(
                                          const State& a_WPoint,                    
                                          T a_h,
                                          uint a_block,
                                          uint a_centering) const;
-
+  
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
                                              T a_h,
@@ -125,6 +205,8 @@ public:
                             BoxData<T, 1, MEM>& a_dVolr,
                             Box a_bx,
                             int a_nradius) const;
+  
+  
 private:
   
 };

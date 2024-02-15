@@ -116,19 +116,75 @@ CubedSphereShell::InterpOp(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 CubedSphereShell::InterpBoundaries(
-        MBLevelBoxData<T,C,MEM,CTR>& a_data,
-        int a_order)
+                                   MBLevelBoxData<T,C,MEM,CTR>& a_data,
+                                   int a_order)
 {
     auto op = InterpOp(a_data, a_order);
     op.apply(a_data, a_data);
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void CubedSphereShell::
+InterpBoundariesEuler(
+                      MBLevelBoxData<T,C,MEM,CTR>& a_USph,
+                      MBInterpOp& a_op,
+                      const MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                      unsigned int a_order)
+{
+  auto layout = a_USph.layout();
+  for (auto dit : layout)
+    {
+      auto& USph_i = a_USph[dit];
+      auto& JU_i = a_JU[dit];
+      Box bx = layout[dit];
+      // Get geometric data.
+      Box bxMetric = bx.grow(1);
+      auto block = layout.block(dit);
+      auto blocksize = layout.domain().blockSize(block);
+      Box blockBox(Point::Zeros(),blocksize - Point::Ones());
+      T dxiPerp = 1.0/blocksize[2];
+      BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,dxiPerp,0); 
+      BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+        ([ ] PROTO_LAMBDA
+         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+         {
+           a_output(0) = 1.0/a_deta(0);
+         }
+         ,deta); 
+      BoxData<T,DIM,MEM,DIM> deta_amat =
+        CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
+      BoxData<T,DIM,MEM,DIM> invcoef(bx);
+      invcoef.setToZero();
+      forallInPlace(f_matinv3by3,invcoef,deta_amat);
+
+      // Slice data and compute quotients.
+      BoxData<T,1,MEM> JRho = slice(JU_i,0);
+      BoxData<T,1,MEM> rho = slice(USph_i,0);      
+      cellQuotientValAndInv(rho,deta,detaInv,JRho,bx,blockBox);
+      
+      BoxData<T,1,MEM> JRhoE = slice(JU_i,C-1);
+      BoxData<T,1,MEM> rhoE = slice(USph_i,C-1);
+      cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,bx,blockBox);
+      
+      BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(JU_i,1);
+      BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph_i,1);
+      cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,bx,blockBox);
+      cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
+    }
+  a_USph.exchange();
+  cout <<  "Building interpolation operator" << endl;
+  auto op = CubedSphereShell::InterpOp(a_USph,4);
+  a_op.apply(a_USph,a_USph);
+}
+
 template <typename T, MemType MEM>
-void cellMatrixQuotientMatAndInv(
-                                 BoxData<T,DIM,MEM,1>& a_quot,
-                                 BoxData<T,DIM,MEM,1>& a_quotBar,
-                                 const BoxData<T,DIM,MEM,DIM>& a_denominator,
-                                 const BoxData<T,DIM,MEM,DIM>& a_denomInv,
-                                 const BoxData<T,DIM,MEM,1>& a_numerator)
+void CubedSphereShell::
+cellMatrixQuotientMatAndInv(
+                            BoxData<T,DIM,MEM,1>& a_quot,
+                            BoxData<T,DIM,MEM,1>& a_quotBar,
+                            const BoxData<T,DIM,MEM,DIM>& a_denominator,
+                            const BoxData<T,DIM,MEM,DIM>& a_denomInv,
+                            const BoxData<T,DIM,MEM,1>& a_numerator)
 {
   T one = 1.0;
   forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
@@ -156,12 +212,50 @@ void cellMatrixQuotientMatAndInv(
   forallInPlace(f_matVecProd,a_quot,a_denomInv,temp2,one);
 }
 template <typename T, MemType MEM>
-void cellQuotientValAndInv(
-                           BoxData<T,1,MEM>& a_quot,
-                           BoxData<T,1,MEM>& a_quotBar,
-                           const BoxData<T,1,MEM>& a_denominator,
-                           const BoxData<T,1,MEM>& a_denomInv,
-                           const BoxData<T,1,MEM>& a_numerator)
+void CubedSphereShell::
+cellMatrixQuotientMatAndInv(
+                            BoxData<T,DIM,MEM,1>& a_quot,
+                            const BoxData<T,DIM,MEM,DIM>& a_denominator,
+                            const BoxData<T,DIM,MEM,DIM>& a_denomInv,
+                            const BoxData<T,DIM,MEM,1>& a_numerator,
+                            Box a_quotBox,
+                            Box a_blockBox)
+{
+  T one = 1.0;
+  BoxData<T,DIM,MEM,1> quotBar(a_quotBox);
+  BoxData<T,DIM,MEM,1> corr(a_quotBox);
+  forallInPlace(f_matVecProd,quotBar,a_denomInv,a_numerator,one);
+  corr.setToZero();
+  for (int dir = 1; dir < DIM; dir++)
+    {
+      BoxData<T,DIM,MEM,1> Dquotbar =
+        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
+      BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
+      BoxData<T,DIM,MEM,1> prod(Ddenom.box());
+      T twelveth = -1.0/12.0;
+      forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
+      corr += prod;
+    }
+  BoxData<T,DIM,MEM> temp2 = forall<T,DIM,MEM>
+    ([ ] PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
+                      const Var<T,DIM,MEM>& a_num,
+                      const Var<T,DIM,MEM>& a_corr)
+     {
+       for (int dir = 0; dir < DIM; dir++)
+         {
+           a_output(dir) = a_num(dir) + a_corr(dir);
+         }
+     },a_numerator,corr);
+  forallInPlace(f_matVecProd,a_quot,a_denomInv,temp2,one);
+}
+template <typename T, MemType MEM>
+void CubedSphereShell::cellQuotientValAndInv(
+                                             BoxData<T,1,MEM>& a_quot,
+                                             BoxData<T,1,MEM>& a_quotBar,
+
+                                             const BoxData<T,1,MEM>& a_denominator,
+                                             const BoxData<T,1,MEM>& a_denomInv,
+                                             const BoxData<T,1,MEM>& a_numerator)
 {
   a_quot.setToZero();
   a_quotBar.setToZero();
@@ -179,6 +273,33 @@ void cellQuotientValAndInv(
     }
   corr *= twelveth;
   a_quotBar.copyTo(a_quot);
+  a_quot += corr;
+}
+template <typename T, MemType MEM>
+void CubedSphereShell::cellQuotientValAndInv(
+                                             BoxData<T,1,MEM>& a_quot,
+                                             const BoxData<T,1,MEM>& a_denominator,
+                                             const BoxData<T,1,MEM>& a_denomInv,
+                                             const BoxData<T,1,MEM>& a_numerator,
+                                             Box a_quotBox,
+                                             Box a_blockBox)
+{
+  // Note that we do not compute correction in the zero direction.
+  a_quot.setToZero();
+  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  BoxData<T,1,MEM> corr(a_quotBox);
+  corr.setToZero();
+  T twelveth = -1.0/12.0;
+  for (int dir = 1; dir < DIM; dir++)
+    {
+      BoxData<T,1,MEM> Dquotbar =
+        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
+      BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
+      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
+      corr += prod;
+    }
+  corr *= twelveth;
+  quotBar.copyTo(a_quot);
   a_quot += corr;
 }
 template<typename T, MemType MEM>
@@ -588,4 +709,32 @@ CubedSphereShell::nCrossD2n(
   // copy lowest slice to all the other slices. 
   Operator::spreadSlice(a_n_x_d2n);
 }
-
+template <typename T, unsigned int C, MemType MEM>
+BoxData<T,C,MEM>
+CubedSphereShell::deriv3case(
+                             const BoxData<T,C,MEM>& a_input,
+                             Box a_outputBox,
+                             Box a_validBox,
+                             uint a_dir)
+{
+  PR_TIMERS("deriv3case");
+  BoxData<T,C,MEM> output(a_outputBox);
+  Stencil<T> loStencil = (-1.5)*Shift(Point::Zeros()) +
+    2.0*Shift(Point::Basis(a_dir)) + (-.5)*Shift(Point::Basis(a_dir,2));
+  Stencil<T> hiStencil = (1.5)*Shift(Point::Zeros()) +
+    (-2.0)*Shift(Point::Basis(a_dir,-1)) + .5*Shift(Point::Basis(a_dir,-2));
+  Box loGhostBox = a_outputBox.adjacent(a_dir,Side::Lo,1);
+  Box hiGhostBox = a_outputBox.adjacent(a_dir,Side::Hi,1);
+  Box loBox = a_outputBox.face(a_dir,Side::Lo,1);
+  Box hiBox = a_outputBox.face(a_dir,Side::Hi,1);
+  output |= Stencil<T>::Derivative(1,a_dir,2)(a_input);
+  if (!a_validBox.contains(loBox))
+    {
+      output |= loStencil(a_input,loBox);
+    }
+  if (!a_validBox.contains(hiBox))
+    {
+      output |= hiStencil(a_input,hiBox);
+    }
+  return output;
+}
