@@ -7,7 +7,7 @@
 #include "Proto_MBLevelMap.H"
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
-
+#include "Proto_MBInterpLayout.H"
 namespace Proto
 {
     /// Mapped Multiblock Block Boundary Interpolation Operator
@@ -152,6 +152,13 @@ namespace Proto
                 int                         a_order = 4,
                 int block = -1);
         
+        template<template<MemType> typename MAP, MemType MEM>
+        inline void define(
+                const MBLevelMap<MAP, MEM>& a_map,
+                const MBInterpLayout&       a_layout,
+                int                         a_order = 4,
+                int block = -1);
+        
         /// Apply
         /** Interpolates from source data to all block boundary ghost cells in the destination.
          *  It is assumed that MBLevelBoxData::fillBoundaries() has been called on the source
@@ -190,6 +197,7 @@ namespace Proto
         Point m_ghost;
         int m_order;
         std::vector<MBPointInterpOp> m_ops;
+        std::set<std::pair<Point, int>> m_points;
     };
 
     // Interpolate Block Boundaries

@@ -230,6 +230,7 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
     m_order = a_order;
     m_ghost = a_ghost;
     m_ops.clear();
+    m_points.clear();
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -284,6 +285,21 @@ void MBInterpOp::define(
         int                         a_order,
         int                         a_block)
 {
+    MBInterpLayout layout;
+    for (auto fi : a_footprint)
+    {
+        layout.addPoint(fi);
+    }
+    define(a_map, layout, a_order, a_block);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+        const MBLevelMap<MAP,MEM>&  a_map,
+        const MBInterpLayout&       a_layout,
+        int                         a_order,
+        int                         a_block)
+{
     m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
@@ -303,13 +319,17 @@ void MBInterpOp::define(
             {
                 for (auto bi : boundBox)
                 {
+                    // check if this point is already done
+                    auto key = std::make_pair(bi, block);
+                    if (m_points.count(key)) {continue; }
+
                     Point corner = patchBox.edge(dir,1).low();
                     std::set<Point> fset;
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         if (dir[ii] == 0) { continue; }
                         Point s = Point::Basis(ii,-1)*(bi-corner);
-                        for (auto fi : a_footprint)
+                        for (auto fi : a_layout.footprint())
                         {
                             fset.insert(fi + s);
                         }
@@ -317,13 +337,15 @@ void MBInterpOp::define(
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                        MBPointInterpOp(
+                                dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    m_points.insert(key);
                 }
                 continue;
             }
             auto bounds = a_map.map().bounds(iter, dir);
             std::set<Point> fset;
-            for (auto fi : a_footprint)
+            for (auto fi : a_layout.footprint())
             {
                 fset.insert(fi);
             }
@@ -332,6 +354,8 @@ void MBInterpOp::define(
                 //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
+                    auto key = std::make_pair(bi, block);
+                    if (m_points.count(key)) {continue; }
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         Point d2 = Point::Basis(ii);
@@ -340,14 +364,14 @@ void MBInterpOp::define(
                         bool onHiEdge = boundBox.edge( d2).contains(bi);
                         if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
                         {
-                            for (auto fi : a_footprint)
+                            for (auto fi : a_layout.footprint())
                             {
                                 fset.insert(fi + d2);
                             }
                         }
                         if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
                         {
-                            for (auto fi : a_footprint)
+                            for (auto fi : a_layout.footprint())
                             {
                                 fset.insert(fi - d2);
                             }
@@ -356,7 +380,9 @@ void MBInterpOp::define(
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
-                            MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                        MBPointInterpOp(
+                                dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    m_points.insert(key);
                 }
             }
         }
