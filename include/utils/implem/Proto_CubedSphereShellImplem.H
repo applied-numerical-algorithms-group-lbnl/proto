@@ -92,7 +92,7 @@ CubedSphereShell::InterpOp(
             interpLayout.addPoint(pi);
         }
     }
-    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, false);
+    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
     MBInterpOp op(a_ghost, a_order);
     for (int bi = 0; bi < 6; bi++)
     {

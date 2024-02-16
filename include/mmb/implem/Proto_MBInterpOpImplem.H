@@ -342,7 +342,7 @@ void MBInterpOp::define(
                 for (auto bi : boundBox)
                 {
                     // check if this point is already done
-                    auto key = std::make_pair(bi, block);
+                    auto key = std::make_tuple(bi, iter, block);
                     if (m_points.count(key)) {continue; }
 
                     Point corner = patchBox.edge(dir,1).low();
@@ -373,7 +373,7 @@ void MBInterpOp::define(
                             for (auto bj : boundColumn)
                             {
                                 if (bi == bj) {continue; }
-                                auto key_j = std::make_pair(bj, block);
+                                auto key_j = std::make_tuple(bj, iter, block);
                                 if (m_points.count(key_j)) {continue; }
                                 Point shift = bj - bi;
                                 MBDataPoint dst_j = dstDataPoint.shift(shift);
@@ -402,7 +402,7 @@ void MBInterpOp::define(
                 //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
-                    auto key = std::make_pair(bi, block);
+                    auto key = std::make_tuple(bi, iter, block);
                     if (m_points.count(key)) {continue; }
                     for (int ii = 0; ii < DIM; ii++)
                     {
@@ -442,7 +442,7 @@ void MBInterpOp::define(
                             for (auto bj : boundColumn)
                             {
                                 if (bi == bj) {continue; }
-                                auto key_j = std::make_pair(bj, block);
+                                auto key_j = std::make_tuple(bj, iter, block);
                                 if (m_points.count(key_j)) {continue; }
                                 Point shift = bj - bi;
                                 MBDataPoint dst_j = dstDataPoint.shift(shift);
