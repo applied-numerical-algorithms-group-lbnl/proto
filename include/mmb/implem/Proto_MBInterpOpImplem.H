@@ -14,6 +14,18 @@ void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, DIM, MEM>& a_x, Poin
 }
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
 
+MBPointInterpOp::MBPointInterpOp(
+        MBDataPoint              a_dst,
+        std::vector<MBDataPoint> a_srcs,
+        std::vector<double>      a_coefs)
+{
+    PROTO_ASSERT(a_srcs.size() == a_coefs.size(),
+            "MBPointInterpOp::constructor | Error: source and coefs should be the same size.");
+    m_dst = a_dst;
+    m_srcs = a_srcs;
+    m_coefs = a_coefs;
+}
+
 template<template<MemType> typename MAP, MemType MEM>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
@@ -49,16 +61,17 @@ MBPointInterpOp::MBPointInterpOp(
     {
         if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
     }
-    m_exponents.clear();
+    std::vector<Point> exponents;
+    //m_exponents.clear();
     for (auto bi : Box(expBoxSize))
     {
         if (bi.sum() < a_order)
         {
-            m_exponents.push_back(bi);
+            exponents.push_back(bi);
         }
     }
 
-    int N = m_exponents.size();
+    int N = exponents.size();
     int M = m_srcs.size();
     
     if (N > M)
@@ -123,7 +136,7 @@ MBPointInterpOp::MBPointInterpOp(
         for (int jj = 0; jj < N; jj++)
         {
             PR_TIMERS("stencil apply");
-            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, exponents[jj]);
             {
                 PR_TIMERS("C2C apply");
                 BoxData<double> temp = HOCorners(Xi_p);
@@ -136,34 +149,37 @@ MBPointInterpOp::MBPointInterpOp(
         }
     }  
     // Compute Matrices
-    m_C.define(M,N);
+    Matrix<double> C(M,N);
+    //m_C.define(M,N);
     for (int ii = 0; ii < M; ii++)
     {
         auto& src = m_srcs[ii];
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
         {
-            m_C(ii,jj) = srcData[srcBlock][jj](src.point);
+            C(ii,jj) = srcData[srcBlock][jj](src.point);
         }
     }
-    m_D.define(1,N);
+    Matrix<double> D(1,N);
+    //m_D.define(1,N);
     for (int jj = 0; jj < N; jj++)
     {
-        m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
+        D(0,jj) = srcData[dstBlock][jj](a_dst.point);
     }
     
     // Compute "Stencil"
-    m_Cinv = m_C.inverse();
-    m_S = m_D*m_Cinv;
+    auto Cinv = C.inverse();
+    //m_Cinv = m_C.inverse();
+    auto S = D*Cinv;
+    //m_S = m_D*m_Cinv;
     m_coefs.clear();
     m_coefs.resize(M);
     //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
     for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = m_S(0,ii);
+        m_coefs[ii] = S(0,ii);
         //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
- //   std::abort();
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -189,6 +205,7 @@ Matrix<double> MBPointInterpOp::coefs(
         MBLevelBoxData<T, C, MEM>& a_src,
         int a_srcComponent)
 {
+    /*
     PROTO_ASSERT(a_srcComponent < C, "Component index %i is out of bounds.", a_srcComponent);
     int M = m_Cinv.M();
     int N = m_Cinv.N();
@@ -198,7 +215,11 @@ Matrix<double> MBPointInterpOp::coefs(
     {
         Y0(ii,0) = a_src[m_srcs[ii]](a_srcComponent);
     }
-    return m_Cinv*Y0;
+    */
+    //return m_Cinv*Y0;
+    PROTO_ASSERT(false,
+            "MBPointInterp::coefs | Error: Deprecated (no longer implemented)");
+    return Matrix<double>(1,1);
 }
 
 unsigned int MBPointInterpOp::size() const
@@ -300,6 +321,7 @@ void MBInterpOp::define(
         int                         a_order,
         int                         a_block)
 {
+    m_layout = a_layout;
     m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
@@ -336,10 +358,36 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    m_ops.push_back(
-                        MBPointInterpOp(
-                                dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    MBPointInterpOp op( dstDataPoint, m_ghost, a_map, extFootprint, a_order);
+                    m_ops.push_back(op);
                     m_points.insert(key);
+                    
+                    //do copy
+                    for (int dir = 0; dir < DIM; dir++)
+                    {
+                        if (a_layout.doCopy(dir))
+                        {
+                            int colHeight = boundBox.sizes()[dir];
+                            Box boundColumn = Box(bi,bi).grow(Point::Basis(dir,colHeight));
+                            boundColumn &= boundBox;
+                            for (auto bj : boundColumn)
+                            {
+                                if (bi == bj) {continue; }
+                                auto key_j = std::make_pair(bj, block);
+                                if (m_points.count(key_j)) {continue; }
+                                Point shift = bj - bi;
+                                MBDataPoint dst_j = dstDataPoint.shift(shift);
+                                std::vector<MBDataPoint> srcs_j;
+                                for (auto si : op.sources())
+                                {
+                                    srcs_j.push_back(si.shift(shift));
+                                }
+                                MBPointInterpOp op_j(dst_j, srcs_j, op.coefs());
+                                m_ops.push_back(op_j);
+                                m_points.insert(key_j);    
+                            }
+                        }
+                    }
                 }
                 continue;
             }
@@ -379,10 +427,36 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    m_ops.push_back(
-                        MBPointInterpOp(
-                                dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    MBPointInterpOp op(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
+                    m_ops.push_back(op);
                     m_points.insert(key);
+                    
+                    //do copy
+                    for (int dir = 0; dir < DIM; dir++)
+                    {
+                        if (a_layout.doCopy(dir))
+                        {
+                            int colHeight = boundBox.sizes()[dir];
+                            Box boundColumn = Box(bi,bi).grow(Point::Basis(dir,colHeight));
+                            boundColumn &= boundBox;
+                            for (auto bj : boundColumn)
+                            {
+                                if (bi == bj) {continue; }
+                                auto key_j = std::make_pair(bj, block);
+                                if (m_points.count(key_j)) {continue; }
+                                Point shift = bj - bi;
+                                MBDataPoint dst_j = dstDataPoint.shift(shift);
+                                std::vector<MBDataPoint> srcs_j;
+                                for (auto si : op.sources())
+                                {
+                                    srcs_j.push_back(si.shift(shift));
+                                }
+                                MBPointInterpOp op_j(dst_j, srcs_j, op.coefs());
+                                m_ops.push_back(op_j);
+                                m_points.insert(key_j);    
+                            }
+                        }
+                    }
                 }
             }
         }

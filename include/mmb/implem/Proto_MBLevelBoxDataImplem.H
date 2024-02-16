@@ -1246,6 +1246,18 @@ unsigned int MBDataPoint::dstBlock() const
     return layout->block(index); 
 }
 
+MBDataPoint MBDataPoint::shift(const Point& a_shift) const
+{
+    MBDataPoint ret;
+    ret.index = index;
+    ret.boundaryDir = boundaryDir;
+    ret.point = point + a_shift;
+    ret.block = block;
+    ret.m_inBoundary = m_inBoundary;
+    ret.layout = layout;
+    return ret;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
 {

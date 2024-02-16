@@ -61,7 +61,25 @@ TEST(MBInterpOp, ShearTest)
 
         //hostSrc.exchange(); // fill boundary data
         hostDst.exchange(); // fill boundary data
-        MBInterpOp interp(map, order);
+        MBInterpOp interp;
+        MBInterpLayout interpLayout;
+        for (auto pi : Box::Kernel(2))
+        {
+#if DIM > 2
+            if (pi[2] != 0) {continue; }
+#endif
+            if (pi.abs().sum() <= 2)
+            {
+                interpLayout.addPoint(pi);
+            }
+        }
+#if DIM > 2
+        interpLayout.setCopy(2, true);
+#endif
+        {
+            PR_TIME("ShearTest::defineInterp");
+            interp.define(map, interpLayout, order);
+        }
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {
@@ -151,7 +169,25 @@ TEST(MBInterpOp, XPointTest)
 
         //hostSrc.exchange(); // fill boundary data
         hostDst.exchange(); // fill boundary data
-        MBInterpOp interp(map, order);
+        MBInterpOp interp;
+        MBInterpLayout interpLayout;
+        for (auto bi : Box::Kernel(2))
+        {
+#if DIM > 2
+            if (bi[2] != 0) {continue; }
+#endif
+            if (bi.abs().sum() <= 2)
+            {
+                interpLayout.addPoint(bi);
+            }
+        }
+#if DIM > 2
+        interpLayout.setCopy(2,true);
+#endif
+        {
+            PR_TIME("XPointTest::DefineInterp");
+            interp.define(map, interpLayout, order);
+        }
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {
@@ -200,7 +236,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 1;
-    int ghostSize = 5;
+    int ghostSize = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;

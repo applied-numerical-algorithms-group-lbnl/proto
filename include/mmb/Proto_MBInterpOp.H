@@ -37,6 +37,11 @@ namespace Proto
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
         
+        inline MBPointInterpOp(
+            MBDataPoint                 a_dst,
+            std::vector<MBDataPoint>    a_srcs,
+            std::vector<double>         a_coefs);
+        
         /// Apply
         /** computes the interpolation */
         template<typename T, unsigned int C, MemType MEM>
@@ -68,42 +73,20 @@ namespace Proto
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
         inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
 
-        /// Exponents
-        /** Returns the list of multidimensional exponents used in the interpolating
-         *  polynomial. The order of these exponents corresponds with the columns of the
-         *  C and D matrices (outputs of CMatrix and DMatrix) */
-        inline std::vector<Point> exponents() const {return m_exponents; }
-
-        /// C Matrix
-        /** Returns the matrix of source moments used to generate the interpolation operator.
-         *  The number of rows corresponds to the number of source points and the number of
-         *  columns correspond to the polynomial terms (see exponents)*/
-        inline Matrix<double>& CMatrix() {return m_C; }
-        
-        /// D Matrix
-        /** Returns the matrix of destination moments used to generate the operator.
-         *  The output has a single row associated with the destination point and the
-         *  columns correspond to the polynomial terms (see exponents)*/
-        inline Matrix<double>& DMatrix() {return m_D; }
-
-        /// S Matrix
-        /** Matrix of coefficients used to weight the source data and compute the interpolation.
-         *  S has a single row with entries equal to size(). Each entry is the coeffcient that
-         *  scales the data point from the associated source */
-        inline Matrix<double>& SMatrix() {return m_S; }
-
+        inline MBPointInterpOp shift(const Point& a_shift) const;
+        inline std::vector<double> coefs() const { return m_coefs; }
         inline void print() const; 
         
         //FIXME: Test code, should be removed
         inline bool validate() const;
         private:
        
-        std::vector<Point> m_exponents;
+        //std::vector<Point> m_exponents;
         MBDataPoint m_dst;
-        Matrix<double> m_C;
-        Matrix<double> m_D;
-        Matrix<double> m_S;
-        Matrix<double> m_Cinv;
+        //Matrix<double> m_C;
+        //Matrix<double> m_D;
+        //Matrix<double> m_S;
+        //Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
     };
@@ -193,7 +176,8 @@ namespace Proto
         //FIXME: Test code, should be removed
         inline bool validate() const;
         private:
-       
+      
+        MBInterpLayout m_layout;
         Point m_ghost;
         int m_order;
         std::vector<MBPointInterpOp> m_ops;
