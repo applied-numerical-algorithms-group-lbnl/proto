@@ -23,9 +23,11 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
-    m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
-    
+    {
+      PR_TIMERS("interpFootprint");
+      m_dst = a_dst;
+      m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
+    }
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
@@ -88,6 +90,7 @@ MBPointInterpOp::MBPointInterpOp(
     
     for (int ii = 0; ii < M; ii++)
     {
+      PR_TIMERS("RGCalculation");
         //auto xj = a_map.analyticCellCentered(m_srcs[ii]);
         auto xj = a_map.apply(m_srcs[ii]);
         auto dist = xj - xg;
@@ -104,6 +107,7 @@ MBPointInterpOp::MBPointInterpOp(
     srcBoxes[a_dst.dstBlock()] = B0;
     for (auto si : m_srcs)
     {
+      PR_TIMERS("Cache Moment Data");
         int bi = si.srcBlock();
         if (srcBoxes.find(bi) == srcBoxes.end())
         {
@@ -114,31 +118,33 @@ MBPointInterpOp::MBPointInterpOp(
     }
     
     for (auto& [block, box] : srcBoxes)
-    {
+      {
+        PR_TIMERS("srcBox loop");
         BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
         BoxData<double, 1, MEM> Ji(Xi.box());
         a_map.doApply(Xi, Ji, block, dstBlock); 
         Xi -= xg;
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
-        {
+          {
             PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
             {
-                PR_TIMERS("C2C apply");
-                BoxData<double> temp = HOCorners(Xi_p);
-                {
-                    PR_TIMERS("av2 apply");
-                    BoxData<double> Xi_p_avg = av2(temp);
-                    srcData[block].push_back(std::move(Xi_p_avg));
-                }
+              PR_TIMERS("C2C apply");
+              BoxData<double> temp = HOCorners(Xi_p);
+              {
+                PR_TIMERS("av2 apply");
+                BoxData<double> Xi_p_avg = av2(temp);
+                srcData[block].push_back(std::move(Xi_p_avg));
+              }
             }
-        }
-    }  
+          }
+      }  
     // Compute Matrices
     m_C.define(M,N);
     for (int ii = 0; ii < M; ii++)
     {
+      PR_TIMERS("Compute Matrices");
         auto& src = m_srcs[ii];
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
@@ -147,21 +153,27 @@ MBPointInterpOp::MBPointInterpOp(
         }
     }
     m_D.define(1,N);
-    for (int jj = 0; jj < N; jj++)
     {
-        m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
+      PR_TIMERS("Compute m_D");
+      for (int jj = 0; jj < N; jj++)
+        {
+          m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
+        }
     }
     
     // Compute "Stencil"
-    m_Cinv = m_C.inverse();
-    m_S = m_D*m_Cinv;
-    m_coefs.clear();
-    m_coefs.resize(M);
-    //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
-    for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = m_S(0,ii);
-        //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
+      PR_TIMERS("Compute Stencil");
+      m_Cinv = m_C.inverse();
+      m_S = m_D*m_Cinv;
+      m_coefs.clear();
+      m_coefs.resize(M);
+      //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
+      for (int ii = 0; ii < M; ii++)
+        {
+          m_coefs[ii] = m_S(0,ii);
+          //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
+        }
     }
  //   std::abort();
 }

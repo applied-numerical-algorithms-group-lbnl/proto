@@ -196,9 +196,9 @@ int main(int argc, char* argv[])
   h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
   
   //U.exchange(); // fill boundary data
-  //MBInterpOp op;// = CubedSphereShell::InterpOp(USph,2);
-  //CubedSphereShell::InterpBoundariesEuler(USph,op,JU,4);
-  //h5.writeMBLevel({ }, map, USph, "MBEulerCubedSphereJU");
+  MBInterpOp op;// = CubedSphereShell::InterpOp(USph,2);
+  CubedSphereShell::InterpBoundariesEuler(USph,op,JU,4);
+  h5.writeMBLevel({ }, map, USph, "MBEulerCubedSphereUSphPre");
   cout << "Setup done" << endl;
   //CubedSphereShell::InterpBoundaries(U);
   // Testing Cubed-sphere single-patch operations.
@@ -232,11 +232,12 @@ int main(int argc, char* argv[])
       BoxData<double,NUMCOMPS,HOST> Utemp;
       forallInPlace_p(f_radialInit,Wfoo,radius,dxradius,gamma,thickness);
       //cout << "initial box" << Wfoo.box() << endl;
-      eulerOp[dit].primToSph(USph_i,Wfoo,dVolr,block_i);
+      //eulerOp[dit].primToSph(USph_i,Wfoo,dVolr,block_i);
       //cout << "JU input box" << Utemp.box() << endl;
       //TODO: PREV OPERATOR CALL
       //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
       //TODO: NEW OPERATOR CALL
+      h5.writePatch(dx,USph_i,"USph:Block=" + to_string(block_i));
       eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
       double maxpforce = rhs_i.absMax(1,0,0);
       BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);

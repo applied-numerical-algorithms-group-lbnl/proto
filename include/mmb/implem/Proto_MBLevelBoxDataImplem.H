@@ -623,6 +623,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const std::vector<Point> &a_footprint,
     const MBIndex &a_index) const
 {
+  PR_TIME("MBLevelBoxData::interpFootprint");
     //const auto &srcPatch = (*this)[a_index];
     Box patchDomain = this->layout()[a_index].grow(a_ghost);
 
@@ -681,6 +682,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     std::set<MBDataPoint> footprint;
     for (auto shift : extendedFootprint)
     {
+      PR_TIMERS("extendedFootprint loop");
         Point p = a_center + shift;
         //std::cout << "Attempting to add stencil point " << p << std::endl;
         if (blockDomain.contains(p) && patchDomain.contains(p))
@@ -694,6 +696,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
             //std::cout << "\tPoint is NOT in the block domain. checking bounds" << std::endl;
             for (auto dir : Box::Kernel(1))
             {
+              PR_TIMERS("checking bounds loop");
                 if (dir == Point::Zeros()) { continue; }
                 auto boundData = bounds(a_index, dir);
                 for (auto bi : boundData)

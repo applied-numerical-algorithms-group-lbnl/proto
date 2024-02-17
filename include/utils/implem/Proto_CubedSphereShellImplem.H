@@ -131,6 +131,7 @@ InterpBoundariesEuler(
                       const MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                       unsigned int a_order)
 {
+  PR_TIMERS("InterpBoundariesEuler");
   auto layout = a_USph.layout();
   for (auto dit : layout)
     {
