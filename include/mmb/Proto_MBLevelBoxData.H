@@ -42,21 +42,14 @@ namespace Proto
             inline MBDataPoint(MBIndex a_index, Point a_point,
                     const MBDisjointBoxLayout& a_layout, 
                     Point a_boundaryDir, int a_block);
-            /*
-            inline MBDataPoint(const MBDataPoint& a_rhs)
-            {
-                block = a_rhs.block;
-                m_inBoundary = a_rhs.m_inBoundary;
-                layout = a_rhs.layout;
-                std::cout << "called copy constructor" << std::endl;
-            }
-            */
             inline bool operator==(const MBDataPoint& a_rhs) const;
 
             inline bool operator<(const MBDataPoint& a_rhs) const;
             inline bool inBoundary() const {return m_inBoundary; }
             inline unsigned int srcBlock() const;
             inline unsigned int dstBlock() const;
+            
+            inline MBDataPoint shift(const Point& a_shift) const;
 
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
