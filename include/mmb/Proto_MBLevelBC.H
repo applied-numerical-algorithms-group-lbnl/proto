@@ -18,11 +18,11 @@ namespace Proto {
         inline virtual void init() {}
         inline virtual void apply(MBLevelBoxData<T,C,MEM,CTR>& a_data) const {}
 
-        inline const MBLevelMap<MAP, MEM> map() { return m_map; }
+        inline const MBLevelMap<MAP, MEM> map() { return *m_map; }
 
         private:
 
-        const MBLevelMap<MAP, MEM>& m_map;
+        const MBLevelMap<MAP, MEM>* m_map;
     };
 
     #include "implem/Proto_MBLevelBCImplem.H"
