@@ -413,6 +413,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
                            },a_WPoint,dVolPoint,ke,m_gamma);
  
   a_USph |= convolveStencil(UPoint);
+  cout << "UPoint, USph boxes = "  << UPoint.box() << " , " << a_USph.box()  << endl;
 }
 template<
     typename T,
@@ -680,11 +681,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         CubedSphereShell::detA_A<T,MEM>(bxface,a_h,a_block,dir);
       BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
       BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
-      forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
-      // BoxData<T,DIM,MEM> tmp =
-      //   Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
-      // tmp.copyTo(fluxdirMom);
-
+      BoxData<T,DIM,MEM> tmp =
+        Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
+      tmp.copyTo(fluxdirMom);
       // Scale rho, rho E fluxes by det(A),
         
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,a_h,dir);   

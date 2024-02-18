@@ -166,30 +166,7 @@ MBPointInterpOp::MBPointInterpOp(
             C(ii,jj) = srcData[srcBlock][jj](src.point);
         }
     }
-<<<<<<< HEAD
-    m_D.define(1,N);
-    {
-      PR_TIMERS("Compute m_D");
-      for (int jj = 0; jj < N; jj++)
-        {
-          m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
-        }
-    }
-    
-    // Compute "Stencil"
-    {
-      PR_TIMERS("Compute Stencil");
-      m_Cinv = m_C.inverse();
-      m_S = m_D*m_Cinv;
-      m_coefs.clear();
-      m_coefs.resize(M);
-      //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
-      for (int ii = 0; ii < M; ii++)
-        {
-          m_coefs[ii] = m_S(0,ii);
-          //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
-        }
-=======
+
     Matrix<double> D(1,N);
     //m_D.define(1,N);
     for (int jj = 0; jj < N; jj++)
@@ -209,7 +186,6 @@ MBPointInterpOp::MBPointInterpOp(
     {
         m_coefs[ii] = S(0,ii);
         //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
->>>>>>> a9f11b1eda4cf9372c7594c8f205bd7c0633b0c9
     }
 }
 

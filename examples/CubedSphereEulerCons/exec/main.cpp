@@ -154,10 +154,6 @@ int main(int argc, char* argv[])
   double dx = 1.0/domainSize;
   double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
-  MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, OP::ghost()+Point::Ones());
-  MBLevelBoxData<double, NUMCOMPS, HOST> WNew(layout, OP::ghost()+Point::Ones());
-  WPoint.setVal(0.);
-  WNew.setVal(0.);
   for (auto dit : layout)
     {      
       BoxData<double> radius(layout[dit].grow(6));
@@ -178,85 +174,81 @@ int main(int argc, char* argv[])
       // map.apply(x_i, J_i, NT,block);
      auto block = layout.block(dit);
      auto& JU_i = JU[dit];
-     auto& WPoint_i = WPoint[dit];
-     auto& WNew_i = WNew[dit];
      BoxData<double,NUMCOMPS,HOST> WNewTemp;
      BoxData<double,NUMCOMPS,HOST> WBarTemp;
      BoxData<double,NUMCOMPS,HOST> JUTemp;
      BoxData<double,NUMCOMPS> WBar_i(JU_i.box());
-     //BoxData<double,NUMCOMPS,HOST> WPoint(JU_i.box().grow(1));
+     BoxData<double,NUMCOMPS,HOST> WPoint_i(JU_i.box().grow(1));
      forallInPlace_p(f_radialInit,WPoint_i,radius,dxradius,gamma,thickness);
      eulerOp[dit].primToCons(JUTemp,WPoint_i,dVolr,gamma,dx,block);
-     eulerOp[dit].consToPrim(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);
-     WNewTemp -= WPoint_i;    
-     WNewTemp.copyTo(WNew_i);
+     eulerOp[dit].consToPrim(WNewTemp,WBarTemp,JUTemp,dVolr,gamma,dx,block);     
      JUTemp.copyTo(JU_i);    
     }
-  h5.writeMBLevel({ }, map, WPoint, "MBEulerCubedSpherePrimOld");
-  h5.writeMBLevel({ }, map, WNew, "MBEulerCubedSpherePrimError");
-  
-  //U.exchange(); // fill boundary data
-  MBInterpOp op;// = CubedSphereShell::InterpOp(USph,2);
-  CubedSphereShell::InterpBoundariesEuler(USph,op,JU,4);
-  h5.writeMBLevel({ }, map, USph, "MBEulerCubedSphereUSphPre");
   cout << "Setup done" << endl;
-  //CubedSphereShell::InterpBoundaries(U);
-  // Testing Cubed-sphere single-patch operations.
-  MBLevelBoxData<double, NUMCOMPS, HOST> flux0(layout, Point::Ones());
-  MBLevelBoxData<double, NUMCOMPS, HOST> flux1(layout, Point::Ones());
-  MBLevelBoxData<double, NUMCOMPS, HOST> flux2(layout, Point::Ones());
-  int ghostTest = 6;
-  for (auto dit :USph.layout())
+  for (int ipass = 0; ipass < 2; ipass++)
     {
-      PR_TIMERS("RHS Calculation");
-      auto& rhs_i = rhs[dit];
-      auto& USph_i = USph[dit];
-      auto& WPoint_i = WPoint[dit];
-      BoxData<double> radius(layout[dit].grow(ghostTest));
-      int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-      double r0 = CUBED_SPHERE_SHELL_R0;
-      double r1 = CUBED_SPHERE_SHELL_R1;
-      double dr = (r1-r0)/thickness;
-      double gamma = 5.0/3.0;
-      BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
-      BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
-      BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
-      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
-      int block_i = layout.block(dit);
-      Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
-      fluxes[0].define(rhs_i.box().extrude(0));
-      fluxes[1].define(rhs_i.box().extrude(1));
-      fluxes[2].define(rhs_i.box().extrude(2));
-      double dx = 1.0/domainSize;
-      BoxData<double,NUMCOMPS,HOST> Wfoo(layout[dit].grow(ghostTest));     
-      BoxData<double,NUMCOMPS,HOST> Utemp;
-      forallInPlace_p(f_radialInit,Wfoo,radius,dxradius,gamma,thickness);
-      //cout << "initial box" << Wfoo.box() << endl;
-      //eulerOp[dit].primToSph(USph_i,Wfoo,dVolr,block_i);
-      //cout << "JU input box" << Utemp.box() << endl;
-      //TODO: PREV OPERATOR CALL
-      //eulerOp[dit](rhs_i,fluxes,Utemp,Dr,adjDr,dVolr,dx,block_i,1.0);
-      //TODO: NEW OPERATOR CALL
-      h5.writePatch(dx,USph_i,"USph:Block=" + to_string(block_i));
-      eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
-      double maxpforce = rhs_i.absMax(1,0,0);
-      BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
-      double maxpforceC = rhs_coarse.absMax(1,0,0);
-      cout << std::fixed;
-      cout <<"block "<< block_i << ": " << "absmax of rhs = "
-           << maxpforce << " , " << "absmax of coarsened rhs = "
-           << maxpforceC << endl;
-      h5.writePatch(dx,rhs_i,"rhsPatch"+to_string(block_i));
-      State WBar_i;
-      State W_i;
-      fluxes[0].copyTo(flux0[dit]);
-      fluxes[1].copyTo(flux1[dit]);
-      fluxes[2].copyTo(flux2[dit]);
-      W_i.copyTo(WPoint_i);
+      if (ipass == 1)
+        {
+          MBInterpOp op;// = CubedSphereShell::InterpOp(USph,2);
+          CubedSphereShell::InterpBoundariesEuler(USph,op,JU,4);
+        }
+      int ghostTest = 6;
+      for (auto dit :USph.layout())
+        {
+          PR_TIMERS("RHS Calculation");
+          auto& rhs_i = rhs[dit];
+          auto& USph_i = USph[dit];
+          BoxData<double> radius(layout[dit].grow(ghostTest));
+          int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+          double r0 = CUBED_SPHERE_SHELL_R0;
+          double r1 = CUBED_SPHERE_SHELL_R1;
+          double dr = (r1-r0)/thickness;
+          double gamma = 5.0/3.0;
+          BoxData<double,DIM,HOST> Dr(layout[dit].grow(ghostTest));
+          BoxData<double,DIM,HOST> adjDr(layout[dit].grow(ghostTest));
+          BoxData<double,1,HOST> dVolr(layout[dit].grow(ghostTest));
+          eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolr,Dr.box(),thickness);
+          int block_i = layout.block(dit);
+          Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
+          fluxes[0].define(rhs_i.box().extrude(0));
+          fluxes[1].define(rhs_i.box().extrude(1));
+          fluxes[2].define(rhs_i.box().extrude(2));
+          double dx = 1.0/domainSize;
+          BoxData<double,NUMCOMPS,HOST> Wfoo(layout[dit].grow(ghostTest));     
+          BoxData<double,NUMCOMPS,HOST> Utemp(USph_i.box());
+          forallInPlace_p(f_radialInit,Wfoo,radius,dxradius,gamma,thickness);
+          //cout << "initial box" << Wfoo.box() << endl;
+          eulerOp[dit].primToSph(Utemp,Wfoo,dVolr,block_i);
+              
+          h5.writePatch(dx,Utemp,"USphAnalyticPass"+to_string(ipass)+"Block"+to_string(block_i));
+          h5.writePatch(dx,USph_i,"USphGhostPass"+to_string(ipass)+"Block"+to_string(block_i));
+          if (ipass == 0)
+            {
+              eulerOp[dit](rhs_i,fluxes,Utemp,block_i,1.0);
+            }
+          else
+            {
+              eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
+            }
+          Utemp -= USph_i;     
+              
+          double maxpforce = rhs_i.absMax(1,0,0);
+          BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
+          double maxpforceC = rhs_coarse.absMax(1,0,0);
+          cout << std::fixed;
+          cout <<"pass = "<< ipass << " , block = "<< block_i << ": " << "absmax of rhs = "
+               << maxpforce << " , " << "absmax of coarsened rhs = "
+               << maxpforceC << endl;
+          h5.writePatch(dx,rhs_i,"rhsPatchPass"+to_string(ipass)+"Block"+to_string(block_i));
+          h5.writePatch(dx,Utemp,"USphErrPass"+to_string(ipass)+"Block"+to_string(block_i));
+          State WBar_i;
+          State W_i;
+          //fluxes[0].copyTo(flux0[dit]);
+          //fluxes[1].copyTo(flux1[dit]);
+          //fluxes[2].copyTo(flux2[dit]);
+        }
+      h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass"+to_string(ipass));
     }
-  h5.writeMBLevel({ }, map, flux0, "MBEulerCubedSphereFlux0");
-  h5.writeMBLevel({ }, map, flux1, "MBEulerCubedSphereFlux1");
-  h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHS");
   PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();

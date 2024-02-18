@@ -132,6 +132,7 @@ InterpBoundariesEuler(
 {
   PR_TIMERS("InterpBoundariesEuler");
   auto layout = a_USph.layout();
+  HDF5Handler h5;
   for (auto dit : layout)
     {
       auto& USph_i = a_USph[dit];
@@ -170,6 +171,9 @@ InterpBoundariesEuler(
       BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph_i,1);
       cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,bx,blockBox);
       cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
+      int block_i = a_USph.layout().block(dit);
+      T dx = 1.0;
+      h5.writePatch(dx,USph_i,"USph:Block=" + to_string(block_i));
     }
   a_USph.exchange();
   cout <<  "Building interpolation operator" << endl;
@@ -724,16 +728,16 @@ CubedSphereShell::deriv3case(
   Stencil<T> hiStencil = (1.5)*Shift(Point::Zeros()) +
     (-2.0)*Shift(Point::Basis(a_dir,-1)) + .5*Shift(Point::Basis(a_dir,-2));
   Box loGhostBox = a_outputBox.adjacent(a_dir,Side::Lo,1);
-  Box hiGhostBox = a_outputBox.adjacent(a_dir,Side::Hi,1);
+  Box hiGhostBox = a_outputBox.adjacent(a_dir,Side::Hi,1);  
   Box loBox = a_outputBox.face(a_dir,Side::Lo,1);
   Box hiBox = a_outputBox.face(a_dir,Side::Hi,1);
   output |= Stencil<T>::Derivative(1,a_dir,2)(a_input);
-  if (!a_validBox.contains(loBox))
-    {
+  if (!a_validBox.contains(loGhostBox))
+    {     
       output |= loStencil(a_input,loBox);
     }
-  if (!a_validBox.contains(hiBox))
-    {
+  if (!a_validBox.contains(hiGhostBox))
+    {      
       output |= hiStencil(a_input,hiBox);
     }
   return output;
