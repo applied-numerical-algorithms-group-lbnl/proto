@@ -217,7 +217,7 @@ TEST(MBBoundaryRegister, Exchange) {
                 pr_out() << "p1: " << p1 << " | b1: " << b1 << " | p2: " << p2 << " | b2: " << b2 << std::endl;
                 Box dstBox = bi.adjData->box();
                 auto R = bi.adjToLocal;
-                Box srcBox = layout.domain()->convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convert(dstBox, b1, b2);
                 BoxData<int, DIM> adjSln(srcBox);
                 BoxData<int, DIM> locSln(dstBox);
 

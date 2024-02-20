@@ -47,7 +47,10 @@ namespace Proto
         inline unsigned int numBlocks() const { return size(); }
         
         // Get Graph Reference
-        inline std::shared_ptr<MBGraph> graph() const { return m_graph; }
+        inline MBGraph& graph() const { return *m_graph; }
+        
+        // Get Graph Reference
+        inline std::shared_ptr<MBGraph> graphPtr() const { return m_graph; }
         
         // Get Local Problem Domain
         inline const ProblemDomain& getBlock(unsigned int a_blockID) const;

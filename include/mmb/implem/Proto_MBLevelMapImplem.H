@@ -47,7 +47,7 @@ void MBLevelMap<MAP,MEM>::define(
     m_ops.resize(a_layout->numBlocks());
     for (int bi = 0; bi < a_layout->numBlocks(); bi++)
     {
-        Box domainBox = a_layout->domain()->getBlock(bi).box();
+        Box domainBox = a_layout->domain().getBlock(bi).box();
         for (int dir = 0; dir < DIM; dir++)
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);
@@ -100,13 +100,13 @@ void MBLevelMap<MAP,MEM>::doApply(
     if (a_computeBlock != a_outBlock)
     {
         PR_TIME("MBLevelMap::doApply");
-        const auto& domain = *layout().domain();
+        const auto& domain = layout().domain();
         Box B = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
         BoxData<double, DIM, MEM> X_tmp(B);
         BoxData<double, 1, MEM> J_tmp(B);
         apply(X_tmp, J_tmp, a_computeBlock);
-        Point conn = domain.graph()->connectivity(a_computeBlock, a_outBlock);
-        auto R = domain.graph()->rotation(a_computeBlock, conn, a_outBlock);
+        Point conn = domain.graph().connectivity(a_computeBlock, a_outBlock);
+        auto R = domain.graph().rotation(a_computeBlock, conn, a_outBlock);
         X_tmp.copyTo(a_X, R);
         J_tmp.copyTo(a_J, R);
     } else {

@@ -24,31 +24,32 @@ namespace Proto
 
         inline MBDisjointBoxLayout(
                 std::shared_ptr<MBProblemDomain> a_domain,
-                const std::vector<Point>& a_boxSizes);
+                std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
                 std::shared_ptr<MBProblemDomain> a_domain,
-                const std::vector<MBPatchID_t>&  a_patches,
-                const std::vector<Point>&        a_boxSizes);
+                std::vector<MBPatchID_t>         a_patches,
+                std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
                 std::shared_ptr<MBBoxPartition>  a_partition,
-                const std::vector<Point>&        a_boxSizes);
+                std::vector<Point>               a_boxSizes);
         
         inline void define(
                 std::shared_ptr<MBProblemDomain> a_domain,
-                const std::vector<Point>&        a_boxSizes);
+                std::vector<Point>               a_boxSizes);
         
         inline void define(
                 std::shared_ptr<MBProblemDomain> a_domain,
-                const std::vector<MBPatchID_t>&  a_patches,
-                const std::vector<Point>&        a_boxSizes);
+                std::vector<MBPatchID_t>         a_patches,
+                std::vector<Point>               a_boxSizes);
 
         inline void define(
-                std::shared_ptr<MBBoxPartition> a_partition,
-                const std::vector<Point>& a_boxSizes);
+                std::shared_ptr<MBBoxPartition>  a_partition,
+                std::vector<Point>               a_boxSizes);
 
-        inline const std::shared_ptr<MBProblemDomain> domain() const; 
+        inline const std::shared_ptr<MBProblemDomain> domainPtr() const; 
+        inline const MBProblemDomain& domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
         inline unsigned int numBoxes() const;
@@ -62,11 +63,14 @@ namespace Proto
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
         inline unsigned int block(const MBIndex& a_index) const; 
-        inline std::shared_ptr<DisjointBoxLayout> getBlock(unsigned int a_block);
-        inline std::shared_ptr<const DisjointBoxLayout> getBlock(unsigned int a_block) const;
+        inline DisjointBoxLayout& getBlock(unsigned int a_block);
+        inline const DisjointBoxLayout& getBlock(unsigned int a_block) const;
+        inline std::shared_ptr<DisjointBoxLayout> getBlockPtr(unsigned int a_block);
+        inline std::shared_ptr<const DisjointBoxLayout> getBlockPtr(unsigned int a_block) const;
         inline std::shared_ptr<DisjointBoxLayout> levelLayout() const;
         inline MBIndex find(Point a_point, unsigned int a_block) const;
-        inline std::shared_ptr<const MBBoxPartition> partition() const { return m_partition; }
+        inline const MBBoxPartition& partition() const { return *m_partition; }
+        inline std::shared_ptr<const MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
         inline Point connectivity(

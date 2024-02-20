@@ -252,6 +252,7 @@ namespace Proto
        
         /// Get Layout
         inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
+        inline std::shared_ptr<const MBDisjointBoxLayout> layoutPtr() const {return m_layout; }    
      
         /// Get Patch Box
         /** multiblock analog of LevelBoxData::patchBox. Returns the Box which defines the domain

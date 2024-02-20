@@ -72,7 +72,7 @@ MBPointInterpOp::MBPointInterpOp(
             pr_out() << "\t\t" << si << std::endl;
         }
     }
-    std::cout << "N: " << N << " | M: " << M << std::endl;
+    //std::cout << "N: " << N << " | M: " << M << std::endl;
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
@@ -302,6 +302,7 @@ void MBInterpOp::define(
     std::vector<Point> footprint = a_layout.footprint();
     m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
+    const auto layoutPtr = a_map.map().layoutPtr();
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
@@ -331,7 +332,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
@@ -370,7 +371,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
                 }
