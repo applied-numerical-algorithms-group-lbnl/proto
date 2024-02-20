@@ -356,7 +356,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
 {
     auto  layout = a_op.m_data->layout();
     auto  ghost = a_op.m_data->ghost();
-    auto& graph = layout.domain().graph();
+    auto& graph = *layout.domain()->graph();
     Box dirs = Box::Kernel(1);
     int localRank = procID();
 
@@ -375,7 +375,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
                 
                 Box localBox_to = bound.localData->box();
-                Box adjBox_to = layout.domain().convert(
+                Box adjBox_to = layout.domain()->convert(
                         bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(
