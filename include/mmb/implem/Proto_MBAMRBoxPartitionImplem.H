@@ -15,7 +15,7 @@ void MBAMRBoxPartition::define(
     {
         if (ii > 0)
         {
-            domain = domain.refine(a_refRatios[ii-1]); 
+            domain = *domain.refine(a_refRatios[ii-1]); 
         }
         m_levelPartitions.push_back(std::make_shared<MBBoxPartition>(domain));
     }

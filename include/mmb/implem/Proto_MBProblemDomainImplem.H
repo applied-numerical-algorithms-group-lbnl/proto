@@ -163,59 +163,64 @@ Box MBProblemDomain::convert(
     return Box(L,H); //suppresses a compiler warning
 }
 
-MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
+std::shared_ptr<MBProblemDomain>
+MBProblemDomain::coarsen(Point a_refRatio) const
 {
     PROTO_ASSERT(coarsenable(a_refRatio),
             "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable.");
-    MBProblemDomain coarsened(size());
+    
+    auto coarsened = std::make_shared<MBProblemDomain>(size());
     for (int ii = 0; ii < size(); ii++)
     {
-        coarsened.m_domains[ii] = m_domains[ii].coarsen(a_refRatio);
-        coarsened.m_domainsDefined[ii] = true;
+        coarsened->m_domains[ii] = m_domains[ii].coarsen(a_refRatio);
+        coarsened->m_domainsDefined[ii] = true;
     }
-    coarsened.m_graph = m_graph;
+    coarsened->m_graph = m_graph;
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
+std::shared_ptr<MBProblemDomain>
+MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
-    MBProblemDomain coarsened(size());
+    auto coarsened = std::make_shared<MBProblemDomain>(size());
     for (int ii = 0; ii < size(); ii++)
     {
         PROTO_ASSERT(coarsenable(ii, a_refRatios[ii]),
-                "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable by inputs.");
-        coarsened.m_domains[ii] = m_domains[ii].coarsen(a_refRatios[ii]);
-        coarsened.m_domainsDefined[ii] = true;
+               "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable by inputs.");
+        coarsened->m_domains[ii] = m_domains[ii].coarsen(a_refRatios[ii]);
+        coarsened->m_domainsDefined[ii] = true;
     }
-    coarsened.m_graph = m_graph;
+    coarsened->m_graph = m_graph;
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
+std::shared_ptr<MBProblemDomain>
+MBProblemDomain::refine(Point a_refRatio) const
 {
-    MBProblemDomain refined(size());
+    auto refined = std::make_shared<MBProblemDomain>(size());
     for (int ii = 0; ii < size(); ii++)
     {
-        refined.m_domains[ii] = m_domains[ii].refine(a_refRatio);
-        refined.m_domainsDefined[ii] = true;
+        refined->m_domains[ii] = m_domains[ii].refine(a_refRatio);
+        refined->m_domainsDefined[ii] = true;
     }
-    refined.m_graph = m_graph;
+    refined->m_graph = m_graph;
     return refined;
 }
 
-MBProblemDomain MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
+std::shared_ptr<MBProblemDomain>
+MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::refine | Error: Wrong number of refinement ratios");
-    MBProblemDomain refined(size());
+    auto refined = std::make_shared<MBProblemDomain>(size());
     for (int ii = 0; ii < size(); ii++)
     {
-        refined.m_domains[ii] = m_domains[ii].refine(a_refRatios[ii]);
-        refined.m_domainsDefined[ii] = true;
+        refined->m_domains[ii] = m_domains[ii].refine(a_refRatios[ii]);
+        refined->m_domainsDefined[ii] = true;
     }
-    refined.m_graph = m_graph;
+    refined->m_graph = m_graph;
     return refined;
 }
 

@@ -4,10 +4,6 @@
 #include "Proto.H"
 #include "MBMap_XPointRigid.H"
 
-#define XPOINT_SIZE 5
-#define XPOINT_RADIUS 2.0
-#define SHEAR_SLOPE 1.0
-#define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
 
 PROTO_KERNEL_START
@@ -165,34 +161,34 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize)
+std::shared_ptr<MBProblemDomain> buildXPoint(int a_domainSize)
 {
     int numBlocks = XPOINT_NUM_BLOCKS;
-    MBProblemDomain domain(numBlocks);
+    auto domain = std::make_shared<MBProblemDomain>(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
+        domain->defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
     }
     for (int bi = 0; bi < numBlocks; bi++)
     {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
+        domain->defineDomain(bi, Point::Ones(a_domainSize));
     }
     return domain;
 }
 
-MBProblemDomain buildShear(int a_domainSize)
+std::shared_ptr<MBProblemDomain> buildShear(int a_domainSize)
 {
-    MBProblemDomain domain(4);
+    auto domain = std::make_shared<MBProblemDomain>(4);
     auto I = CoordPermutation::identity();
-    domain.defineBoundary(0,1,0,Side::Hi,I);
-    domain.defineBoundary(1,2,1,Side::Hi,I);
-    domain.defineBoundary(2,3,0,Side::Lo,I);
-    domain.defineBoundary(3,0,1,Side::Lo,I);
+    domain->defineBoundary(0,1,0,Side::Hi,I);
+    domain->defineBoundary(1,2,1,Side::Hi,I);
+    domain->defineBoundary(2,3,0,Side::Lo,I);
+    domain->defineBoundary(3,0,1,Side::Lo,I);
 
     for (int ii = 0; ii < 4; ii++)
     {
-        domain.defineDomain(ii, Point::Ones(a_domainSize));
+        domain->defineDomain(ii, Point::Ones(a_domainSize));
     }
     return domain;
 }

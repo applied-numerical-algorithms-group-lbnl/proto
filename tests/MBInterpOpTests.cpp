@@ -61,7 +61,13 @@ TEST(MBInterpOp, ShearTest)
 
         //hostSrc.exchange(); // fill boundary data
         hostDst.exchange(); // fill boundary data
-        MBInterpOp interp(map, order);
+        MBInterpOp interp;//(map, order);
+        MBInterpLayout interpLayout;
+        for (auto pi : Box::Kernel(2))
+        {
+            if (pi.abs().sum() <= 2) { interpLayout.addPoint(pi); }
+        }
+        interp.define(map, interpLayout, order);
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {

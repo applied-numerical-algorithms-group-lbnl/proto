@@ -19,13 +19,13 @@ MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
         const MBLevelMap<MAP, MEM>& a_map,
-        const std::vector<Point>& a_footprint,
+        std::vector<Point> a_footprint,
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
-    
+     
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = a_dst.dstBlock();
@@ -72,7 +72,7 @@ MBPointInterpOp::MBPointInterpOp(
             pr_out() << "\t\t" << si << std::endl;
         }
     }
-    //std::cout << "N: " << N << " | M: " << M << std::endl;
+    std::cout << "N: " << N << " | M: " << M << std::endl;
 
     // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
@@ -280,10 +280,26 @@ void MBInterpOp::define(
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
-        const std::vector<Point>&   a_footprint,
+        std::vector<Point>          a_footprint,
         int                         a_order,
         int                         a_block)
 {
+    MBInterpLayout interpLayout;
+    for (auto fi : a_footprint)
+    {
+        interpLayout.addPoint(fi);
+    }
+    define(a_map, interpLayout, a_order, a_block);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+        const MBLevelMap<MAP,MEM>&  a_map,
+        MBInterpLayout              a_layout,
+        int                         a_order,
+        int                         a_block)
+{
+    std::vector<Point> footprint = a_layout.footprint();
     m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
@@ -309,7 +325,7 @@ void MBInterpOp::define(
                     {
                         if (dir[ii] == 0) { continue; }
                         Point s = Point::Basis(ii,-1)*(bi-corner);
-                        for (auto fi : a_footprint)
+                        for (auto fi : footprint)
                         {
                             fset.insert(fi + s);
                         }
@@ -323,7 +339,7 @@ void MBInterpOp::define(
             }
             auto bounds = a_map.map().bounds(iter, dir);
             std::set<Point> fset;
-            for (auto fi : a_footprint)
+            for (auto fi : footprint)
             {
                 fset.insert(fi);
             }
@@ -340,14 +356,14 @@ void MBInterpOp::define(
                         bool onHiEdge = boundBox.edge( d2).contains(bi);
                         if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
                         {
-                            for (auto fi : a_footprint)
+                            for (auto fi : footprint)
                             {
                                 fset.insert(fi + d2);
                             }
                         }
                         if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
                         {
-                            for (auto fi : a_footprint)
+                            for (auto fi : footprint)
                             {
                                 fset.insert(fi - d2);
                             }

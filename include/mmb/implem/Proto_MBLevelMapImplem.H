@@ -47,7 +47,7 @@ void MBLevelMap<MAP,MEM>::define(
     m_ops.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
-        Box domainBox = a_layout.domain().getBlock(bi).box();
+        Box domainBox = a_layout.domain()->getBlock(bi).box();
         for (int dir = 0; dir < DIM; dir++)
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);

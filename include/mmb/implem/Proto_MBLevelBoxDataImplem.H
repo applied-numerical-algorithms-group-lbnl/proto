@@ -53,7 +53,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.getBlock(block);
+        auto& localLayout = *a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -81,7 +81,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                 Box k = K.grow(shrinkDirs).shift(di);
                 PROTO_ASSERT(k.contains(di),
                              "MBLevelBoxData::define | Error: Data corruption");
-                auto bounds = a_layout.domain().boundaries(block, di);
+                auto bounds = a_layout.domain()->boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
                 
                 for (auto bound : bounds)
@@ -90,10 +90,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                  "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.getBlock(adjBlock);
+                    auto& adjLocalLayout = *a_layout.getBlock(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
-                    auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
+                    auto R = a_layout.domain()->graph()->rotation(block, di, adjBlock);
                     for (auto ki : k)
                     {
                         boundsKey_t key(patch, block, ki);
@@ -109,11 +109,11 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // to get this right, we rotate the in-plane coordinates and
                             // use the reverse arc for the out of plane coordinates
                             
-                            Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
+                            Point kiAdj = a_layout.domain()->graph()->reverseDir(block, adjBlock, ki);
 
                             // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
+                            Box adjPatchBoundary = a_layout.domain()->convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == *a_layout.end()) { continue; } //patch was not found
@@ -1161,7 +1161,7 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
 {
     PROTO_ASSERT(a_layout.defined(),
             "MBDataPoint::constructor | Error: Undefined layout");
-    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+    PROTO_ASSERT(a_index.compatible(*a_layout.partition()),
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
     index = a_index;
     point = a_point;
@@ -1175,7 +1175,7 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
 {
     PROTO_ASSERT(a_layout.defined(),
             "MBDataPoint::constructor | Error: Undefined layout");
-    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+    PROTO_ASSERT(a_index.compatible(*a_layout.partition()),
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
     PROTO_ASSERT(a_layout.isBlockBoundary(a_index, a_boundaryDir, a_block),
             "MBDataPoint::constructor | Error: Invalid boundary inputs");

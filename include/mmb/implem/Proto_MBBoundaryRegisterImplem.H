@@ -24,7 +24,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.getBlock(block);
+        auto& localLayout = (*a_layout.getBlock(block));
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -57,17 +57,17 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
                 
                 // loop over all blocks that bound this one in direction di
-                auto bounds = a_layout.domain().boundaries(block, di);
+                auto bounds = a_layout.domain()->boundaries(block, di);
                 for (auto bound : bounds)
                 {
                     PROTO_ASSERT(bound.srcToDst == di,
                                  "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.getBlock(adjBlock);
+                    auto& adjLocalLayout = (*a_layout.getBlock(adjBlock));
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
-                    auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
+                    auto R = a_layout.domain()->graph()->rotation(block, di, adjBlock);
                     for (auto ki : k)
                     {
                         boundsKey_t key(patch, block, ki);
@@ -87,7 +87,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             // to get this right, we rotate the in-plane coordinates and
                             // use the reverse arc for the out of plane coordinates
                             
-                            Point kiAdj = a_layout.domain().graph().reverseDir(
+                            Point kiAdj = a_layout.domain()->graph()->reverseDir(
                                     block, adjBlock, ki);
                             //std::cout << "localBlock: " << block << " | adjBlock: " << adjBlock << " | dir: " << ki << std::endl;
                             // TODO: make this work with anisotropic ghost regions

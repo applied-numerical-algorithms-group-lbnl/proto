@@ -1,26 +1,26 @@
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        MBProblemDomain& a_domain,
-        Point a_boxSize)
+        std::shared_ptr<MBProblemDomain>    a_domain,
+        Point                               a_boxSize)
 {
-    m_partition = std::make_shared<MBBoxPartition>();
-    std::vector<Point> boxSizes(a_domain.numBlocks(), a_boxSize);
+    //m_partition = std::make_shared<MBBoxPartition>();
+    std::vector<Point> boxSizes(a_domain->numBlocks(), a_boxSize);
     define(a_domain, boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        MBProblemDomain& a_domain,
-        const std::vector<Point>& a_boxSizes)
+        std::shared_ptr<MBProblemDomain>    a_domain,
+        const std::vector<Point>&           a_boxSizes)
 {
-    m_partition = std::make_shared<MBBoxPartition>();
+    //m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        MBProblemDomain& a_domain,
-        const std::vector<MBPatchID_t>& a_patches,
-        const std::vector<Point>& a_boxSizes)
+        std::shared_ptr<MBProblemDomain>    a_domain,
+        const std::vector<MBPatchID_t>&     a_patches,
+        const std::vector<Point>&           a_boxSizes)
 {
-    m_partition = std::make_shared<MBBoxPartition>();
+    //m_partition = std::make_shared<MBBoxPartition>();
     define(a_domain, a_patches, a_boxSizes);
 }
 
@@ -32,16 +32,16 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
 }
 
 void MBDisjointBoxLayout::define(
-        MBProblemDomain& a_domain, 
+        std::shared_ptr<MBProblemDomain> a_domain, 
         const std::vector<Point>& a_boxSizes)
 {
-    PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
+    PROTO_ASSERT(a_boxSizes.size() == a_domain->size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
     
     std::vector<MBPatchID_t> patches;
-    for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < a_domain->numBlocks(); bi++)
     {
-        Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
+        Box patchBox = a_domain->getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
         {
             patches.push_back(MBPatchID_t(pi, bi));
@@ -51,42 +51,42 @@ void MBDisjointBoxLayout::define(
 }
 
 void MBDisjointBoxLayout::define(
-        MBProblemDomain& a_domain,
-        const std::vector<MBPatchID_t>& a_patches,
-        const std::vector<Point>& a_boxSizes)
+        std::shared_ptr<MBProblemDomain> a_domain,
+        const std::vector<MBPatchID_t>&  a_patches,
+        const std::vector<Point>&        a_boxSizes)
 {
-    a_domain.close();
-    PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
+    a_domain->close();
+    PROTO_ASSERT(a_boxSizes.size() == a_domain->size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 
     m_domain = a_domain;
-    m_partition->define(a_domain.coarsen(a_boxSizes), a_patches);
+    m_partition = std::make_shared<MBBoxPartition>(a_domain->coarsen(a_boxSizes), a_patches);
     m_layouts.clear();
-    m_layouts.resize(a_domain.numBlocks());
+    m_layouts.resize(a_domain->numBlocks());
     
-    for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < a_domain->numBlocks(); bi++)
     {
-        m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
+        m_layouts[bi] = std::make_shared<DisjointBoxLayout>(m_partition->blockPartition(bi), a_boxSizes[bi]);
     }
     m_defined = true;
 }
 
 void MBDisjointBoxLayout::define(
         std::shared_ptr<MBBoxPartition> a_partition,
-        const std::vector<Point>& a_boxSizes)
+        const std::vector<Point>&       a_boxSizes)
 {
     m_partition = a_partition;
-    m_domain = a_partition->domain().refine(a_boxSizes);
+    m_domain = a_partition->domain()->refine(a_boxSizes);
     m_layouts.clear();
-    m_layouts.resize(m_domain.size());
-    for (int bi = 0; bi < m_domain.size(); bi++)
+    m_layouts.resize(m_domain->size());
+    for (int bi = 0; bi < m_domain->size(); bi++)
     {
-        m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
+        m_layouts[bi] = std::make_shared<DisjointBoxLayout>(m_partition->blockPartition(bi), a_boxSizes[bi]);
     }
     m_defined = true;
 }
 
-const MBProblemDomain& MBDisjointBoxLayout::domain() const
+const std::shared_ptr<MBProblemDomain> MBDisjointBoxLayout::domain() const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::domain | Error: Layout is not defined");
     return m_domain;
@@ -139,7 +139,7 @@ MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::blockIndex | Error: Layout is not defined");
     Point p = point(a_index);
     unsigned int b = block(a_index);
-    return m_layouts[b].find(p); 
+    return m_layouts[b]->find(p); 
 }
 
 Box MBDisjointBoxLayout::operator[](const MBIndex& a_index) const
@@ -177,7 +177,7 @@ Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
     auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
-    auto boxSize = m_layouts[block].boxSize();
+    auto boxSize = m_layouts[block]->boxSize();
     return Box(patch, patch).refine(boxSize);
 }
 
@@ -189,7 +189,7 @@ unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
     return block;
 }
 
-DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block)
+std::shared_ptr<DisjointBoxLayout> MBDisjointBoxLayout::getBlock(unsigned int a_block)
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
     PROTO_ASSERT(a_block < numBlocks(),
@@ -198,7 +198,8 @@ DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block)
     return m_layouts[a_block];
 }
 
-const DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block) const
+std::shared_ptr<const DisjointBoxLayout>
+MBDisjointBoxLayout::getBlock(unsigned int a_block) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
     PROTO_ASSERT(a_block < numBlocks(),
@@ -207,7 +208,7 @@ const DisjointBoxLayout& MBDisjointBoxLayout::getBlock(unsigned int a_block) con
     return m_layouts[a_block];
 }
 
-DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
+std::shared_ptr<DisjointBoxLayout> MBDisjointBoxLayout::levelLayout() const
 {
     return m_layouts[0];
 }
@@ -215,7 +216,7 @@ DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::find | Error: Layout is not defined");
-    auto patchDomain = m_layouts[a_block].patchDomain();
+    auto patchDomain = m_layouts[a_block]->patchDomain();
     if (!patchDomain.contains(a_point))
     {
         return *end();
@@ -250,13 +251,13 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     unsigned int thisBlock = block(a_index);
     Point thisPatch = point(a_index);
     
-    Point conn = domain().graph().connectivity(thisBlock, a_block);
+    Point conn = domain()->graph()->connectivity(thisBlock, a_block);
     if (conn == Point::Zeros()) {return false;}
-    Point invConn = domain().graph().reverseDir(thisBlock, a_block, conn);
-    auto R = domain().graph().rotation(thisBlock, conn, a_block);
+    Point invConn = domain()->graph()->reverseDir(thisBlock, a_block, conn);
+    auto R = domain()->graph()->rotation(thisBlock, conn, a_block);
 
-    Box localBoundPatches = getBlock(thisBlock).patchDomain().box().adjacent(conn);
-    Box adjBoundPatches = getBlock(a_block).patchDomain().box().edge(invConn);
+    Box localBoundPatches = getBlock(thisBlock)->patchDomain().box().adjacent(conn);
+    Box adjBoundPatches = getBlock(a_block)->patchDomain().box().edge(invConn);
     Point neighbor = thisPatch + a_dir;
 
     Point adjPatch = R.rotateCell(
@@ -271,7 +272,8 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
+    PROTO_ASSERT(m_defined,
+            "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     for (int bi = 0; bi < numBlocks(); bi++)
     {
         if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
@@ -283,12 +285,13 @@ bool MBDisjointBoxLayout::isDomainBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
+    PROTO_ASSERT(m_defined,
+            "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
     if (a_dir == Point::Zeros()) { return false; }
     else if (isBlockBoundary(a_index, a_dir)) {return false; }
     auto block = this->block(a_index);
     auto patchID = this->point(a_index);
-    Box domainBox = domain().getBlock(block).box();
+    Box domainBox = domain()->getBlock(block).box();
     Box patchDomain = domainBox.coarsen(boxSizes()[block]);
     PROTO_ASSERT(patchDomain.contains(patchID),
             "MBDisjointBoxLayout::isDomainBoundary | Error: data corruption");
@@ -306,7 +309,7 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
     if (a_dir == Point::Zeros()) { return false; } // not a boundary
     auto block = this->block(a_index);
     auto patchID = this->point(a_index);
-    Box domainBox = domain().getBlock(block).box();
+    Box domainBox = domain()->getBlock(block).box();
     Box patchDomain = domainBox.coarsen(boxSizes()[block]);
     PROTO_ASSERT(patchDomain.contains(patchID),
             "MBDisjointBoxLayout::isInteriorBoundary | Error: data corruption");
@@ -324,9 +327,9 @@ std::vector<MBIndex> MBDisjointBoxLayout::bounds(
     auto b0 = block(a_index);
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        auto conn = domain().graph().connectivity(b0, bi);
+        auto conn = domain()->graph()->connectivity(b0, bi);
         if (bi != b0 && conn == Point::Zeros()) { continue; }
-        Box patchDomain = getBlock(bi).patchDomain().box();
+        Box patchDomain = getBlock(bi)->patchDomain().box();
         for (auto pi : patchDomain)
         {
             auto index = find(pi, bi);
@@ -360,14 +363,14 @@ Point MBDisjointBoxLayout::connectivity(
     
     // patches on different blocks
 
-    Point conn12 = domain().graph().connectivity(b1, b2);
+    Point conn12 = domain()->graph()->connectivity(b1, b2);
     if (conn12 == Point::Zeros()) { return Point::Zeros(); }
-    Point conn21 = domain().graph().connectivity(b2, b1);
+    Point conn21 = domain()->graph()->connectivity(b2, b1);
     PROTO_ASSERT(conn21 != Point::Zeros(),
             "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
-    Box adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
-    Box adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
-    auto R = domain().graph().rotation(b1,conn12,b2);
+    Box adjPatch1 = getBlock(b1)->patchDomain().box().adjacent(conn12);
+    Box adjPatch2 = getBlock(b2)->patchDomain().box().edge(conn21);
+    auto R = domain()->graph()->rotation(b1,conn12,b2);
 
     Box dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
     //std::cout << "checking " << p1 << " -> " << p2 << " | conn12: " << conn12 << " | conn21: " << conn21;
@@ -411,19 +414,21 @@ std::vector<Point> MBDisjointBoxLayout::boxSizes() const
     std::vector<Point> ret;
     for (int bi = 0; bi < numBlocks(); bi++)
     {
-        ret.push_back(m_layouts[bi].boxSize());
+        ret.push_back(m_layouts[bi]->boxSize());
     }
     return ret;
 }
 
-MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
+std::shared_ptr<MBDisjointBoxLayout>
+MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
     std::vector<Point> refRatios(numBlocks(), a_refRatio);
     return this->coarsen(refRatios);
 }
 
-MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
+std::shared_ptr<MBDisjointBoxLayout>
+MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
     PROTO_ASSERT(a_refRatios.size() == numBlocks(),
@@ -436,8 +441,9 @@ MBDisjointBoxLayout MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_ref
             "MBDisjointBoxLayout::coarsen | Error: Layout is not coarsenable by ref ratio.");
         crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
     }
-    auto crseDomain = m_domain.coarsen(a_refRatios);
-    return MBDisjointBoxLayout(crseDomain, patches(), crseBoxSize);
+    auto crseDomain = m_domain->coarsen(a_refRatios);
+    auto crseLayout = std::make_shared<MBDisjointBoxLayout>(crseDomain, patches(), crseBoxSize);
+    return crseLayout;
 }
 
 void MBDisjointBoxLayout::print() const

@@ -1,23 +1,24 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-
-#define XPOINT_SIZE 5
+#include "Lambdas.H"
 
 using namespace Proto;
+#if 0
 MBProblemDomain buildXPoint(int a_domainSize)
 {
     MBProblemDomain domain(XPOINT_SIZE);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < XPOINT_SIZE; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        domain->defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
+        domain->defineDomain(bi, Point::Ones(a_domainSize));
     }
     return domain;
 }
+#endif
 
 TEST(MBDisjointBoxLayout, Iteration) {
     int domainSize = 64;
@@ -28,7 +29,7 @@ TEST(MBDisjointBoxLayout, Iteration) {
     
     std::set<std::pair<unsigned int, Box>> correctPatchSet;
     Box patches = Box::Cube(domainSize).coarsen(boxSizeVect);
-    for (unsigned int bi = 0; bi < domain.size(); bi++)
+    for (unsigned int bi = 0; bi < domain->size(); bi++)
     {
         for (auto p : patches)
         {
@@ -39,7 +40,7 @@ TEST(MBDisjointBoxLayout, Iteration) {
         }
     }
     
-    int N = pow(domainSize / boxSize, DIM)*domain.size();
+    int N = pow(domainSize / boxSize, DIM)*domain->size();
     int n0 = N / numProc();
     int r =  N % numProc();
     if (procID() < r) { n0++; }
@@ -139,7 +140,7 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = XPOINT_SIZE;
+    int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -150,12 +151,12 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     auto crseDomain = buildXPoint(domainSize/refRatio);
     MBDisjointBoxLayout crseLayoutSoln(crseDomain, Point::Ones(boxSize/refRatio));
 
-    EXPECT_EQ(crseLayout.numBoxes(), layout.numBoxes());
-    EXPECT_TRUE(crseLayout.compatible(layout));
-    EXPECT_TRUE(crseLayout.compatible(crseLayoutSoln));
-    for (auto iter : crseLayout)
+    EXPECT_EQ(crseLayout->numBoxes(), layout.numBoxes());
+    EXPECT_TRUE(crseLayout->compatible(layout));
+    EXPECT_TRUE(crseLayout->compatible(crseLayoutSoln));
+    for (auto iter : (*crseLayout))
     {
-        EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
+        EXPECT_EQ((*crseLayout)[iter], crseLayoutSoln[iter]);
     }
 }
 

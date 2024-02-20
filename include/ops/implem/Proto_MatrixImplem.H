@@ -832,7 +832,7 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
     Matrix<T> A(M(), N());
     this->copyTo(A);
 
-    // query and allocate optimal workspace 
+    // query and allocate optimal workspace
     int LWORK = -1;
     double LWORK_OPT;
     PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),

@@ -13,18 +13,18 @@ namespace Proto
 
         inline MBBoxPartition(){}
         inline MBBoxPartition(
-                const MBProblemDomain& a_domain);
+                std::shared_ptr<const MBProblemDomain> a_domain);
         inline MBBoxPartition(
-                const MBProblemDomain& a_domain,
+                std::shared_ptr<const MBProblemDomain> a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
         inline void define(
-                const MBProblemDomain& a_domain,
+                std::shared_ptr<const MBProblemDomain> a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
         inline void define(
                 const std::vector<MBPatchID_t>& a_patches);
         inline void loadBalance();
         inline bool compatible(const MBBoxPartition& a_rhs);
-        inline const MBProblemDomain& domain() const {return m_patchDomain; }
+        inline std::shared_ptr<const MBProblemDomain> domain() const {return m_patchDomain; }
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc);
@@ -50,7 +50,7 @@ namespace Proto
         inline void buildLocalMaps();
         inline void buildGlobalMaps();
 
-        MBProblemDomain m_patchDomain;
+        std::shared_ptr<const MBProblemDomain> m_patchDomain;
         mutable std::map<MBPatchID_t, uint64_t> m_indexMap; ///< Maps local to global
         mutable std::unordered_map<unsigned int, std::pair<uint64_t, uint64_t>> m_procMap; ///< Maps proc to global indices
         std::vector<std::shared_ptr<BoxPartition>> m_blockPartitions;

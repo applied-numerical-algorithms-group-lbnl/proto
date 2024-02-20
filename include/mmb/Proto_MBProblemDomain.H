@@ -47,7 +47,7 @@ namespace Proto
         inline unsigned int numBlocks() const { return size(); }
         
         // Get Graph Reference
-        inline MBGraph& graph() const { return *m_graph; }
+        inline std::shared_ptr<MBGraph> graph() const { return m_graph; }
         
         // Get Local Problem Domain
         inline const ProblemDomain& getBlock(unsigned int a_blockID) const;
@@ -76,10 +76,12 @@ namespace Proto
                 unsigned int a_dstBlock,
                 Centering a_ctr = PR_CELL) const;
 
-        inline MBProblemDomain coarsen(Point a_refRatio) const;
-        inline MBProblemDomain coarsen(const std::vector<Point>& a_refRatios) const;
-        inline MBProblemDomain refine(Point a_refRatio) const;
-        inline MBProblemDomain refine(const std::vector<Point>& a_refRatios) const;
+        inline std::shared_ptr<MBProblemDomain> coarsen(Point a_refRatio) const;
+        inline std::shared_ptr<MBProblemDomain>
+            coarsen(const std::vector<Point>& a_refRatios) const;
+        inline std::shared_ptr<MBProblemDomain> refine(Point a_refRatio) const;
+        inline std::shared_ptr<MBProblemDomain>
+            refine(const std::vector<Point>& a_refRatios) const;
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
