@@ -453,7 +453,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     }
     for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
     {
-        const auto& blockLayout = a_data.layout().getBlock(bi);
+        const auto& blockLayout = *a_data.layout().getBlock(bi);
         const auto& blockData = a_data.getBlock(bi);
         numData += blockLayout.size()*blockData.patchSize();
     }
@@ -1168,7 +1168,7 @@ void HDF5Handler::writeMBLevel(
     a_mapVarNames.push_back("z");
 #endif
     MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
-    for (auto iter : a_data.layout())
+    for (auto iter : *a_data.layout())
     {
         a_map.map()[iter].copyTo(tmpMap[iter]);
     }
