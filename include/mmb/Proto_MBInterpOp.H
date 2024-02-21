@@ -143,13 +143,6 @@ namespace Proto
                 int                         a_order = 4,
                 int block = -1);
         
-        template<template<MemType> typename MAP, MemType MEM>
-        inline void define(
-                const MBLevelMap<MAP, MEM>& a_map,
-                const MBInterpLayout&       a_layout,
-                int                         a_order = 4,
-                int block = -1);
-        
         /// Apply
         /** Interpolates from source data to all block boundary ghost cells in the destination.
          *  It is assumed that MBLevelBoxData::fillBoundaries() has been called on the source

@@ -16,7 +16,7 @@ TEST(MBInterpOp, ShearTest)
     // grid parameters
     int domainSize = 32;
     int boxSize = 16;
-    int ghostSize = 5;
+    int ghostSize = 1;
     
     // interplating function parameters
     double order = 4.0;

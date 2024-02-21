@@ -135,7 +135,7 @@ MBPointInterpOp::MBPointInterpOp(
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
-            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, exponents[jj]);
             BoxData<double> Xi_p_avg = C2C(Xi_p);
             srcData[block].push_back(std::move(Xi_p_avg));
         }
@@ -309,7 +309,7 @@ void MBInterpOp::define(
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
-        const MBInterpLayout&       a_layout,
+        MBInterpLayout              a_layout,
         int                         a_order,
         int                         a_block)
 {
@@ -350,7 +350,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
                     MBPointInterpOp op( dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
                     m_points.insert(key);
@@ -419,7 +419,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layout);
+                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
                     MBPointInterpOp op(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
                     m_points.insert(key);
