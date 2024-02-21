@@ -2,7 +2,7 @@
 
 #include "Proto.H"
 
-#define XPOINT_NUM_BLOCKS 4
+#define XPOINT_NUM_BLOCKS 3
 
 using namespace Proto;
 

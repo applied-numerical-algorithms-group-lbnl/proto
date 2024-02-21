@@ -48,6 +48,8 @@ namespace Proto
             inline bool inBoundary() const {return m_inBoundary; }
             inline unsigned int srcBlock() const;
             inline unsigned int dstBlock() const;
+            
+            inline MBDataPoint shift(const Point& a_shift) const;
 
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;

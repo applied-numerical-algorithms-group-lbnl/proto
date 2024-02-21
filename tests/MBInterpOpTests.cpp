@@ -162,7 +162,25 @@ TEST(MBInterpOp, XPointTest)
 
         //hostSrc.exchange(); // fill boundary data
         hostDst.exchange(); // fill boundary data
-        MBInterpOp interp(map, order);
+        MBInterpOp interp;
+        MBInterpLayout interpLayout;
+        for (auto bi : Box::Kernel(2))
+        {
+#if DIM > 2
+            if (bi[2] != 0) {continue; }
+#endif
+            if (bi.abs().sum() <= 2)
+            {
+                interpLayout.addPoint(bi);
+            }
+        }
+#if DIM > 2
+        interpLayout.setCopy(2,true);
+#endif
+        {
+            PR_TIME("XPointTest::DefineInterp");
+            interp.define(map, interpLayout, order);
+        }
         interp.apply(hostDst, hostDst);
         for (auto iter : *layout)
         {
