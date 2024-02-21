@@ -10,9 +10,11 @@ using namespace Proto;
 #if 1
 TEST(MBInterpOp, ShearTest)
 {
+#if PR_VERBOSE > 0
     HDF5Handler h5;
+#endif
     // grid parameters
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
     int ghostSize = 5;
     
@@ -28,24 +30,18 @@ TEST(MBInterpOp, ShearTest)
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
+        err[nn] = 0;
         // initialize data
         auto domain = buildShear(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
-        std::cout << "Making the layout...";
         auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
-        std::cout << "...done" << std::endl;
         // initialize data and map
-        std::cout << "Allocating data...";
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-        std::cout << "...done" << std::endl;
-        std::cout << "Defining map...";
         MBLevelMap<MBMap_Shear, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
-        std::cout << "...done" << std::endl;
 
-        std::cout << "Initializing data...";
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : *layout)
         {
@@ -65,8 +61,6 @@ TEST(MBInterpOp, ShearTest)
         }
         hostErr.setVal(0);
         hostDst.exchange(); // fill boundary data
-        std::cout << "...done" << std::endl;
-        std::cout << "Defining interp op...";
         MBInterpOp interp;//(map, order);
         MBInterpLayout interpLayout;
         for (auto pi : Box::Kernel(2))
@@ -74,10 +68,10 @@ TEST(MBInterpOp, ShearTest)
             if (pi.abs().sum() <= 2) { interpLayout.addPoint(pi); }
         }
         interp.define(map, interpLayout, order);
-        std::cout << "...done" << std::endl;
-        std::cout << "Applying interp op...";
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_0",nn);
+#endif
         interp.apply(hostDst, hostDst);
-        std::cout << "...done" << std::endl;
         for (auto iter : *layout)
         {
             auto& src_i = hostSrc[iter];
@@ -100,7 +94,7 @@ TEST(MBInterpOp, ShearTest)
 #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << err[nn] << std::endl;
         h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_Shear_Src_N%i",nn);
-        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i",nn);
+        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_1",nn);
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_Shear_Err_N%i",nn);
 #endif
         domainSize *= 2;
@@ -119,7 +113,9 @@ TEST(MBInterpOp, ShearTest)
 #if 1
 TEST(MBInterpOp, XPointTest)
 {
+#if PR_VERBOSE > 0
     HDF5Handler h5;
+#endif
     int domainSize = 32;
     int boxSize = 16;
     int ghostSize = 5;
@@ -211,11 +207,13 @@ TEST(MBInterpOp, XPointTest)
 #if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
+#if PR_VERBOSE > 0
     HDF5Handler h5;
+#endif
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 1;
-    int ghostSize = 5;
+    int ghostSize = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;
@@ -230,7 +228,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
     {
-        pr_out() << "ITER = " << nn << std::endl;
         err[nn] = 0.0;
         errL1[nn] = 0.0;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
@@ -268,7 +265,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostDst.exchange();
         for (auto iter : *layout)
         {
-            pr_out() << "Computing erron on block: " << layout->block(iter) << std::endl;
             auto block = layout->block(iter);
             Box blockDomain = layout->domain().getBlock(block).box();
 
@@ -281,9 +277,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
             dst_i.copyTo(err_i);
             err_i -= src_i;
             err_i += tmp;
-            err_i.printData();
             err_i.setVal(0,blockDomain & err_i.box()); 
-            err_i.printData();
             for (auto dir : Box::Kernel(1).grow(-Point::Basis(radialDir)))
             {
                 if (dir == Point::Zeros()) {continue; }

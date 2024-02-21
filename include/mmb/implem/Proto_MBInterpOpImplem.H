@@ -122,17 +122,9 @@ MBPointInterpOp::MBPointInterpOp(
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
         {
-            PR_TIMERS("stencil apply");
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
-            {
-                PR_TIMERS("C2C apply");
-                BoxData<double> temp = HOCorners(Xi_p);
-                {
-                    PR_TIMERS("av2 apply");
-                    BoxData<double> Xi_p_avg = av2(temp);
-                    srcData[block].push_back(std::move(Xi_p_avg));
-                }
-            }
+            BoxData<double> Xi_p_avg = C2C(Xi_p);
+            srcData[block].push_back(std::move(Xi_p_avg));
         }
     }  
     // Compute Matrices
