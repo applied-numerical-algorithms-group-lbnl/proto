@@ -1,9 +1,9 @@
-std::shared_ptr<MBProblemDomain> CubedSphereShell::Domain(
+MBProblemDomain CubedSphereShell::Domain(
     int a_domainSize,
     int a_thickness,
     int a_radialDir)
 {
-    auto domain = std::make_shared<MBProblemDomain>(6);
+    MBProblemDomain domain(6);
     auto CCW = CoordPermutation::ccw(a_radialDir);
     auto CW = CoordPermutation::cw(a_radialDir);
     CoordPermutation RNorth, RSouth, RI;
@@ -18,14 +18,14 @@ std::shared_ptr<MBProblemDomain> CubedSphereShell::Domain(
         switch (a_radialDir)
         {
             case 0:
-                domain->defineBoundary(srcBlock, dstBlock, y, RI);
-                domain->defineBoundary(srcBlock, 1, z, RNorth);
-                domain->defineBoundary(srcBlock, 0, -z, RSouth);
+                domain.defineBoundary(srcBlock, dstBlock, y, RI);
+                domain.defineBoundary(srcBlock, 1, z, RNorth);
+                domain.defineBoundary(srcBlock, 0, -z, RSouth);
                 break;
             case 2:
-                domain->defineBoundary(srcBlock, dstBlock, x, RI);
-                domain->defineBoundary(srcBlock, 1, y, RNorth);
-                domain->defineBoundary(srcBlock, 0, -y, RSouth);
+                domain.defineBoundary(srcBlock, dstBlock, x, RI);
+                domain.defineBoundary(srcBlock, 1, y, RNorth);
+                domain.defineBoundary(srcBlock, 0, -y, RSouth);
                 break;
             default:
                 MayDay<void>::Abort("NOT IMPLEMENTED");
@@ -33,12 +33,12 @@ std::shared_ptr<MBProblemDomain> CubedSphereShell::Domain(
         RNorth = RNorth*CW;
         RSouth = RSouth*CCW;
     }
-    domain->graph().fixRotations();
+    domain.graph().fixRotations();
     Point domainSize = Point::Ones(a_domainSize);
     domainSize[a_radialDir] = a_thickness;
     for (int bi = 0; bi < 6; bi++)
     {
-        domain->defineDomain(bi, domainSize);
+        domain.defineDomain(bi, domainSize);
     }
     return domain;
 }
@@ -46,7 +46,7 @@ std::shared_ptr<MBProblemDomain> CubedSphereShell::Domain(
 template<MemType MEM>
 MBLevelMap<MBMap_CubedSphereShell, MEM>
 CubedSphereShell::Map(
-        std::shared_ptr<const MBDisjointBoxLayout>  a_layout,
+        const MBDisjointBoxLayout&  a_layout,
         Point   a_ghost)
 {
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
@@ -60,7 +60,7 @@ CubedSphereShell::Map(
         const MBLevelBoxData<T,C,MEM,CTR>& a_data)
 {
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
-    map.define(a_data.layoutPtr(), a_data.ghost());
+    map.define(a_data.layout(), a_data.ghost());
     return map;
 }
 
@@ -79,7 +79,7 @@ CubedSphereShell::Operator(
 template<MemType MEM>
 MBInterpOp
 CubedSphereShell::InterpOp(
-        std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+        const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)
 {
@@ -109,7 +109,7 @@ CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
         int a_order)
 {
-    return InterpOp<MEM>(a_data.layoutPtr(), a_data.ghost()[0], a_order);
+    return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
     
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

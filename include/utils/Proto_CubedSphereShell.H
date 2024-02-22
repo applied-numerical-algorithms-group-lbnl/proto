@@ -22,7 +22,7 @@ class CubedSphereShell
      *  \param a_thickness  - Size of each block in the radial direction
      *  \param a_radialDir  - Which coordinate corresponds to the radial direction (0 or 2)
      */
-    static std::shared_ptr<MBProblemDomain> Domain(
+    static MBProblemDomain Domain(
         int a_domainSize,
         int a_thickness,
         int a_radialDir = 0);
@@ -34,7 +34,7 @@ class CubedSphereShell
      */
     template<MemType MEM = MEMTYPE_DEFAULT>
     static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             Point a_ghost);
     
     /// Get Map (Convenient Overload)
@@ -60,7 +60,7 @@ class CubedSphereShell
      */
     template<MemType MEM>
     static MBInterpOp InterpOp(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             Point a_ghost,
             int a_order = 4);
     
