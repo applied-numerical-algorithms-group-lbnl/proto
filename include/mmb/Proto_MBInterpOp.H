@@ -182,7 +182,7 @@ namespace Proto
         Point m_ghost;
         int m_order;
         std::vector<MBPointInterpOp> m_ops;
-        std::set<std::tuple<Point, MBIndex, int>> m_points;
+        std::set<std::tuple<Point, int, int>> m_points;
     };
 
     // Interpolate Block Boundaries
