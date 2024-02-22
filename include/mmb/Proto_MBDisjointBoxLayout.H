@@ -62,6 +62,7 @@ namespace Proto
         inline MBIterator end() const;
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
+        inline Box blockDomainBox(unsigned int a_block) const { return getBlock(a_block).domain().box(); }
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& getBlock(unsigned int a_block);
         inline const DisjointBoxLayout& getBlock(unsigned int a_block) const;
