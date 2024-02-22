@@ -430,7 +430,7 @@ std::vector<Point> MBDisjointBoxLayout::boxSizes() const
     return ret;
 }
 
-std::shared_ptr<MBDisjointBoxLayout>
+MBDisjointBoxLayout
 MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
@@ -438,7 +438,7 @@ MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
     return this->coarsen(refRatios);
 }
 
-std::shared_ptr<MBDisjointBoxLayout>
+MBDisjointBoxLayout
 MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::coarsen | Error: Layout is not defined");
@@ -453,7 +453,7 @@ MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
         crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
     }
     auto crseDomain = m_domain.coarsen(a_refRatios);
-    auto crseLayout = std::make_shared<MBDisjointBoxLayout>(crseDomain, patches(), crseBoxSize);
+    MBDisjointBoxLayout crseLayout(crseDomain, patches(), crseBoxSize);
     return crseLayout;
 }
 

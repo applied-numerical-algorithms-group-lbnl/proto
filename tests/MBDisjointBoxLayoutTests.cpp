@@ -151,12 +151,12 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     auto crseDomain = buildXPoint(domainSize/refRatio);
     MBDisjointBoxLayout crseLayoutSoln(crseDomain, Point::Ones(boxSize/refRatio));
 
-    EXPECT_EQ(crseLayout->numBoxes(), layout.numBoxes());
-    EXPECT_TRUE(crseLayout->compatible(layout));
-    EXPECT_TRUE(crseLayout->compatible(crseLayoutSoln));
-    for (auto iter : (*crseLayout))
+    EXPECT_EQ(crseLayout.numBoxes(), layout.numBoxes());
+    EXPECT_TRUE(crseLayout.compatible(layout));
+    EXPECT_TRUE(crseLayout.compatible(crseLayoutSoln));
+    for (auto iter : crseLayout)
     {
-        EXPECT_EQ((*crseLayout)[iter], crseLayoutSoln[iter]);
+        EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
 

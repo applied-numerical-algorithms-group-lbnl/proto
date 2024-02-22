@@ -97,9 +97,8 @@ namespace Proto
         inline unsigned int size() const;
         inline unsigned int localSize() const;
         inline std::vector<Point> boxSizes() const;
-        inline std::shared_ptr<MBDisjointBoxLayout> coarsen(const Point& a_refRatio) const;
-        inline std::shared_ptr<MBDisjointBoxLayout> coarsen(
-                const std::vector<Point>& a_refRatios) const;
+        MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
+        MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
         inline void print() const;
         inline bool defined() const {return m_defined; }
         private:
