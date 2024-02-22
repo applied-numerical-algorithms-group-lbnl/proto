@@ -52,7 +52,7 @@ TEST(MBLevelBoxData, Construction) {
         unsigned int xBlock = (blockID+1) % numBlocks;
         unsigned int yBlock = (blockID-1+numBlocks) % numBlocks;
         auto blockLayout = layout.getBlock(blockID);
-        Box patchBox = layout[iter]; 
+        Box patchBox = (layout)[iter]; 
         for (auto dir : K)
         {
             Point neighbor = patchID + dir;
@@ -123,7 +123,7 @@ TEST(MBLevelBoxData, Initialization) {
 
     for (auto iter : layout)
     {
-        Box patchBox = layout[iter];
+        Box patchBox = (layout)[iter];
         auto& hostData_i = hostData[iter];
         int block = layout.block(iter);
         BoxData<double, NCOMP, HOST> tempData(patchBox);
@@ -167,9 +167,9 @@ TEST(MBLevelBoxData, SetBoundary) {
             Box b;
             if (dir == Point::Zeros())
             {
-                b = layout[iter];
+                b = (layout)[iter];
             } else {
-                b = layout[iter].adjacent(dir * ghostSize);
+                b = (layout)[iter].adjacent(dir * ghostSize);
             }
             for (auto pi : b)
             {
@@ -270,7 +270,7 @@ TEST(MBLevelBoxData, CopyTo) {
     {
         auto& src = hostSrc[iter];
         auto& dst = hostDst[iter];
-        BoxData<double, DIM, HOST> err(layout[iter]);
+        BoxData<double, DIM, HOST> err((layout)[iter]);
         dst.copyTo(err);
         err -= src;
         EXPECT_LT(err.absMax(), 1e-12);
@@ -461,7 +461,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         // correct output
         Point nx = Point::Basis(0);
         Point ny = Point::Basis(1);
-        Box patchBox_0 = layout[mbIndex];
+        Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
         Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
@@ -541,7 +541,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         // correct output
         Point nx = Point::Basis(0);
         Point ny = Point::Basis(1);
-        Box patchBox_0 = layout[mbIndex];
+        Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
         Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
@@ -649,7 +649,7 @@ TEST(MBLevelBoxData, MBDataPointOperator)
             for (auto bound : hostData.bounds(iter, dir))
             {
                 auto adjBlock = layout.block(bound.adjIndex);
-                for (auto bi : layout[iter].adjacent(dir*ghost[0]).grow(1))
+                for (auto bi : (layout)[iter].adjacent(dir*ghost[0]).grow(1))
                 {
                     MBDataPoint pi(iter, bi, layout, dir, adjBlock);
                     for (int ii = 0; ii < DIM; ii++)

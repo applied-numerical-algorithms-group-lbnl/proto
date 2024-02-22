@@ -1167,7 +1167,7 @@ void HDF5Handler::writeMBLevel(
 #if DIM > 2
     a_mapVarNames.push_back("z");
 #endif
-    MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
+    MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layoutPtr(), a_data.ghost());
     for (auto iter : a_data.layout())
     {
         a_map.map()[iter].copyTo(tmpMap[iter]);

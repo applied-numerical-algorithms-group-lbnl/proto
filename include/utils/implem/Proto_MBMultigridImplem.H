@@ -211,12 +211,12 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         int             a_maxIter,
         T               a_tolerance)
 {
-    HDF5Handler h5;
     m_solveIter = 0;
     int fineLevel = numLevels()-1;
     T res0 = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
     T res = res0;
 #if PR_VERBOSE > 0
+    HDF5Handler h5;
     pr_out()  << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
     std::cout << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
     h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
@@ -349,8 +349,8 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         int                     a_level)
 {
     m_relaxIter = 0;
-    HDF5Handler h5;
 #if PR_VERBOSE > 1
+    HDF5Handler h5;
     if (a_level == 0) {
     h5.writeMBLevel({"rhs"}, m_maps[a_level], a_force,
             "MBMultigrid_JF_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
@@ -400,7 +400,6 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         const LevelStateData&   a_force,
         int                     a_level)
 {
-    HDF5Handler h5;
     m_solveLevel = a_level;
     //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
     if (a_level > 0)
@@ -471,7 +470,6 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         const LevelStateData&   a_force,
         int                     a_level)
 {
-    HDF5Handler h5;
     LevelStateData LPhi(a_state.layout(), Point::Zeros());
     a_state.exchange();
     m_blockInterp[a_level]->apply(a_state, a_state);
@@ -487,8 +485,11 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         res_i += force_i;
         res_i.reduce(rxn);
     }
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
     h5.writeMBLevel({"-lphi"}, m_maps[a_level], LPhi, "RESNORM_LPHI");
     h5.writeMBLevel({"phi"}, m_maps[a_level], a_state, "RESNORM_PHI");
     h5.writeMBLevel({"force"}, m_maps[a_level], a_force, "RESNORM_RHS");
+#endif
     return rxn.fetch();
 }

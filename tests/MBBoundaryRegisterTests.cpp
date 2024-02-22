@@ -231,7 +231,6 @@ TEST(MBBoundaryRegister, Exchange) {
                 pr_out() << "Adjacent Solution (Computed): " << std::endl;
                 locSln.printData();
                 locSln -= (*bi.adjData);
-                std::cout << "Error: " << locSln.absMax() << std::endl;
                 locSln.printData();
                 EXPECT_LT(locSln.absMax(), 1e-12);
             }

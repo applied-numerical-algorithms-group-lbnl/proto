@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-
-#define XPOINT_SIZE 5
+#include "Lambdas.H"
 
 using namespace Proto;
+#if 0
 MBProblemDomain buildXPoint(int a_domainSize)
 {
     MBProblemDomain domain(XPOINT_SIZE);
@@ -18,6 +18,7 @@ MBProblemDomain buildXPoint(int a_domainSize)
     }
     return domain;
 }
+#endif
 
 TEST(MBDisjointBoxLayout, Iteration) {
     int domainSize = 64;
@@ -139,7 +140,7 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = XPOINT_SIZE;
+    int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);

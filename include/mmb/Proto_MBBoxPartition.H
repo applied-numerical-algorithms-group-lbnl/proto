@@ -24,7 +24,7 @@ namespace Proto
                 const std::vector<MBPatchID_t>& a_patches);
         inline void loadBalance();
         inline bool compatible(const MBBoxPartition& a_rhs);
-        inline const MBProblemDomain& domain() const {return m_patchDomain; }
+        const MBProblemDomain& domain() const {return m_patchDomain; }
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc);

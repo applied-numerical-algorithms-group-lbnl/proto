@@ -3,10 +3,6 @@
 #define _PROTO_MB_INTERP_LAYOUT_
 
 #include "Proto.H"
-#include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
-#include "Proto_MBLevelMap.H"
-#include "Proto_Matrix.H"
-#include "Proto_Operator.H"
 
 namespace Proto
 {

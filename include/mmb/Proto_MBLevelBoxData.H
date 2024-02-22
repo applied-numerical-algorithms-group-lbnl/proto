@@ -55,11 +55,11 @@ namespace Proto
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-            inline const MBDisjointBoxLayout& grid() {return *layout; }
+            inline const MBDisjointBoxLayout& grid() {return layout; }
         private:
             int  block;
             bool m_inBoundary;
-            const MBDisjointBoxLayout* layout;
+            MBDisjointBoxLayout layout;
     };
 
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
@@ -373,7 +373,7 @@ namespace Proto
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
-        MBDisjointBoxLayout     m_layout;
+        MBDisjointBoxLayout m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };

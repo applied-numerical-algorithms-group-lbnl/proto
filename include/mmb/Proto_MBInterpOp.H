@@ -8,6 +8,7 @@
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
 #include "Proto_MBInterpLayout.H"
+
 namespace Proto
 {
     /// Mapped Multiblock Block Boundary Interpolation Operator
@@ -33,8 +34,8 @@ namespace Proto
         inline MBPointInterpOp(
             MBDataPoint                 a_dst,
             Point                       a_ghost,
-            const MBLevelMap<MAP, MEM>&       a_map,
-            const std::vector<Point>&   a_footprint,
+            const MBLevelMap<MAP, MEM>& a_map,
+            std::vector<Point>          a_footprint,
             unsigned int                a_order);
         
         inline MBPointInterpOp(
@@ -131,14 +132,14 @@ namespace Proto
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
-                const std::vector<Point>&   a_footprint,
+                const std::vector<Point>    a_footprint,
                 int                         a_order = 4,
                 int block = -1);
         
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
-                const MBInterpLayout&       a_layout,
+                MBInterpLayout              a_layout,
                 int                         a_order = 4,
                 int block = -1);
         

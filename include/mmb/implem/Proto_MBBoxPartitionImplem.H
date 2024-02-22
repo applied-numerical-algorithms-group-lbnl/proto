@@ -41,7 +41,8 @@ void MBBoxPartition::define(
     
     for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
     {
-        m_blockPartitions[bi]->define(m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
+        m_blockPartitions[bi]->define(
+                m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
 }

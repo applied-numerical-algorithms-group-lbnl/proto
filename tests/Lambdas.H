@@ -4,10 +4,6 @@
 #include "Proto.H"
 #include "MBMap_XPointRigid.H"
 
-#define XPOINT_SIZE 5
-#define XPOINT_RADIUS 2.0
-#define SHEAR_SLOPE 1.0
-#define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
 
 PROTO_KERNEL_START

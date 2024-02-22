@@ -163,10 +163,12 @@ Box MBProblemDomain::convert(
     return Box(L,H); //suppresses a compiler warning
 }
 
-MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
+MBProblemDomain
+MBProblemDomain::coarsen(Point a_refRatio) const
 {
     PROTO_ASSERT(coarsenable(a_refRatio),
             "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable.");
+    
     MBProblemDomain coarsened(size());
     for (int ii = 0; ii < size(); ii++)
     {
@@ -177,7 +179,8 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
+MBProblemDomain
+MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
@@ -185,7 +188,7 @@ MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) 
     for (int ii = 0; ii < size(); ii++)
     {
         PROTO_ASSERT(coarsenable(ii, a_refRatios[ii]),
-                "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable by inputs.");
+               "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable by inputs.");
         coarsened.m_domains[ii] = m_domains[ii].coarsen(a_refRatios[ii]);
         coarsened.m_domainsDefined[ii] = true;
     }
@@ -193,7 +196,8 @@ MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) 
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
+MBProblemDomain
+MBProblemDomain::refine(Point a_refRatio) const
 {
     MBProblemDomain refined(size());
     for (int ii = 0; ii < size(); ii++)
@@ -205,7 +209,8 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
     return refined;
 }
 
-MBProblemDomain MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
+MBProblemDomain
+MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
 {
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::refine | Error: Wrong number of refinement ratios");

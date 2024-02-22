@@ -31,7 +31,7 @@ MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
         const MBLevelMap<MAP, MEM>& a_map,
-        const std::vector<Point>& a_footprint,
+        std::vector<Point> a_footprint,
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
@@ -139,20 +139,12 @@ MBPointInterpOp::MBPointInterpOp(
         Xi -= xg;
         Xi /= Rg;
         for (int jj = 0; jj < N; jj++)
-          {
-            PR_TIMERS("stencil apply");
+        {
             auto Xi_p = forall<double, 1>(f_binomialPower, Xi, exponents[jj]);
-            {
-              PR_TIMERS("C2C apply");
-              BoxData<double> temp = HOCorners(Xi_p);
-              {
-                PR_TIMERS("av2 apply");
-                BoxData<double> Xi_p_avg = av2(temp);
-                srcData[block].push_back(std::move(Xi_p_avg));
-              }
-            }
-          }
-      }  
+            BoxData<double> Xi_p_avg = C2C(Xi_p);
+            srcData[block].push_back(std::move(Xi_p_avg));
+        }
+    }  
     // Compute Matrices
     Matrix<double> C(M,N);
     //m_C.define(M,N);
@@ -309,22 +301,22 @@ void MBInterpOp::define(
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
-        const std::vector<Point>&   a_footprint,
+        std::vector<Point>          a_footprint,
         int                         a_order,
         int                         a_block)
 {
-    MBInterpLayout layout;
+    MBInterpLayout interpLayout;
     for (auto fi : a_footprint)
     {
-        layout.addPoint(fi);
+        interpLayout.addPoint(fi);
     }
-    define(a_map, layout, a_order, a_block);
+    define(a_map, interpLayout, a_order, a_block);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
-        const MBInterpLayout&       a_layout,
+        MBInterpLayout              a_layout,
         int                         a_order,
         int                         a_block)
 {
