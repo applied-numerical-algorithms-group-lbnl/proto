@@ -34,7 +34,7 @@ TEST(MBInterpOp, ShearTest)
         // initialize data
         auto domain = buildShear(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
-        auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
@@ -43,12 +43,12 @@ TEST(MBInterpOp, ShearTest)
         map.define(layout, Point::Ones(ghostSize));
 
         auto C2C = Stencil<double>::CornersToCells(4);
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
-            auto block = layout->block(iter);
+            auto block = layout.block(iter);
             auto& src_i = hostSrc[iter];
             auto& dst_i = hostDst[iter];
-            Box b_i = C2C.domain((*layout)[iter]).grow(ghostSize);
+            Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
             BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
             // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(b_i);
@@ -72,16 +72,16 @@ TEST(MBInterpOp, ShearTest)
         h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_0",nn);
 #endif
         interp.apply(hostDst, hostDst);
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
             auto& src_i = hostSrc[iter];
             auto& dst_i = hostDst[iter];
             auto& err_i = hostErr[iter];
             for (auto dir : Box::Kernel(1))
             {
-                if (layout->isBlockBoundary(iter, dir))
+                if (layout.isBlockBoundary(iter, dir))
                 {
-                    Box boundBox = (*layout)[iter].adjacent(dir*ghostSize);
+                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
                     BoxData<double, 1, HOST> error(boundBox);
                     dst_i.copyTo(error);
                     error -= src_i;
@@ -132,7 +132,7 @@ TEST(MBInterpOp, XPointTest)
         err[nn] = 0;
         auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
-        auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
@@ -142,12 +142,12 @@ TEST(MBInterpOp, XPointTest)
         map.define(layout, Point::Ones(ghostSize));
 
         auto C2C = Stencil<double>::CornersToCells(4);
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
-            auto block = layout->block(iter);
+            auto block = layout.block(iter);
             auto& src_i = hostSrc[iter];
             auto& dst_i = hostDst[iter];
-            Box b_i = C2C.domain((*layout)[iter]).grow(ghostSize);
+            Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
             BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
             // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(b_i);
@@ -182,16 +182,16 @@ TEST(MBInterpOp, XPointTest)
             interp.define(map, interpLayout, order);
         }
         interp.apply(hostDst, hostDst);
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
             auto& src_i = hostSrc[iter];
             auto& dst_i = hostDst[iter];
             auto& err_i = hostErr[iter];
             for (auto dir : Box::Kernel(1))
             {
-                if (layout->isBlockBoundary(iter, dir))
+                if (layout.isBlockBoundary(iter, dir))
                 {
-                    Box boundBox = (*layout)[iter].adjacent(dir*ghostSize);
+                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
                     BoxData<double, 1, HOST> error(boundBox);
                     dst_i.copyTo(error);
                     error -= src_i;
@@ -251,7 +251,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
         boxSizeVect[radialDir] = thickness;
-        auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         auto map = CubedSphereShell::Map<HOST>(layout, ghost);
         // initialize data
@@ -259,15 +259,15 @@ TEST(MBInterpOp, CubedSphereShellTest)
         MBLevelBoxData<double, 1, HOST> hostDst(layout, ghost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, ghost);
         auto C2C = Stencil<double>::CornersToCells(4);
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
-            auto block = layout->block(iter);
+            auto block = layout.block(iter);
             auto& src_i = hostSrc[iter];
-            Box b_i = C2C.domain((*layout)[iter]).grow(ghost);
+            Box b_i = C2C.domain(layout[iter]).grow(ghost);
             BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
             // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(x_i.box());
-            FluxBoxData<double, DIM> NT((*layout)[iter]);
+            FluxBoxData<double, DIM> NT(layout[iter]);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
             src_i |= C2C(x_pow);
@@ -281,16 +281,16 @@ TEST(MBInterpOp, CubedSphereShellTest)
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
-        for (auto iter : *layout)
+        for (auto iter : layout)
         {
-            auto block = layout->block(iter);
-            Box blockDomain = layout->domain().getBlock(block).box();
+            auto block = layout.block(iter);
+            Box blockDomain = layout.domain().getBlock(block).box();
 
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
             auto& src_i = hostSrc[iter];
 
-            BoxData<double, 1> tmp((*layout)[iter]);
+            BoxData<double, 1> tmp(layout[iter]);
             src_i.copyTo(tmp);
             dst_i.copyTo(err_i);
             err_i -= src_i;

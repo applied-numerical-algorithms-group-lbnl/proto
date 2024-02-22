@@ -316,7 +316,6 @@ void MBInterpOp::define(
     m_layout = a_layout;
     m_ghost = a_map.ghost()[0];
     const auto& layout = a_map.map().layout();
-    const auto layoutPtr = a_map.map().layoutPtr();
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
@@ -350,7 +349,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
+                    MBDataPoint dstDataPoint(iter, bi, layout);
                     MBPointInterpOp op( dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
                     m_points.insert(key);
@@ -419,7 +418,7 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
-                    MBDataPoint dstDataPoint(iter, bi, layoutPtr);
+                    MBDataPoint dstDataPoint(iter, bi, layout);
                     MBPointInterpOp op(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
                     m_points.insert(key);

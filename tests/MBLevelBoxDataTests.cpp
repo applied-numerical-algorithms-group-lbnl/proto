@@ -11,7 +11,7 @@ TEST(MBLevelBoxData, Construction) {
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
     Point boundGhost = Point::Ones();
@@ -45,14 +45,14 @@ TEST(MBLevelBoxData, Construction) {
     auto CW = CoordPermutation::cw();
     auto CCW = CoordPermutation::ccw();
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto patchID = layout->point(iter);
-        auto blockID = layout->block(iter);
+        auto patchID = layout.point(iter);
+        auto blockID = layout.block(iter);
         unsigned int xBlock = (blockID+1) % numBlocks;
         unsigned int yBlock = (blockID-1+numBlocks) % numBlocks;
-        auto blockLayout = layout->getBlock(blockID);
-        Box patchBox = (*layout)[iter]; 
+        auto blockLayout = layout.getBlock(blockID);
+        Box patchBox = (layout)[iter]; 
         for (auto dir : K)
         {
             Point neighbor = patchID + dir;
@@ -70,8 +70,8 @@ TEST(MBLevelBoxData, Construction) {
                 Point adjDir = -CCW(dir);
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
 
-                EXPECT_EQ(layout->block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout->block(bounds[0].adjIndex), xBlock);
+                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
                 EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
                 EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
@@ -81,8 +81,8 @@ TEST(MBLevelBoxData, Construction) {
                 Box patchBoundary = patchBox.adjacent(dir, 1);
                 Point adjDir = -CW(dir); 
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
-                EXPECT_EQ(layout->block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout->block(bounds[0].adjIndex), yBlock);
+                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
                 EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
                 EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
@@ -94,10 +94,10 @@ TEST(MBLevelBoxData, Construction) {
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 for (auto bound : bounds)
                 {
-                    EXPECT_EQ(layout->block(bound.localIndex), blockID);
-                    EXPECT_NE(layout->block(bound.adjIndex), blockID);
-                    EXPECT_NE(layout->block(bound.adjIndex), yBlock);
-                    EXPECT_NE(layout->block(bound.adjIndex), xBlock);
+                    EXPECT_EQ(layout.block(bound.localIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), yBlock);
+                    EXPECT_NE(layout.block(bound.adjIndex), xBlock);
                     EXPECT_EQ(bound.localData->box(), patchBoundary.grow(boundGhost));
                     EXPECT_EQ(bound.adjData->box(), adjPatchBoundary.grow(boundGhost));
                 }
@@ -116,16 +116,16 @@ TEST(MBLevelBoxData, Initialization) {
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
     hostData.initialize(f_MBPointID);
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        Box patchBox = (*layout)[iter];
+        Box patchBox = (layout)[iter];
         auto& hostData_i = hostData[iter];
-        int block = layout->block(iter);
+        int block = layout.block(iter);
         BoxData<double, NCOMP, HOST> tempData(patchBox);
         forallInPlace_p(f_MBPointID, tempData, block);
         for (auto pi : patchBox)
@@ -148,7 +148,7 @@ TEST(MBLevelBoxData, SetBoundary) {
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
     hostData.setVal(0);
@@ -159,7 +159,7 @@ TEST(MBLevelBoxData, SetBoundary) {
 #if PR_VERBOSE > 0
     h5.writeMBLevel(hostData, "MBLevelBoxDataTests_SetBoundaries"); 
 #endif
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
         auto& patch = hostData[iter];
         for (auto dir : Box::Kernel(1))
@@ -167,15 +167,15 @@ TEST(MBLevelBoxData, SetBoundary) {
             Box b;
             if (dir == Point::Zeros())
             {
-                b = (*layout)[iter];
+                b = (layout)[iter];
             } else {
-                b = (*layout)[iter].adjacent(dir * ghostSize);
+                b = (layout)[iter].adjacent(dir * ghostSize);
             }
             for (auto pi : b)
             {
                 for (int ii = 0; ii < DIM; ii++)
                 {
-                    if (layout->isDomainBoundary(iter, dir))
+                    if (layout.isDomainBoundary(iter, dir))
                     {
                         EXPECT_EQ(patch(pi, ii), ii+1);
                     } else {
@@ -203,7 +203,7 @@ TEST(MBLevelBoxData, FillBoundaries) {
     {
         patches.push_back(MBPatchID_t(Point::Ones(), bi));
     }
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, patches, boxSizes);
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
     
     MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
     
@@ -216,10 +216,10 @@ TEST(MBLevelBoxData, FillBoundaries) {
 
     Box dirs = Box::Kernel(1);
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto block = layout->block(iter);
-        auto patch = layout->point(iter);
+        auto block = layout.block(iter);
+        auto patch = layout.point(iter);
         for (auto dir : dirs)
         {
             auto bounds = hostData.bounds(iter, dir);
@@ -229,7 +229,7 @@ TEST(MBLevelBoxData, FillBoundaries) {
                 BoxData<double, DIM, HOST> adj(bound.adjData->box());
                 BoxData<double, DIM, HOST> localSoln(bound.localData->box());
                 BoxData<double, DIM, HOST> error(bound.localData->box());
-                auto adjBlock = layout->block(bound.adjIndex);
+                auto adjBlock = layout.block(bound.adjIndex);
                 auto R = bound.adjToLocal;
                 forallInPlace_p(f_MBPointID, adj, adjBlock);
                 adj.copyTo(localSoln, R);
@@ -250,7 +250,7 @@ TEST(MBLevelBoxData, CopyTo) {
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<double, DIM, HOST> hostSrc(layout, Point::Ones(ghostSize));
     MBLevelBoxData<double, DIM, HOST> hostDst(layout, Point::Ones(ghostSize));
@@ -258,19 +258,19 @@ TEST(MBLevelBoxData, CopyTo) {
     hostSrc.copyTo(hostDst);
 
 #if PR_VERBOSE > 0
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        int block = layout->block(iter);
+        int block = layout.block(iter);
         h5.writeLevel(1, hostSrc.getBlock(block), "CopyTo_Src_B%i", block); 
         h5.writeLevel(1, hostDst.getBlock(block), "CopyTo_Dst_B%i", block); 
     }
 #endif
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
         auto& src = hostSrc[iter];
         auto& dst = hostDst[iter];
-        BoxData<double, DIM, HOST> err((*layout)[iter]);
+        BoxData<double, DIM, HOST> err((layout)[iter]);
         dst.copyTo(err);
         err -= src;
         EXPECT_LT(err.absMax(), 1e-12);
@@ -285,7 +285,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -294,9 +294,9 @@ TEST(MBLevelBoxData, OnDomainBoundary)
     MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost);
     hostData.setVal(0);
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto block = layout->block(iter);
+        auto block = layout.block(iter);
         auto& patch = hostData[iter];
 
         for (auto pi : patch.box())
@@ -315,9 +315,9 @@ TEST(MBLevelBoxData, OnDomainBoundary)
         }
     }
     
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto block = layout->block(iter);
+        auto block = layout.block(iter);
         auto& patch = hostData[iter];
 
         for (auto pi : patch.box())
@@ -350,7 +350,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -375,7 +375,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
         // inputs
         Point p0 = Point::Ones(domainSize) + Point::Basis(0);
         Point patchID = Point::Ones((domainSize / boxSize) - 1);
-        auto mbIndex = layout->find(patchID, 0);
+        auto mbIndex = layout.find(patchID, 0);
 
         // correct output
         Box domainBox_0 = Box::Cube(domainSize);
@@ -431,7 +431,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -456,12 +456,12 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         // inputs
         Point p0 = Point::Basis(0,domainSize) + Point::Basis(1,boxSize+1);
         Point patchID = Point::Basis(0,(domainSize / boxSize) - 1);
-        auto mbIndex = layout->find(patchID, 0);
+        auto mbIndex = layout.find(patchID, 0);
 
         // correct output
         Point nx = Point::Basis(0);
         Point ny = Point::Basis(1);
-        Box patchBox_0 = (*layout)[mbIndex];
+        Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
         Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
@@ -506,7 +506,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -536,12 +536,12 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         // inputs
         Point p0 = Point::Basis(0,domainSize);
         Point patchID = Point::Basis(0,(domainSize / boxSize) - 1);
-        auto mbIndex = layout->find(patchID, 0);
+        auto mbIndex = layout.find(patchID, 0);
 
         // correct output
         Point nx = Point::Basis(0);
         Point ny = Point::Basis(1);
-        Box patchBox_0 = (*layout)[mbIndex];
+        Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
         Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
@@ -589,7 +589,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
     auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -614,7 +614,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
     {
         Point p0 = Point::Basis(0,domainSize);
         Point patchID = Point::Zeros();
-        auto mbIndex = layout->find(patchID, 0);
+        auto mbIndex = layout.find(patchID, 0);
 
         auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
     }
@@ -630,7 +630,7 @@ TEST(MBLevelBoxData, MBDataPointOperator)
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -640,16 +640,16 @@ TEST(MBLevelBoxData, MBDataPointOperator)
     hostData.initialize(f_MBPointID);
     hostData.exchange();
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto block = layout->block(iter);
+        auto block = layout.block(iter);
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
             for (auto bound : hostData.bounds(iter, dir))
             {
-                auto adjBlock = layout->block(bound.adjIndex);
-                for (auto bi : (*layout)[iter].adjacent(dir*ghost[0]).grow(1))
+                auto adjBlock = layout.block(bound.adjIndex);
+                for (auto bi : (layout)[iter].adjacent(dir*ghost[0]).grow(1))
                 {
                     MBDataPoint pi(iter, bi, layout, dir, adjBlock);
                     for (int ii = 0; ii < DIM; ii++)

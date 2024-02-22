@@ -13,7 +13,7 @@ TEST(MBLevelMapTests, ShearMap) {
 
     auto domain = buildShear(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -35,7 +35,7 @@ TEST(MBLevelMapTests, InterBlockApply_Shear) {
 
     auto domain = buildShear(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -48,10 +48,10 @@ TEST(MBLevelMapTests, InterBlockApply_Shear) {
     for (unsigned int bi = 0; bi < 4; bi++)
     {
         unsigned int bj = (bi + 1) % 4;
-        Point dir_ij = layout->domain().graph().connectivity(bi, bj);
-        Point dir_ji = layout->domain().graph().connectivity(bj, bi);
-        auto Rij = layout->domain().graph().rotation(bi, dir_ij, bj);
-        auto Rji = layout->domain().graph().rotation(bj, dir_ji, bi);
+        Point dir_ij = layout.domain().graph().connectivity(bi, bj);
+        Point dir_ji = layout.domain().graph().connectivity(bj, bi);
+        auto Rij = layout.domain().graph().rotation(bi, dir_ij, bj);
+        auto Rji = layout.domain().graph().rotation(bj, dir_ji, bi);
 
         Box Bi = Box::Cube(domainSize).edge(dir_ij, 2);
         Box Bj = Box::Cube(domainSize).adjacent(dir_ji, 2);
@@ -91,7 +91,7 @@ TEST(MBLevelMapTests, CellApply_Shear)
 
     auto domain = buildShear(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -104,16 +104,16 @@ TEST(MBLevelMapTests, CellApply_Shear)
     auto XAvg  = 0.5*Shift::Zeros() + 0.5*Shift::Basis(0);
     auto YAvg0 = 0.5*Shift::Zeros() + 0.5*Shift::Basis(1);
     auto YAvg1 = 1.0*Shift::Basis(1);
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto block = layout->block(iter);
-        BoxData<double, DIM> X_cnr((*layout)[iter].grow(PR_NODE));
-        BoxData<double, 1> J((*layout)[iter]);
+        auto block = layout.block(iter);
+        BoxData<double, DIM> X_cnr(layout[iter].grow(PR_NODE));
+        BoxData<double, 1> J(layout[iter]);
         map.apply(X_cnr, J, block);
         auto X_cnr_0 = slice(X_cnr, 0);
         auto X_cnr_1 = slice(X_cnr, 1);
         BoxData<double, 1> X_ctr_0 = XAvg(X_cnr_0);
-        BoxData<double, 1> X_ctr_1((*layout)[iter]);
+        BoxData<double, 1> X_ctr_1(layout[iter]);
         switch (block)
         {
             case 0:
@@ -123,11 +123,11 @@ TEST(MBLevelMapTests, CellApply_Shear)
             case 2:
                 X_ctr_1 |= YAvg1(X_cnr_1); break;
         }
-        auto Y_ctr = map.cellCentered((*layout)[iter], block, block);
+        auto Y_ctr = map.cellCentered(layout[iter], block, block);
         auto Y_ctr_0 = slice(Y_ctr, 0);
         auto Y_ctr_1 = slice(Y_ctr, 1);
 
-        EXPECT_EQ(Y_ctr.box(), (*layout)[iter]);
+        EXPECT_EQ(Y_ctr.box(), layout[iter]);
         Y_ctr_0 -= X_ctr_0;
         Y_ctr_1 -= X_ctr_1;
         EXPECT_LT(Y_ctr_0.absMax(), 1e-12);
@@ -155,7 +155,7 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 
     auto domain = buildShear(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -167,16 +167,16 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 
     MBLevelBoxData<double, 1, HOST> data(layout, ghost);
 
-    for (auto iter : *layout)
+    for (auto iter : layout)
     {
-        auto locBlock = layout->block(iter);
+        auto locBlock = layout.block(iter);
         for (auto dir : Box::Kernel(1))
         {
             auto bounds = data.bounds(iter, dir);
             for (auto bound : bounds)
             {
-                Box boundBox = (*layout)[iter].adjacent(ghost[0]*dir);
-                auto adjBlock = layout->block(bound.adjIndex);
+                Box boundBox = layout[iter].adjacent(ghost[0]*dir);
+                auto adjBlock = layout.block(bound.adjIndex);
 
                 auto XLoc = map.cellCentered(boundBox, locBlock, locBlock);
                 auto XAdj = map.cellCentered(boundBox, adjBlock, locBlock);
@@ -211,7 +211,7 @@ TEST(MBLevelMapTests, CubeSphereShell) {
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
@@ -237,7 +237,7 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
-    auto layout = std::make_shared<MBDisjointBoxLayout>(domain, boxSizeVect);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));

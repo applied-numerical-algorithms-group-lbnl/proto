@@ -23,8 +23,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++1
 set(CMAKE_VERBOSE_MAKEFILE ON) # if ON, prints the full compilation command when building
 
 #override compiler if desired
-#set(ENV{CC} "gcc")
-#set(ENV{CXX} "g++")
+set(ENV{CC} "gcc")
+set(ENV{CXX} "g++")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)

@@ -40,13 +40,13 @@ class MBLevelMap
     
     /// Non-Trivial Constructor
     inline MBLevelMap(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1>& a_ghost,
             unsigned int         a_focalBlock = 0);
     
     /// Non-Trivial Constructor
     inline MBLevelMap(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             Point                      a_ghost,
             unsigned int         a_focalBlock = 0);
     
@@ -60,12 +60,12 @@ class MBLevelMap
      *  \param a_focalBlock The "focus" block id associated with this map. Often unused.
      */
     inline void define(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1>& a_ghost,
             unsigned int               a_focalBlock = 0);
     
     inline void define(
-            std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+            const MBDisjointBoxLayout& a_layout,
             Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
 

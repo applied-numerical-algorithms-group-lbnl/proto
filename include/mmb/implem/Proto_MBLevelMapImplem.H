@@ -1,6 +1,6 @@
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
-        std::shared_ptr<const MBDisjointBoxLayout>  a_layout,
+        const MBDisjointBoxLayout&  a_layout,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -9,7 +9,7 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
 
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
-        std::shared_ptr<const MBDisjointBoxLayout>  a_layout,
+        const MBDisjointBoxLayout&  a_layout,
         Point                       a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -18,7 +18,7 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
-        std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+        const MBDisjointBoxLayout& a_layout,
         Point                      a_ghost,
         unsigned int               a_focalBlock)
 {
@@ -30,7 +30,7 @@ void MBLevelMap<MAP,MEM>::define(
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
-        std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+        const MBDisjointBoxLayout& a_layout,
         const Array<Point, DIM+1>& a_ghost,
         unsigned int               a_focalBlock)
 {
@@ -43,11 +43,11 @@ void MBLevelMap<MAP,MEM>::define(
     m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, a_ghost);
     m_X->setVal(0);
     m_J->setVal(0);
-    m_dx.resize(a_layout->numBlocks());
-    m_ops.resize(a_layout->numBlocks());
-    for (int bi = 0; bi < a_layout->numBlocks(); bi++)
+    m_dx.resize(a_layout.numBlocks());
+    m_ops.resize(a_layout.numBlocks());
+    for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
-        Box domainBox = a_layout->domain().getBlock(bi).box();
+        Box domainBox = a_layout.domain().getBlock(bi).box();
         for (int dir = 0; dir < DIM; dir++)
         {
             m_dx[bi][dir] = 1.0/domainBox.size(dir);
@@ -55,10 +55,10 @@ void MBLevelMap<MAP,MEM>::define(
         m_ops[bi].define(m_dx[bi], bi, a_focalBlock);
     }
 
-    for (auto iter : *a_layout)
+    for (auto iter : a_layout)
     {
-        auto block = a_layout->block(iter);
-        Box b_i = (*a_layout)[iter];
+        auto block = a_layout.block(iter);
+        Box b_i = a_layout[iter];
         auto& X_i = (*m_X)[iter];
         auto& J_i = (*m_J)[iter];
         BoxData<double, 1, MEM> J0(X_i.box());

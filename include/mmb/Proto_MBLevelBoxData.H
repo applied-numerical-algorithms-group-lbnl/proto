@@ -38,9 +38,9 @@ namespace Proto
             
             inline MBDataPoint(){}
             inline MBDataPoint(MBIndex a_index, Point a_point,
-                    std::shared_ptr<const MBDisjointBoxLayout> a_layout);
+                    const MBDisjointBoxLayout& a_layout);
             inline MBDataPoint(MBIndex a_index, Point a_point,
-                    std::shared_ptr<const MBDisjointBoxLayout> a_layout, 
+                    const MBDisjointBoxLayout& a_layout, 
                     Point a_boundaryDir, int a_block);
             inline bool operator==(const MBDataPoint& a_rhs) const;
 
@@ -55,11 +55,11 @@ namespace Proto
             inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>& srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-            inline const MBDisjointBoxLayout& grid() {return *layout; }
+            inline const MBDisjointBoxLayout& grid() {return layout; }
         private:
             int  block;
             bool m_inBoundary;
-            std::shared_ptr<const MBDisjointBoxLayout> layout;
+            MBDisjointBoxLayout layout;
     };
 
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
@@ -167,7 +167,7 @@ namespace Proto
          *                      really know what you are doing.
          */
         inline MBLevelBoxData(
-                std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+                const MBDisjointBoxLayout& a_layout,
                 const Array<Point, DIM+1>& a_ghost,
                 Point                      a_boundGhost = Point::Zeros());
         
@@ -176,14 +176,14 @@ namespace Proto
          *  data buffers are constructed conservatively assuming 4th order block-boundary interpolation is desired.
          */
         inline MBLevelBoxData(
-                std::shared_ptr<const MBDisjointBoxLayout> a_layout,
+                const MBDisjointBoxLayout& a_layout,
                 Point                      a_ghost,
                 Point                      a_boundGhost = Point::Zeros());
 
         
         /// Lazy Constructor
         inline void define(
-                std::shared_ptr<const MBDisjointBoxLayout>    a_layout,
+                const MBDisjointBoxLayout&    a_layout,
                 const Array<Point, DIM+1>&    a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
        
@@ -253,8 +253,7 @@ namespace Proto
         inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
        
         /// Get Layout
-        inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
-        inline std::shared_ptr<const MBDisjointBoxLayout> layoutPtr() const {return m_layout; }    
+        inline const MBDisjointBoxLayout& layout() const {return m_layout; }    
      
         /// Get Patch Box
         /** multiblock analog of LevelBoxData::patchBox. Returns the Box which defines the domain
@@ -321,7 +320,7 @@ namespace Proto
 
         /// Compatibility Check
         /** This is the same as this->layout().compatible(a_layout) */
-        inline bool compatible(std::shared_ptr<const MBDisjointBoxLayout> a_layout) const;
+        inline bool compatible(const MBDisjointBoxLayout& a_layout) const;
 
         /// Convert MBDataPoint to Var
         /** Used by interpolation API. Not recommended for public use. */
@@ -365,7 +364,7 @@ namespace Proto
         inline void printBounds(const MBIndex& a_index, int a_prec = 4);
         
         /// Get Number of Blocks
-        inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
+        inline unsigned int numBlocks() const { return m_layout.numBlocks(); }
         inline MBIterator begin();
         inline MBIterator end();
         inline const MBIterator begin() const;
@@ -374,7 +373,7 @@ namespace Proto
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
-        std::shared_ptr<const MBDisjointBoxLayout>     m_layout;
+        MBDisjointBoxLayout m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };
