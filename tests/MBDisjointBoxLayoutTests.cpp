@@ -10,11 +10,11 @@ MBProblemDomain buildXPoint(int a_domainSize)
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < XPOINT_SIZE; ii++)
     {
-        domain->defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
-        domain->defineDomain(bi, Point::Ones(a_domainSize));
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
     return domain;
 }
@@ -29,7 +29,7 @@ TEST(MBDisjointBoxLayout, Iteration) {
     
     std::set<std::pair<unsigned int, Box>> correctPatchSet;
     Box patches = Box::Cube(domainSize).coarsen(boxSizeVect);
-    for (unsigned int bi = 0; bi < domain->size(); bi++)
+    for (unsigned int bi = 0; bi < domain.size(); bi++)
     {
         for (auto p : patches)
         {
@@ -40,7 +40,7 @@ TEST(MBDisjointBoxLayout, Iteration) {
         }
     }
     
-    int N = pow(domainSize / boxSize, DIM)*domain->size();
+    int N = pow(domainSize / boxSize, DIM)*domain.size();
     int n0 = N / numProc();
     int r =  N % numProc();
     if (procID() < r) { n0++; }

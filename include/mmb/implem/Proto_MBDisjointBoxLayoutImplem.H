@@ -1,20 +1,20 @@
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        std::shared_ptr<MBProblemDomain>    a_domain,
+        MBProblemDomain&    a_domain,
         Point                               a_boxSize)
 {
-    std::vector<Point> boxSizes(a_domain->numBlocks(), a_boxSize);
+    std::vector<Point> boxSizes(a_domain.numBlocks(), a_boxSize);
     define(a_domain, boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        std::shared_ptr<MBProblemDomain>    a_domain,
+        MBProblemDomain&    a_domain,
         std::vector<Point>                  a_boxSizes)
 {
     define(a_domain, a_boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        std::shared_ptr<MBProblemDomain>  a_domain,
+        MBProblemDomain&  a_domain,
         std::vector<MBPatchID_t>          a_patches,
         std::vector<Point>                a_boxSizes)
 {
@@ -29,16 +29,16 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
 }
 
 void MBDisjointBoxLayout::define(
-        std::shared_ptr<MBProblemDomain> a_domain, 
+        MBProblemDomain& a_domain, 
         std::vector<Point>               a_boxSizes)
 {
-    PROTO_ASSERT(a_boxSizes.size() == a_domain->size(),
+    PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
     
     std::vector<MBPatchID_t> patches;
-    for (unsigned int bi = 0; bi < a_domain->numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
     {
-        Box patchBox = a_domain->getBlock(bi).box().coarsen(a_boxSizes[bi]);
+        Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
         {
             patches.push_back(MBPatchID_t(pi, bi));
@@ -48,19 +48,19 @@ void MBDisjointBoxLayout::define(
 }
 
 void MBDisjointBoxLayout::define(
-        std::shared_ptr<MBProblemDomain> a_domain,
+        MBProblemDomain& a_domain,
         std::vector<MBPatchID_t>         a_patches,
         std::vector<Point>               a_boxSizes)
 {
-    a_domain->close();
-    PROTO_ASSERT(a_boxSizes.size() == a_domain->size(),
+    a_domain.close();
+    PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 
     m_domain = a_domain;
-    m_partition = std::make_shared<MBBoxPartition>(a_domain->coarsen(a_boxSizes), a_patches);
+    m_partition = std::make_shared<MBBoxPartition>(a_domain.coarsen(a_boxSizes), a_patches);
     m_layouts.clear();
     
-    for (unsigned int bi = 0; bi < a_domain->numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
     {
         auto li = std::make_shared<DisjointBoxLayout>(
                 m_partition->blockPartition(bi), a_boxSizes[bi]);
@@ -76,8 +76,8 @@ void MBDisjointBoxLayout::define(
     m_partition = a_partition;
     m_domain = a_partition->domain().refine(a_boxSizes);
     m_layouts.clear();
-    m_layouts.resize(m_domain->size());
-    for (int bi = 0; bi < m_domain->size(); bi++)
+    m_layouts.resize(m_domain.size());
+    for (int bi = 0; bi < m_domain.size(); bi++)
     {
         auto li = std::make_shared<DisjointBoxLayout>(
                 m_partition->blockPartition(bi), a_boxSizes[bi]);
@@ -87,12 +87,6 @@ void MBDisjointBoxLayout::define(
 }
 
 const MBProblemDomain& MBDisjointBoxLayout::domain() const
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::domain | Error: Layout is not defined");
-    return *m_domain;
-}
-
-const std::shared_ptr<MBProblemDomain> MBDisjointBoxLayout::domainPtr() const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::domain | Error: Layout is not defined");
     return m_domain;
@@ -458,7 +452,7 @@ MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
             "MBDisjointBoxLayout::coarsen | Error: Layout is not coarsenable by ref ratio.");
         crseBoxSize.push_back(fineBoxSize[bi] / a_refRatios[bi]);
     }
-    auto crseDomain = m_domain->coarsen(a_refRatios);
+    auto crseDomain = m_domain.coarsen(a_refRatios);
     auto crseLayout = std::make_shared<MBDisjointBoxLayout>(crseDomain, patches(), crseBoxSize);
     return crseLayout;
 }

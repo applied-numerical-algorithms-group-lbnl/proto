@@ -19,15 +19,15 @@ namespace Proto
         inline MBDisjointBoxLayout(){m_defined = false;}
 
         inline MBDisjointBoxLayout(
-                std::shared_ptr<MBProblemDomain> a_domain,
+                MBProblemDomain& a_domain,
                 Point a_boxSize);
 
         inline MBDisjointBoxLayout(
-                std::shared_ptr<MBProblemDomain> a_domain,
+                MBProblemDomain& a_domain,
                 std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
-                std::shared_ptr<MBProblemDomain> a_domain,
+                MBProblemDomain& a_domain,
                 std::vector<MBPatchID_t>         a_patches,
                 std::vector<Point>               a_boxSizes);
         
@@ -36,11 +36,11 @@ namespace Proto
                 std::vector<Point>               a_boxSizes);
         
         inline void define(
-                std::shared_ptr<MBProblemDomain> a_domain,
+                MBProblemDomain& a_domain,
                 std::vector<Point>               a_boxSizes);
         
         inline void define(
-                std::shared_ptr<MBProblemDomain> a_domain,
+                MBProblemDomain& a_domain,
                 std::vector<MBPatchID_t>         a_patches,
                 std::vector<Point>               a_boxSizes);
 
@@ -48,7 +48,7 @@ namespace Proto
                 std::shared_ptr<MBBoxPartition>  a_partition,
                 std::vector<Point>               a_boxSizes);
 
-        inline const std::shared_ptr<MBProblemDomain> domainPtr() const; 
+        inline const MBProblemDomain& domainPtr() const; 
         inline const MBProblemDomain& domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
@@ -104,7 +104,7 @@ namespace Proto
         inline bool defined() const {return m_defined; }
         private:
         bool                                            m_defined;
-        std::shared_ptr<MBProblemDomain>                m_domain;
+        MBProblemDomain                                 m_domain;
         std::vector<std::shared_ptr<DisjointBoxLayout>> m_layouts;
         std::shared_ptr<MBBoxPartition>                 m_partition;
     };

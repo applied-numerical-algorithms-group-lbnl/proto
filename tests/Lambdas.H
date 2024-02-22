@@ -161,34 +161,34 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-std::shared_ptr<MBProblemDomain> buildXPoint(int a_domainSize)
+MBProblemDomain buildXPoint(int a_domainSize)
 {
     int numBlocks = XPOINT_NUM_BLOCKS;
-    auto domain = std::make_shared<MBProblemDomain>(numBlocks);
+    MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
     {
-        domain->defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
     }
     for (int bi = 0; bi < numBlocks; bi++)
     {
-        domain->defineDomain(bi, Point::Ones(a_domainSize));
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
     return domain;
 }
 
-std::shared_ptr<MBProblemDomain> buildShear(int a_domainSize)
+MBProblemDomain buildShear(int a_domainSize)
 {
-    auto domain = std::make_shared<MBProblemDomain>(4);
+    MBProblemDomain domain(4);
     auto I = CoordPermutation::identity();
-    domain->defineBoundary(0,1,0,Side::Hi,I);
-    domain->defineBoundary(1,2,1,Side::Hi,I);
-    domain->defineBoundary(2,3,0,Side::Lo,I);
-    domain->defineBoundary(3,0,1,Side::Lo,I);
+    domain.defineBoundary(0,1,0,Side::Hi,I);
+    domain.defineBoundary(1,2,1,Side::Hi,I);
+    domain.defineBoundary(2,3,0,Side::Lo,I);
+    domain.defineBoundary(3,0,1,Side::Lo,I);
 
     for (int ii = 0; ii < 4; ii++)
     {
-        domain->defineDomain(ii, Point::Ones(a_domainSize));
+        domain.defineDomain(ii, Point::Ones(a_domainSize));
     }
     return domain;
 }
