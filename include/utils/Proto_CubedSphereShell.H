@@ -82,15 +82,25 @@ namespace Proto {
                                  MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                  int a_order = 4);
     
+    template<typename T, unsigned int C, MemType MEM>
+    static void consToSphNGEuler( 
+                                 BoxData<T,C,MEM>& a_JU,
+                                 BoxData<T,1,MEM>& a_dVolr,
+                                 Box a_bx,
+                                 Box a_blockBox,
+                                 T a_dxiPerp,
+                                 int a_block,                 
+                                 unsigned int a_order = 4);
+    
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void InterpBoundariesEuler( 
-                                       MBLevelBoxData<T,C,MEM,CTR>& a_USph,
-                                       MBInterpOp& a_op,
-                                       const MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                                       unsigned int a_order = 4);
+     static void consToSphInterpEuler( 
+                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                                      Array<T,DIM> a_dx,
+                                      unsigned int a_order = 4);
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    static void InterpBoundariesMHD( 
+    static void interpBoundariesMHD( 
                                     MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                     const MBInterpOp& a_op,
                                     unsigned int a_order = 4);
@@ -196,6 +206,16 @@ namespace Proto {
                                const BoxData<T,1,MEM>& a_numerator,
                                Box a_quotBox,
                                Box a_blockBox);
+    
+    template <typename T, MemType MEM>
+    inline
+    static void cellQuotientValAndInvRadial(
+                                            BoxData<T,1,MEM>& a_quot,
+                                            const BoxData<T,1,MEM>& a_denominator,
+                                            const BoxData<T,1,MEM>& a_denomInv,
+                                            const BoxData<T,1,MEM>& a_numerator,
+                                            Box a_quotBox,
+                                            Box a_blockBox);
     
     template <typename T, unsigned int C, MemType MEM>
     static BoxData<T,C,MEM> deriv3case(

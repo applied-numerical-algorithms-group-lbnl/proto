@@ -22,18 +22,17 @@ PROTO_KERNEL_START
 template<typename T,MemType MEM>
 void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_wpoint,
-                   Var<T,NUMCOMPS,MEM>& a_upoint,
-                   Var<T,1,MEM>& a_dvolrpoint)                           
+                   Var<T,NUMCOMPS,MEM>& a_upoint)                           
 {
   Var<T,NUMCOMPS,MEM> wpoint;
-  a_wpoint(0) = a_upoint(0)/a_dvolrpoint(0);
+  a_wpoint(0) = a_upoint(0);
   a_wpoint(1) =
-    a_upoint(1)/a_upoint(0)/a_dvolrpoint(0);
+    a_upoint(1)/a_upoint(0);
   a_wpoint(2) =
-    a_upoint(2)/a_upoint(0)/a_dvolrpoint(0);
+    a_upoint(2)/a_upoint(0);
   a_wpoint(3) =
-    a_upoint(3)/a_upoint(0)/a_dvolrpoint(0);
-  a_wpoint(4) = a_upoint(4)/a_dvolrpoint(0);  
+    a_upoint(3)/a_upoint(0);
+  a_wpoint(4) = a_upoint(4);  
 }
 PROTO_KERNEL_END(f_sphToPrim_F,f_sphToPrim)
 PROTO_KERNEL_START
@@ -150,7 +149,6 @@ public:
                          State& a_W,
                          State& a_WBar,
                          const State& a_USph,
-                         const BoxData<T,1,MEM>& a_dVolr,
                          uint a_block) const;
   // Implemented.
   inline void primToSph(

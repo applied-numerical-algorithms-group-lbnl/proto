@@ -122,63 +122,95 @@ CubedSphereShell::InterpBoundaries(
     op.apply(a_data, a_data);
 }
 
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::
+consToSphNGEuler(                    
+                 BoxData<T,C,MEM>& a_JU,
+                 BoxData<T,1,MEM>& a_dVolr,
+                 Box a_bx,
+                 Box a_blockBox,
+                 T a_dxiPerp,
+                 int a_block,                 
+                 unsigned int a_order)
+{
+  PR_TIMERS("consToSphNGEuler");
+  
+  HDF5Handler h5;
+  BoxData<T,C,MEM> USph(a_bx);
+  USph.setVal(1.);
+  // Get geometric data.
+  Box bxMetric = a_bx.grow(1);
+  BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
+  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+     {
+       a_output(0) = 1.0/a_deta(0);
+     }
+     ,deta);
+      
+  BoxData<T,DIM,MEM,DIM> deta_amat =
+    CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> invcoef(a_bx);
+  invcoef.setToZero();
+  forallInPlace(f_matinv3by3,invcoef,deta_amat);
+
+  // Slice data and compute quotients.
+  BoxData<T,1,MEM> JRho = slice(a_JU,0);
+  BoxData<T,1,MEM> rho = slice(USph,0);      
+  cellQuotientValAndInv(rho,deta,detaInv,JRho,a_bx,a_blockBox);
+      
+  BoxData<T,1,MEM> JRhoE = slice(a_JU,C-1);
+  BoxData<T,1,MEM> rhoE = slice(USph,C-1);
+  cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,a_bx,a_blockBox);
+      
+  BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(a_JU,1);
+  BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph,1);
+  cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,a_bx,a_blockBox);
+
+  // scale out radial dVol.
+  BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
+     {
+       a_output(0) = 1.0/a_dvolr(0);
+     }
+     ,a_dVolr); 
+  for (int comp = 0; comp < C; comp++)
+    {
+      BoxData<T,1,MEM> USphcomp = slice(USph,comp);
+      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
+      BoxData<T,1,MEM> USphtemp(USphcomp.box());
+      cellQuotientValAndInvRadial(USphtemp,a_dVolr,dVolrInv,USphcomp,a_bx,a_blockBox);
+      USphtemp.copyTo(JUcomp);
+    }
+  // cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
+  h5.writePatch(a_dxiPerp,a_JU,"USph:Block=" + to_string(a_block));
+}
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
-InterpBoundariesEuler(
-                      MBLevelBoxData<T,C,MEM,CTR>& a_USph,
-                      MBInterpOp& a_op,
-                      const MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                      unsigned int a_order)
+consToSphInterpEuler(                    
+                        MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                        MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                        Array<T,DIM> a_dx,
+                        unsigned int a_order)
 {
-  PR_TIMERS("InterpBoundariesEuler");
-  auto layout = a_USph.layout();
-  HDF5Handler h5;
-  for (auto dit : layout)
+  for (auto dit : a_JU.layout())
     {
-      auto& USph_i = a_USph[dit];
+      unsigned int block = a_JU.layout().block(dit);
       auto& JU_i = a_JU[dit];
-      Box bx = layout[dit];
-      // Get geometric data.
-      Box bxMetric = bx.grow(1);
-      auto block = layout.block(dit);
-      auto blocksize = layout.domain().blockSize(block);
-      Box blockBox(Point::Zeros(),blocksize - Point::Ones());
-      T dxiPerp = 1.0/blocksize[2];
-      BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,dxiPerp,0); 
-      BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
-        ([ ] PROTO_LAMBDA
-         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
-         {
-           a_output(0) = 1.0/a_deta(0);
-         }
-         ,deta); 
-      BoxData<T,DIM,MEM,DIM> deta_amat =
-        CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
-      BoxData<T,DIM,MEM,DIM> invcoef(bx);
-      invcoef.setToZero();
-      forallInPlace(f_matinv3by3,invcoef,deta_amat);
-
-      // Slice data and compute quotients.
-      BoxData<T,1,MEM> JRho = slice(JU_i,0);
-      BoxData<T,1,MEM> rho = slice(USph_i,0);      
-      cellQuotientValAndInv(rho,deta,detaInv,JRho,bx,blockBox);
-      
-      BoxData<T,1,MEM> JRhoE = slice(JU_i,C-1);
-      BoxData<T,1,MEM> rhoE = slice(USph_i,C-1);
-      cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,bx,blockBox);
-      
-      BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(JU_i,1);
-      BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph_i,1);
-      cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,bx,blockBox);
-      cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
-      int block_i = a_USph.layout().block(dit);
-      T dx = 1.0;
-      h5.writePatch(dx,USph_i,"USph:Block=" + to_string(block_i));
-    }
-  a_USph.exchange();
+      auto& dVolr_i = a_dVolr[dit];
+      Box bx_i = a_JU.layout()[dit];
+      T dxiPerp = a_dx[2];
+      T dxi0 = a_dx[0];
+      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      CubedSphereShell::
+        consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+    } 
+  a_JU.exchange();
   cout <<  "Building interpolation operator" << endl;
-  auto op = CubedSphereShell::InterpOp(a_USph,4);
-  a_op.apply(a_USph,a_USph);
+  auto op = CubedSphereShell::InterpOp(a_JU,4);
+  op.apply(a_JU,a_JU);
 }
 
 template <typename T, MemType MEM>
@@ -194,7 +226,8 @@ cellMatrixQuotientMatAndInv(
   forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
   BoxData<T,DIM,MEM,1> corr(a_quotBar.box().grow(-1));
   corr.setToZero();
-  for (int dir = 0; dir < DIM; dir++)
+  // Note that we do not compute correction in the zero direction.
+  for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,DIM,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
       BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
@@ -230,6 +263,7 @@ cellMatrixQuotientMatAndInv(
   BoxData<T,DIM,MEM,1> corr(a_quotBox);
   forallInPlace(f_matVecProd,quotBar,a_denomInv,a_numerator,one);
   corr.setToZero();
+  // Note that we do not compute correction in the zero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,DIM,MEM,1> Dquotbar =
@@ -268,7 +302,8 @@ void CubedSphereShell::cellQuotientValAndInv(
   BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1));
   corr.setToZero();
   T twelveth = -1.0/12.0;
-  for (int dir = 0; dir < DIM; dir++)
+  // Note that we do not compute correction in the zero direction.
+  for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
       BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
@@ -288,13 +323,38 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              Box a_quotBox,
                                              Box a_blockBox)
 {
-  // Note that we do not compute correction in the zero direction.
   a_quot.setToZero();
   BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
   BoxData<T,1,MEM> corr(a_quotBox);
   corr.setToZero();
   T twelveth = -1.0/12.0;
   for (int dir = 1; dir < DIM; dir++)
+    {
+      BoxData<T,1,MEM> Dquotbar =
+        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
+      BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
+      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
+      corr += prod;
+    }
+  corr *= twelveth;
+  quotBar.copyTo(a_quot);
+  a_quot += corr;
+}
+template <typename T, MemType MEM>
+void CubedSphereShell::cellQuotientValAndInvRadial(
+                                                   BoxData<T,1,MEM>& a_quot,
+                                                   const BoxData<T,1,MEM>& a_denominator,
+                                                   const BoxData<T,1,MEM>& a_denomInv,
+                                                   const BoxData<T,1,MEM>& a_numerator,
+                                                   Box a_quotBox,
+                                                   Box a_blockBox)
+{
+  a_quot.setToZero();
+  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  BoxData<T,1,MEM> corr(a_quotBox);
+  corr.setToZero();
+  T twelveth = -1.0/12.0;
+  for (int dir = 0; dir < 1; dir++)
     {
       BoxData<T,1,MEM> Dquotbar =
         CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);

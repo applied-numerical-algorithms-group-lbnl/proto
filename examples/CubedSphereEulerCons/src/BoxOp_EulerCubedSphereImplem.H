@@ -768,7 +768,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   State WBar;
   //cout << "inputbox = " << bx << endl;
   
-  sphToPrim(W,WBar,a_USph,dVolr,a_block);
+  sphToPrim(W,WBar,a_USph,a_block);
   // Compute Fluxes, rhs.
   a_Rhs.setVal(0.0);
   Box outputbox = bx;
@@ -1073,7 +1073,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                                           State& a_W,
                                           State& a_WBar,
                                           const State& a_USph,
-                                          const BoxData<T,1,MEM>& a_dVolr,
                                           uint a_block) const
 {
   // Get radial conserved variables.
@@ -1083,29 +1082,27 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                                 + (1.0/24.0)*Stencil<T>::Laplacian());
   Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
                                   - (1.0/24.0)*Stencil<T>::Laplacian());
-  Stencil<T> convolveStencilRadial =
-    (1.0*Shift(Point::Zeros()) + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
-  Stencil<T> deconvolveStencilRadial =
-    (1.0*Shift(Point::Zeros()) - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
-  
-  BoxData<T,1,MEM>  dVolrPoint = deconvolveStencilRadial(a_dVolr);          
+         
   BoxData<T,NUMCOMPS,MEM> UPoint = deconvolveStencil(a_USph);
-  BoxData<T,NUMCOMPS,MEM> WPoint =
-    forall<T,NUMCOMPS,MEM>(f_sphToPrim,UPoint,dVolrPoint);
-  a_WBar =
-    forall<T,NUMCOMPS,MEM>(f_sphToPrim,UPoint,dVolrPoint);
+  a_WBar = forall<T,NUMCOMPS,MEM>(f_sphToPrim,a_USph);
+  a_W = forall<T,NUMCOMPS,MEM>(f_sphToPrim,UPoint);
   // Compute pressure.
-  BoxData<T,1,MEM> kePoint = kineticEnergyW(WPoint,a_block,-1);
   BoxData<T,1,MEM> keBar = kineticEnergyW(a_WBar,a_block,-1);
+  BoxData<T,1,MEM> kePoint = kineticEnergyW(a_W,a_block,-1);
   forallInPlace([ ] PROTO_LAMBDA
-                (Var<T,NUMCOMPS>& a_wpoint,
-                 Var<T,NUMCOMPS>& a_wbar,
-                 const Var<T,1,MEM>& a_kepoint,
-                 const Var<T,1,MEM>& a_kebar,
+                (Var<T,NUMCOMPS>& a_w,
+                 const Var<T,1,MEM>& a_ke,
                  T a_gamma)
                 {
-                  a_wpoint(NUMCOMPS-1) = (a_wpoint(NUMCOMPS-1) - a_kepoint(0))*(a_gamma - 1.0);
-                  a_wbar(NUMCOMPS-1) = (a_wbar(NUMCOMPS-1) - a_kebar(0))*(a_gamma - 1.0);
-                },WPoint,a_WBar,kePoint,keBar,m_gamma);
-  a_W = convolveStencil(WPoint);
+                  a_w(NUMCOMPS-1) = (a_w(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                },a_W,kePoint,m_gamma);
+  forallInPlace([ ] PROTO_LAMBDA
+                (Var<T,NUMCOMPS>& a_w,
+                 const Var<T,1,MEM>& a_ke,
+                 T a_gamma)
+                {
+                  a_w(NUMCOMPS-1) = (a_w(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                },a_WBar,keBar,m_gamma);
+  T coef = 1.0/24.0;
+  a_W += Stencil<T>::Laplacian()(a_WBar,coef);
 }
