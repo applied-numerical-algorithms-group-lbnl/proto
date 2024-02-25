@@ -641,7 +641,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
    int                             a_block,
    T                               a_scale) const
 {
-  PR_TIME("BoxOp_Euler::operator()");        
+  PR_TIME("BoxOp_Euler::operator()");
+  HDF5Handler h5;
   // Primitive Variables.
 
   // Transform to primitive variables, spherical velocities.
@@ -753,7 +754,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
    T                               a_scale) const
 {
   PR_TIME("BoxOp_Euler::operator()");
-
+  HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
   BoxData<T,DIM,MEM> Dr(bxRad);
   BoxData<T,1,MEM> radius(bxRad);
@@ -791,6 +792,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
       primToFlux(physFlux,WFace,WFaceBar,adjDrDir,a_block,dir);
       Box bxface = physFlux.box();
+      h5.writePatch(dxiPerp,physFlux,
+                    "physFlux:dir:"+ to_string(dir) + "Block"+to_string(a_block));
       State fluxdir(bxface);
         
 
@@ -799,9 +802,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
       BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
       forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
-      // BoxData<T,DIM,MEM> tmp =
-      //   Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
-      // tmp.copyTo(fluxdirMom);
+      BoxData<T,DIM,MEM> tmp =
+        Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
+      tmp.copyTo(fluxdirMom);
 
       // Scale rho, rho E fluxes by det(A),
         
@@ -824,7 +827,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           advfluxprod.copyTo(advfluxcomp);
         }
         
-      // Momentum fluxes - pressure forces.
+      // Momentum fluxes - pressure forces.      
       {
         BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
         Box bx = W.box();
@@ -838,14 +841,14 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
             ntslice *= tmp3;
           }
        
-        fluxdirMom += ntrow;
+        //fluxdirMom += ntrow;
         
         // Save fluxes, update RHS.
         fluxdir.copyTo(a_fluxes[dir]);
         BoxData<T,NUMCOMPS,MEM> rhsIncr;
-        T dxInv = 1.0/this->dx()[dir];
+        T dxInv = 1.0/(this->dx()[dir]);
         rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
-        a_Rhs += rhsIncr;
+        if (dir == 0) a_Rhs += rhsIncr;
         outputbox &= rhsIncr.box();
       }
     }

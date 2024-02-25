@@ -70,8 +70,8 @@ void f_initPatchData_(
 PROTO_KERNEL_END(f_initPatchData_, f_initPatchData)
 #endif
 
-template<typename T, MemType MEM>
 PROTO_KERNEL_START
+template<typename T, MemType MEM>
 void f_radialInit_F(
                       Point                           a_pt,
                       Var<T,NUMCOMPS,MEM>&            a_W,
@@ -93,10 +93,9 @@ void f_radialInit_F(
     {
       amplitude = 0.;
     }
-  T rho = rho0 + amplitude*rho0;//rho0*pow(1.0  - eps*arg,2);
+  T rho = rho0 + amplitude*rho0;
   T p = p0*pow(rho/rho0,a_gamma);
   T ur =  amplitude*sqrt(a_gamma*p0/rho0)/rho0;
-  //pow(1.0 - eps*arg,4)*sqrt(a_gamma*p/rho0)/rho0;
   a_W(0) = rho;
   a_W(1) = ur;
   a_W(2) = 0.0;
@@ -104,7 +103,39 @@ void f_radialInit_F(
   a_W(NUMCOMPS-1) = p;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
-
+PROTO_KERNEL_START
+template<typename T, MemType MEM>
+void f_radialBCs_F(
+                      Point                           a_pt,
+                      Var<T,NUMCOMPS,MEM>&            a_USph,
+                      Var<T>&                         a_radius,
+                      T                               a_dxradius,
+                      T                               a_gamma,
+                      int                             a_nradius)
+{
+  // Compute sphericl BCs.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T eps = 0.1;
+  T amplitude;
+  T arg = (1.0*a_pt[0] + .5 - 1.0*a_nradius/2)*a_dxradius/2.;
+  if (abs(arg) < .25)
+    {
+      amplitude = eps*pow(cos(2*M_PI*arg),6);
+    }else
+    {
+      amplitude = 0.;
+    }
+  T rho = rho0 + amplitude*rho0;;
+  T p = p0*pow(rho/rho0,a_gamma);
+  T ur =  amplitude*sqrt(a_gamma*p0/rho0)/rho0;
+  a_USph(0) = rho;
+  a_USph(1) = ur*rho;
+  a_USph(2) = 0.0;
+  a_USph(3) = 0.0;
+  a_USph(NUMCOMPS-1) = p/(a_gamma-1.0);
+}
+PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 int main(int argc, char* argv[])
 {   
 #ifdef PR_MPI
@@ -145,15 +176,12 @@ int main(int argc, char* argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
   MBLevelBoxData<double, 1       , HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0,2));
-
-  // FIXME: Commenting this out until the interpOp can be built without SVD failing
-  //auto interpOp = CubedSphereShell::InterpOp<HOST>(layout, OP::ghost(), 4);
-  //MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, interpOp);
   Array<double,DIM> dx;
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   USph.setVal(0.);  
   double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
+  // Set input solution.
   for (auto dit : layout)
     {
       dx = eulerOp[dit].dx();
@@ -171,14 +199,11 @@ int main(int argc, char* argv[])
       BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
      auto block = layout.block(dit);
      auto& JU_i = JU[dit];
-     BoxData<double,NUMCOMPS,HOST> WNewTemp;
-     BoxData<double,NUMCOMPS,HOST> WBarTemp;
      BoxData<double,NUMCOMPS,HOST> JUTemp;
      BoxData<double,NUMCOMPS> WBar_i(JU_i.box());
      BoxData<double,NUMCOMPS,HOST> WPoint_i(JU_i.box());
      forallInPlace_p(f_radialInit,WPoint_i,radius,dxradius,gamma,thickness);
      eulerOp[dit].primToCons(JUTemp,WPoint_i,dVolrLev[dit],gamma,dx[2],block);
-     eulerOp[dit].consToPrim(WNewTemp,WBarTemp,JUTemp,dVolrLev[dit],gamma,dx[2],block);
      JU_i.setVal(0.);
      JUTemp.copyTo(JU_i,layout[dit]);
      
@@ -199,6 +224,7 @@ int main(int argc, char* argv[])
           auto& rhs_i = rhs[dit];
           auto& USph_i = JU[dit];
           Box bx_i = layout[dit];
+          Box bxGhosted = USph_i.box();
           BoxData<double> radius(layout[dit].grow(ghostTest));
           int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
           double r0 = CUBED_SPHERE_SHELL_R0;
@@ -209,20 +235,21 @@ int main(int argc, char* argv[])
           BoxData<double,DIM,HOST> adjDr(dVolrLev[dit].box());
           unsigned int block = layout.block(dit);
           eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box(),thickness);
+
+          // Set radial boundary condtions in radial ghost cells.         
           Box blockBox = layout.getBlock(block).domain().box();
-          if (blockBox.high()[0] < bx_i.high()[0])
+          if (blockBox.high()[0] < bxGhosted.high()[0])
             {
-              Point low =bx_i.low();
+              Point low = bxGhosted.low();
               low[0] = blockBox.high()[0]+1;
-              Box bdryBoxHigh(low,bx_i.high());
-              forallInPlace_p(f_radialInit,bdryBoxHigh,USph_i,radius,dxradius,gamma,thickness);
-            }
-          if (blockBox.low()[0] > bx_i.low()[0])
+              Box bdryBoxHigh(low,bxGhosted.high());
+              forallInPlace_p(f_radialBCs,bdryBoxHigh,USph_i,radius,dxradius,gamma,thickness);            }
+          if (blockBox.low()[0] > bxGhosted.low()[0])
             {
-              Point high = bx_i.high();
-              high[0] = blockBox.high()[0] + 1;
-              Box bdryBoxLow(bx_i.low(),high);
-              forallInPlace_p(f_radialInit,bdryBoxLow,USph_i,radius,dxradius,gamma,thickness);
+              Point high = bxGhosted.high();
+              high[0] = blockBox.low()[0] + 1;
+              Box bdryBoxLow(bxGhosted.low(),high);
+              forallInPlace_p(f_radialBCs,bdryBoxLow,USph_i,radius,dxradius,gamma,thickness);
             }
           int block_i = layout.block(dit);
           Array<BoxData<double,NUMCOMPS>, DIM> fluxes;
@@ -247,6 +274,9 @@ int main(int argc, char* argv[])
                              "USphGhostPass"+to_string(ipass)+"Block"+to_string(block_i));
               eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
             }
+          CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
+                                             layout.getBlock(block).domain().box(),dx,
+                                             layout.block(dit),4);
           Utemp -= USph_i;                  
           double maxpforce = rhs_i.absMax(1,0,0);
           BoxData<double,NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
@@ -255,7 +285,13 @@ int main(int argc, char* argv[])
           cout <<"pass = "<< ipass << " , block = "<< block_i << ": " << "absmax of rhs = "
                << maxpforce << " , " << "absmax of coarsened rhs = "
                << maxpforceC << endl;
-          h5.writePatch(dx,rhs_i,"rhsPatchPass"+to_string(ipass)+"Block"+to_string(block_i));
+          BoxData<double,NUMCOMPS,HOST> rhsSph(rhs_i.box());
+          rhs_i.copyTo(rhsSph);
+          CubedSphereShell::consToSphNGEuler(rhsSph,dVolrLev[dit],layout[dit],
+                                             layout.getBlock(block).domain().box(),dx,
+                                             layout.block(dit),4);
+          
+          h5.writePatch(dx,rhsSph,"rhsPatchPass"+to_string(ipass)+"Block"+to_string(block_i));
         }
       h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass"+to_string(ipass));
     }

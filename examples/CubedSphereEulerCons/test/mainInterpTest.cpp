@@ -142,13 +142,19 @@ int main(int argc, char* argv[])
   // initialize data and map
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS, HOST> USphDest(layout, OP::ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-  USph.setVal(0.);  
+  USph.setVal(0.);
   double dx = 1.0/domainSize;
   double dxradius = 1.0/thickness;
   auto C2C = Stencil<double>::CornersToCells(4);
   for (auto dit : layout)
-    {      
+    {
+      USphDest[dit].setVal(1.,USphDest[dit].box(),0);
+      USphDest[dit].setVal(0.,USphDest[dit].box(),1);
+      USphDest[dit].setVal(0.,USphDest[dit].box(),2);
+      USphDest[dit].setVal(0.,USphDest[dit].box(),3);
+      USphDest[dit].setVal(1.,USphDest[dit].box(),4);
       BoxData<double> radius(layout[dit].grow(6));
       int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
       double r0 = CUBED_SPHERE_SHELL_R0;
@@ -168,18 +174,20 @@ int main(int argc, char* argv[])
   for (auto dit :layout)
     {
       int block_i = layout.block(dit);
-      auto& USph_i = USph[dit]; 
-      h5.writePatch(dx,USph_i,"USphInit:Block"+to_string(block_i));
-    }
-  USph.exchange();
+      auto& USph_i = USph[dit];
+      auto& USphDest_i = USphDest[dit];
+      USph_i.copyTo(USphDest_i,layout[dit]);
+      h5.writePatch(dx,USphDest_i,"USphInit:Block"+to_string(block_i));
+    }  
+  USphDest.exchange();
   cout <<  "Building interpolation operator" << endl;
-  auto op = CubedSphereShell::InterpOp(USph,4);
-  op.apply(USph,USph); 
+  auto op = CubedSphereShell::InterpOp(USphDest,4);
+  op.apply(USphDest,USphDest); 
   for (auto dit :layout)
     {
       int block_i = layout.block(dit);
-      auto& USph_i = USph[dit]; 
-      h5.writePatch(dx,USph_i,"USphGhostPass:Block"+to_string(block_i));                        
+      auto& USph_i = USphDest[dit]; 
+      h5.writePatch(dx,USph_i,"USphDest:Block"+to_string(block_i));                        
     }
   PR_TIMER_REPORT();
 #ifdef PR_MPI
