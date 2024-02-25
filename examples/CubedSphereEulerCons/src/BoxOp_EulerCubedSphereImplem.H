@@ -841,14 +841,14 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
             ntslice *= tmp3;
           }
        
-        //fluxdirMom += ntrow;
+        fluxdirMom += ntrow;
         
         // Save fluxes, update RHS.
         fluxdir.copyTo(a_fluxes[dir]);
         BoxData<T,NUMCOMPS,MEM> rhsIncr;
         T dxInv = 1.0/(this->dx()[dir]);
         rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
-        if (dir == 0) a_Rhs += rhsIncr;
+        a_Rhs += rhsIncr;
         outputbox &= rhsIncr.box();
       }
     }
