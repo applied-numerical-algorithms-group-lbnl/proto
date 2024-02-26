@@ -350,8 +350,8 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    MBPointInterpOp op( dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
+                    m_ops.push_back(MBPointInterpOp( dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    auto& op = m_ops[m_ops.size()-1];
                     m_points.insert(key);
                     
                     //do copy
@@ -419,8 +419,8 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    MBPointInterpOp op(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
+                    m_ops.push_back(MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    auto& op = m_ops[m_ops.size()-1];
                     m_points.insert(key);
                     
                     //do copy

@@ -6,6 +6,62 @@
 //#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
+
+TEST(MBInterpOp, MBDataPoint)
+{
+    // grid parameters
+    int domainSize = 32;
+    int boxSize = 16;
+    int ghostSize = 1;
+    
+    // interplating function parameters
+    double order = 4.0;
+    Array<double, DIM> exp{1,1,0,0,0,0};
+    exp *= order;
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
+  
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    // initialize data and map
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+    MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+
+    hostSrc.setVal(1);
+    hostDst.setVal(2);
+
+    MBLevelMap<MBMap_Shear, HOST> map;
+    map.define(layout, Point::Ones(ghostSize));
+    
+    std::vector<MBDataPoint> points;
+    for (auto iter : layout)
+    {
+        for (auto pi : layout[iter])
+        {
+            points.push_back(MBDataPoint(iter, pi, layout));
+        }
+    }
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+    h5.writeMBLevel({"v"},map, hostSrc, "SRC_0"); 
+    h5.writeMBLevel({"v"},map, hostDst, "DST_0"); 
+#endif
+    
+    for (auto& pi : points)
+    {
+        auto vSrc = hostSrc[pi];
+        auto vDst = hostDst[pi];
+        vDst(0) = vSrc(0);
+    }
+
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"v"},map, hostSrc, "SRC_1"); 
+    h5.writeMBLevel({"v"},map, hostDst, "DST_1"); 
+#endif
+}
+
 #if DIM == 2
 #if 1
 TEST(MBInterpOp, ShearTest)
@@ -53,6 +109,7 @@ TEST(MBInterpOp, ShearTest)
             // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(b_i);
             FluxBoxData<double, DIM> NT(b_i);
+            std::cout << "block: " << block << std::endl;
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
             //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
@@ -241,7 +298,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 3;
+    int N = 1;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)

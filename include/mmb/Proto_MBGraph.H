@@ -27,6 +27,8 @@ namespace Proto
             dstToSrc = a_dstToSrc;
         }
 
+        inline ~MBGraphArc(){}
+
         inline void print() {
             std::cout << "srcBlock: " << srcBlock;
             std::cout << " | dstBlock: " << dstBlock;
