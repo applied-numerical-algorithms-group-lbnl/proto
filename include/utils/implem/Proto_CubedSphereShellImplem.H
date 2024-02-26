@@ -160,8 +160,8 @@ consToSphNGEuler(
   BoxData<T,1,MEM> rho = slice(USph,0);      
   cellQuotientValAndInv(rho,deta,detaInv,JRho,a_bx,a_blockBox);
       
-  BoxData<T,1,MEM> JRhoE = slice(a_JU,C-1);
-  BoxData<T,1,MEM> rhoE = slice(USph,C-1);
+  BoxData<T,1,MEM> JRhoE = slice(a_JU,1+DIM);
+  BoxData<T,1,MEM> rhoE = slice(USph,1+DIM);
   cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,a_bx,a_blockBox);
       
   BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(a_JU,1);

@@ -114,9 +114,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                       vecType velSph;
                       vecType velCart;
                   
-                      velSph[0] = a_wpoint(1);       
-                      velSph[1] = a_wpoint(2);
-                      velSph[2] = a_wpoint(3);
+                      velSph[0] = a_wpoint(iVX);       
+                      velSph[1] = a_wpoint(iVY);
+                      velSph[2] = a_wpoint(iVZ);
                       velCart[0] = 0.;       
                       velCart[1] = 0.;
                       velCart[2] = 0.;
@@ -131,7 +131,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                             }
                           a_ke(0) += velCart[dir0]*velCart[dir0]/2;
                         }
-                      a_ke(0) *= a_wpoint(0);
+                      a_ke(0) *= a_wpoint(iRHO);
                     },Amat,a_WPoint);
   return ke;
 }
@@ -155,19 +155,19 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
        a_output(0) = 1.0/a_deta(0);
      }
      ,deta);
-  BoxData<T,1,MEM> rho = slice(outputs,0);
-  BoxData<T,1,MEM> rhoIn = slice(a_inputs,0);
+  BoxData<T,1,MEM> rho = slice(outputs,iRHO);
+  BoxData<T,1,MEM> rhoIn = slice(a_inputs,iRHO);
   rho += rhoIn*detaInv;
-  BoxData<T,1,MEM> rhoE = slice(outputs,NUMCOMPS-1);
-  BoxData<T,1,MEM> rhoEIn = slice(a_inputs,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoE = slice(outputs,iE);
+  BoxData<T,1,MEM> rhoEIn = slice(a_inputs,iE);
   rhoE += rhoEIn*detaInv;
   
   BoxData<T,DIM,MEM,DIM> deta_amat = CubedSphereShell::detA_A<T,MEM>(bx.grow(2),a_h,a_block,0); 
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
-  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(outputs,1);
-  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_inputs,1);
+  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(outputs,iMOMX);
+  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_inputs,iMOMX);
   BoxData<T,DIM,MEM> tmpmom(outputs.box());
   T one = 1.0;  
   forallInPlace(f_matVecProd,tmpmom,invcoef,MomIn,one);
@@ -212,11 +212,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                             const Var<T,1,MEM>& a_ke,
                             T a_gamma)
                            {
-                             a_upoint(0) = a_wpoint(0)*a_dvolpoint(0);
-                             a_upoint(1) = a_wpoint(1)*a_upoint(0);
-                             a_upoint(2) = a_wpoint(2)*a_upoint(0);
-                             a_upoint(3) = a_wpoint(3)*a_upoint(0);
-                             a_upoint(4) = (a_wpoint(4)/(a_gamma - 1.0) + a_ke(0))
+                             a_upoint(iRHO) = a_wpoint(iRHO)*a_dvolpoint(0);
+                             a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO);
+                             a_upoint(iMOMY) = a_wpoint(iVY)*a_upoint(iRHO);
+                             a_upoint(iMOMZ) = a_wpoint(iVZ)*a_upoint(iRHO);
+                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0))
                              *a_dvolpoint(0);
                            },a_WPoint,dVolPoint,ke,a_gamma);
  
@@ -225,8 +225,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   // spherical velocities -> Cartesian velocities.
   a_JU.define(U.box());
   Box bx = U.box();
-  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-  BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
+  BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iMOMX);
+  BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,iMOMX);
   BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(bx,a_h,a_block,0);
   
   T one = 1.0;
@@ -237,15 +237,15 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
 
   BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx,a_h,0);
   {
-    BoxData<T,1,MEM> JUcomp = slice(a_JU,0);
-    BoxData<T,1,MEM> Ucomp = slice(U,0);
+    BoxData<T,1,MEM> JUcomp = slice(a_JU,iRHO);
+    BoxData<T,1,MEM> Ucomp = slice(U,iRHO);
     BoxData<T,1,MEM> tmp;
     tmp = Ucomp * deta;
     tmp.copyTo(JUcomp);
   }
   {
-    BoxData<T,1,MEM> JUcomp = slice(a_JU,NUMCOMPS-1);
-    BoxData<T,1,MEM> Ucomp = slice(U,NUMCOMPS-1);
+    BoxData<T,1,MEM> JUcomp = slice(a_JU,iE);
+    BoxData<T,1,MEM> Ucomp = slice(U,iE);
     BoxData<T,1,MEM> tmp;
     tmp = Ucomp * deta;
     tmp.copyTo(JUcomp);
@@ -293,15 +293,15 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToFlux(
       uint a_block,
       uint a_centering)
      {
-       T velnorm = a_wface(a_centering+1);
-       a_flux(0) = a_wface(0)*velnorm*a_adjddir(0);
-       T veltan1 = a_wface((a_centering+1)%DIM + 1);
-       T veltan2 = a_wface((a_centering+2)%DIM + 1);
-       a_flux(a_centering+1) = a_flux(0)*velnorm;
-       a_flux((a_centering+1)%DIM + 1) = a_flux(0)*veltan1;
-       a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
-       a_flux(NUMCOMPS - 1) =
-       (a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
+       T velnorm = a_wface(a_centering+iVX);
+       a_flux(iRHO) = a_wface(iRHO)*velnorm*a_adjddir(0);
+       T veltan1 = a_wface((a_centering+1)%DIM + iVX);
+       T veltan2 = a_wface((a_centering+2)%DIM + iVX);
+       a_flux(a_centering+iMOMX) = a_flux(iRHO)*velnorm;
+       a_flux((a_centering+1)%DIM + iMOMX) = a_flux(iRHO)*veltan1;
+       a_flux((a_centering+2)%DIM + iMOMX) = a_flux(iRHO)*veltan2;
+       a_flux(iE) =
+       (a_ke(0) + a_wface(iP)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
      },WFacePoint,kePoint,adjDdirPoint,m_gamma,a_block,a_centering);
    if ((a_block == BLOCKTEST) && a_centering == 0)
     {
@@ -351,9 +351,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                       vecType velSph;
                       vecType velCart;
                   
-                      velSph[0] = a_wpoint(1);       
-                      velSph[1] = a_wpoint(2);
-                      velSph[2] = a_wpoint(3);
+                      velSph[0] = a_wpoint(iVX);       
+                      velSph[1] = a_wpoint(iVY);
+                      velSph[2] = a_wpoint(iVZ);
                       velCart[0] = 0.;       
                       velCart[1] = 0.;
                       velCart[2] = 0.;
@@ -368,7 +368,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                             }
                           a_ke(0) += velCart[dir0]*velCart[dir0]/2;
                         }
-                      a_ke(0) *= a_wpoint(0);
+                      a_ke(0) *= a_wpoint(iRHO);
                     },Amat,a_WPoint);
   return ke;
 }
@@ -404,11 +404,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
                             const Var<T,1,MEM>& a_ke,
                             T a_gamma)
                            {
-                             a_upoint(0) = a_wpoint(0)*a_dvolpoint(0);
-                             a_upoint(1) = a_wpoint(1)*a_upoint(0);
-                             a_upoint(2) = a_wpoint(2)*a_upoint(0);
-                             a_upoint(3) = a_wpoint(3)*a_upoint(0);
-                             a_upoint(4) = (a_wpoint(4)/(a_gamma - 1.0) + a_ke(0))
+                             a_upoint(iRHO) = a_wpoint(iRHO)*a_dvolpoint(0);
+                             a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO);
+                             a_upoint(iMOMY) = a_wpoint(iVY)*a_upoint(iRHO);
+                             a_upoint(iMOMZ) = a_wpoint(iVZ)*a_upoint(iRHO);
+                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0))
                              *a_dvolpoint(0);
                            },a_WPoint,dVolPoint,ke,m_gamma);
  
@@ -468,17 +468,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToPrim(
   {
     PR_TIMERS("ConsToRadialCons");
     BoxData<T,1,MEM> tmp(a_JU.box()); 
-    BoxData<T,1,MEM> JRho = slice(a_JU,0);
-    BoxData<T,1,MEM> rho = slice(U,0);
+    BoxData<T,1,MEM> JRho = slice(a_JU,iRHO);
+    BoxData<T,1,MEM> rho = slice(U,iRHO);
     tmp = JRho*detaInv;
     tmp.copyTo(rho);
-    BoxData<T,1,MEM> JRhoE = slice(a_JU,NUMCOMPS-1);
-    BoxData<T,1,MEM> rhoE = slice(U,NUMCOMPS-1);
+    BoxData<T,1,MEM> JRhoE = slice(a_JU,iE);
+    BoxData<T,1,MEM> rhoE = slice(U,iE);
     tmp = JRhoE*detaInv;
     tmp.copyTo(rhoE);
     // V_r*rho*v_cart -> V_r*rho*v_sphere = (detA A)^{-1} V_r*rho*v_cart;
-    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-    BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,1);
+    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iMOMX);
+    BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,iMOMX);
     BoxData<T,DIM,MEM> tmpmom(JUMom.box());
     T one = 1.0;  
     forallInPlace(f_matVecProd,tmpmom,invcoef,JUMom,one);
@@ -504,11 +504,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToPrim(
                               Var<T,NUMCOMPS,MEM>& a_upoint)                           
                              {
                                Var<T,NUMCOMPS,MEM> wpoint;
-                               a_wpoint(0) = a_upoint(0);
-                               a_wpoint(1) = a_upoint(1)/a_upoint(0);
-                               a_wpoint(2) = a_upoint(2)/a_upoint(0);
-                               a_wpoint(3) = a_upoint(3)/a_upoint(0);
-                               a_wpoint(4) = a_upoint(4);                             
+                               a_wpoint(iRHO) = a_upoint(iRHO);
+                               a_wpoint(iVX) = a_upoint(iMOMX)/a_upoint(iRHO);
+                               a_wpoint(iVY) = a_upoint(iMOMY)/a_upoint(iRHO);
+                               a_wpoint(iVZ) = a_upoint(iMOMZ)/a_upoint(iRHO);
+                               a_wpoint(iP) = a_upoint(iE);                             
                              },UPoint);
     // Compute pressure.
     BoxData<T,1,MEM> kePoint = kineticEnergyW(WPoint,a_h,a_block,-1); 
@@ -517,7 +517,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToPrim(
                    const Var<T,1,MEM>& a_ke,
                    T a_gamma)
                   {
-                    a_wpoint(NUMCOMPS-1) = (a_wpoint(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                    a_wpoint(iP) = (a_wpoint(iP) - a_ke(0))*(a_gamma - 1.0);
                   },WPoint,kePoint,a_gamma);
     a_W = convolveStencil(WPoint);
     WPoint.copyTo(a_WBar);
@@ -567,15 +567,15 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToFlux(
       uint a_block,
       uint a_centering)
      {
-       T velnorm = a_wface(a_centering+1);
-       a_flux(0) = a_wface(0)*velnorm*a_adjddir(0);
-       T veltan1 = a_wface((a_centering+1)%DIM + 1);
-       T veltan2 = a_wface((a_centering+2)%DIM + 1);
-       a_flux(a_centering+1) = a_flux(0)*velnorm;
-       a_flux((a_centering+1)%DIM + 1) = a_flux(0)*veltan1;
-       a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
-       a_flux(NUMCOMPS - 1) =
-       (a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
+       T velnorm = a_wface(a_centering+iVX);
+       a_flux(iRHO) = a_wface(iRHO)*velnorm*a_adjddir(0);
+       T veltan1 = a_wface((a_centering+1)%DIM + iVX);
+       T veltan2 = a_wface((a_centering+2)%DIM + iVX);
+       a_flux(a_centering+iVX) = a_flux(iRHO)*velnorm;
+       a_flux((a_centering+1)%DIM + iVX) = a_flux(iRHO)*veltan1;
+       a_flux((a_centering+2)%DIM + iVX) = a_flux(iRHO)*veltan2;
+       a_flux(iE) =
+       (a_ke(0) + a_wface(iP)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
      },WFacePoint,kePoint,adjDdirPoint,a_gamma,a_block,a_centering);
    if ((a_block == BLOCKTEST) && a_centering == 0)
     {
@@ -680,8 +680,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       T one = 1.0;
       BoxData<T,DIM,MEM,DIM> deta_a =
         CubedSphereShell::detA_A<T,MEM>(bxface,a_h,a_block,dir);
-      BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
-      BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
+      BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,iMOMX);
+      BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,iMOMX);
       BoxData<T,DIM,MEM> tmp =
         Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
       tmp.copyTo(fluxdirMom);
@@ -694,8 +694,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
                      const Var<T,1,MEM>& a_deta,
                      const Var<T,1,MEM>& a_adjddir)
                     {                    
-                      a_advflux(0) = a_deta(0)*a_fluxin(0);
-                      a_advflux(NUMCOMPS-1) = a_deta(0)*a_fluxin(NUMCOMPS-1);  
+                      a_advflux(iRHO) = a_deta(0)*a_fluxin(iRHO);
+                      a_advflux(iE) = a_deta(0)*a_fluxin(iE);  
                     },fluxdir,physFlux,deta,adjDrDir);
         
       for (int comp = 0; comp < NUMCOMPS;comp++)
@@ -707,7 +707,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         
       // Momentum fluxes - pressure forces.
       {
-        BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
+        BoxData<T,1,MEM> pslice = slice(WFace,iP);
         Box bx = W.box();
         Box bxdir = bx.extrude(Point::Basis(dir));
         BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,a_h,a_block,dir);
@@ -799,8 +799,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
       BoxData<T,DIM,MEM,DIM> deta_a =
         CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
-      BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
-      BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
+      BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,iMOMX);
+      BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,iMOMX);
       forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
       BoxData<T,DIM,MEM> tmp =
         Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
@@ -815,9 +815,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
                      const Var<T,1,MEM>& a_deta,
                      const Var<T,1,MEM>& a_adjddir)
                     {                    
-                      a_advflux(0) = a_deta(0)*a_fluxin(0);
-                      a_advflux(NUMCOMPS-1) =
-                        a_deta(0)*a_fluxin(NUMCOMPS-1);  
+                      a_advflux(iRHO) = a_deta(0)*a_fluxin(iRHO);
+                      a_advflux(iE) =
+                        a_deta(0)*a_fluxin(iE);  
                     },fluxdir,physFlux,deta,adjDrDir);
         
       for (int comp = 0; comp < NUMCOMPS;comp++)
@@ -829,7 +829,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         
       // Momentum fluxes - pressure forces.      
       {
-        BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
+        BoxData<T,1,MEM> pslice = slice(WFace,iP);
         Box bx = W.box();
         Box bxdir = bx.extrude(Point::Basis(dir));
         BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,dxiPerp,a_block,dir);
@@ -905,15 +905,15 @@ primToFlux(
       uint a_block,
       uint a_centering)
      {
-       T velnorm = a_wface(a_centering+1);
-       a_flux(0) = a_wface(0)*velnorm*a_adjddir(0);
-       T veltan1 = a_wface((a_centering+1)%DIM + 1);
-       T veltan2 = a_wface((a_centering+2)%DIM + 1);
-       a_flux(a_centering+1) = a_flux(0)*velnorm;
-       a_flux((a_centering+1)%DIM + 1) = a_flux(0)*veltan1;
-       a_flux((a_centering+2)%DIM + 1) = a_flux(0)*veltan2;
-       a_flux(NUMCOMPS - 1) =
-       (a_ke(0) + a_wface(NUMCOMPS-1)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
+       T velnorm = a_wface(a_centering+iVX);
+       a_flux(iRHO) = a_wface(iRHO)*velnorm*a_adjddir(0);
+       T veltan1 = a_wface((a_centering+1)%DIM + iVX);
+       T veltan2 = a_wface((a_centering+2)%DIM + iVX);
+       a_flux(a_centering+iMOMX) = a_flux(iRHO)*velnorm;
+       a_flux((a_centering+1)%DIM + iMOMX) = a_flux(iRHO)*veltan1;
+       a_flux((a_centering+2)%DIM + iMOMX) = a_flux(iRHO)*veltan2;
+       a_flux(iE) =
+       (a_ke(0) + a_wface(iP)*a_gamma/(a_gamma - 1.0))*a_adjddir(0)*velnorm;
      },WFacePoint,kePoint,adjDdirPoint,m_gamma,a_block,a_centering);
    if ((a_block == BLOCKTEST) && a_centering == 0)
     {
@@ -948,12 +948,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToSph(State& a_input,
        a_output(0) = 1.0/a_deta(0);
      }
      ,deta);
-  BoxData<T,1,MEM> rho = slice(output,0);
-  BoxData<T,1,MEM> rhoIn = slice(a_input,0);
+  BoxData<T,1,MEM> rho = slice(output,iRHO);
+  BoxData<T,1,MEM> rhoIn = slice(a_input,iRHO);
   
   rho += rhoIn*detaInv;
-  BoxData<T,1,MEM> rhoE = slice(output,NUMCOMPS-1);
-  BoxData<T,1,MEM> rhoEIn = slice(a_input,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoE = slice(output,iE);
+  BoxData<T,1,MEM> rhoEIn = slice(a_input,iE);
   rhoE += rhoEIn*detaInv;
   
   BoxData<T,DIM,MEM,DIM> deta_amat =
@@ -961,9 +961,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToSph(State& a_input,
   BoxData<T,DIM,MEM,DIM> invcoef(bx);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
-  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(output,1);
+  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(output,iMOMX);
   BoxData<T,DIM,MEM> MomBar;
-  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_input,1);
+  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_input,iMOMX);
   BoxData<T,DIM,MEM> tmpmom(output.box());
   T one = 1.0;  
   // forallInPlace(f_matVecProd,tmpmom,invcoef,MomIn,one);
@@ -986,16 +986,16 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToCart(State& a_input,
   Box bx = a_bx;
   BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx,dxiPerp,0); 
  
-  BoxData<T,1,MEM> rho = slice(output,0);
-  BoxData<T,1,MEM> rhoIn = slice(a_input,0);
+  BoxData<T,1,MEM> rho = slice(output,iRHO);
+  BoxData<T,1,MEM> rhoIn = slice(a_input,iRHO);
   rho += rhoIn*deta;
-  BoxData<T,1,MEM> rhoE = slice(output,NUMCOMPS-1);
-  BoxData<T,1,MEM> rhoEIn = slice(a_input,NUMCOMPS-1);
+  BoxData<T,1,MEM> rhoE = slice(output,iE);
+  BoxData<T,1,MEM> rhoEIn = slice(a_input,iE);
   rhoE += rhoEIn*deta;
   
   BoxData<T,DIM,MEM,DIM> deta_amat = CubedSphereShell::detA_A<T,MEM>(bx,dxiPerp,a_block,0); 
-  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(output,1);
-  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_input,1);
+  BoxData<T,DIM,MEM> Mom = slice<T,NUMCOMPS,DIM,MEM>(output,iMOMX);
+  BoxData<T,DIM,MEM> MomIn = slice<T,NUMCOMPS,DIM,MEM>(a_input,iMOMX);
   BoxData<T,DIM,MEM> tmpmom(output.box());
   T one = 1.0;  
   forallInPlace(f_matVecProd,tmpmom,deta_amat,MomIn,one);
@@ -1051,19 +1051,19 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::cartToSph(
   {
     PR_TIMERS("ConsToRadialCons");
     BoxData<T,1,MEM> tmp(bx); 
-    BoxData<T,1,MEM> JRho = slice(a_JU,0);
-    BoxData<T,1,MEM> rho = slice(a_USph,0);
+    BoxData<T,1,MEM> JRho = slice(a_JU,iRHO);
+    BoxData<T,1,MEM> rho = slice(a_USph,iRHO);
     //tmp = JRho*detaInv;
     //tmp.copyTo(rho);
     cellQuotientValAndInv(rho,deta,detaInv,JRho,domainBox);
-    BoxData<T,1,MEM> JRhoE = slice(a_JU,NUMCOMPS-1);
-    BoxData<T,1,MEM> rhoE = slice(a_USph,NUMCOMPS-1);
+    BoxData<T,1,MEM> JRhoE = slice(a_JU,iE);
+    BoxData<T,1,MEM> rhoE = slice(a_USph,iE);
     //tmp = JRhoE*detaInv;
     //tmp.copyTo(rhoE);
     cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,domainBox);
     // V_r*rho*v_cart -> V_r*rho*v_sphere = (det(A) A)^{-1} V_r*rho*v_cart;
-    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,1);
-    BoxData<T,DIM,MEM> USphMom = slice<T,NUMCOMPS,DIM,MEM>(a_USph,1);    
+    BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iMOMX);
+    BoxData<T,DIM,MEM> USphMom = slice<T,NUMCOMPS,DIM,MEM>(a_USph,iMOMX);    
     cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,domainBox);
   }
 }
@@ -1097,14 +1097,14 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                  const Var<T,1,MEM>& a_ke,
                  T a_gamma)
                 {
-                  a_w(NUMCOMPS-1) = (a_w(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                  a_w(iP) = (a_w(iP) - a_ke(0))*(a_gamma - 1.0);
                 },a_W,kePoint,m_gamma);
   forallInPlace([ ] PROTO_LAMBDA
                 (Var<T,NUMCOMPS>& a_w,
                  const Var<T,1,MEM>& a_ke,
                  T a_gamma)
                 {
-                  a_w(NUMCOMPS-1) = (a_w(NUMCOMPS-1) - a_ke(0))*(a_gamma - 1.0);
+                  a_w(iP) = (a_w(iP) - a_ke(0))*(a_gamma - 1.0);
                 },a_WBar,keBar,m_gamma);
   T coef = 1.0/24.0;
   a_W += Stencil<T>::Laplacian()(a_WBar,coef);

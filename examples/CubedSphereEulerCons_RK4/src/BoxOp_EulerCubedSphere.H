@@ -6,7 +6,50 @@
 //#include "Proto_CubedSphereShell.H"
 //#include "Proto_CubedSphereKernels.H"
 
-#define NUMCOMPS DIM+2
+#define NUMCOMPS 2*DIM+2
+
+#if DIM == 2
+#define iRHO 0
+#define iVX 1
+#define iMOMX 1
+#define iVY 2
+#define iMOMY 2
+#define iE 3
+#define iP 3
+#define iBX 4
+#define iBY 5
+#if TURB == 1
+	#define iRHOZ2 6
+	#define iZ2 6
+	#define iRHOZ2SIGMA 7
+	#define iSIGMA 7
+	#define iRHOLAMBDA 8
+	#define iLAMBDA 8
+#endif
+#endif
+
+#if DIM == 3
+#define iRHO 0
+#define iVX 1
+#define iMOMX 1
+#define iVY 2
+#define iMOMY 2
+#define iVZ 3
+#define iMOMZ 3
+#define iE 4
+#define iP 4
+#define iBX 5
+#define iBY 6
+#define iBZ 7
+#if TURB == 1
+	#define iRHOZ2 8
+	#define iZ2 8
+	#define iRHOZ2SIGMA 9
+	#define iSIGMA 9
+	#define iRHOLAMBDA 10
+	#define iLAMBDA 10
+#endif
+#endif
 
 using namespace Proto;
 typedef BoxData<double> Scalar;

@@ -97,11 +97,11 @@ void f_radialInit_F(
   T rho = rho0 + amplitude * rho0;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_W(0) = rho;
-  a_W(1) = 0.;//ur;
-  a_W(2) = 0.0;
-  a_W(3) = 0.0;
-  a_W(NUMCOMPS - 1) = p;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 PROTO_KERNEL_START
@@ -132,11 +132,11 @@ void f_radialBCs_F(
   ;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_USph(0) = rho;
-  a_USph(1) = 0.;//ur * rho;
-  a_USph(2) = 0.0;
-  a_USph(3) = 0.0;
-  a_USph(NUMCOMPS - 1) = p / (a_gamma - 1.0);
+  a_USph(iRHO) = rho;
+  a_USph(iMOMX) = 0.;//ur * rho;
+  a_USph(iMOMY) = 0.0;
+  a_USph(iMOMZ) = 0.0;
+  a_USph(iE) = p / (a_gamma - 1.0);
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
