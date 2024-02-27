@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
       double gamma = 5.0/3.0;
       BoxData<double,DIM,HOST> Dr(dVolrLev[dit].box());
       BoxData<double,DIM,HOST> adjDr(dVolrLev[dit].box());
-      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box(),thickness);
+      eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box());
       Box b_i = C2C.domain(layout[dit]).grow(6);
       BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
      auto block = layout.block(dit);
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
           BoxData<double,DIM,HOST> Dr(dVolrLev[dit].box());
           BoxData<double,DIM,HOST> adjDr(dVolrLev[dit].box());
           unsigned int block = layout.block(dit);
-          eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box(),thickness);
+          eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box());
 
           // Set radial boundary condtions in radial ghost cells.         
           Box blockBox = layout.getBlock(block).domain().box();

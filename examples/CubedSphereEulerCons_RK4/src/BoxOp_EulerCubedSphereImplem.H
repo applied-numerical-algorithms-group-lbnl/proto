@@ -8,48 +8,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                                              BoxData<T,DIM,MEM>& a_Diagr,
                                              BoxData<T,DIM,MEM>& a_adjDr,
                                              BoxData<T, 1, MEM>& a_dVolr,
-                                             Box a_bx,
-                                             int a_nradius) const
-{
-  int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-  double r0 = CUBED_SPHERE_SHELL_R0;
-  double r1 = CUBED_SPHERE_SHELL_R1;
-  double dr = (r1-r0)/a_nradius;
-  double dxi0 = 1.0/a_nradius;
-  forallInPlace_p([]PROTO_LAMBDA(Point a_pt,
-                                 Var<double>& a_rad,
-                                 Var<double,DIM>& a_diagr,
-                                 Var<double,DIM>& a_adjdiagr,
-                                 Var<double>& a_dVolr,
-                                 double a_r0,
-                                 double a_r1,
-                                 double a_dr,
-                                 double a_dxi0,
-                                 int a_rdir)
-                  {
-                    a_rad(0) = a_r0 + a_dr*a_pt[a_rdir];
-                    T rlow = a_rad(0);
-                    T rhigh = a_rad(0)+a_dr;
-                    a_rad(0) = rlow;
-                    a_dVolr(0) = (rhigh*rhigh*rhigh - rlow*rlow*rlow)/3.0/a_dxi0;
-                    a_diagr(0) = (rhigh - rlow)/a_dxi0;
-                    a_diagr(1) = (rhigh + rlow)/2.0;
-                    a_diagr(2) = (rhigh + rlow)/2.0;
-                    a_adjdiagr(0) = rlow*rlow;
-                    a_adjdiagr(1) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
-                    a_adjdiagr(2) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
-                  },a_bx,a_radius,a_Diagr,a_adjDr,a_dVolr,r0,r1,dr,dxi0,r_dir);
-}
-template<
-    typename T,
-    template<MemType> typename MAP,
-    MemType MEM>
-inline void
-BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
-                                             BoxData<T, 1, MEM>& a_radius,
-                                             BoxData<T,DIM,MEM>& a_Diagr,
-                                             BoxData<T,DIM,MEM>& a_adjDr,
-                                             BoxData<T, 1, MEM>& a_dVolr,
                                              Box a_bx) const
 {
   int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -174,6 +132,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
   tmpmom.copyTo(Mom);
   return outputs;
 }
+
 template<
   typename T,
   template<MemType> typename MAP,
@@ -251,6 +210,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
     tmp.copyTo(JUcomp);
   }
 }
+#if 0
 template<
   typename T,
   template<MemType> typename MAP,
@@ -313,6 +273,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToFlux(
   a_physFlux = (1.0*Shift(Point::Zeros()) +
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
 }
+#endif
 template<
   typename T,
   template<MemType> typename MAP,
@@ -415,6 +376,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
   a_USph |= convolveStencil(UPoint);
   cout << "UPoint, USph boxes = "  << UPoint.box() << " , " << a_USph.box()  << endl;
 }
+#if 0
 template<
     typename T,
     template<MemType> typename MAP,
@@ -737,6 +699,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
     }
   a_Rhs *= (a_scale);
 }
+#endif
 // ====================================================================================
 // New factorization of operator implems start here.
 // ====================================================================================
@@ -861,7 +824,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   a_Rhs *= (a_scale);
   cout << "output box = " << outputbox << endl;
 }
-#if 0
 template<
     typename T,
     template<MemType> typename MAP,
@@ -925,7 +887,7 @@ primToFlux(
   a_physFlux = (1.0*Shift(Point::Zeros()) +
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
 }
-#endif
+
 template<
     typename T,
     template<MemType> typename MAP,

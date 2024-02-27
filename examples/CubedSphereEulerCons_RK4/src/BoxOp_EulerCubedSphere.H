@@ -116,61 +116,18 @@ public:
   inline void init()
   {
   };  
-  
-  // Apply BCs by filling ghost cells in stage values. For Euler, this is done by calling
-  // exchange. For the MHD code, it will be more complicated.
-  // The interface is very provisional. We expect it to evolve as we d more real problems.
-  // Apply Operator
-  inline void operator()
-      (
-       State&                          a_Rhs,
-       Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
-       const BoxData<T,DIM,MEM>&       a_Dr,
-       const BoxData<T,DIM,MEM>&       a_adjDr,
-       const BoxData<T,1,MEM>&         a_dVolr,
-       T                               a_h,
-       int                             a_block,
-       T                               a_scale = 1.0) const;
 
-  // Same as the above but conforms to Proto's API
-  inline void operator()
-      (
-       State&                          a_Rhs,
-       Array<State, DIM>&              a_fluxes,
-       const State&                    a_JU,
-       T                               a_scale = 1.0) const;
+  // New factorization of the operator starts here.
+  // New operator - calls RadialMetrics from inside the operator.
+  // Implem added.
   
-  inline void primToFlux(
-                         State& a_physFlux,
-                         const State& a_WFace,
-                         const State& a_WFaceBar,
-                         const BoxData<T,1,MEM>& a_adjDdir,
-                         T a_h,
-                         T a_gamma,
-                         uint a_block,
-                         uint a_centering) const;
-  
-  inline void consToPrim(
-                         State& a_W,
-                         State& a_WBar,
-                         const State& a_JU,
-                         const BoxData<T,1,MEM>& a_dVolr,
-                         T a_gamma,
-                         T a_h,
-                         uint a_block) const;
-  
-  inline void primToCons(
+   inline void primToCons(
                          State& a_JU,
                          const State& a_WPoint,
                          const BoxData<T>& a_dVolr,
                          T a_gamma,
                          T a_h,
                          uint a_block) const;
-  
-  // New factorization of the operator starts here.
-  // New operator - calls RadialMetrics from inside the operator.
-  // Implem added.
   
   inline void operator()
   (
@@ -239,14 +196,6 @@ public:
                                              State& a_inputs,
                                              T a_h,
                                              unsigned int a_block) const;
-  inline void radialMetrics(
-                            BoxData<T, 1, MEM>& a_radius,
-                            BoxData<T,DIM,MEM>& a_Diagr,
-                            BoxData<T,DIM,MEM>& a_adjDr,
-                            BoxData<T, 1, MEM>& a_dVolr,
-                            Box a_bx,
-                            int a_nradius) const;
-  
   
 private:
   
