@@ -258,6 +258,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         Point           a_dir,
         unsigned int    a_block) const
 {
+    PR_TIME("MBLevelBoxData::isBlockBoundary");
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     unsigned int thisBlock = block(a_index);
     Point thisPatch = point(a_index);

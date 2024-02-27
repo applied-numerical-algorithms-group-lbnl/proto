@@ -75,7 +75,6 @@ void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, 1, MEM>& a_J,
         unsigned int a_block) const
 {
-    std::cout << "block: " << a_block << std::endl;
     PR_TIME("MBLevelMap::apply");
     m_ops[a_block]._apply(a_X, a_J);
 }
@@ -87,7 +86,6 @@ void MBLevelMap<MAP,MEM>::apply(
         FluxBoxData<double, DIM, MEM>& a_NT,
         unsigned int a_block) const
 {
-    std::cout << "block: " << a_block << std::endl;
     PR_TIME("MBLevelMap::apply");
     m_ops[a_block]._apply(a_X, a_J, a_NT);
 }

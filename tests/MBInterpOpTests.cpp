@@ -109,7 +109,6 @@ TEST(MBInterpOp, ShearTest)
             // Jacobian and NT are computed but not used
             BoxData<double, 1> J_i(b_i);
             FluxBoxData<double, DIM> NT(b_i);
-            std::cout << "block: " << block << std::endl;
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
             //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
@@ -234,10 +233,7 @@ TEST(MBInterpOp, XPointTest)
 #if DIM > 2
         interpLayout.setCopy(2,true);
 #endif
-        {
-            PR_TIME("XPointTest::DefineInterp");
-            interp.define(map, interpLayout, order);
-        }
+        interp.define(map, interpLayout, order);
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {
