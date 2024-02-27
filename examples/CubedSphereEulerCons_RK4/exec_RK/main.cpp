@@ -97,12 +97,13 @@ void f_radialInit_F(
   T rho = rho0 + amplitude * rho0;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_W(iRHO) = rho;
-  a_W(iVX) = 0.;//ur;
-  a_W(iVY) = 0.0;
-  a_W(iVZ) = 0.0;
-  a_W(iP) = p;
+  a_W(0) = rho;
+  a_W(1) = 0.;//ur;
+  a_W(2) = 0.0;
+  a_W(3) = 0.0;
+  a_W(4) = p;
 }
+
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
@@ -132,17 +133,16 @@ void f_radialBCs_F(
   ;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_USph(iRHO) = rho;
-  a_USph(iMOMX) = 0.;//ur * rho;
-  a_USph(iMOMY) = 0.0;
-  a_USph(iMOMZ) = 0.0;
-  a_USph(iE) = p / (a_gamma - 1.0);
+  a_USph(0) = rho;
+  a_USph(1) = 0;//ur * rho;
+  a_USph(2) = 0.0;
+  a_USph(3) = 0.0;
+  a_USph(4) = p / (a_gamma - 1.0);
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              auto &eulerOp,
-             double domainSize,
              double thickness,
              int iter)
 {
@@ -164,7 +164,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     dx = eulerOp[dit].dx();
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-    eulerOp[dit].radialMetrics(radiusLev[dit], Dr, adjDr, dVolrLev[dit], Dr.box(), thickness);
+    eulerOp[dit].radialMetrics(radiusLev[dit], Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
     a_JU[dit].copyTo(JUTemp[dit]);
   }
 
@@ -260,15 +260,10 @@ int main(int argc, char *argv[])
   {
     dx = eulerOp[dit].dx();
     BoxData<double> radius(layout[dit].grow(6));
-    int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    double r0 = CUBED_SPHERE_SHELL_R0;
-    double r1 = CUBED_SPHERE_SHELL_R1;
-    double dr = (r1 - r0) / thickness;
-    double dxi0 = dx[0];
     double gamma = 5.0 / 3.0;
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box(), thickness);
+    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
     Box b_i = C2C.domain(layout[dit]).grow(6);
     BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
     auto block = layout.block(dit);
@@ -284,11 +279,11 @@ int main(int argc, char *argv[])
 
   double dt = 0.01;
   double time = 0.0;
-  for (int iter = 0; iter <= 2; iter++)
+  for (int iter = 0; iter <= 0; iter++)
   {
     if (procID() == 0) cout << "iter = " << iter << endl;
 
-    Write_W(JU, eulerOp, domainSize, thickness, iter);
+    Write_W(JU, eulerOp, thickness, iter);
 
     for (auto dit : layout)
     {
@@ -305,15 +300,11 @@ int main(int argc, char *argv[])
       Box bx_i = layout[dit];
       Box bxGhosted = USph_i.box();
       BoxData<double> radius(layout[dit].grow(ghostTest));
-      int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-      double r0 = CUBED_SPHERE_SHELL_R0;
-      double r1 = CUBED_SPHERE_SHELL_R1;
-      double dr = (r1 - r0) / thickness;
       double gamma = 5.0 / 3.0;
       BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
       BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
       unsigned int block = layout.block(dit);
-      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box(), thickness);
+      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
 
       // Set radial boundary condtions in radial ghost cells.
       Box blockBox = layout.getBlock(block).domain().box();
@@ -336,11 +327,15 @@ int main(int argc, char *argv[])
       fluxes[0].define(rhs_i.box().extrude(0));
       fluxes[1].define(rhs_i.box().extrude(1));
       fluxes[2].define(rhs_i.box().extrude(2));
-      double dx = 1.0 / domainSize;
       eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
-      rhs_i *= dt;
-      JU[dit] -= rhs_i;
+      // rhs_i *= dt;
+      // JU[dit] -= rhs_i;
+      CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
+                                             layout.getBlock(block).domain().box(),1.0/domainSize,
+                                             layout.block(dit),4);
+
     }
+    h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
     time += dt;
   }
   PR_TIMER_REPORT();
