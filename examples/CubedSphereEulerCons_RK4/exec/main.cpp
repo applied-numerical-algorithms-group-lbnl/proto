@@ -98,10 +98,10 @@ void f_radialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(0) = rho;
-  a_W(1) = ur;
+  a_W(1) = 0;//ur;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
-  a_W(NUMCOMPS - 1) = p;
+  a_W(4) = p;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 PROTO_KERNEL_START
@@ -133,10 +133,10 @@ void f_radialBCs_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_USph(0) = rho;
-  a_USph(1) = ur * rho;
+  a_USph(1) = 0;//ur * rho;
   a_USph(2) = 0.0;
   a_USph(3) = 0.0;
-  a_USph(NUMCOMPS - 1) = p / (a_gamma - 1.0);
+  a_USph(4) = p / (a_gamma - 1.0);
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 int main(int argc, char *argv[])
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     double gamma = 5.0 / 3.0;
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box(), thickness);
+    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
     Box b_i = C2C.domain(layout[dit]).grow(6);
     BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
     auto block = layout.block(dit);
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
       BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
       BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
       unsigned int block = layout.block(dit);
-      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box(), thickness);
+      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
 
       // Set radial boundary condtions in radial ghost cells.
       Box blockBox = layout.getBlock(block).domain().box();
