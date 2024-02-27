@@ -21,54 +21,6 @@ void GetCmdLineArgumenti(int argc, const char **argv, const char *name, int *rtn
     }
   }
 }
-#if 0
-template<typename T, MemType MEM>
-PROTO_KERNEL_START
-void f_initPatchData_(
-                      Point                           a_pt,
-                      Var<T,NUMCOMPS,MEM>&            a_U,
-                      Var<T>&                         a_radius,
-                      Var<T,DIM,MEM,DIM>&             a_A,
-                      T                               a_dx,
-                      T                               a_dxi0,
-                      T                               a_gamma,
-                      int                             a_nradius)
-{
-  // Compute Cartesian conserved quantitities from spherical data.
-  T p0 = a_gamma;
-  T rho0 = 1.0;
-  T eps = .01;
-  T amplitude;
-  T arg = (a_pt[0] - a_nradius/2)/(a_nradius*1.0);
-  if (abs(arg) < .5)
-    {
-      amplitude = eps*pow(cos(M_PI*arg),6);
-    }else
-    {
-      amplitude = 0.;
-    }
-  T rho = rho0*(1.0 + amplitude);
-  T p = p0*pow(rho/rho0,a_gamma);
-  Array<T,DIM> vSpherical = {1.,0.,0.};
-  vSpherical[0] *= amplitude;
-  Array<T,DIM> vcart;
-  T ke;
-  for (int dim1 = 0; dim1 < DIM; dim1++)
-    {
-      vcart[dim1] = 0.;
-      // Can set velocities here.
-      for (int dim2 = 0; dim2 < DIM; dim2++)
-        {
-          vcart[dim1] += vSpherical[dim2]*a_A(dim1,dim2);
-        }
-      a_U(dim1 + 1) = vcart[dim1]*rho;
-      ke += .5*vcart[dim1]*vcart[dim1];
-    }
-  a_U(0) = rho;
-  a_U(NUMCOMPS-1) = p/(a_gamma-1) + rho*ke;
-}
-PROTO_KERNEL_END(f_initPatchData_, f_initPatchData)
-#endif
 
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
@@ -97,11 +49,14 @@ void f_radialInit_F(
   T rho = rho0 + amplitude * rho0;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_W(0) = rho;
-  a_W(1) = 0.;//ur;
-  a_W(2) = 0.0;
-  a_W(3) = 0.0;
-  a_W(4) = p;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
 }
 
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
@@ -130,14 +85,18 @@ void f_radialBCs_F(
     amplitude = 0.;
   }
   T rho = rho0 + amplitude * rho0;
-  ;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_USph(0) = rho;
-  a_USph(1) = 0;//ur * rho;
-  a_USph(2) = 0.0;
-  a_USph(3) = 0.0;
-  a_USph(4) = p / (a_gamma - 1.0);
+  a_USph(iRHO) = rho;
+  a_USph(iMOMX) = 0;//ur * rho;
+  a_USph(iMOMY) = 0.0;
+  a_USph(iMOMZ) = 0.0;
+  a_USph(iBX) = 0.0;
+  a_USph(iBY) = 0.0;
+  a_USph(iBZ) = 0.0;
+  T umag = sqrt(a_USph(iMOMX) * a_USph(iMOMX) + a_USph(iMOMY) * a_USph(iMOMY) + a_USph(iMOMZ) * a_USph(iMOMZ)) / a_USph(iRHO);
+  T Bmag = sqrt(a_USph(iBX) * a_USph(iBX) + a_USph(iBY) * a_USph(iBY) + a_USph(iBZ) * a_USph(iBZ));
+  a_USph(iE) = p / (a_gamma - 1.0) + 0.5 * a_USph(iRHO) * umag * umag + Bmag * Bmag/8.0/M_PI;
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
@@ -200,7 +159,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     W.copyTo(Wout[dit]);
   }
 
-  h5.writeMBLevel({}, map, Wout, "W_" + to_string(iter));
+  h5.writeMBLevel({"density","Vr","Vt","Vp","P","Br","Bt","Bp"}, map, Wout, "W_" + to_string(iter));
 }
 
 int main(int argc, char *argv[])
@@ -211,7 +170,7 @@ int main(int argc, char *argv[])
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   HDF5Handler h5;
   int domainSize = 32;
-  int thickness = 16;
+  int thickness = 32;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
@@ -279,7 +238,7 @@ int main(int argc, char *argv[])
 
   double dt = 0.01;
   double time = 0.0;
-  for (int iter = 0; iter <= 0; iter++)
+  for (int iter = 0; iter <= 2; iter++)
   {
     if (procID() == 0) cout << "iter = " << iter << endl;
 
@@ -328,14 +287,14 @@ int main(int argc, char *argv[])
       fluxes[1].define(rhs_i.box().extrude(1));
       fluxes[2].define(rhs_i.box().extrude(2));
       eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
-      // rhs_i *= dt;
-      // JU[dit] -= rhs_i;
-      CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
-                                             layout.getBlock(block).domain().box(),1.0/domainSize,
-                                             layout.block(dit),4);
+      rhs_i *= dt;
+      JU[dit] -= rhs_i;
+      // CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
+      //                                        layout.getBlock(block).domain().box(),1.0/domainSize,
+      //                                        layout.block(dit),4);
 
     }
-    h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
+    // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
     time += dt;
   }
   PR_TIMER_REPORT();

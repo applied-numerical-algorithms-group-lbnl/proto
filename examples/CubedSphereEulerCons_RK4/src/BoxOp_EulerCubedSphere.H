@@ -68,14 +68,18 @@ void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_upoint)                           
 {
   Var<T,NUMCOMPS,MEM> wpoint;
-  a_wpoint(0) = a_upoint(0);
-  a_wpoint(1) =
-    a_upoint(1)/a_upoint(0);
-  a_wpoint(2) =
-    a_upoint(2)/a_upoint(0);
-  a_wpoint(3) =
-    a_upoint(3)/a_upoint(0);
-  a_wpoint(4) = a_upoint(4);  
+  a_wpoint(iRHO) = a_upoint(iRHO);
+  a_wpoint(iVX) =
+    a_upoint(iMOMX)/a_upoint(iRHO);
+  a_wpoint(iVY) =
+    a_upoint(iMOMY)/a_upoint(iRHO);
+  a_wpoint(iVZ) =
+    a_upoint(iMOMZ)/a_upoint(iRHO);
+  a_wpoint(iE) = a_upoint(iP);  
+  a_wpoint(iBX) = a_upoint(iBX);
+  a_wpoint(iBY) = a_upoint(iBY);
+  a_wpoint(iBZ) = a_upoint(iBZ);
+  
 }
 PROTO_KERNEL_END(f_sphToPrim_F,f_sphToPrim)
 PROTO_KERNEL_START
@@ -176,6 +180,16 @@ public:
                                          const State& a_WPoint,
                                          uint a_block,
                                          uint a_centering) const;
+
+  inline BoxData<T,1,MEM> magneticEnergyW(
+                                         const State& a_WPoint,
+                                         uint a_block,
+                                         uint a_centering) const;
+
+  inline BoxData<T,1,MEM> vdotbW(
+                                const State& a_WPoint,
+                                uint a_block,
+                                uint a_centering) const;                                       
 
   inline void radialMetrics(
                             BoxData<T, 1, MEM>& a_radius,

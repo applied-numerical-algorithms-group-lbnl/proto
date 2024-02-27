@@ -168,6 +168,10 @@ consToSphNGEuler(
   BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph,1);
   cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,a_bx,a_blockBox);
 
+  BoxData<T,DIM,MEM> JUB = slice<T,C,DIM,MEM>(a_JU,2+DIM);
+  BoxData<T,DIM,MEM> USphB = slice<T,C,DIM,MEM>(USph,2+DIM);
+  cellMatrixQuotientMatAndInv(USphB,deta_amat,invcoef,JUB,a_bx,a_blockBox);
+
   // scale out radial dVol.
   BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA

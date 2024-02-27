@@ -296,13 +296,13 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                             T a_gamma)
                            {
                               a_upoint(iRHO) = a_wpoint(iRHO)*a_dvolpoint(0);
-                              a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO); // Why is this not a_wpoint(iVX)*a_wpoint(iRHO)*a_dvolpoint(0)? It should be here
+                              a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO); 
                               a_upoint(iMOMY) = a_wpoint(iVY)*a_upoint(iRHO);
                               a_upoint(iMOMZ) = a_wpoint(iVZ)*a_upoint(iRHO);
                               a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0) + a_me(0))*a_dvolpoint(0);
-                              a_upoint(iBX) = a_wpoint(iBX);
-                              a_upoint(iBY) = a_wpoint(iBY);
-                              a_upoint(iBZ) = a_wpoint(iBZ);
+                              a_upoint(iBX) = a_wpoint(iBX)*a_dvolpoint(0);
+                              a_upoint(iBY) = a_wpoint(iBY)*a_dvolpoint(0);
+                              a_upoint(iBZ) = a_wpoint(iBZ)*a_dvolpoint(0);
                            },a_WPoint,dVolPoint,ke,me,a_gamma);
  
   BoxData<T,NUMCOMPS,MEM> U = convolveStencil(UPoint);
