@@ -40,60 +40,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                     a_adjdiagr(2) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
                   },a_bx,a_radius,a_Diagr,a_adjDr,a_dVolr,r0,r1,dr,dxi0,r_dir);
 }
-template<
-    typename T,
-    template<MemType> typename MAP,
-    MemType MEM>
-BoxData<T,1,MEM> 
-BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
-                                              const State& a_WPoint,                    
-                                              T a_h,
-                                              uint a_block,
-                                              uint a_centering) const
-{
-  PR_TIMERS("kineticEnergyW");
-  Array<Array<uint,DIM>,6>
-     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6>
-    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};  
-  // Compute fluxes at face centers.
-  
-  // Compute Cartesian UPoint.
-  T half = .5;
-  Box bx = a_WPoint.box();
-  BoxData<T,DIM,MEM,DIM> Amat =
-    forall_p<T,DIM,MEM,DIM>(f_Amatrix,bx,permute[a_block],sign[a_block],a_h,half,half); 
-  BoxData<T,1,MEM> ke =
-    forall<T,1,MEM>([ ] PROTO_LAMBDA
-                    (                
-                     Var<T,1,MEM> a_ke,
-                     const Var<T,DIM,MEM,DIM>& a_amat,
-                     const Var<T,NUMCOMPS>& a_wpoint)
-                    {
-                      vecType velSph;
-                      vecType velCart;
-                  
-                      velSph[0] = a_wpoint(iVX);       
-                      velSph[1] = a_wpoint(iVY);
-                      velSph[2] = a_wpoint(iVZ);
-                      velCart[0] = 0.;       
-                      velCart[1] = 0.;
-                      velCart[2] = 0.;
-                      T half = .5;
-                      T one = 1.0;
-                      a_ke(0) = 0.;
-                      for (int dir0 = 0; dir0 < DIM; dir0++)
-                        {
-                          for (int dir1 = 0; dir1 < DIM; dir1++)
-                            {
-                              velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
-                            }
-                          a_ke(0) += velCart[dir0]*velCart[dir0]/2;
-                        }
-                      a_ke(0) *= a_wpoint(iRHO);
-                    },Amat,a_WPoint);
-  return ke;
-}
+
 template<
     typename T,
     template<MemType> typename MAP,
@@ -163,7 +110,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   // Primitive variables -> V_r*(rho,vel_sph,rho*E).
 
   BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
-  BoxData<T,1,MEM> ke = kineticEnergyW(a_WPoint,a_h,a_block,-1);
+  BoxData<T,1,MEM> ke = kineticEnergyW(a_WPoint,a_block,-1);
   BoxData<T,NUMCOMPS,MEM> UPoint =
     forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
                            (Var<T,NUMCOMPS,MEM>& a_upoint,
@@ -765,7 +712,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
       BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,iMOMX);
       BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,iMOMX);
-      forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
       BoxData<T,DIM,MEM> tmp =
         Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
       tmp.copyTo(fluxdirMom);

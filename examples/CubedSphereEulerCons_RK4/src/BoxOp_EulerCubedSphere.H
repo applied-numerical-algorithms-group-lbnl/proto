@@ -186,12 +186,6 @@ public:
 
   // End new factorization of operator().
   
-  inline BoxData<T,1,MEM> kineticEnergyW(
-                                         const State& a_WPoint,                    
-                                         T a_h,
-                                         uint a_block,
-                                         uint a_centering) const;
-  
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
                                              T a_h,
