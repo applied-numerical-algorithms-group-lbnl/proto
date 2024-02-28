@@ -16,7 +16,7 @@ MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
     m_domainsDefined.resize(a_numBlocks, false);
 }
 
-void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
+void MBProblemDomain::defineDomain(BlockIndex a_blockID, Point a_domainSize)
 {
     PROTO_ASSERT(!m_closed,
         "MBProblemDomain::defineDomain | Error: ProblemDomain is closed.");
@@ -28,8 +28,8 @@ void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
 }
 
 void MBProblemDomain::defineBoundary(
-        unsigned int        a_srcBlock,
-        unsigned int        a_dstBlock,
+        BlockIndex        a_srcBlock,
+        BlockIndex        a_dstBlock,
         unsigned int        a_dir,
         Side::LoHiSide      a_side,
         CoordPermutation&   a_rotation)
@@ -40,8 +40,8 @@ void MBProblemDomain::defineBoundary(
 }
 
 void MBProblemDomain::defineBoundary(
-        unsigned int        a_srcBlock,
-        unsigned int        a_dstBlock,
+        BlockIndex        a_srcBlock,
+        BlockIndex        a_dstBlock,
         Point               a_dir,
         CoordPermutation&   a_rotation)
 {
@@ -50,17 +50,17 @@ void MBProblemDomain::defineBoundary(
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
 }
 
-const ProblemDomain& MBProblemDomain::getBlock(unsigned int a_blockID) const
+const ProblemDomain& MBProblemDomain::getBlock(BlockIndex a_blockID) const
 {
     return m_domains[a_blockID];
 }
 
-Point MBProblemDomain::blockSize(unsigned int a_blockID) const
+Point MBProblemDomain::blockSize(BlockIndex a_blockID) const
 {
     return getBlock(a_blockID).box().sizes();
 }
 
-double MBProblemDomain::dv(unsigned int a_blockID) const
+double MBProblemDomain::dv(BlockIndex a_blockID) const
 {
     double ret = 1.0;
     Point sizes = blockSize(a_blockID);
@@ -72,7 +72,7 @@ double MBProblemDomain::dv(unsigned int a_blockID) const
 }
 
 std::vector<MBGraphArc> MBProblemDomain::boundaries(
-        unsigned int a_srcBlock,
+        BlockIndex a_srcBlock,
         Point        a_dir) const
 {
     return m_graph->boundaries(a_srcBlock, a_dir);
@@ -80,8 +80,8 @@ std::vector<MBGraphArc> MBProblemDomain::boundaries(
 
 Point MBProblemDomain::convert(
         Point a_point,
-        unsigned int a_srcBlock,
-        unsigned int a_dstBlock) const
+        BlockIndex a_srcBlock,
+        BlockIndex a_dstBlock) const
 {
     PROTO_ASSERT(a_srcBlock < size(),
             "MBProblemDomain::convert | Error: srcBlock is out of bounds.");
@@ -132,8 +132,8 @@ share a codimension 1 boundary.");
 
 Box MBProblemDomain::convert(
         Box a_box,
-        unsigned int a_srcBlock,
-        unsigned int a_dstBlock,
+        BlockIndex a_srcBlock,
+        BlockIndex a_dstBlock,
         Centering a_ctr) const
 {
     Point L, H;
@@ -233,7 +233,7 @@ bool MBProblemDomain::coarsenable(Point a_refRatio) const
     return true;
 }
 
-bool MBProblemDomain::coarsenable(unsigned int a_block, Point a_refRatio) const
+bool MBProblemDomain::coarsenable(BlockIndex a_block, Point a_refRatio) const
 {
     return m_domains[a_block].coarsenable(a_refRatio);
 }
@@ -264,7 +264,7 @@ void MBProblemDomain::close()
     m_graph->close();
     PROTO_ASSERT(defined(),
         "MBProblemDomain::close | Error: Some blocks have undefined domains.");
-    for (unsigned int bi = 0; bi < size(); bi++)
+    for (BlockIndex bi = 0; bi < size(); bi++)
     {
         Box box_i = getBlock(bi).box();
         for (auto dir_ij : Box::Kernel(1))
@@ -273,7 +273,7 @@ void MBProblemDomain::close()
             if (dir_ij.codim() > 2) {continue; } //TODO: make this work for higher codim
             for (auto bound : boundaries(bi, dir_ij))
             {
-                unsigned int bj = bound.dstBlock;
+                BlockIndex bj = bound.dstBlock;
                 auto dir_ji = bound.dstToSrc;
                 Box box_j = getBlock(bj).box();
 

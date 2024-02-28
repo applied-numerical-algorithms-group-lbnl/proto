@@ -6,6 +6,63 @@
 //#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
+
+#if 1
+TEST(MBInterpOp, MBDataPoint)
+{
+    // grid parameters
+    int domainSize = 32;
+    int boxSize = 16;
+    int ghostSize = 1;
+    
+    // interplating function parameters
+    double order = 4.0;
+    Array<double, DIM> exp{1,1,0,0,0,0};
+    exp *= order;
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
+  
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    // initialize data and map
+    MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+    MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+
+    hostSrc.setVal(1);
+    hostDst.setVal(2);
+
+    MBLevelMap<MBMap_Shear, HOST> map;
+    map.define(layout, Point::Ones(ghostSize));
+    
+    std::vector<MBDataPoint> points;
+    for (auto iter : layout)
+    {
+        for (auto pi : layout[iter])
+        {
+            points.push_back(MBDataPoint(iter, pi, layout));
+        }
+    }
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+    h5.writeMBLevel({"v"},map, hostSrc, "SRC_0"); 
+    h5.writeMBLevel({"v"},map, hostDst, "DST_0"); 
+#endif
+    
+    for (auto& pi : points)
+    {
+        auto vSrc = hostSrc[pi];
+        auto vDst = hostDst[pi];
+        vDst(0) = vSrc(0);
+    }
+
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"v"},map, hostSrc, "SRC_1"); 
+    h5.writeMBLevel({"v"},map, hostDst, "DST_1"); 
+#endif
+}
+#endif
 #if DIM == 2
 #if 1
 TEST(MBInterpOp, ShearTest)
@@ -177,10 +234,7 @@ TEST(MBInterpOp, XPointTest)
 #if DIM > 2
         interpLayout.setCopy(2,true);
 #endif
-        {
-            PR_TIME("XPointTest::DefineInterp");
-            interp.define(map, interpLayout, order);
-        }
+        interp.define(map, interpLayout, order);
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {

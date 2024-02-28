@@ -194,7 +194,7 @@ void MBPointInterpOp::apply(
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
         for (int cc = 0; cc < C; cc++)
         {
-          PR_TIMERS("inner loop");
+            PR_TIME("increment");
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
         }
@@ -343,7 +343,7 @@ void MBInterpOp::define(
                 for (auto bi : boundBox)
                 {
                     // check if this point is already done
-                    auto key = std::make_tuple(bi, iter, block);
+                    auto key = std::make_tuple(bi, iter.global(), block);
                     if (m_points.count(key)) {continue; }
 
                     Point corner = patchBox.edge(dir,1).low();
@@ -359,8 +359,8 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    MBPointInterpOp op( dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
+                    m_ops.push_back(MBPointInterpOp( dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    auto& op = m_ops[m_ops.size()-1];
                     m_points.insert(key);
                     
                     //do copy
@@ -374,7 +374,7 @@ void MBInterpOp::define(
                             for (auto bj : boundColumn)
                             {
                                 if (bi == bj) {continue; }
-                                auto key_j = std::make_tuple(bj, iter, block);
+                                auto key_j = std::make_tuple(bj, iter.global(), block);
                                 if (m_points.count(key_j)) {continue; }
                                 Point shift = bj - bi;
                                 MBDataPoint dst_j = dstDataPoint.shift(shift);
@@ -403,7 +403,7 @@ void MBInterpOp::define(
                 //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
-                    auto key = std::make_tuple(bi, iter, block);
+                    auto key = std::make_tuple(bi, iter.global(), block);
                     if (m_points.count(key)) {continue; }
                     for (int ii = 0; ii < DIM; ii++)
                     {
@@ -428,8 +428,8 @@ void MBInterpOp::define(
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
-                    MBPointInterpOp op(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
+                    m_ops.push_back(MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    auto& op = m_ops[m_ops.size()-1];
                     m_points.insert(key);
                     
                     //do copy
@@ -443,7 +443,7 @@ void MBInterpOp::define(
                             for (auto bj : boundColumn)
                             {
                                 if (bi == bj) {continue; }
-                                auto key_j = std::make_tuple(bj, iter, block);
+                                auto key_j = std::make_tuple(bj, iter.global(), block);
                                 if (m_points.count(key_j)) {continue; }
                                 Point shift = bj - bi;
                                 MBDataPoint dst_j = dstDataPoint.shift(shift);

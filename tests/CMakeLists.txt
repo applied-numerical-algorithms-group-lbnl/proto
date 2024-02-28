@@ -125,6 +125,7 @@ if(ENABLE_ALL_TESTS)
         blt_add_executable(NAME MBInterpOpTests SOURCES MBInterpOpTests.cpp
             DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        #target_compile_options(MBInterpOpTests PRIVATE -O2 -g)
         blt_add_test(NAME MBInterpOpTests COMMAND MBInterpOpTests)
         blt_add_executable(NAME MBLevelOpTests SOURCES MBLevelOpTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
