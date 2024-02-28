@@ -944,7 +944,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
     }
   a_Rhs *= (a_scale);
-  cout << "output box = " << outputbox << endl;
+  if (procID() == 0)cout << "output box = " << outputbox << endl;
 }
 
 template<

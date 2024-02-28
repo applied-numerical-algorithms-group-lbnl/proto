@@ -102,6 +102,7 @@ PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              auto &eulerOp,
+             MBInterpOp& a_iop,
              double thickness,
              int iter)
 {
@@ -127,7 +128,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     a_JU[dit].copyTo(JUTemp[dit]);
   }
 
-  CubedSphereShell::consToSphInterpEuler(JUTemp, dVolrLev, dx, 4);
+  CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop,dVolrLev, dx, 4);
 
   for (auto dit : a_JU.layout())
   {
@@ -236,20 +237,21 @@ int main(int argc, char *argv[])
     JUTemp.copyTo(JU_i, layout[dit]);
   }
 
+  MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
   double dt = 0.01;
   double time = 0.0;
-  for (int iter = 0; iter <= 2; iter++)
+  for (int iter = 0; iter <= 10; iter++)
   {
     if (procID() == 0) cout << "iter = " << iter << endl;
 
-    Write_W(JU, eulerOp, thickness, iter);
+    Write_W(JU, eulerOp, iop, thickness, iter);
 
     for (auto dit : layout)
     {
       JU[dit].copyTo(JU_Temp[dit]);
     }
 
-    CubedSphereShell::consToSphInterpEuler(JU_Temp, dVolrLev, dx, 4);
+    CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
     int ghostTest = 6;
     for (auto dit : USph.layout())
     {
