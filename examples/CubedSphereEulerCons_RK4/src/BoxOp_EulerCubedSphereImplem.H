@@ -258,14 +258,25 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
   
   // Compute Cartesian UPoint.
   T dxiPerp = this->dx()[1];
-  T half = .5;
   Box bx = a_WPoint.box();
   Point high = bx.high();
   Point low = bx.low();
   high[0] = low[0];
   Box bx0(low,high);
   BoxData<T,DIM,MEM,DIM> Amat(bx);
-  forallInPlace_p(f_Amatrix,bx0,Amat,permute[a_block],sign[a_block],dxiPerp,half,half);
+  T half = .5;
+  T offseta = half;
+  T offsetb = half;
+  if (a_centering == 1)
+    {
+      offseta = 0.0;
+    }
+  if (a_centering == 2)
+    {
+      offsetb = 0.0;
+    }
+  forallInPlace_p(f_Amatrix,bx0,Amat,permute[a_block],sign[a_block],
+                  dxiPerp,offseta,offsetb);
   spreadSlice(Amat);
   BoxData<T,1,MEM> ke =
     forall<T,1,MEM>([ ] PROTO_LAMBDA
