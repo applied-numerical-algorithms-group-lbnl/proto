@@ -1,6 +1,7 @@
 // #include <gtest/gtest.h>
 #include "Proto.H"
 #include "InputParser.H"
+#include "MBMap_CubedSphereShell.H"
 // #include "Lambdas.H"
 // #include "MBLevelMap_Shear.H"
 // #include "MBLevelMap_XPointRigid.H"
@@ -211,13 +212,14 @@ int main(int argc, char *argv[])
 
     h5.writePatch(dx, JU_i, "JU:Block" + to_string(block));
   }
+ MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
   cout << "Setup done" << endl;
   for (int ipass = 1; ipass < 2; ipass++)
     {    
       if (ipass == 1)
         {
           cout << "performing evaluation for interpolated block boundary data." << endl;
-          CubedSphereShell::consToSphInterpEuler(JU,dVolrLev,dx,4);
+          CubedSphereShell::consToSphInterpEuler(JU,iop,dVolrLev,dx,4);
         }
       int ghostTest = 6;
       for (auto dit : USph.layout())

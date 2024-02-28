@@ -195,6 +195,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
 consToSphInterpEuler(                    
                         MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                        MBInterpOp& a_iop,
                         MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
                         Array<T,DIM> a_dx,
                         unsigned int a_order)
@@ -213,10 +214,20 @@ consToSphInterpEuler(
     } 
   a_JU.exchange();
   cout <<  "Building interpolation operator" << endl;
-  auto op = CubedSphereShell::InterpOp(a_JU,4);
-  op.apply(a_JU,a_JU);
+  //auto op = CubedSphereShell::InterpOp(a_JU,4);
+  a_iop.apply(a_JU,a_JU);
 }
-
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void CubedSphereShell::
+consToSphInterpEuler(                    
+                        MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                        MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                        Array<T,DIM> a_dx,
+                        unsigned int a_order)
+{
+  auto iop = CubedSphereShell::InterpOp(a_JU,a_order);
+  CubedSphereShell::consToSphInterpEuler(a_JU,iop,a_dVolr,a_dx,a_order);
+}
 template <typename T, MemType MEM>
 void CubedSphereShell::
 cellMatrixQuotientMatAndInv(
