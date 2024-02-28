@@ -259,7 +259,10 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         unsigned int    a_block) const
 {
     PR_TIME("MBLevelBoxData::isBlockBoundary");
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
+    PROTO_ASSERT(m_defined,
+            "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
+    return m_partition->isBlockBoundary(a_index.global(), a_dir, a_block);
+    /*
     unsigned int thisBlock = block(a_index);
     Point thisPatch = point(a_index);
     
@@ -278,6 +281,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     auto adjIndex = find(adjPatch, a_block);
     if (adjIndex == end()){return false;}
     return true;
+    */
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
@@ -286,11 +290,14 @@ bool MBDisjointBoxLayout::isBlockBoundary(
 {
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
+    return m_partition->isBlockBoundary(a_index.global(), a_dir);
+    /*
     for (int bi = 0; bi < numBlocks(); bi++)
     {
         if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
     }
     return false;
+    */
 }
 
 bool MBDisjointBoxLayout::isDomainBoundary(
@@ -299,6 +306,8 @@ bool MBDisjointBoxLayout::isDomainBoundary(
 {
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
+    return m_partition->isDomainBoundary(a_index, a_dir);
+    /*
     if (a_dir == Point::Zeros()) { return false; }
     else if (isBlockBoundary(a_index, a_dir)) {return false; }
     auto block = this->block(a_index);
@@ -311,6 +320,7 @@ bool MBDisjointBoxLayout::isDomainBoundary(
     Point neighborID = patchID + a_dir;
     if (patchDomain.contains(neighborID)) { return false; }
     return true;
+    */
 }
 
 bool MBDisjointBoxLayout::isInteriorBoundary(
@@ -318,6 +328,8 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
         Point           a_dir) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
+    return m_partition->isInteriorBoundary(a_index.global(), a_dir);
+    /*
     if (a_dir == Point::Zeros()) { return false; } // not a boundary
     auto block = this->block(a_index);
     auto patchID = this->point(a_index);
@@ -330,6 +342,8 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
     auto neighborIndex = find(neighborID, block);
     if (neighborIndex == *end()) { return true; } // neighbor patch is not in the layout
     return false;
+    */
+    
 }
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const

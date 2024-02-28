@@ -7,6 +7,7 @@
 
 using namespace Proto;
 
+#if 1
 TEST(MBInterpOp, MBDataPoint)
 {
     // grid parameters
@@ -61,7 +62,7 @@ TEST(MBInterpOp, MBDataPoint)
     h5.writeMBLevel({"v"},map, hostDst, "DST_1"); 
 #endif
 }
-
+#endif
 #if DIM == 2
 #if 1
 TEST(MBInterpOp, ShearTest)
@@ -294,7 +295,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 1;
+    int N = 3;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)

@@ -111,6 +111,63 @@ void MBBoxPartition::loadBalance()
 {
     buildLocalMaps();
     buildGlobalMaps();
+    findBoundaries();
+}
+
+void MBBoxPartition::findBoundaries()
+{
+    typedef std::pair<uint64_t, Point> PatchDir;
+    m_blockBoundaries.clear();
+    m_domainBoundaries.clear();
+    auto& graph = m_patchDomain.graph();
+
+    for (uint64_t ind_i = 0; ind_i < numBoxes(); ind_i++)
+    {
+        auto& partitionData = m_partition[ind_i];
+        int   block_i = partitionData.first.second;
+        auto  patch_i = partitionData.first.first;
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == Point::Zeros()) { continue; }
+            auto patch_ji = patch_i + dir;
+            if (m_patchDomain.getBlock(block_i).box().contains(patch_ji))
+            {
+                // patch_j is interior to the block
+                continue; 
+            }
+            PatchBound key; key.index = ind_i; key.dir = dir;
+            bool foundBlockBoundary = false; 
+            for (int block_j = 0; block_j < numBlocks(); block_j++)
+            {
+                if (block_j == block_i) { continue; }
+                Point conn_ij = graph.connectivity(block_i, block_j);
+                if (conn_ij.dot(dir) <= 0) { continue; }
+                Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
+                auto R = graph.rotation(block_i, conn_ij, block_j);
+
+                Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
+                Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
+
+                Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
+
+                if (!localBoundPatches.contains(patch_ji)) { continue; }
+
+                PROTO_ASSERT(adjBoundPatches.contains(patch_jj),
+                        "MBBoxPartition::findBoundaries | Error: Data Corruption.");
+                
+                auto ind_j = find(patch_jj, block_j);
+                if (ind_j < numBoxes())
+                {
+                    m_blockBoundaries[key].push_back(ind_j);
+                    foundBlockBoundary = true;
+                }
+            }
+            if (!foundBlockBoundary)
+            {
+                m_domainBoundaries.insert(key);
+            }
+        }
+    }
 }
 
 bool MBBoxPartition::compatible(const MBBoxPartition& a_rhs)
@@ -189,6 +246,55 @@ uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
     return m_indexMap[patchID];
 }
 
+bool MBBoxPartition::isBlockBoundary(
+        uint64_t  a_index,
+        Point           a_dir) const
+{
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
+    {
+        if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
+    }
+    return false;
+}
+
+bool MBBoxPartition::isBlockBoundary(
+        uint64_t  a_index,
+        Point           a_dir,
+        BlockIndex      a_block) const
+{
+    PatchBound key;
+    key.index = a_index;
+    key.dir = a_dir;
+    
+    if (m_blockBoundaries.find(key) != m_blockBoundaries.end())
+    {
+        for (auto& adjInd : m_blockBoundaries[key])
+        {
+            auto& partitionData = m_partition[adjInd];
+            BlockIndex block = partitionData.first.second;
+            if (block == a_block) { return true; }
+        }
+    }
+    return false;
+}
+bool MBBoxPartition::isDomainBoundary(
+        uint64_t  a_index,
+        Point           a_dir) const
+{
+    PatchBound key;
+    key.index = a_index;
+    key.dir = a_dir;
+    return m_domainBoundaries.find(key) != m_domainBoundaries.end();
+}
+
+bool MBBoxPartition::isInteriorBoundary(
+        uint64_t  a_index,
+        Point           a_dir) const
+{
+    if (isDomainBoundary(a_index, a_dir)) { return false; }
+    if (isBlockBoundary(a_index, a_dir)) { return false; }
+    return true;
+}
 
 void MBBoxPartition::print()
 {
