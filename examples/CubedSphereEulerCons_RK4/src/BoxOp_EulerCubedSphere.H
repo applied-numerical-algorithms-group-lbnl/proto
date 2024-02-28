@@ -61,8 +61,8 @@ typedef BoxData<double, DIM> Vector;
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
 //template<typename T, MemType MEM>
-PROTO_KERNEL_START
 template<typename T,MemType MEM>
+PROTO_KERNEL_START
 void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_wpoint,
                    Var<T,NUMCOMPS,MEM>& a_upoint)                           

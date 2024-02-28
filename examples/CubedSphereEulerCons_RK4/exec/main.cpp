@@ -1,7 +1,7 @@
 // #include <gtest/gtest.h>
 #include "Proto.H"
 #include "InputParser.H"
-#include "MBMap_CubedSphereShell.H"
+//#include "MBMap_CubedSphereShell.H"
 // #include "Lambdas.H"
 // #include "MBLevelMap_Shear.H"
 // #include "MBLevelMap_XPointRigid.H"
@@ -71,8 +71,8 @@ void f_initPatchData_(
 PROTO_KERNEL_END(f_initPatchData_, f_initPatchData)
 #endif
 
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
@@ -105,8 +105,8 @@ void f_radialInit_F(
   a_W(4) = p;
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialBCs_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_USph,
