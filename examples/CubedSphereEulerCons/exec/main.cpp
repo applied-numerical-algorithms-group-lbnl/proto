@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
             {
                h5.writePatch(dx,USph_i,
                              "USphGhostPass"+to_string(ipass)+"Block"+to_string(block_i));
-              eulerOp[dit](rhs_i,fluxes,USph_i,block_i,1.0);
+              eulerOp[dit](rhs_i,fluxes,USph_i,blocy_i,1.0);
             }
           CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
                                              layout.getBlock(block).domain().box(),dx,
