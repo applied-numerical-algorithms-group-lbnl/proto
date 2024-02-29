@@ -331,7 +331,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostDst.setVal(0);
         hostErr.setVal(0);
     
-        MBInterpOp op = CubedSphereShell::InterpOp(hostDst, order);
+        MBInterpOp op = CubedSphereShell::InterpOp<HOST>(layout, ghost, order);
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
