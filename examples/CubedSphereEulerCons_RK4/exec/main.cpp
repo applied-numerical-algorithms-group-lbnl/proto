@@ -99,10 +99,14 @@ void f_radialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(0) = rho;
-  a_W(1) = 0;//ur;
+  a_W(1) = ur;
   a_W(2) = 0.0;
   a_W(3) = 0.0;
   a_W(4) = p;
+  for (int comp = 5; comp < NUMCOMPS; comp++)
+    {
+      a_W(comp) = 0.0;
+    }
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 PROTO_KERNEL_START
@@ -115,7 +119,7 @@ void f_radialBCs_F(
     T a_gamma,
     int a_nradius)
 {
-  // Compute sphericl BCs.
+  // Compute spherical BCs.
   T p0 = 1.0;
   T rho0 = 1.0;
   T eps = 0.1;
@@ -134,10 +138,14 @@ void f_radialBCs_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_USph(0) = rho;
-  a_USph(1) = 0;//ur * rho;
+  a_USph(1) = ur * rho;
   a_USph(2) = 0.0;
   a_USph(3) = 0.0;
   a_USph(4) = p / (a_gamma - 1.0);
+  for (int comp = 5; comp < NUMCOMPS; comp++)
+    {
+      a_USph(comp) = 0.0;
+    }
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 int main(int argc, char *argv[])
@@ -203,11 +211,12 @@ int main(int argc, char *argv[])
     auto block = layout.block(dit);
     auto &JU_i = JU[dit];
     BoxData<double, NUMCOMPS, HOST> JUTemp;
+    
     BoxData<double, NUMCOMPS> WBar_i(JU_i.box());
     BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
     forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
-    JU_i.setVal(0.);
+    JU_i.setVal(1.);
     JUTemp.copyTo(JU_i, layout[dit]);
 
     h5.writePatch(dx, JU_i, "JU:Block" + to_string(block));
@@ -225,8 +234,11 @@ int main(int argc, char *argv[])
       for (auto dit : USph.layout())
         {
           PR_TIMERS("RHS Calculation");
+          unsigned int block = layout.block(dit);
           auto& rhs_i = rhs[dit];
           auto& USph_i = JU[dit];
+          double dx = eulerOp[dit].dx()[2];
+          h5.writePatch(dx, USph_i, "main:USph:Block" + to_string(block));
           Box bx_i = layout[dit];
           Box bxGhosted = USph_i.box();
           BoxData<double> radius(layout[dit].grow(ghostTest));
@@ -237,7 +249,7 @@ int main(int argc, char *argv[])
           double gamma = 5.0/3.0;
           BoxData<double,DIM,HOST> Dr(dVolrLev[dit].box());
           BoxData<double,DIM,HOST> adjDr(dVolrLev[dit].box());
-          unsigned int block = layout.block(dit);
+          
           eulerOp[dit].radialMetrics(radius,Dr,adjDr,dVolrLev[dit],Dr.box());
           // Set radial boundary condtions in radial ghost cells.
           Box blockBox = layout.getBlock(block).domain().box();
@@ -260,7 +272,6 @@ int main(int argc, char *argv[])
           fluxes[0].define(rhs_i.box().extrude(0));
           fluxes[1].define(rhs_i.box().extrude(1));
           fluxes[2].define(rhs_i.box().extrude(2));
-          double dx = 1.0 / domainSize;
           BoxData<double, NUMCOMPS, HOST> Wfoo(layout[dit].grow(ghostTest));
           BoxData<double, NUMCOMPS, HOST> Utemp(USph_i.box());
           forallInPlace_p(f_radialInit, Wfoo, radius, dxradius, gamma, thickness);
@@ -278,9 +289,11 @@ int main(int argc, char *argv[])
                             "USphGhostPass" + to_string(ipass) + "Block" + to_string(block_i));
               eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
             }
+           h5.writePatch(dx, rhs_i, "rhsPass" + to_string(ipass) + "Block" + to_string(block_i));
           CubedSphereShell::consToSphNGEuler(rhs_i, dVolrLev[dit], layout[dit],
                                              layout.getBlock(block).domain().box(), dx,
                                              layout.block(dit), 4);
+           h5.writePatch(dx, rhs_i, "rhsSphPass" + to_string(ipass) + "Block" + to_string(block_i));
           Utemp -= USph_i;
           double maxpforce = rhs_i.absMax(1, 0, 0);
           BoxData<double, NUMCOMPS> rhs_coarse = Stencil<double>::AvgDown(2)(rhs_i);
@@ -292,12 +305,8 @@ int main(int argc, char *argv[])
                << "absmax of coarsened rhs = "
                << maxpforceC << endl;
           BoxData<double, NUMCOMPS, HOST> rhsSph(rhs_i.box());
-          rhs_i.copyTo(rhsSph);
-          CubedSphereShell::consToSphNGEuler(rhsSph, dVolrLev[dit], layout[dit],
-                                             layout.getBlock(block).domain().box(), dx,
-                                             layout.block(dit), 4);
-
-          h5.writePatch(dx, rhsSph, "rhsPatchPass" + to_string(ipass) + "Block" + to_string(block_i));
+                   
+         
         }
       h5.writeMBLevel({}, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(ipass));
     }
