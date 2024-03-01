@@ -49,16 +49,17 @@ MBPointInterpOp::MBPointInterpOp(
     {
         if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
     }
-    m_exponents.clear();
+    //m_exponents.clear();
+    std::vector<Point> exponents;
     for (auto bi : Box(expBoxSize))
     {
         if (bi.sum() < a_order)
         {
-            m_exponents.push_back(bi);
+            exponents.push_back(bi);
         }
     }
 
-    int N = m_exponents.size();
+    int N = exponents.size();
     int M = m_srcs.size();
     
     if (N > M)
@@ -123,7 +124,7 @@ MBPointInterpOp::MBPointInterpOp(
         for (int jj = 0; jj < N; jj++)
         {
             PR_TIMERS("stencil apply");
-            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, m_exponents[jj]);
+            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, exponents[jj]);
             {
                 PR_TIMERS("C2C apply");
                 BoxData<double> temp = HOCorners(Xi_p);
@@ -136,31 +137,32 @@ MBPointInterpOp::MBPointInterpOp(
         }
     }  
     // Compute Matrices
-    m_C.define(M,N);
+    //m_C.define(M,N);
+    Matrix<double> C(M,N);
     for (int ii = 0; ii < M; ii++)
     {
         auto& src = m_srcs[ii];
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
         {
-            m_C(ii,jj) = srcData[srcBlock][jj](src.point);
+            C(ii,jj) = srcData[srcBlock][jj](src.point);
         }
     }
-    m_D.define(1,N);
+    //m_D.define(1,N);
+    Matrix<double> D(1,N);
     for (int jj = 0; jj < N; jj++)
     {
-        m_D(0,jj) = srcData[dstBlock][jj](a_dst.point);
+        D(0,jj) = srcData[dstBlock][jj](a_dst.point);
     }
     
     // Compute "Stencil"
-    m_Cinv = m_C.inverse();
-    m_S = m_D*m_Cinv;
-    m_coefs.clear();
+    auto Cinv = C.inverse();
+    auto S = D*Cinv;
     m_coefs.resize(M);
     //std::cout << "\nComputed operator for dest " << a_dst << std::endl;
     for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = m_S(0,ii);
+        m_coefs[ii] = S(0,ii);
         //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
     }
  //   std::abort();
@@ -184,6 +186,7 @@ void MBPointInterpOp::apply(
     }
 }
 
+/*
 template<typename T, unsigned int C, MemType MEM>
 Matrix<double> MBPointInterpOp::coefs(
         MBLevelBoxData<T, C, MEM>& a_src,
@@ -200,6 +203,7 @@ Matrix<double> MBPointInterpOp::coefs(
     }
     return m_Cinv*Y0;
 }
+*/
 
 unsigned int MBPointInterpOp::size() const
 {
@@ -376,6 +380,7 @@ void MBInterpOp::apply(
     }
 }
 
+/*
 template<typename T, unsigned int C, unsigned int P, MemType MEM>
 void MBInterpOp::coefs(
         MBLevelBoxData<T, P, MEM>& a_coefs,
@@ -391,6 +396,7 @@ void MBInterpOp::coefs(
         }
     }
 }
+*/
 
 void MBInterpOp::print() const
 {
