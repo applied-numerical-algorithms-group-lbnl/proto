@@ -122,7 +122,11 @@ void Matrix<T>::define(
     m_transpose = false;
     m_numRows = a_numRows;
     m_numCols = a_numCols;
-    m_data = std::shared_ptr<T>((T*)proto_malloc<HOST>(a_numRows*a_numCols*sizeof(T)));
+    m_data = std::shared_ptr<T>(
+            (T*)proto_malloc<HOST>(a_numRows*a_numCols*sizeof(T)),
+            [](T* ptr) {
+                proto_free<HOST>(ptr);
+            });
 #endif
     m_alias = false;
     m_storage = a_storage;
@@ -832,7 +836,7 @@ Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
     Matrix<T> A(M(), N());
     this->copyTo(A);
 
-    // query and allocate optimal workspace 
+    // query and allocate optimal workspace
     int LWORK = -1;
     double LWORK_OPT;
     PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),
