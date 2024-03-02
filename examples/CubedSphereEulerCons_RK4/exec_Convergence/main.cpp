@@ -93,11 +93,12 @@ int main(int argc, char *argv[])
 #endif
   
   int domainSize = 8;
-  int thickness = 8;
+  int thickness = 16;
   int iter_max = 1;
   double dt = 0.01;
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
-
+  PR_TIMER_SETFILE(to_string(domainSize) + "_DIM" + to_string(DIM)
+                 + "_CubeSphereTest.time.table");
   for (int lev=0; lev<3; lev++)
 	{
     typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
@@ -164,6 +165,7 @@ int main(int argc, char *argv[])
         PR_TIMERS("RHS Calculation");
         auto &rhs_i = rhs[dit];
         auto &USph_i = JU_Temp[dit];
+        auto &JU_i = JU[dit];
         Box bx_i = layout[dit];
         Box bxGhosted = USph_i.box();
         BoxData<double> radius(layout[dit].grow(ghostTest));
@@ -195,15 +197,15 @@ int main(int argc, char *argv[])
         fluxes[1].define(rhs_i.box().extrude(1));
         fluxes[2].define(rhs_i.box().extrude(2));
         eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
-        rhs_i *= dt;
-        JU[dit] -= rhs_i;
+        //rhs_i *= dt;
+        //JU[dit] -= rhs_i;
       }
       time += dt;
     }
     U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
     for (auto dit : layout)
     {
-      JU[dit].copyTo(U_conv_test[lev][dit]);
+      rhs[dit].copyTo(U_conv_test[lev][dit]);
     }
     h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
     domainSize *= 2;
@@ -233,7 +235,7 @@ int main(int argc, char *argv[])
 			std::cout << "order of accuracy for var " << varr << " = " << rate << std::endl;
 		}
 	}
-
+PR_TIMER_REPORT();
 #ifdef PR_MPI
   MPI_Finalize();
 #endif

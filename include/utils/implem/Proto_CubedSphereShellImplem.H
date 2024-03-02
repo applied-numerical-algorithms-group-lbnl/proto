@@ -200,6 +200,7 @@ consToSphInterpEuler(
                         Array<T,DIM> a_dx,
                         unsigned int a_order)
 {
+  HDF5Handler h5;
   for (auto dit : a_JU.layout())
     {
       unsigned int block = a_JU.layout().block(dit);
@@ -211,10 +212,11 @@ consToSphInterpEuler(
       Box blockBox = a_JU.layout().getBlock(block).domain().box();
       CubedSphereShell::
         consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+      h5.writePatch(dxiPerp, JU_i, "consToSphInterpEuler:USph:Block" + to_string(block));
     } 
   a_JU.exchange();
-  cout <<  "Building interpolation operator" << endl;
-  //auto op = CubedSphereShell::InterpOp(a_JU,4);
+  // cout <<  "Building interpolation operator" << endl;
+  // auto op = CubedSphereShell::InterpOp(a_JU,4);
   a_iop.apply(a_JU,a_JU);
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -582,20 +584,19 @@ BoxData<T,1,MEM> CubedSphereShell::detA(
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
     weights_0={1.,0.,0.,0.,0.};
-  int qnum = 5;  
-  int q1d1 = 2;
-  int q1d2 = 2;
-  Array<double,5> weight1 = weights_0;
-  Array<double,5> weight2 = weights_0;
+  int q1d1 = 5;
+  int q1d2 = 5;
+  Array<double,5> weight1 = weights;
+  Array<double,5> weight2 = weights;
   if (a_centering == 1)
     {
-      q1d1 = 5;
-      weight1 = weights;
+      q1d1 = 2;
+      weight1 = weights_0;
     }
   if (a_centering == 2)
     {
-      q1d2 = 5;
-      weight2 = weights;
+      q1d2 = 2;
+      weight2 = weights_0;
      }
   Point low0 = a_bx.low();
   Point high0 = a_bx.high();
