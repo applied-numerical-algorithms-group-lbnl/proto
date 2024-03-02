@@ -135,7 +135,7 @@ consToSphNGEuler(
 {
   PR_TIMERS("consToSphNGEuler");
   
-  HDF5Handler h5;
+  //HDF5Handler h5;
   BoxData<T,C,MEM> USph(a_bx);
   USph.setVal(1.);
   // Get geometric data.
@@ -189,7 +189,7 @@ consToSphNGEuler(
       USphtemp.copyTo(JUcomp);
     }
   // cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
-  h5.writePatch(a_dxiPerp,a_JU,"USph:Block=" + to_string(a_block));
+  // h5.writePatch(a_dxiPerp,a_JU,"USph:Block=" + to_string(a_block));
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
@@ -200,7 +200,7 @@ consToSphInterpEuler(
                         Array<T,DIM> a_dx,
                         unsigned int a_order)
 {
-  HDF5Handler h5;
+  //HDF5Handler h5;
   for (auto dit : a_JU.layout())
     {
       unsigned int block = a_JU.layout().block(dit);
@@ -212,7 +212,7 @@ consToSphInterpEuler(
       Box blockBox = a_JU.layout().getBlock(block).domain().box();
       CubedSphereShell::
         consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
-      h5.writePatch(dxiPerp, JU_i, "consToSphInterpEuler:USph:Block" + to_string(block));
+      //h5.writePatch(dxiPerp, JU_i, "consToSphInterpEuler:USph:Block" + to_string(block));
     } 
   a_JU.exchange();
   // cout <<  "Building interpolation operator" << endl;
@@ -358,28 +358,24 @@ void CubedSphereShell::cellQuotientValAndInv(
   a_quot += corr;
 }
 template <typename T, MemType MEM>
-void CubedSphereShell::cellQuotientValAndInvRadial(
-                                                   BoxData<T,1,MEM>& a_quot,
-                                                   const BoxData<T,1,MEM>& a_denominator,
-                                                   const BoxData<T,1,MEM>& a_denomInv,
-                                                   const BoxData<T,1,MEM>& a_numerator,
-                                                   Box a_quotBox,
-                                                   Box a_blockBox)
+void CubedSphereShell::
+cellQuotientValAndInvRadial(
+                            BoxData<T,1,MEM>& a_quot,
+                            const BoxData<T,1,MEM>& a_denominator,
+                            const BoxData<T,1,MEM>& a_denomInv,
+                            const BoxData<T,1,MEM>& a_numerator,
+                            Box a_quotBox,
+                            Box a_blockBox)
 {
   a_quot.setToZero();
   BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
-  BoxData<T,1,MEM> corr(a_quotBox);
-  corr.setToZero();
   T twelveth = -1.0/12.0;
-  for (int dir = 0; dir < 1; dir++)
-    {
-      BoxData<T,1,MEM> Dquotbar =
-        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
-      BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
-      corr += prod;
-    }
+  BoxData<T,1,MEM> Dquotbar =
+    CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,0);
+  BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,0)(a_denominator);
+  BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
   corr *= twelveth;
+  corr *= a_denomInv;
   quotBar.copyTo(a_quot);
   a_quot += corr;
 }

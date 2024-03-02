@@ -152,8 +152,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(bx,a_h,a_block,0);
   
   T one = 1.0;
+  // PC: This is second-order accurate for non-radial solutions.
   forallInPlace(f_matVecProd,JUMom,amat,UMom,one);
   JUMom.copyTo(UMom); //Are these copies necessary?
+  // PC: This is second-order accurate for non-radial solutions.
   forallInPlace(f_matVecProd,JUB,amat,UB,one);
   JUB.copyTo(UB);
 
@@ -615,6 +617,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
     BoxData<T,DIM,MEM> tmp2(a_ntrow.box());
     a_ntrow.copyTo(tmp2);
     BoxData<T,1,MEM> tmp3 = faceProduct(a_adjDrDir,pslice,a_dir);
+    
     for (int dirvec = 0; dirvec < DIM; dirvec++)
       {
         BoxData<T> ntslice = slice(tmp2,dirvec);          
