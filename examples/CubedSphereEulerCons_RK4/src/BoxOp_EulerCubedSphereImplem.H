@@ -40,7 +40,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                     a_adjdiagr(2) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
                   },a_bx,a_radius,a_Diagr,a_adjDr,a_dVolr,r0,r1,dr,dxi0,r_dir);
 }
-
 template<
     typename T,
     template<MemType> typename MAP,
@@ -88,7 +87,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
 
   return outputs;
 }
-
 template<
   typename T,
   template<MemType> typename MAP,
@@ -935,6 +933,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToCart(State& a_input,
 
   return output;
 }
+
 template<
     typename T,
     template<MemType> typename MAP,
@@ -1050,3 +1049,55 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
   T coef = 1.0/24.0;
   a_W += Stencil<T>::Laplacian()(a_WBar,coef);
 }
+#if 0
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+preStage(
+         MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage)
+{
+   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, dx, 4);
+}
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+postStage(
+          State& a_RhsStage,
+          MBBoundaryRegister<T,2*NUMCOMPS,MEM,PR_CELL>& a_blockReg,
+          const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev)
+{  
+}
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::radialGhost(State& a_U,
+                                                BoxData<T,1,MEM>& a_radius,
+                                                T a_dxi0,
+                                                Box a_bxGhosted,
+                                                Box a_blockBox
+                                                )
+{
+  if (a_blockBox.high()[0] < a_bxGhosted.high()[0])
+    {
+      Point low = a_bxGhosted.low();
+      low[0] = a_blockBox.high()[0] + 1;
+      Box bdryBoxHigh(low, a_bxGhosted.high());
+      forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USph, a_radius, a_dxi0, m_gamma, m_eps, thickness);
+    }
+  if (a_blockBox.low()[0] > a_bxGhosted.low()[0])
+    {
+      Point high = a_bxGhosted.high();
+      high[0] = a_blockBox.low()[0] + 1;
+      Box bdryBoxLow(a_bxGhosted.low(), high);
+      forallInPlace_p(f_radialBCs, bdryBoxLow, a_USph, radius, a_dxi0, m_gamma, m_eps, thickness);
+    }
+}
+#endif

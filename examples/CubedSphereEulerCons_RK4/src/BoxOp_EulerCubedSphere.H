@@ -154,6 +154,7 @@ public:
                          State& a_WBar,
                          const State& a_USph,
                          uint a_block) const;
+  
   // Implemented.
   inline void primToSph(
                          State& a_USph,
@@ -168,7 +169,8 @@ public:
   // Implemented.
   inline BoxData<T,NUMCOMPS,MEM> sphToCart(State& a_input,
                                            Box a_bx,
-                                          unsigned int a_block) const;
+                                         unsigned int a_block) const;
+
   //Implemented.
   inline void cartToSph(
                         State& a_USph,
@@ -230,7 +232,23 @@ public:
                                              State& a_inputs,
                                              T a_h,
                                              unsigned int a_block) const;
+
+  inline void radialGhost(State& a_USph,
+                          BoxData<T,1,MEM>& a_radius,
+                          T a_dxi0,
+                          Box a_ghostedBox,
+                          Box a_blockBox);
   
+  static inline void
+  preStage(MBLevelBoxData<T,NUMCOMPS,HOST>& UStage,
+           const MBInterpOp& a_iop,
+           const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+  
+  static inline void
+  postStage(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsStage,
+            MBBoundaryRegister<T,2*NUMCOMPS,MEM,PR_CELL>& a_blockReg,
+            const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+             
 private:
   
 };

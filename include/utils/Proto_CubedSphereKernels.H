@@ -347,6 +347,76 @@ void f_detA_(Point a_pt,
   T norm3 = norm*norm*norm;
   a_detA = secasq*secbsq*norm3*(M_PI*M_PI)*.25;
 }
+PROTO_KERNEL_START
+template<MemType MEM>
+void f_cubedSphereMap3_F(
+                       Point& a_pt, // grid point.
+                       Var<double,DIM,MEM>& a_X,
+                       // location in physical space (output)                       
+                       Var<double,1,MEM>& a_r0,
+                       // radial coordinate of physical space location.
+                       Array<double, DIM> a_dx,
+                       // mesh spacing in xi space.
+                       double a_offseta,
+                       double a_offsetb,
+                       unsigned int a_block // block id.
+                       )
+{
+    
+    double alpha  = -M_PI/4.0 + a_dx[1]*(a_pt[1] + a_offseta)*M_PI/2.0;
+    double beta = -M_PI/4.0 + a_dx[2]*(a_pt[2] + a_offsetb)*M_PI/2.0;
+    double r0 = a_r0(0);
+    double X0 = tan(alpha);
+    double Y0 = tan(beta);
+    double d0 = sqrt(1+X0*X0+Y0*Y0);
+
+ 
+    switch (a_block)
+    {
+        case 0:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = -r0*Y0/d0;
+            a_X(2) = -r0/d0;
+           
+            break;
+        case 1:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = r0*Y0/d0;
+            a_X(2) = r0/d0;
+            
+            break;
+        case 2:
+            a_X(0) = r0*X0/d0;
+            a_X(1) = -r0/d0;
+            a_X(2) = r0*Y0/d0;
+            
+            break;
+        case 3:
+            a_X(0) = r0/d0;
+            a_X(1) = r0*X0/d0;
+            a_X(2) = r0*Y0/d0;
+            
+            break;
+        case 4:
+            a_X(0) = -r0*X0/d0;
+            a_X(1) = r0/d0;
+            a_X(2) = r0*Y0/d0;
+            
+            break;
+        case 5:
+            a_X(0) = -r0/d0;
+            a_X(1) = -r0*X0/d0;
+            a_X(2) = r0*Y0/d0;
+            
+            break;
+        default:
+            a_X(0) = 0;
+            a_X(1) = 0;
+            a_X(2) = 0;
+            break;
+    }
+}
+PROTO_KERNEL_END(f_cubedSphereMap3_F, f_cubedSphereMap3);
 #if 0
 template<typename T, MemType MEM>
 PROTO_KERNEL_START

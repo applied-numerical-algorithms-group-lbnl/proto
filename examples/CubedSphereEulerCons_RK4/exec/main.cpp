@@ -1,7 +1,7 @@
 // #include <gtest/gtest.h>
 #include "Proto.H"
 #include "InputParser.H"
-//#include "MBMap_CubedSphereShell.H"
+#include "MBMap_CubedSphereShell.H"
 // #include "Lambdas.H"
 // #include "MBLevelMap_Shear.H"
 // #include "MBLevelMap_XPointRigid.H"
@@ -71,8 +71,8 @@ void f_initPatchData_(
 PROTO_KERNEL_END(f_initPatchData_, f_initPatchData)
 #endif
 
-template <typename T, MemType MEM>
 PROTO_KERNEL_START
+template <typename T, MemType MEM>
 void f_radialInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
@@ -109,8 +109,8 @@ void f_radialInit_F(
     }
 }
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
-template <typename T, MemType MEM>
 PROTO_KERNEL_START
+template <typename T, MemType MEM>
 void f_radialBCs_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_USph,
@@ -214,9 +214,13 @@ int main(int argc, char *argv[])
     
     BoxData<double, NUMCOMPS> WBar_i(JU_i.box());
     BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
+    double zero = 0.;
+    BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+      (f_cubedSphereMap3,layout[dit],radius,dx,zero,zero,block);   
+    h5.writePatch(dx[1],XCart,"XCart:Block"+to_string(block));
     forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
-    JU_i.setVal(1.);
+    JU_i.setVal(2.0);
     JUTemp.copyTo(JU_i, layout[dit]);
 
     h5.writePatch(dx, JU_i, "JU:Block" + to_string(block));
