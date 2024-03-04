@@ -199,7 +199,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 8;
-    int thickness = 4;
+    int thickness = 1;
     int ghostSize = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;

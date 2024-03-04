@@ -49,7 +49,6 @@ MBPointInterpOp::MBPointInterpOp(
     {
         if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
     }
-    //m_exponents.clear();
     std::vector<Point> exponents;
     for (auto bi : Box(expBoxSize))
     {
@@ -228,12 +227,18 @@ void MBPointInterpOp::print() const
     }
 }
 
+MBInterpOp::MBInterpOp()
+{
+    PR_TIME("MBInterpOp::constructor");
+    m_copyAxes.fill(false);
+}
+
 MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
     m_order = a_order;
     m_ghost = a_ghost;
-    m_ops.clear();
+    m_copyAxes.fill(false);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -241,6 +246,7 @@ MBInterpOp::MBInterpOp(
         const MBLevelMap<MAP,MEM>&    a_map,
         int                           a_order)
 {
+    m_copyAxes.fill(false);
     for (int bi = 0; bi < a_map.layout().numBlocks(); bi++)
     {
         define(a_map, a_order, bi);
@@ -289,6 +295,7 @@ void MBInterpOp::define(
         int                         a_block)
 {
     m_ghost = a_map.ghost()[0];
+    
     const auto& layout = a_map.map().layout();
     for (auto iter : layout)
     {
@@ -307,6 +314,9 @@ void MBInterpOp::define(
             {
                 for (auto bi : boundBox)
                 {
+                    MBPointID key(bi, iter.global());
+                    if (m_points.count(key)) { continue; }
+                    //if (std::find(m_points.begin(), m_points.end(), key) != m_points.end()) { continue; }
                     Point corner = patchBox.edge(dir,1).low();
                     std::set<Point> fset;
                     for (int ii = 0; ii < DIM; ii++)
@@ -318,10 +328,13 @@ void MBInterpOp::define(
                             fset.insert(fi + s);
                         }
                     }
+                    
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    m_points.insert(key);
+                    //m_points.push_back(key);
                 }
                 continue;
             }
@@ -336,6 +349,9 @@ void MBInterpOp::define(
                 //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
+                    MBPointID key(bi, iter.global());
+                    if (m_points.count(key)) { continue; }
+                    //if (std::find(m_points.begin(), m_points.end(), key) != m_points.end()) { continue; }
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         Point d2 = Point::Basis(ii);
@@ -361,9 +377,15 @@ void MBInterpOp::define(
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     m_ops.push_back(
                             MBPointInterpOp(dstDataPoint, m_ghost, a_map, extFootprint, a_order));
+                    m_points.insert(key);
+                    //m_points.push_back(key);
                 }
             }
         }
+    }
+    for (auto pi : m_points)
+    {
+        //std::cout << "block: " << pi.block << " | point: " << pi.point << std::endl;
     }
 }
 
@@ -405,6 +427,11 @@ void MBInterpOp::print() const
     {
         op.print(); 
     }
+}
+
+void MBInterpOp::copyAxis(unsigned int a_axis, bool a_flag)
+{
+    m_copyAxes[a_axis] = a_flag;
 }
 
 bool MBInterpOp::validate() const
