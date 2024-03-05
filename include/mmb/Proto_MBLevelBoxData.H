@@ -17,63 +17,10 @@ namespace Proto
     class MBLevelBoxData;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
+    class MBDataPoint;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
   
-    /// Multiblock Data Point
-    /** This structure is used to specify a data point in the context of mapped multiblock
-     *  which may exist in either the interior of a block or in the boundary region
-     *  which is allocated between each pair of blocks according to the supplied ghost sizing
-     *  when a MBLevelBoxData is created.
-     *
-     *  This structure is used heavily in the implementation of block boundary interpolation,
-     *  but it is otherwise not very useful and is not recommended for public use.
-     */
-    struct MBDataPoint
-    {
-        public:
-            MBIndex index;
-            Point   boundaryDir;
-            Point   point;
-            
-            inline MBDataPoint(){}
-            inline MBDataPoint(MBIndex a_index, Point a_point,
-                    const MBDisjointBoxLayout& a_layout);
-            inline MBDataPoint(MBIndex a_index, Point a_point,
-                    const MBDisjointBoxLayout& a_layout, 
-                    Point a_boundaryDir, int a_block);
-            /*
-            inline MBDataPoint(const MBDataPoint& a_rhs)
-            {
-                block = a_rhs.block;
-                m_inBoundary = a_rhs.m_inBoundary;
-                layout = a_rhs.layout;
-                std::cout << "called copy constructor" << std::endl;
-            }
-            */
-            inline bool operator==(const MBDataPoint& a_rhs) const;
-
-            inline bool operator<(const MBDataPoint& a_rhs) const;
-            inline bool inBoundary() const {return m_inBoundary; }
-            inline unsigned int srcBlock() const;
-            inline unsigned int dstBlock() const;
-
-            template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-            template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>& srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-            inline const MBDisjointBoxLayout& grid() {return *layout; }
-        private:
-            int  block;
-            bool m_inBoundary;
-            const MBDisjointBoxLayout* layout;
-    };
-
-   inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
-   {
-       a_os << "point: " << a_point.point << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir;
-       return a_os;
-   }
  
     /// Level Copier Operator
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>

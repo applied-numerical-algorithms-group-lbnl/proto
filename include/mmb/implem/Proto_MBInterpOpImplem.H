@@ -24,7 +24,7 @@ MBPointInterpOp::MBPointInterpOp(
 {
     PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
+    m_srcs = a_map.map().interpFootprint(a_dst.point(), a_ghost, a_footprint, a_dst.index());
     
     // References
     auto& layout = a_map.map().layout();
@@ -40,7 +40,7 @@ MBPointInterpOp::MBPointInterpOp(
     Box spanBox;
     for (auto si : m_srcs)
     {
-        spanBox &= si.point;
+        spanBox &= si.point();
     }
     Point expBoxSize = Point::Ones(a_order);
     // Cull exponents if the footprint is "flat" in a given direction
@@ -100,16 +100,16 @@ MBPointInterpOp::MBPointInterpOp(
     auto C2C = Stencil<double>::CornersToCells(4);
     std::unordered_map<int, Box> srcBoxes;
     std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
-    Box B0(a_dst.point, a_dst.point);
+    Box B0(a_dst.point(), a_dst.point());
     srcBoxes[a_dst.dstBlock()] = B0;
     for (auto si : m_srcs)
     {
         int bi = si.srcBlock();
         if (srcBoxes.find(bi) == srcBoxes.end())
         {
-            srcBoxes[bi] = Box(si.point, si.point); 
+            srcBoxes[bi] = Box(si.point(), si.point()); 
         } else {
-            srcBoxes[bi] &= si.point;
+            srcBoxes[bi] &= si.point();
         }
     }
     
@@ -144,14 +144,14 @@ MBPointInterpOp::MBPointInterpOp(
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
         {
-            C(ii,jj) = srcData[srcBlock][jj](src.point);
+            C(ii,jj) = srcData[srcBlock][jj](src.point());
         }
     }
     //m_D.define(1,N);
     Matrix<double> D(1,N);
     for (int jj = 0; jj < N; jj++)
     {
-        D(0,jj) = srcData[dstBlock][jj](a_dst.point);
+        D(0,jj) = srcData[dstBlock][jj](a_dst.point());
     }
     
     // Compute "Stencil"
@@ -162,7 +162,7 @@ MBPointInterpOp::MBPointInterpOp(
     for (int ii = 0; ii < M; ii++)
     {
         m_coefs[ii] = S(0,ii);
-        //std::cout << "\t" << m_srcs[ii].point - a_dst.point << " : " << m_coefs[ii] << std::endl;
+        //std::cout << "\t" << m_srcs[ii].point() - a_dst.point() << " : " << m_coefs[ii] << std::endl;
     }
  //   std::abort();
 }
@@ -207,15 +207,6 @@ Matrix<double> MBPointInterpOp::coefs(
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
-}
-
-bool MBPointInterpOp::validate() const
-{
-    for (auto si : m_srcs)
-    {
-        if (!si.grid().defined()) { return false; }
-    }
-    return true;
 }
 
 void MBPointInterpOp::print() const
@@ -385,7 +376,7 @@ void MBInterpOp::define(
     }
     for (auto pi : m_points)
     {
-        //std::cout << "block: " << pi.block << " | point: " << pi.point << std::endl;
+        //std::cout << "block: " << pi.block << " | point: " << pi.point() << std::endl;
     }
 }
 
@@ -397,7 +388,7 @@ void MBInterpOp::apply(
     PR_TIME("MBInterpOp::apply");
     for (auto& op : m_ops)
     {
-        auto block = a_dst.layout().block(op.target().index);
+        auto block = a_dst.layout().block(op.target().index());
         op.apply(a_dst, a_src);
     }
 }
@@ -432,15 +423,6 @@ void MBInterpOp::print() const
 void MBInterpOp::copyAxis(unsigned int a_axis, bool a_flag)
 {
     m_copyAxes[a_axis] = a_flag;
-}
-
-bool MBInterpOp::validate() const
-{
-    for (auto& op : m_ops)
-    {
-        if (!op.validate()) { return false; }
-    }
-    return true;
 }
 
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>

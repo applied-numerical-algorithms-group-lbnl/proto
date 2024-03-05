@@ -56,7 +56,7 @@ CoordPermutation& MBGraphNode::rotation(Point a_dir, BlockIndex a_block)
 //=================================================================================================
 // BLOCK GRAPH
 
-MBGraph::MBGraph(unsigned int a_numBlocks)
+MBGraph::MBGraph(BlockIndex a_numBlocks)
 {
     m_closed = false;
     m_blocks.resize(a_numBlocks);
