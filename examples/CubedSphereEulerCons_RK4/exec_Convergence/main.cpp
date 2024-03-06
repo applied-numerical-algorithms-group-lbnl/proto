@@ -45,6 +45,46 @@ void f_radialInit_F(
 }
 
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_nonradialInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T, DIM> &a_X_cart,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T eps = 0.1;
+  T amplitude;
+  int half_nr = a_nradius / 2;
+  T arg = sqrt((a_X_cart(2)+0.5) * (a_X_cart(2)+0.5) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  if (abs(arg) < .25)
+  {
+    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+  }
+  else
+  {
+    amplitude = 0.;
+  }
+  T rho = rho0 + amplitude * rho0;
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
+
+
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
 void f_radialBCs_F(
@@ -92,9 +132,9 @@ int main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
 #endif
   
-  int domainSize = 8;
-  int thickness = 16;
-  int iter_max = 1;
+  int domainSize = 32;
+  int thickness = 64;
+  int iter_max = 0;
   double dt = 0.01;
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
   PR_TIMER_SETFILE(to_string(domainSize) + "_DIM" + to_string(DIM)
@@ -143,7 +183,11 @@ int main(int argc, char *argv[])
       BoxData<double, NUMCOMPS, HOST> JUTemp;
       BoxData<double, NUMCOMPS> WBar_i(JU_i.box());
       BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
-      forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+      double half = 0.5;
+      BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+      (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+      forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
+      // forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
       eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
       JU_i.setVal(0.);
       JUTemp.copyTo(JU_i, layout[dit]);
@@ -151,9 +195,9 @@ int main(int argc, char *argv[])
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
     double time = 0.0;
-    for (int iter = 0; iter < iter_max; iter++)
+    for (int iter = 1; iter <= iter_max; iter++)
     {
-      if (procID() == 0) cout << "iter = " << iter+1 << endl;
+      if (procID() == 0) cout << "iter = " << iter << endl;
       for (auto dit : layout)
       {
         JU[dit].copyTo(JU_Temp[dit]);
@@ -205,7 +249,8 @@ int main(int argc, char *argv[])
     U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
     for (auto dit : layout)
     {
-      rhs[dit].copyTo(U_conv_test[lev][dit]);
+      // rhs[dit].copyTo(U_conv_test[lev][dit]);
+      JU[dit].copyTo(U_conv_test[lev][dit]);
     }
     h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
     domainSize *= 2;
@@ -217,7 +262,7 @@ int main(int argc, char *argv[])
 	if(procID() == 0)
 	{
 		for (int varr = 0; varr < NUMCOMPS; varr++) {
-			double ErrMax[2];
+					double ErrMax[2];
 			for(int ilev=0; ilev<2; ilev++)
 			{
 				auto dit_lev=U_conv_test[ilev].begin();
