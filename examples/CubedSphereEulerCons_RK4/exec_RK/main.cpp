@@ -60,6 +60,44 @@ void f_radialInit_F(
 }
 
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_nonradialInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T, DIM> &a_X_cart,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T eps = 0.1;
+  T amplitude;
+  T arg = sqrt((a_X_cart(2)+0.5) * (a_X_cart(2)+0.5) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  if (abs(arg) < .25)
+  {
+    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+  }
+  else
+  {
+    amplitude = 0.;
+  }
+  T rho = rho0 + amplitude * rho0;
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
+
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
 void f_radialBCs_F(
@@ -231,26 +269,27 @@ int main(int argc, char *argv[])
     BoxData<double, NUMCOMPS, HOST> JUTemp;
     BoxData<double, NUMCOMPS> WBar_i(JU_i.box());
     BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
-    forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+    double half = 0.5;
+    BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+    (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+    forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
+    // forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
     JU_i.setVal(0.);
     JUTemp.copyTo(JU_i, layout[dit]);
   }
 
   MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+  Write_W(JU, eulerOp, iop, thickness, 0);
   double dt = 0.01;
   double time = 0.0;
-  for (int iter = 0; iter <= 10; iter++)
+  for (int iter = 1; iter <= 5; iter++)
   {
     if (procID() == 0) cout << "iter = " << iter << endl;
-
-    Write_W(JU, eulerOp, iop, thickness, iter);
-
     for (auto dit : layout)
     {
       JU[dit].copyTo(JU_Temp[dit]);
     }
-
     CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
     int ghostTest = 6;
     for (auto dit : USph.layout())
@@ -298,6 +337,7 @@ int main(int argc, char *argv[])
     }
     // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
     time += dt;
+    Write_W(JU, eulerOp, iop, thickness, iter);
   }
   PR_TIMER_REPORT();
 #ifdef PR_MPI
