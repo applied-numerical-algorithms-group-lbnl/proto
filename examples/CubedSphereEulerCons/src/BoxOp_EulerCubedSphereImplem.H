@@ -801,7 +801,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
       BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(fluxdir,1);
       BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(physFlux,1);
-      forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
+      //forallInPlace(f_matVecProd,fluxdirMom,deta_a,physFluxMom,one);
       BoxData<T,DIM,MEM> tmp =
         Operator::_faceMatrixProductAB(deta_a,physFluxMom,deta_a,physFluxMom,dir);
       tmp.copyTo(fluxdirMom);
@@ -826,7 +826,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           BoxData<T,1,MEM> advfluxprod = faceProduct(advfluxcomp,adjDrDir,dir);
           advfluxprod.copyTo(advfluxcomp);
         }
-        
+      {
+        HDF5Handler h5;
+        h5.writePatch(dxiPerp,fluxdir,
+                      "advFlux"+to_string(dir)+"dir"+to_string(a_block));
+      }
       // Momentum fluxes - pressure forces.      
       {
         BoxData<T,1,MEM> pslice = slice(WFace,NUMCOMPS-1);
