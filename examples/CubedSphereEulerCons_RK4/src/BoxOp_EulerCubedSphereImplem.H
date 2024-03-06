@@ -113,7 +113,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                                       + (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                         - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
-  // Primitive variables -> V_r*(rho,vel_sph,rho*E).
+  
+  // Primitive variables at points -> <dVolr*(rho,vel_sph,rho*E)>
 
   BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
   BoxData<T,1,MEM> ke = kineticEnergyW(a_WPoint,a_block,-1);
@@ -140,9 +141,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
  
   BoxData<T,NUMCOMPS,MEM> U = convolveStencil(UPoint);
   
-  // spherical velocities -> Cartesian velocities.
-  a_JU.define(U.box());
-  Box bx = U.box();
+  // spherical velocities -> Cartesian velocities:
+  // multiply <dvolr*rho u>, <dVolr*B> by det(A)*A using fourth-order product rule.
+  
+  Box bxOut = this->layout()[this->index()];
+  a_JU.define(bxOut);
+  Box bx = bxOut.grow(1);
   BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iMOMX);
   BoxData<T,DIM,MEM> UMom = slice<T,NUMCOMPS,DIM,MEM>(U,iMOMX);
   BoxData<T,DIM,MEM> JUB = slice<T,NUMCOMPS,DIM,MEM>(a_JU,iBX);
@@ -150,29 +154,49 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(bx,a_h,a_block,0);
   
   T one = 1.0;
-  // PC: This is second-order accurate for non-radial solutions.
+  unsigned int block = this->block();
+  Box blockBox = this->layout().blockDomainBox(block);  
+  T twelveth = 1.0/12.0;
   forallInPlace(f_matVecProd,JUMom,amat,UMom,one);
-  JUMom.copyTo(UMom); //Are these copies necessary?
-  // PC: This is second-order accurate for non-radial solutions.
   forallInPlace(f_matVecProd,JUB,amat,UB,one);
+  for (int dir = 1; dir < DIM; dir++)
+    {
+      BoxData<T,DIM,MEM,DIM> damat = Stencil<T>::Derivative(1,dir,2)(amat);
+      BoxData<T,DIM,MEM> dumom =
+        CubedSphereShell::deriv3case(UMom,bxOut,blockBox,dir);
+      BoxData<T,DIM,MEM> produ = forall<T,DIM,MEM>(f_matVecProd,damat,dumom,twelveth);
+      JUMom += produ;
+      BoxData<T,DIM,MEM> dub =
+        CubedSphereShell::deriv3case(UB,bxOut,blockBox,dir);
+      BoxData<T,DIM,MEM> prodb = forall<T,DIM,MEM>(f_matVecProd,damat,dub,twelveth);
+      JUB += prodb;
+    }
+  // I'm not sure these copies are necessary.
+  JUMom.copyTo(UMom); 
   JUB.copyTo(UB);
 
-  // scale by det(A)
+  // multiply <dvolr*rho>, <dVolr*rho*E> by det(A) using fourth-order product rule.
 
   BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx,a_h,0);
   {
-    BoxData<T,1,MEM> JUcomp = slice(a_JU,iRHO);
-    BoxData<T,1,MEM> Ucomp = slice(U,iRHO);
-    BoxData<T,1,MEM> tmp;
-    tmp = Ucomp * deta;
-    tmp.copyTo(JUcomp);
-  }
-  {
-    BoxData<T,1,MEM> JUcomp = slice(a_JU,iE);
-    BoxData<T,1,MEM> Ucomp = slice(U,iE);
-    BoxData<T,1,MEM> tmp;
-    tmp = Ucomp * deta;
-    tmp.copyTo(JUcomp);
+    BoxData<T,1,MEM> JURho = slice(a_JU,iRHO);
+    BoxData<T,1,MEM> URho = slice(U,iRHO);
+    BoxData<T,1,MEM> tmpRho = deta*URho;
+    tmpRho.copyTo(JURho);
+    BoxData<T,1,MEM> JUE = slice(a_JU,iE);
+    BoxData<T,1,MEM> UE = slice(U,iE);
+    BoxData<T,1,MEM> tmpE = UE * deta;
+    tmpE.copyTo(JUE);   
+    for (int dir = 1; dir < DIM; dir++)
+      {        
+        BoxData<T,1,MEM> ddeta = Stencil<T>::Derivative(1,dir,2)(deta,twelveth);
+        BoxData<T,1,MEM> drho =
+          CubedSphereShell::deriv3case(URho,bxOut,blockBox,dir);
+        JURho += ddeta*drho;
+        BoxData<T,1,MEM> de =
+          CubedSphereShell::deriv3case(UE,bxOut,blockBox,dir);
+        JUE += ddeta*de;
+      }
   }
 }
 template<

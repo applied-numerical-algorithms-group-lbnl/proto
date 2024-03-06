@@ -122,16 +122,9 @@ public:
   };  
 
   // New factorization of the operator starts here.
-  // New operator - calls RadialMetrics from inside the operator.
-  // Implem added.
+  // New operator() - calls RadialMetrics from inside the operator.
   
-   inline void primToCons(
-                         State& a_JU,
-                         const State& a_WPoint,
-                         const BoxData<T>& a_dVolr,
-                         T a_gamma,
-                         T a_h,
-                         uint a_block) const;
+   
   
   inline void operator()
   (
@@ -164,7 +157,17 @@ public:
   // Implemented.
   inline BoxData<T,NUMCOMPS,MEM> consToSph(State& a_input,
                                            Box a_bx,
-                                           unsigned int a_block) const;
+                                          unsigned int a_block) const;
+
+  /// Compute conserved quantities only on valid cells, given point values
+  /// of primitive variables. Typically used for initialization. 
+  inline void primToCons(
+                         State& a_JU,
+                         const State& a_WPoint,
+                         const BoxData<T>& a_dVolr,
+                         T a_gamma,
+                         T a_h,
+                         uint a_block) const;
   
   // Implemented.
   inline BoxData<T,NUMCOMPS,MEM> sphToCart(State& a_input,
