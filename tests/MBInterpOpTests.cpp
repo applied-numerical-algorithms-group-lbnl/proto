@@ -7,7 +7,7 @@
 
 using namespace Proto;
 
-#if 0
+#if 1
 TEST(MBInterpOp, MBDataPoint)
 {
     // grid parameters

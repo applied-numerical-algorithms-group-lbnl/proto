@@ -276,21 +276,6 @@ void MBInterpOp::define(
         int                         a_order,
         int                         a_block)
 {
-    MBInterpLayout interpLayout;
-    for (auto fi : a_footprint)
-    {
-        interpLayout.addPoint(fi);
-    }
-    define(a_map, interpLayout, a_order, a_block);
-}
-
-template<template<MemType> typename MAP, MemType MEM>
-void MBInterpOp::define(
-        const MBLevelMap<MAP,MEM>&  a_map,
-        MBInterpLayout              a_layout,
-        int                         a_order,
-        int                         a_block)
-{
     PR_TIME("MBInterpOp::define");
     m_ghost = a_map.ghost()[0];
     
@@ -321,7 +306,7 @@ void MBInterpOp::define(
                     {
                         if (dir[ii] == 0) { continue; }
                         Point s = Point::Basis(ii,-1)*(bi-corner);
-                        for (auto fi : a_layout.footprint())
+                        for (auto fi : a_footprint)
                         {
                             fset.insert(fi + s);
                         }
@@ -365,7 +350,7 @@ void MBInterpOp::define(
             }
             auto bounds = a_map.map().bounds(iter, dir);
             std::set<Point> fset;
-            for (auto fi : a_layout.footprint())
+            for (auto fi : a_footprint)
             {
                 fset.insert(fi);
             }
@@ -386,14 +371,14 @@ void MBInterpOp::define(
                         bool onHiEdge = boundBox.edge( d2).contains(bi);
                         if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
                         {
-                            for (auto fi : a_layout.footprint())
+                            for (auto fi : a_footprint)
                             {
                                 fset.insert(fi + d2);
                             }
                         }
                         if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
                         {
-                            for (auto fi : a_layout.footprint())
+                            for (auto fi : a_footprint)
                             {
                                 fset.insert(fi - d2);
                             }
