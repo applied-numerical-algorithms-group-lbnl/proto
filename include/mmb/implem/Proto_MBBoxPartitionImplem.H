@@ -58,7 +58,7 @@ void MBBoxPartition::buildLocalMaps()
         unassignedBoxes[ii]++;
     }
     unsigned int proc = 0;
-    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         uint64_t numAssigned = 0;
         uint64_t blockSize = m_blockPartitions[bi]->numBoxes();
@@ -83,7 +83,7 @@ void MBBoxPartition::buildGlobalMaps()
     uint64_t globalIndex = 0;
     unsigned int currentProc = 0;
     uint64_t procRangeStart = 0;
-    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         auto patchData = m_blockPartitions[bi]->partition();
         for (auto patchData_i : patchData)
@@ -137,7 +137,7 @@ void MBBoxPartition::findBoundaries()
             }
             PatchBound key; key.index = ind_i; key.dir = dir;
             bool foundBlockBoundary = false; 
-            for (int block_j = 0; block_j < numBlocks(); block_j++)
+            for (BlockIndex block_j = 0; block_j < numBlocks(); block_j++)
             {
                 if (block_j == block_i) { continue; }
                 Point conn_ij = graph.connectivity(block_i, block_j);
@@ -170,11 +170,17 @@ void MBBoxPartition::findBoundaries()
     }
 }
 
+BlockIndex MBBoxPartition::block(uint64_t a_index) const
+{
+    auto& partitionData = m_partition[a_index];
+    return partitionData.first.second;
+}
+
 bool MBBoxPartition::compatible(const MBBoxPartition& a_rhs)
 {
     if (this == &a_rhs) { return true; }
     if (numBlocks() != a_rhs.numBlocks()) { return false; }
-    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         if (!m_blockPartitions[bi]->compatible(*a_rhs.m_blockPartitions[bi]))
         {
@@ -201,7 +207,7 @@ unsigned int MBBoxPartition::numBoxes(unsigned int a_proc)
     return m_procMap[a_proc].second - m_procMap[a_proc].first;
 }
 
-unsigned int MBBoxPartition::numBlocks() const
+BlockIndex MBBoxPartition::numBlocks() const
 {
     return m_blockPartitions.size();
 }
@@ -228,12 +234,12 @@ uint64_t MBBoxPartition::globalIndex(uint64_t a_localIndex, unsigned int a_proc)
 }
 
 
-inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int a_block) const
+inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(BlockIndex a_block) const
 {
     return m_blockPartitions[a_block];
 }
 
-uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
+uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
 {
     auto blockDomain = m_patchDomain.getBlock(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),
@@ -250,6 +256,7 @@ bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
         Point           a_dir) const
 {
+    if (a_dir == Point::Zeros()) { return false; }
     for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
@@ -262,6 +269,7 @@ bool MBBoxPartition::isBlockBoundary(
         Point           a_dir,
         BlockIndex      a_block) const
 {
+    if (a_dir == Point::Zeros()) { return false; }
     PatchBound key;
     key.index = a_index;
     key.dir = a_dir;
@@ -300,7 +308,7 @@ void MBBoxPartition::print()
 {
     using Proto::pr_out;
     pr_out() << "MBBoxPartition" << std::endl;
-    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         pr_out() << "Block " << bi << std::endl;
         m_blockPartitions[bi]->print();

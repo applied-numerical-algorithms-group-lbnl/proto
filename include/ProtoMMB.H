@@ -13,6 +13,7 @@
 #include "mmb/Proto_MBDisjointBoxLayout.H"
 #include "mmb/Proto_MBBoundaryRegister.H"
 #include "mmb/Proto_MBLevelBoxData.H"
+#include "mmb/Proto_MBDataPoint.H"
 #include "mmb/Proto_MBMapOp.H"
 #include "mmb/Proto_MBLevelMap.H"
 #include "mmb/Proto_MBBoxOp.H"

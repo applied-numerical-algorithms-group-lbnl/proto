@@ -492,7 +492,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         EXPECT_EQ(soln.size(), mb_footprint.size());
         for (int ii = 0; ii < soln.size(); ii++)
         {
-            EXPECT_EQ(soln[ii].point, mb_footprint[ii].point);
+            EXPECT_EQ(soln[ii].point(), mb_footprint[ii].point());
         }
     }
 }
@@ -572,7 +572,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         EXPECT_EQ(soln.size(), mb_footprint.size());
         for (int ii = 0; ii < soln.size(); ii++)
         {
-            EXPECT_EQ(soln[ii].point, mb_footprint[ii].point);
+            EXPECT_EQ(soln[ii].point(), mb_footprint[ii].point());
         }
     }
 }
