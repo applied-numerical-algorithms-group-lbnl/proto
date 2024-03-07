@@ -256,6 +256,7 @@ bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
         Point           a_dir) const
 {
+    if (a_dir == Point::Zeros()) { return false; }
     for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
@@ -268,6 +269,7 @@ bool MBBoxPartition::isBlockBoundary(
         Point           a_dir,
         BlockIndex      a_block) const
 {
+    if (a_dir == Point::Zeros()) { return false; }
     PatchBound key;
     key.index = a_index;
     key.dir = a_dir;

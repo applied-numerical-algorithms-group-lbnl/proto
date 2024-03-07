@@ -86,6 +86,11 @@ namespace Proto
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
         
+        inline MBPointInterpOp(
+            MBDataPoint a_dst,
+            std::vector<MBDataPoint> a_srcs,
+            std::vector<double> a_coefs);
+
         /// Apply
         /** computes the interpolation */
         template<typename T, unsigned int C, MemType MEM>
@@ -115,8 +120,8 @@ namespace Proto
         /** Returns the list of locations used for input data to the interpolation
          *  as a list of MBDataPoint objects. The order of the returnd points corresponds
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
-        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
-
+        inline std::vector<MBDataPoint> sources() const {return m_srcs;}
+        inline std::vector<double> coefs() const {return m_coefs; }
         /// Exponents
         /** Returns the list of multidimensional exponents used in the interpolating
          *  polynomial. The order of these exponents corresponds with the columns of the
@@ -227,7 +232,7 @@ namespace Proto
         {
             for (auto& op : m_ops)
             {
-                if (a_target == op.target()) {return op;}
+                if (a_target == op->target()) {return *op;}
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
@@ -243,7 +248,7 @@ namespace Proto
         mutable Array<bool, DIM> m_copyAxes;
         Point m_ghost;
         int m_order;
-        std::vector<MBPointInterpOp> m_ops;
+        std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
         std::unordered_set<MBPointID, MBPointID::Hash> m_points;
         //std::vector<MBPointID> m_points;
     };

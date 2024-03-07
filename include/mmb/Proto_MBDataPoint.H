@@ -11,14 +11,13 @@ namespace Proto
     {
         public:
         inline MBDataPoint() = default;
-        inline MBDataPoint(const MBDataPoint& a_rhs) = default;
+        inline MBDataPoint(const MBDataPoint& a_rhs);
         inline MBDataPoint(MBIndex a_index, Point a_point,
                 const MBDisjointBoxLayout& a_layout);
         inline MBDataPoint(MBIndex a_index, Point a_point,
                 const MBDisjointBoxLayout& a_layout, 
                 Point a_boundaryDir, BlockIndex a_block);
-
-
+        inline MBDataPoint& operator=(const MBDataPoint& a_rhs) = default;
         inline bool operator==(const MBDataPoint& a_rhs) const;
 
         inline bool operator<(const MBDataPoint& a_rhs) const;

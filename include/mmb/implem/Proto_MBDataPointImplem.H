@@ -20,6 +20,8 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
             "MBDataPoint::constructor | Error: Undefined layout");
     PROTO_ASSERT(a_index.compatible(a_layout.partition()),
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
+    PROTO_ASSERT(a_boundaryDir.dot(a_boundaryDir) <= DIM,
+            "MBDataPoint::constructor | Error: Invalid boundary direction");
     PROTO_ASSERT(a_layout.isBlockBoundary(a_index, a_boundaryDir, a_block),
             "MBDataPoint::constructor | Error: Invalid boundary inputs");
     m_index = a_index.global();
@@ -28,6 +30,25 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
     m_point = a_point;
     m_inBoundary = true;
     m_partition = a_layout.partitionPtr();
+}
+
+MBDataPoint::MBDataPoint(const MBDataPoint& a_rhs)
+{
+    m_index = a_rhs.m_index;
+    m_boundaryDir = a_rhs.m_boundaryDir;
+    m_point = a_rhs.m_point;
+    m_block = a_rhs.m_block;
+    m_inBoundary = a_rhs.m_inBoundary;
+    m_partition = a_rhs.m_partition;
+    PROTO_ASSERT(m_block < m_partition->numBlocks(),
+            "MBDataPoint::constructor | Error: Invalid block index");
+    PROTO_ASSERT(m_boundaryDir.dot(m_boundaryDir) <= DIM,
+            "MBDataPoint::constructor | Error: Invalid boundary direction");
+    if (m_inBoundary)
+    {
+        PROTO_ASSERT(m_partition->isBlockBoundary(m_index, m_boundaryDir, m_block),
+                "MBDataPoint::constructor | Error: Invalid boundary inputs");
+    }
 }
 
 MBDataPoint MBDataPoint::shift(Point a_shift) const
