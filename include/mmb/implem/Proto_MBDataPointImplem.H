@@ -116,7 +116,7 @@ BlockIndex MBDataPoint::dstBlock() const
 {
     return m_partition->block(m_index); 
 }
-
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
 {
@@ -139,3 +139,4 @@ BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data
         return a_data[index()];
     }
 }
+*/

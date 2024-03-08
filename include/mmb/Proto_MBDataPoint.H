@@ -3,7 +3,6 @@
 #define _PROTO_MB_DATA_POINT_
 
 #include "Proto.H"
-#include "Proto_MBLevelBoxData.H"
 
 namespace Proto
 {
@@ -29,12 +28,14 @@ namespace Proto
         inline BlockIndex srcBlock() const;
         inline BlockIndex dstBlock() const;
         inline MBDataPoint shift(Point a_shift) const; 
+        /*
         template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>&
             patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
         template<typename T, unsigned int C, MemType MEM, Centering CTR>
             inline BoxData<T, C, MEM>&
             srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+        */
 
         // MEMBER DATA
         private:

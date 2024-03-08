@@ -592,6 +592,37 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point) const
     return (*ptr)[a_point];
 }
 
+// TODO: possibly deprecated
+/*
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& 
+MBLevelBoxData<T, C, MEM, CTR>::patch(const MBDataPoint &a_point)
+{
+    if (a_point.inBoundary())
+    {
+        auto& boundData = this->bound(
+                a_point.index(), a_point.boundaryDir(), a_point.block());
+        return *boundData.localData;
+    } else {
+        return (*this)[a_point.index()];
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& 
+MBLevelBoxData<T, C, MEM, CTR>::srcPatch(const MBDataPoint &a_point)
+{
+    if (a_point.inBoundary())
+    {
+        auto& boundData = this->bound(
+                a_point.index(), a_point.boundaryDir(), a_point.block());
+        return *boundData.adjData;
+    } else {
+        return (*this)[a_point.index()];
+    }
+}
+*/
+
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<Point>
 MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
@@ -989,8 +1020,8 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == SRC_MEM,
-                 "MBLevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
-                 mem, SRC_MEM);
+        "MBLevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
     auto &patch = (*m_src)[a_info.fromIndex];
     CInterval cint(0, C - 1);
     patch.linearOut(a_buffer, a_info.fromRegion, cint);
@@ -1002,8 +1033,8 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == DST_MEM,
-                 "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
-                 mem, DST_MEM);
+        "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+         mem, DST_MEM);
     auto &patch = (*m_dst)[a_info.toIndex];
     CInterval cint(0, C - 1);
     patch.linearIn(a_buffer, a_info.toRegion, cint);

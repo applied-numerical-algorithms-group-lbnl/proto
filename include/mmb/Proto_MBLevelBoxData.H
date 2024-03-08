@@ -2,9 +2,9 @@
 #ifndef _PROTO_MB_LEVEL_DATA_
 #define _PROTO_MB_LEVEL_DATA_
 
-#include "Proto.H"
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBBoundaryData.H"
+#include "Proto_MBDataPoint.H"
 
 namespace Proto
 {
@@ -17,7 +17,6 @@ namespace Proto
     class MBLevelBoxData;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
-    class MBDataPoint;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
   
@@ -282,6 +281,18 @@ namespace Proto
         /// Convert MBDataPoint to Var (Const Overload)
         /** Used by interpolation API. Not recommended for public use. */
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
+
+        /// Get BoxData containing the destination of the DataPoint
+        /** For points inside of block boundaries, this is the localData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the 
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& patch(const MBDataPoint &a_point);
+        
+        /// Get BoxData containing the source of the DataPoint
+        /** For points inside of block boundaries, this is the adjData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& srcPatch(const MBDataPoint &a_point);
 
         /// Domain Boundary Check
         /** Determines which domain boundaries - if any - a specified Point in a specified patch
