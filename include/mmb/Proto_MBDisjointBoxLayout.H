@@ -71,7 +71,7 @@ namespace Proto
         inline std::shared_ptr<DisjointBoxLayout> levelLayout() const;
         inline MBIndex find(Point a_point, unsigned int a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
-        inline std::shared_ptr<const MBBoxPartition> partitionPtr() const { return m_partition; }
+        inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
         inline Point connectivity(
