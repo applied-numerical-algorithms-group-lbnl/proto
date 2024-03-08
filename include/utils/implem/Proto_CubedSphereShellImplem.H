@@ -94,6 +94,7 @@ CubedSphereShell::InterpOp(
     }
     interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
     MBInterpOp op(a_ghost, a_order);
+    op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
     for (int bi = 0; bi < 6; bi++)
     {
         MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;

@@ -119,12 +119,12 @@ TEST(MBInterpOp, ShearTest)
         hostErr.setVal(0);
         hostDst.exchange(); // fill boundary data
         MBInterpOp interp;//(map, order);
-        MBInterpLayout interpLayout;
+        std::vector<Point> footprint;
         for (auto pi : Box::Kernel(2))
         {
-            if (pi.abs().sum() <= 2) { interpLayout.addPoint(pi); }
+            if (pi.abs().sum() <= 2) { footprint.push_back(pi); }
         }
-        interp.define(map, interpLayout, order);
+        interp.define(map, footprint, order);
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_0",nn);
 #endif
@@ -220,7 +220,7 @@ TEST(MBInterpOp, XPointTest)
         //hostSrc.exchange(); // fill boundary data
         hostDst.exchange(); // fill boundary data
         MBInterpOp interp;
-        MBInterpLayout interpLayout;
+        std::vector<Point> footprint;
         for (auto bi : Box::Kernel(2))
         {
 #if DIM > 2
@@ -228,13 +228,13 @@ TEST(MBInterpOp, XPointTest)
 #endif
             if (bi.abs().sum() <= 2)
             {
-                interpLayout.addPoint(bi);
+                footprint.push_back(bi);
             }
         }
 #if DIM > 2
-        interpLayout.setCopy(2,true);
+        interp.copyAxis(2,true);
 #endif
-        interp.define(map, interpLayout, order);
+        interp.define(map, footprint, order);
         interp.apply(hostDst, hostDst);
         for (auto iter : layout)
         {
@@ -280,12 +280,14 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, CubedSphereShellTest)
 {
 #if PR_VERBOSE > 0
+#define CUBED_SPHERE_SHELL_R0 0.5
+#define CUBED_SPHERE_SHELL_R1 1.0
     HDF5Handler h5;
 #endif
     int domainSize = 16;
     int boxSize = 8;
-    int thickness = 1;
-    int ghostSize = 1;
+    int thickness = 8;
+    int ghostSize = 2;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;

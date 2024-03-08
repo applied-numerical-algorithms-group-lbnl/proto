@@ -6,9 +6,9 @@
 #include "Proto_PAssert.H"
 #include "Proto_MemType.H"
 
-#define PR_STACK_ALLOC    0 // 4294967296 //4GB
+#define PR_STACK_ALLOC    4294967296 //4GB
 //#define PR_STACK_OVERFLOW 268435456  //256MB
-#define PR_STACK_OVERFLOW 0// 536870912  //512MB
+#define PR_STACK_OVERFLOW 536870912  //512MB
 namespace Proto {
 
     template<MemType MEM = MEMTYPE_DEFAULT>
