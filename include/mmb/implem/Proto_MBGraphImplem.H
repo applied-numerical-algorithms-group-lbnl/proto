@@ -56,7 +56,7 @@ CoordPermutation& MBGraphNode::rotation(Point a_dir, BlockIndex a_block)
 //=================================================================================================
 // BLOCK GRAPH
 
-MBGraph::MBGraph(BlockIndex a_numBlocks)
+MBGraph::MBGraph(unsigned int a_numBlocks)
 {
     m_closed = false;
     m_blocks.resize(a_numBlocks);
@@ -202,7 +202,7 @@ unsigned int MBGraph::numBoundaries(BlockIndex a_index, Point& a_dir) const
     return m_blocks[a_index]->arcs[a_dir].size();
 }
 
-std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
+std::set<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
 {
     auto& srcNode = *m_blocks[a_srcBlock];
     std::set<Point> ret;
@@ -218,7 +218,7 @@ std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a
             }
         }
     }
-    return std::vector<Point>(ret.begin(), ret.end()); 
+    return ret; 
 }
 
 Point MBGraph::connectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
@@ -227,7 +227,7 @@ Point MBGraph::connectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
     auto conns = fullConnectivity(a_srcBlock, a_dstBlock);
     unsigned int minCodim = DIM+1;
     Point minDir = Point::Zeros();
-    for (auto& dir : conns)
+    for (auto dir : conns)
     {
         int thisCodim = dir.codim();
         if (thisCodim < minCodim)
@@ -253,7 +253,7 @@ Point MBGraph::reverseArc(
         "MBGraph::reverseArc | Error: Block %u has no boundary in the specified direction",
         a_srcBlock);
     auto& arcs = bounds[a_dir];
-    for (auto& arc : arcs)
+    for (auto arc : arcs)
     {
         if (arc.dstBlock == a_dstBlock) { return arc.dstToSrc; }
     }
@@ -269,11 +269,11 @@ Point MBGraph::reverseDir(
         "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_srcBlock);
     PROTO_ASSERT(a_dstBlock < size(),
         "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_dstBlock);
-    auto& bounds = m_blocks[a_srcBlock]->arcs;
+    auto bounds = m_blocks[a_srcBlock]->arcs;
     Point norm = connectivity(a_srcBlock, a_dstBlock);
-    auto& arcs = bounds[norm];
+    auto arcs = bounds[norm];
     Point adjNorm = Point::Ones();
-    for (auto& arc : arcs)
+    for (auto arc : arcs)
     {
         if (arc.dstBlock == a_dstBlock)
         {

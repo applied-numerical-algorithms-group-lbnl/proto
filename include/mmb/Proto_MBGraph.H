@@ -7,7 +7,7 @@
 
 namespace Proto
 {
-    typedef int BlockIndex;
+    typedef unsigned int BlockIndex;
 
     /// Codimension Directions
     /** Returns a list of points with the desired codimension in space DIM */
@@ -88,7 +88,7 @@ namespace Proto
 
         /// Constructor
         /** Creates an empty graph with a specified number of nodes and no connections */
-        inline MBGraph(BlockIndex a_numBlocks);
+        inline MBGraph(unsigned int a_numBlocks);
 
         /// Define Boundary
         /** Adds a codimension-1 boundary to the graph. This function creates both directional
@@ -113,7 +113,7 @@ namespace Proto
         inline void defineBoundary(
                 BlockIndex        a_srcBlock,
                 BlockIndex        a_dstBlock,
-                unsigned int      a_dir,
+                BlockIndex        a_dir,
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
 
@@ -143,7 +143,7 @@ namespace Proto
          *  boundary between the two specified blocks. The returned Point set is in the
          *  coordinates of the source block.
          *  */
-        inline std::vector<Point> fullConnectivity(
+        inline std::set<Point> fullConnectivity(
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock) const;
         

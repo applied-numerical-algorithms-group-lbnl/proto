@@ -145,9 +145,9 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellAveraged(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.point, a_point.point);
     auto X = cellAveraged(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.point);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -156,9 +156,9 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellCentered(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.point, a_point.point);
     auto X = cellCentered(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.point);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -168,7 +168,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
 {
     auto block = a_point.srcBlock();
     auto dx = this->dx(block);
-    Array<double, DIM> X = a_point.point();
+    Array<double, DIM> X = a_point.point;
     X += 0.5; //default is cell center
     X += a_offset;
     X *= dx;
@@ -214,7 +214,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& 
     auto computeBlock = a_point.srcBlock();
     Array<double,DIM> X;
     Array<double,DIM> thisDx = this->dx(a_point.srcBlock());
-    Point pt = a_point.point();
+    Point pt = a_point.point;
     f_cubeSphereMapPoint<MEM>(pt,X,thisDx,CUBED_SPHERE_SHELL_R0,
                          CUBED_SPHERE_SHELL_R1,a_point.srcBlock(),
                          CUBED_SPHERE_SHELL_RADIAL_COORD);

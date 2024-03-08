@@ -280,14 +280,12 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, CubedSphereShellTest)
 {
 #if PR_VERBOSE > 0
-#define CUBED_SPHERE_SHELL_R0 0.5
-#define CUBED_SPHERE_SHELL_R1 1.0
     HDF5Handler h5;
 #endif
     int domainSize = 16;
     int boxSize = 8;
-    int thickness = 8;
-    int ghostSize = 2;
+    int thickness = 1;
+    int ghostSize = 1;
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     double order = 4.0;

@@ -347,9 +347,8 @@ void f_detA_(Point a_pt,
   T norm3 = norm*norm*norm;
   a_detA = secasq*secbsq*norm3*(M_PI*M_PI)*.25;
 }
-
-template<MemType MEM>
 PROTO_KERNEL_START
+template<MemType MEM>
 void f_cubedSphereMap3_F(
                        Point& a_pt, // grid point.
                        Var<double,DIM,MEM>& a_X,

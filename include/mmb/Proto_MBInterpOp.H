@@ -5,60 +5,12 @@
 #include "Proto.H"
 #include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
 #include "Proto_MBLevelMap.H"
-#include "Proto_MBInterpLayout.H"
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
-#include <unordered_set>
-#include <algorithm>
+#include "Proto_MBInterpLayout.H"
 
 namespace Proto
 {
-    // used for the hash table
-    class MBPointID
-    {
-        public:
-
-        inline MBPointID(Point a_pt, int a_index) : m_point(a_pt), m_index(a_index) {}
-
-        inline MBPointID(const MBPointID& a_rhs) : m_point(a_rhs.m_point), m_index(a_rhs.m_index) {}
-        inline bool operator<(const MBPointID& a_rhs) const
-        {
-            if (m_index != a_rhs.m_index) { return m_index < a_rhs.m_index; }
-            if (m_point != a_rhs.m_point) { return m_point < a_rhs.m_point; }
-            return false;
-        }
-
-        inline bool operator==(const MBPointID& a_rhs) const
-        {
-            return ((m_index == a_rhs.m_index) && (m_point == a_rhs.m_point));
-        }
-        
-        inline Point point() const { return m_point; }
-        inline BlockIndex index() const {return m_index; }
-
-        struct Hash {
-            std::size_t operator()(const MBPointID& a_pt) const {
-                std::size_t hashValue = 0;
-                hash_combine(hashValue, a_pt.index());
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    hash_combine(hashValue, a_pt.point()[ii]);
-                }
-                return hashValue;
-            }
-            
-            void hash_combine(std::size_t& seed, int value) const {
-                seed ^= std::hash<int>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-            }
-        };
-        
-        private: 
-        
-        const Point m_point;
-        const int   m_index;
-    };
-
-
     /// Mapped Multiblock Block Boundary Interpolation Operator
     /** MBPointInterpOp interpolates to exactly one point in a
      *  MBLevelBoxData. This object is used by MBInterpOp which executes the
@@ -87,9 +39,9 @@ namespace Proto
             unsigned int                a_order);
         
         inline MBPointInterpOp(
-            MBDataPoint a_dst,
-            std::vector<MBDataPoint> a_srcs,
-            std::vector<double> a_coefs);
+            MBDataPoint                 a_dst,
+            std::vector<MBDataPoint>    a_srcs,
+            std::vector<double>         a_coefs);
         
         /// Apply
         /** computes the interpolation */
@@ -102,6 +54,16 @@ namespace Proto
         /** Returns the number of coeffcients used in the interpolation */
         inline unsigned int size() const;
         
+        /// Coefficients
+        /** Returns the coefficients of the interpolating polynomial for a
+         *  specified component in a specified data set.
+         *
+         *  Mostly used for debugging. */
+        template<typename T, unsigned int C, MemType MEM>
+        inline Matrix<double> coefs(
+                MBLevelBoxData<T, C, MEM>& a_src,
+                int a_srcComponent = 0);
+        
         /// Target
         /** Returns the MBDataPoint corresponding to the point of interpolation */
         inline const MBDataPoint& target() const {return m_dst;}
@@ -110,20 +72,22 @@ namespace Proto
         /** Returns the list of locations used for input data to the interpolation
          *  as a list of MBDataPoint objects. The order of the returnd points corresponds
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
-        inline std::vector<MBDataPoint> sources() const {return m_srcs;}
-        
-        /// Coefficients
-        /** Return the coefficient array which multiply each source point when the 
-         *  operator is applied.
-         */
-        inline std::vector<double> coefs() const {return m_coefs; }
-        
-        /// Print
+        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
+
+        inline MBPointInterpOp shift(const Point& a_shift) const;
+        inline std::vector<double> coefs() const { return m_coefs; }
         inline void print() const; 
         
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
        
+        //std::vector<Point> m_exponents;
         MBDataPoint m_dst;
+        //Matrix<double> m_C;
+        //Matrix<double> m_D;
+        //Matrix<double> m_S;
+        //Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
     };
@@ -136,7 +100,7 @@ namespace Proto
     {
         public:
        
-        inline MBInterpOp();
+        inline MBInterpOp(){}
 
         /// Initialize 
         /** This function does not create any operators. The user must call define separately */
@@ -191,13 +155,11 @@ namespace Proto
         /// Coefficients
         /** Writes the first P coefficients of the interpolating polynomial to a specified
          *  component of a specified source data array. Useful for debugging */
-        /*
         template<typename T, unsigned int C, unsigned int P, MemType MEM>
         inline void coefs(
                 MBLevelBoxData<T, P, MEM>& a_coefs,
                 MBLevelBoxData<T, C, MEM>& a_src,
                 int a_srcComponent = 0);
-        */
 
         /// Get Point Operator
         /** Returns the MBPointInterpOp associated with a specified target cell. */
@@ -205,21 +167,22 @@ namespace Proto
         {
             for (auto& op : m_ops)
             {
-                if (a_target == op->target()) {return *op;}
+                if (a_target == op.target()) {return op;}
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
 
-        inline void copyAxis(unsigned int a_axis, bool a_flag);
-
         void print() const;
         
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
-        mutable Array<bool, DIM> m_copyAxes;
+      
+        MBInterpLayout m_layout;
         Point m_ghost;
         int m_order;
-        std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
-        std::unordered_set<MBPointID, MBPointID::Hash> m_points;
+        std::vector<MBPointInterpOp> m_ops;
+        std::set<std::tuple<Point, int, int>> m_points;
     };
 
     // Interpolate Block Boundaries

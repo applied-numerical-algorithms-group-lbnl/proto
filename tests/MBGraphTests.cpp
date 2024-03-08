@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include <algorithm>
+
 #define XPOINT_SIZE 5
 
 
@@ -132,7 +132,7 @@ TEST(MBGraph, XPointFullConnectivity) {
             EXPECT_EQ(connectivity.size(), dirs.size());
             for (auto dir : dirs)
             {
-                EXPECT_NE(std::find(connectivity.begin(), connectivity.end(), dir), connectivity.end()); 
+                EXPECT_NE(connectivity.find(dir), connectivity.end());
             }
         }
     }

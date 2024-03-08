@@ -55,8 +55,7 @@ namespace Proto
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc);
-        inline BlockIndex block(uint64_t a_globalIndex) const;
-        inline BlockIndex numBlocks() const;
+        inline unsigned int numBlocks() const;
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
         inline uint64_t localIndex(uint64_t a_globalIndex, unsigned int a_proc) const;
