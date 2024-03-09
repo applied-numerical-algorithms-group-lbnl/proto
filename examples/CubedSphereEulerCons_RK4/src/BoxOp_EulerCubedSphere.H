@@ -230,6 +230,28 @@ public:
                               uint a_dir) const;
 
   // End new factorization of operator().
+  // Linear Viscocity starts here.
+
+  inline void LinearVisc(
+                        State& a_Rhs,
+                        const State& a_USph,
+                        int a_block,
+                        T a_scale = 1.0) const;
+
+  inline void primToMappedViscFlux(
+                                  State& a_fluxdir,
+                                  const State& a_physFlux,
+                                  const State& a_WFace,
+                                  const State& a_WFaceBar,
+                                  const BoxData<T,1,MEM>& a_adjDdir,
+                                  const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                                  const BoxData<T,1,MEM>& a_deta,
+                                  const BoxData<T,DIM,MEM,DIM>& a_A,
+                                  const BoxData<T,DIM,MEM>& a_ntrow,
+                                  uint a_block,
+                                  uint a_dir) const;
+
+  // End Linear Viscosity.
   
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,

@@ -38,9 +38,9 @@ void f_radialInit_F(
   T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
-  if (abs(arg) < .25)
+  if (abs(arg) < .125)
   {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+    amplitude = eps * pow(cos(2 * M_PI * arg), 16);
   }
   else
   {
@@ -75,7 +75,7 @@ void f_nonradialInit_F(
   T rho0 = 1.0;
   T eps = 0.1;
   T amplitude;
-  T arg = sqrt((a_X_cart(2)+0.5) * (a_X_cart(2)+0.5) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  T arg = sqrt((a_X_cart(2)+0.7) * (a_X_cart(2)+0.7) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
   if (abs(arg) < .25)
   {
     amplitude = eps * pow(cos(2 * M_PI * arg), 6);
@@ -108,15 +108,15 @@ void f_radialBCs_F(
     T a_gamma,
     int a_nradius)
 {
-  // Compute sphericl BCs.
+  // Compute spherical BCs.
   T p0 = 1.0;
   T rho0 = 1.0;
   T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
-  if (abs(arg) < .25)
+  if (abs(arg) < .125)
   {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+    amplitude = eps * pow(cos(2 * M_PI * arg), 16);
   }
   else
   {
@@ -209,7 +209,8 @@ int main(int argc, char *argv[])
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   HDF5Handler h5;
   int domainSize = 32;
-  int thickness = 32;
+  int thickness = 64;
+  int max_iter = 30;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
@@ -257,7 +258,8 @@ int main(int argc, char *argv[])
   for (auto dit : layout)
   {
     dx = eulerOp[dit].dx();
-    BoxData<double> radius(layout[dit].grow(6));
+    // BoxData<double> radius(layout[dit].grow(6));
+    BoxData<double> radius(dVolrLev[dit].box());
     double gamma = 5.0 / 3.0;
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
@@ -272,8 +274,8 @@ int main(int argc, char *argv[])
     double half = 0.5;
     BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
     (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-    forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
-    // forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+    // forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
+    forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
     JU_i.setVal(0.);
     JUTemp.copyTo(JU_i, layout[dit]);
@@ -283,7 +285,7 @@ int main(int argc, char *argv[])
   Write_W(JU, eulerOp, iop, thickness, 0);
   double dt = 0.01;
   double time = 0.0;
-  for (int iter = 1; iter <= 5; iter++)
+  for (int iter = 1; iter <= max_iter; iter++)
   {
     if (procID() == 0) cout << "iter = " << iter << endl;
     for (auto dit : layout)
@@ -299,7 +301,7 @@ int main(int argc, char *argv[])
       auto &USph_i = JU_Temp[dit];
       Box bx_i = layout[dit];
       Box bxGhosted = USph_i.box();
-      BoxData<double> radius(layout[dit].grow(ghostTest));
+      BoxData<double> radius(dVolrLev[dit].box());
       double gamma = 5.0 / 3.0;
       BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
       BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
@@ -336,6 +338,49 @@ int main(int argc, char *argv[])
 
     }
     // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
+
+    for (auto dit : layout)
+    {
+      JU[dit].copyTo(JU_Temp[dit]);
+    }
+    CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
+    for (auto dit : USph.layout())
+    {
+      PR_TIMERS("RHS Calculation");
+      auto &rhs_i = rhs[dit];
+      auto &USph_i = JU_Temp[dit];
+      Box bx_i = layout[dit];
+      Box bxGhosted = USph_i.box();
+      // BoxData<double> radius(layout[dit].grow(6));
+      BoxData<double> radius(dVolrLev[dit].box());
+      double gamma = 5.0 / 3.0;
+      BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+      BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+      unsigned int block = layout.block(dit);
+      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
+
+      // Set radial boundary condtions in radial ghost cells.
+      Box blockBox = layout.getBlock(block).domain().box();
+      if (blockBox.high()[0] < bxGhosted.high()[0])
+      {
+        Point low = bxGhosted.low();
+        low[0] = blockBox.high()[0] + 1;
+        Box bdryBoxHigh(low, bxGhosted.high());
+        forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+      }
+      if (blockBox.low()[0] > bxGhosted.low()[0])
+      {
+        Point high = bxGhosted.high();
+        high[0] = blockBox.low()[0] + 1;
+        Box bdryBoxLow(bxGhosted.low(), high);
+        forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+      }
+      int block_i = layout.block(dit);
+      eulerOp[dit].LinearVisc(rhs_i, USph_i, block_i, 1.0);
+      rhs_i *= dt;
+      JU[dit] -= rhs_i;
+    }
+
     time += dt;
     Write_W(JU, eulerOp, iop, thickness, iter);
   }

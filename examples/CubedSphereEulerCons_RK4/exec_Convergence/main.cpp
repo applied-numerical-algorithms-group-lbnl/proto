@@ -134,8 +134,8 @@ int main(int argc, char *argv[])
   
   int domainSize = 32;
   int thickness = 64;
-  int iter_max = 0;
-  double dt = 0.01;
+  int iter_max = 2;
+  double dt = 0.001;
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
   PR_TIMER_SETFILE(to_string(domainSize) + "_DIM" + to_string(DIM)
                  + "_CubeSphereTest.time.table");
@@ -241,8 +241,8 @@ int main(int argc, char *argv[])
         fluxes[1].define(rhs_i.box().extrude(1));
         fluxes[2].define(rhs_i.box().extrude(2));
         eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
-        //rhs_i *= dt;
-        //JU[dit] -= rhs_i;
+        rhs_i *= dt;
+        JU[dit] -= rhs_i;
       }
       time += dt;
     }
