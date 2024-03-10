@@ -481,7 +481,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
-    PR_TIME("MBLevelBoxData::bound");
+  // PR_TIME("MBLevelBoxData::bound");
     auto patch = m_layout.point(a_index);
     auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
@@ -491,7 +491,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     MBIndex a_index, Point a_dir, unsigned int a_block)
 {
-    PR_TIME("MBLevelBoxData::bound");
+  // PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
     /*
     auto &boundaries = bounds(a_index, a_dir);
@@ -510,7 +510,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
 {
-    PR_TIME("MBLevelBoxData::bound");
+  //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -531,7 +531,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
 {
-    PR_TIME("MBLevelBoxData::bound");
+  //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -558,10 +558,10 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
 MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
-    PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
+  //PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
     if (!a_point.inBoundary())
     {
-        PR_TIME("get bulk data");
+      //PR_TIME("get bulk data");
         // bulk data is requested
         auto &patch = (*this)[a_point.index()];
         PROTO_ASSERT(patch.box().contains(a_point.point()),
@@ -571,7 +571,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
     }
     else
     {
-        PR_TIME("get boundary data");
+      //PR_TIME("get boundary data");
         PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
                 "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 input is not in an MBBoundaryData");

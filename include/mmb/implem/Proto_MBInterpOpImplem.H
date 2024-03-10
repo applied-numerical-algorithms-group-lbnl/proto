@@ -180,15 +180,15 @@ void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
-    PR_TIME("MBPointInterpOp::apply");
+  //PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
     for (int ii = 0; ii < size(); ii++)
     {
-      PR_TIMERS("size loop");
+      //PR_TIMERS("size loop");
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
         for (int cc = 0; cc < C; cc++)
         {
-            PR_TIME("increment");
+          //PR_TIME("increment");
             if (ii == 0) { dst(cc) = 0.0; }
             dst(cc) += m_coefs[ii]*src(cc);
         }

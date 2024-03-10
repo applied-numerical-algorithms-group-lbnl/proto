@@ -791,7 +791,7 @@ T* BoxData<T,C,MEM,D,E>::data(
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
-    PR_TIME("BoxData::var");
+  //PR_TIME("BoxData::var");
     PROTO_ASSERT(m_box.contains(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
@@ -799,7 +799,7 @@ Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
         for(unsigned int dd = 0; dd < D; ++dd)
             for(unsigned int cc = 0; cc < C; ++cc)
             {
-                PR_TIME("set pointers");
+              //PR_TIME("set pointers");
                 rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
             }
     rtn.boxDimX=this->box().size(0);
