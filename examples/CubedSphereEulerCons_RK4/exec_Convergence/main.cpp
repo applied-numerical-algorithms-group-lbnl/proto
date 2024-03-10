@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   
   int domainSize = 32;
   int thickness = 64;
-  int iter_max = 2;
+  int iter_max = 1;
   double dt = 0.001;
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
   PR_TIMER_SETFILE(to_string(domainSize) + "_DIM" + to_string(DIM)
@@ -244,6 +244,49 @@ int main(int argc, char *argv[])
         rhs_i *= dt;
         JU[dit] -= rhs_i;
       }
+
+      for (auto dit : layout)
+      {
+        JU[dit].copyTo(JU_Temp[dit]);
+      }
+      CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
+      for (auto dit : USph.layout())
+      {
+        PR_TIMERS("RHS Calculation");
+        auto &rhs_i = rhs[dit];
+        auto &USph_i = JU_Temp[dit];
+        Box bx_i = layout[dit];
+        Box bxGhosted = USph_i.box();
+        // BoxData<double> radius(layout[dit].grow(6));
+        BoxData<double> radius(dVolrLev[dit].box());
+        double gamma = 5.0 / 3.0;
+        BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+        BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+        unsigned int block = layout.block(dit);
+        eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
+
+        // Set radial boundary condtions in radial ghost cells.
+        Box blockBox = layout.getBlock(block).domain().box();
+        if (blockBox.high()[0] < bxGhosted.high()[0])
+        {
+          Point low = bxGhosted.low();
+          low[0] = blockBox.high()[0] + 1;
+          Box bdryBoxHigh(low, bxGhosted.high());
+          forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+        }
+        if (blockBox.low()[0] > bxGhosted.low()[0])
+        {
+          Point high = bxGhosted.high();
+          high[0] = blockBox.low()[0] + 1;
+          Box bdryBoxLow(bxGhosted.low(), high);
+          forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+        }
+        int block_i = layout.block(dit);
+        eulerOp[dit].LinearVisc(rhs_i, USph_i, block_i, 1.0);
+        rhs_i *= dt;
+        JU[dit] -= rhs_i;
+      }
+
       time += dt;
     }
     U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});

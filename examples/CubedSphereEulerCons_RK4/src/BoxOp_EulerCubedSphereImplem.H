@@ -1120,7 +1120,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
 
       Stencil<double> SPlus = 1.0*Shift(Point::Zeros()); // This SPlus, SMinus, and IdOp should give D5 at lower face.
-      Stencil<double> SMinus = 2.0*Shift(-Point::Basis(dir));
+      Stencil<double> SMinus = 1.0*Shift(-2*Point::Basis(dir));
       Stencil<double> IdOp = 1.0*Shift(-Point::Basis(dir));
       Stencil<double> D1 = SPlus - IdOp;
       Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
@@ -1236,7 +1236,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedViscFlux(
                   double p = a_wface(iP);
                   if (p < 0.0) p = 0.0;
                   double af = sqrt(a_gamma*p/rho + B_mag*B_mag/4.0/M_PI/rho); 
-                  double AdjA = abs(a_ntrow(a_d)); 
+                  double AdjA = sqrt(a_ntrow(0)*a_ntrow(0) + a_ntrow(1)*a_ntrow(1) + a_ntrow(2)*a_ntrow(2)); 
                   double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
                   
    

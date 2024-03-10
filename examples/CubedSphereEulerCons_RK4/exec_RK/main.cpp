@@ -210,7 +210,8 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 64;
-  int max_iter = 30;
+  int max_iter = 15;
+  double dt = 0.01;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
@@ -283,7 +284,6 @@ int main(int argc, char *argv[])
 
   MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
   Write_W(JU, eulerOp, iop, thickness, 0);
-  double dt = 0.01;
   double time = 0.0;
   for (int iter = 1; iter <= max_iter; iter++)
   {
@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
     }
 
     time += dt;
-    Write_W(JU, eulerOp, iop, thickness, iter);
+    if (iter % 1 == 0) Write_W(JU, eulerOp, iop, thickness, iter);
   }
   PR_TIMER_REPORT();
 #ifdef PR_MPI
