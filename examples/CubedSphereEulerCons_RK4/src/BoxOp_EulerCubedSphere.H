@@ -252,6 +252,20 @@ public:
                                   uint a_dir) const;
 
   // End Linear Viscosity.
+
+  // Begin Limiter.
+  inline void Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave_L_lim_flat,
+                              BoxData<double,NUMCOMPS>& a_W_ave_R_lim_flat,
+                              BoxData<double,NUMCOMPS>& a_W_ave_L,
+                              BoxData<double,NUMCOMPS>& a_W_ave_R,
+                              BoxData<double,NUMCOMPS>& a_W_ave,
+                              BoxData<double,NUMCOMPS>& a_W_bar,
+                              const int a_d,
+                              const double a_dx,
+                              const double a_dy,
+                              const double a_dz) const;
+
+  // End Limiter.
   
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
