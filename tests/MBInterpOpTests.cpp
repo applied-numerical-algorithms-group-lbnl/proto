@@ -284,10 +284,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #define CUBED_SPHERE_SHELL_R1 1.0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
-    int thickness = 64;
-    int ghostSize = 5;
+    int thickness = 16;
+    int ghostSize = 2;
     bool cullRadialGhost = true;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
