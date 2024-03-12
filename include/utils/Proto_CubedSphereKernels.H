@@ -181,6 +181,7 @@ void f_Amatrix_F(Point a_pt,
 }
 
 PROTO_KERNEL_END(f_Amatrix_F,f_Amatrix)
+
 template<typename T>
 void f_Ainv_(Point a_pt,
              matType& a_amat,
@@ -347,8 +348,9 @@ void f_detA_(Point a_pt,
   T norm3 = norm*norm*norm;
   a_detA = secasq*secbsq*norm3*(M_PI*M_PI)*.25;
 }
-PROTO_KERNEL_START
+
 template<MemType MEM>
+PROTO_KERNEL_START
 void f_cubedSphereMap3_F(
                        Point& a_pt, // grid point.
                        Var<double,DIM,MEM>& a_X,

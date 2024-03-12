@@ -285,11 +285,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
     HDF5Handler h5;
 #endif
     int domainSize = 16;
-    int boxSize = 8;
-    int thickness = 8;
-    int ghostSize = 2;
+    int boxSize = 16;
+    int thickness = 64;
+    int ghostSize = 5;
     bool cullRadialGhost = true;
-    bool use2DFootprint = true;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{1,1,1,0,0,0};
@@ -306,7 +305,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
         errL1[nn] = 0.0;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
         Point boxSizeVect = Point::Ones(boxSize);
-        boxSizeVect[radialDir] = thickness;
+        boxSizeVect[radialDir] = min(thickness, boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
 
         auto map = CubedSphereShell::Map<HOST>(layout, ghost);
