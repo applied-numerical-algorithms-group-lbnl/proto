@@ -164,7 +164,10 @@ void MBBoxPartition::findBoundaries()
             }
             if (!foundBlockBoundary)
             {
-                m_domainBoundaries.insert(key);
+                if (!graph.isTriplePoint(block_i, dir))
+                {
+                    m_domainBoundaries.insert(key);
+                }
             }
         }
     }

@@ -5,7 +5,6 @@
 #include "Proto.H"
 #include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
 #include "Proto_MBLevelMap.H"
-#include "Proto_MBInterpLayout.H"
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
 #include <unordered_set>
@@ -117,8 +116,6 @@ namespace Proto
          *  operator is applied.
          */
         inline std::vector<double> coefs() const {return m_coefs; }
-        
-        /// Print
         inline void print() const; 
         
         private:
@@ -172,13 +169,6 @@ namespace Proto
                 int                         a_order = 4,
                 int block = -1);
         
-        template<template<MemType> typename MAP, MemType MEM>
-        inline void define(
-                const MBLevelMap<MAP, MEM>& a_map,
-                MBInterpLayout              a_layout,
-                int                         a_order = 4,
-                int block = -1);
-        
         /// Apply
         /** Interpolates from source data to all block boundary ghost cells in the destination.
          *  It is assumed that MBLevelBoxData::fillBoundaries() has been called on the source
@@ -213,8 +203,14 @@ namespace Proto
         inline void copyAxis(unsigned int a_axis, bool a_flag);
 
         void print() const;
-        
+       
+        template<typename T, unsigned int C, MemType MEM>
+        void printErrorPoints(
+                MBLevelBoxData<T,C,MEM>& a_err,
+                T                        a_eps = 0);
+
         private:
+     
         mutable Array<bool, DIM> m_copyAxes;
         Point m_ghost;
         int m_order;

@@ -181,6 +181,7 @@ void f_Amatrix_F(Point a_pt,
 }
 
 PROTO_KERNEL_END(f_Amatrix_F,f_Amatrix)
+
 template<typename T>
 void f_Ainv_(Point a_pt,
              matType& a_amat,
