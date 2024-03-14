@@ -284,9 +284,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 4;
-    int boxSize = 4;
-    int thickness = 8;
+    int domainSize = 16;
+    int boxSize = 16;
+    int thickness = 32;
     int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;
@@ -296,7 +296,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 1;
+    int N = 3;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)

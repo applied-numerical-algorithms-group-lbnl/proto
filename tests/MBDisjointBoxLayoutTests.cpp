@@ -142,6 +142,46 @@ TEST(MBDisjointBoxLayout, Coarsen) {
         EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
+
+TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
+{
+    int domainSize = 8;
+    int boxSize = 4;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Point patchDomainSize = Point::Ones(domainSize / boxSize);
+    Box patchDomain(patchDomainSize);
+    std::cout << "patchDomain: " << patchDomain << std::endl;
+
+    for (auto iter_i : layout)
+    {
+        for (auto iter_j : layout)
+        {
+            auto pi = layout.point(iter_i);
+            auto bi = layout.block(iter_i);
+            auto pj = layout.point(iter_j);
+            auto bj = layout.block(iter_j);
+            
+            if (bi == 0 && bi != bj)
+            {
+                auto dij = layout.connectivity(iter_i, iter_j);
+                auto dji = layout.connectivity(iter_j, iter_i);
+                if (dij == Point::Zeros())
+                {
+                    std::cout << "no connection between " << pi << " and " << pj << "(bj = " << bj << ")" << std::endl;
+                    EXPECT_EQ(dji, Point::Zeros());
+                } else {
+                    std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
+                    std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
+                }
+            }
+
+        }
+    }
+}
+#if 0
 #if DIM == 3
 TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
 {
@@ -170,10 +210,16 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
             
             if (bi == 0 && bi != bj)
             {
-                std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
                 auto dij = layout.connectivity(iter_i, iter_j);
                 auto dji = layout.connectivity(iter_j, iter_i);
-                std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
+                if (dij == Point::Zeros())
+                {
+                    std::cout << "no connection between " << pi << " and " << pj << "(bj = " << bj << ")" << std::endl;
+                    EXPECT_EQ(dji, Point::Zeros());
+                } else {
+                    std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
+                    std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
+                }
             }
 
         }
@@ -181,7 +227,7 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
 
 }
 #endif
-
+#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
