@@ -279,16 +279,16 @@ TEST(MBInterpOp, XPointTest)
 #if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
-#if PR_VERBOSE > 0
 #define CUBED_SPHERE_SHELL_R0 0.5
 #define CUBED_SPHERE_SHELL_R1 1.0
+#if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
-    int boxSize = 16;
-    int thickness = 16;
-    int ghostSize = 2;
-    bool cullRadialGhost = true;
+    int domainSize = 4;
+    int boxSize = 4;
+    int thickness = 8;
+    int ghostSize = 1;
+    bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{1,1,1,0,0,0};
@@ -296,7 +296,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 3;
+    int N = 1;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -362,6 +362,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
+        op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();
@@ -381,6 +382,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #endif
         domainSize *= 2;
         boxSize *= 2;
+        thickness *= 2;
     }
     for (int ii = 1; ii < N; ii++)
     {

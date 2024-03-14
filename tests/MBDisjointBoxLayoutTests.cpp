@@ -3,23 +3,6 @@
 #include "Lambdas.H"
 
 using namespace Proto;
-#if 0
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-#endif
-
 TEST(MBDisjointBoxLayout, Iteration) {
     int domainSize = 64;
     int boxSize = 16;
@@ -159,6 +142,45 @@ TEST(MBDisjointBoxLayout, Coarsen) {
         EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
+#if DIM == 3
+TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
+{
+    int domainSize = 8;
+    int boxSize = 4;
+    int thickness = 8;
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
+    Point boxSizeVect = Point::Ones(boxSize);
+    boxSizeVect[radialDir] = min(thickness, boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Point patchDomainSize = Point::Ones(domainSize / boxSize);
+    patchDomainSize[radialDir] = thickness > boxSize ? thickness / boxSize : 1;
+    Box patchDomain(patchDomainSize);
+    std::cout << "patchDomain: " << patchDomain << std::endl;
+
+    for (auto iter_i : layout)
+    {
+        for (auto iter_j : layout)
+        {
+            auto pi = layout.point(iter_i);
+            auto bi = layout.block(iter_i);
+            auto pj = layout.point(iter_j);
+            auto bj = layout.block(iter_j);
+            
+            if (bi == 0 && bi != bj)
+            {
+                std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
+                auto dij = layout.connectivity(iter_i, iter_j);
+                auto dji = layout.connectivity(iter_j, iter_i);
+                std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
+            }
+
+        }
+    }
+
+}
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

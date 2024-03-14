@@ -197,6 +197,45 @@ void MBPointInterpOp::apply(
     }
 }
 
+template<typename T, unsigned int C, MemType MEM>
+void MBInterpOp::printErrorPoints(
+        MBLevelBoxData<T, C, MEM>& a_err,
+        T                          a_eps)
+{
+    auto& layout = a_err.layout();
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        auto& err_i = a_err[iter];
+        for (auto pi : err_i.box())
+        {
+            for (int cc = 0; cc < C; cc++)
+            {
+                if (err_i(pi, cc) > a_eps)
+                {   
+                    for (auto& op : m_ops)
+                    {
+                        auto& dst = op->target();
+                        if (dst.point() == pi && dst.dstBlock() == block)
+                        {
+                            std::cout << "\nError Point found | error: " << err_i(pi, cc) << " | target: " << pi << " | block: " << block << std::endl;
+                            std::cout << "Source Points: " << std::endl;
+                            for (auto& si : op->sources())
+                            {
+                                std::cout << "\t" << si << std::endl;
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                
+            }
+        }
+    }
+}
+
+
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
@@ -291,6 +330,7 @@ void MBInterpOp::define(
         for (auto dir : Box::Kernel(1))
         {
             Box boundBox = patchBox.adjacent(m_ghost*dir);
+            std::cout << "\nBLOCK: " << block << " BOX: " << layout[iter] << " | DIR: " << dir << " | BOUND_BOX: " << boundBox << std::endl;
             if (blockDomainBox.contains(boundBox))
             {
                 continue;
@@ -299,6 +339,7 @@ void MBInterpOp::define(
             {
                 for (auto bi : boundBox)
                 {
+                    std::cout << "\tFOUND TRIPLE POINT: " << bi << std::endl;
                     PR_TIME("add_triple_point");
                     MBPointID key(bi, iter.global());
                     if (m_points.count(key)) { continue; }
@@ -351,6 +392,8 @@ void MBInterpOp::define(
                 continue;
             }
             auto bounds = a_map.map().bounds(iter, dir);
+            std::cout << "---------------------------------------------------------------------------------------------------" << std::endl;
+            std::cout << "NO TRIPLE POINTS FOUND. CHECKING " << bounds.size() << " BOUNDS IN DIRECTION " << dir << std::endl;
             std::set<Point> fset;
             for (auto fi : a_footprint)
             {
@@ -364,15 +407,20 @@ void MBInterpOp::define(
                     PR_TIME("add_non_triple_point");
                     MBPointID key(bi, iter.global());
                     if (m_points.count(key)) { continue; }
+                    std::cout << "\tFOUND NORMAL POINT: " << bi << std::endl;
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         PR_TIME("adjacent_triple_point_logic");
                         Point d2 = Point::Basis(ii);
-                        if (dir[ii] != 0) {continue; }
+                        //if (dir[ii] != 0) {continue; }
                         bool onLoEdge = boundBox.edge(-d2).contains(bi);
                         bool onHiEdge = boundBox.edge( d2).contains(bi);
+                        bool hasLoTriplePoint = layout.domain().graph().isTriplePoint(block, dir-d2);
+                        bool hasHiTriplePoint = layout.domain().graph().isTriplePoint(block, dir+d2);
+                        std::cout << "\t\tonLoEdge: " << onLoEdge << " | onHiEdge: " << onHiEdge << " | hasLoTriplePoint: " << hasLoTriplePoint << " | hasHiTriplePoint: " << hasHiTriplePoint << std::endl;
                         if (onLoEdge && layout.domain().graph().isTriplePoint(block, dir - d2))
                         {
+                            std::cout << "\t\t\tTRIPLE POINT ADJACENT: " << bi << std::endl;
                             for (auto fi : a_footprint)
                             {
                                 fset.insert(fi + d2);
@@ -380,6 +428,7 @@ void MBInterpOp::define(
                         }
                         if (onHiEdge && layout.domain().graph().isTriplePoint(block, dir + d2))
                         {
+                            std::cout << "\t\t\tTRIPLE POINT ADJACENT: " << bi << std::endl;
                             for (auto fi : a_footprint)
                             {
                                 fset.insert(fi - d2);
