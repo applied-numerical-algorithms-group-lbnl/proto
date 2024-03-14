@@ -254,6 +254,7 @@ TEST(Operator, InitConvolve)
 }
 #endif
 #if DIM==3
+#ifdef PR_MMB
 TEST(Operator, Cofactor)
 {
 #ifdef PR_HDF5
@@ -339,6 +340,7 @@ TEST(Operator, Cofactor)
 
     }
 }
+#endif
 #endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

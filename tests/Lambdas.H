@@ -2,8 +2,9 @@
 #define TEST_LAMBDAS
 #include <cmath>
 #include "Proto.H"
+#ifdef PR_MMB
 #include "MBMap_XPointRigid.H"
-
+#endif
 using namespace Proto;
 
 PROTO_KERNEL_START
@@ -227,8 +228,6 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     return domain;
 }
 #endif
-#endif
-
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -299,7 +298,7 @@ void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSi
 }
 PROTO_KERNEL_END(f_JCubeSphere_, f_JCubeSphere);
 #endif
-
+#endif
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
