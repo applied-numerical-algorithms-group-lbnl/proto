@@ -157,9 +157,11 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 16;
+  int boxSize = 16;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
+  args.add("boxSize", boxSize);
   args.parse(argc, argv);
   args.print();
   Array<double, DIM> offset = {0., 0., 0.};
@@ -177,7 +179,7 @@ int main(int argc, char *argv[])
   Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}};
   auto domain =
       CubedSphereShell::Domain(domainSize, thickness, radialDir);
-  Point boxSizeVect = Point::Ones(domainSize);
+  Point boxSizeVect = Point::Ones(boxSize);
   boxSizeVect[radialDir] = thickness;
   MBDisjointBoxLayout layout(domain, boxSizeVect);
 
