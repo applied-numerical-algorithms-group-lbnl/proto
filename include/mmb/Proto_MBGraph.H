@@ -214,7 +214,12 @@ namespace Proto
         /// Detect Block Boundary
         /** Returns true if the specified inputs correspond to a boundary between two blocks. */
         inline bool isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const;
-        
+      
+        /// Return list of codimension-2 triple points
+        inline std::vector<Point> triplePoints(
+                BlockIndex a_srcBlock,
+                Point a_dir) const;
+
         /// Detect Triple Point
         /** Returns true if the specified block boundary corresponds to a "triple point".
          *  In this context, a "triple point" is a codimension-2 block boundary where exactly

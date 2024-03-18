@@ -93,6 +93,9 @@ namespace Proto
         inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
+        
+        inline bool inTriplePoint(Point a_patch, BlockIndex a_block) const;
+
         private:
 
         mutable bool m_closed;
