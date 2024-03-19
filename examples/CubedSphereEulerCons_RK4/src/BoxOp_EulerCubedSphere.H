@@ -7,7 +7,7 @@
 //#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS 2*DIM+2
-
+#define NGHOST 4
 #if DIM == 2
 #define iRHO 0
 #define iVX 1
@@ -108,7 +108,7 @@ public:
   mutable T umax;
 
   // How many ghost cells does the operator need from the state variables
-  inline static Point ghost() { return Point::Ones(4);}
+  inline static Point ghost() { return Point::Ones(NGHOST);}
     
   // How many ghost cells does the operator need from the auxiliary variables
   inline static Point auxGhost() { return Point::Zeros();}
@@ -264,6 +264,12 @@ public:
                               const double a_dx,
                               const double a_dy,
                               const double a_dz) const;
+
+  inline void Limiters_minmod(BoxData<double,NUMCOMPS>& a_W_low_lim,
+                  BoxData<double,NUMCOMPS>& a_W_high_lim,
+                  BoxData<double,NUMCOMPS>& a_W,
+                  BoxData<double,DIM>& a_dx_sph,
+                  const int a_d) const;                   
 
   // End Limiter.
   
