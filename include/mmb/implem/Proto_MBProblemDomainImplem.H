@@ -316,3 +316,52 @@ std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_bo
     }
     return patchVect;
 }
+
+Point MBProblemDomain::getDir(Point a_point, BlockIndex a_block) const
+{
+    Box patchDomain = getBlock(a_block).box();
+    Point hiDiff = a_point - patchDomain.high();
+    Point loDiff = patchDomain.low() - a_point;
+    Point dir = Point::Zeros();
+    for (int di = 0; di < DIM; di++)
+    {
+        if (hiDiff[di] > 0)
+        {
+            dir[di] = 1;
+        } else if (loDiff[di] > 0)
+        {
+            dir[di] = -1;
+        } else {
+            dir[di] = 0;
+        }
+    }
+    return dir;
+}
+
+bool MBProblemDomain::inTriplePoint(
+        Point       a_point,
+        BlockIndex  a_block) const
+{
+    return graph().isTriplePoint(a_block, getDir(a_point, a_block));
+}
+
+bool MBProblemDomain::inBlockBoundary(
+        Point       a_point,
+        BlockIndex  a_block) const
+{
+    return graph().isBlockBoundary(a_block, getDir(a_point, a_block));
+}
+
+bool MBProblemDomain::inDomainBoundary(
+        Point       a_point,
+        BlockIndex  a_block) const
+{
+    return graph().isDomainBoundary(a_block, getDir(a_point, a_block));
+}
+
+bool MBProblemDomain::inInterior(
+        Point       a_point,
+        BlockIndex  a_block) const
+{
+    return getBlock(a_block).box().contains(a_point);
+}

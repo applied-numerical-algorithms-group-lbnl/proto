@@ -120,7 +120,6 @@ void MBBoxPartition::findBoundaries()
     m_blockBoundaries.clear();
     m_domainBoundaries.clear();
     auto& graph = m_patchDomain.graph();
-
     for (uint64_t ind_i = 0; ind_i < numBoxes(); ind_i++)
     {
         auto& partitionData = m_partition[ind_i];
@@ -129,6 +128,7 @@ void MBBoxPartition::findBoundaries()
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
+            if (m_patchDomain.inTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().contains(patch_ji))
             {
@@ -164,10 +164,7 @@ void MBBoxPartition::findBoundaries()
             }
             if (!foundBlockBoundary)
             {
-                if (!graph.isTriplePoint(block_i, dir))
-                {
-                    m_domainBoundaries.insert(key);
-                }
+                m_domainBoundaries.insert(key);
             }
         }
     }
