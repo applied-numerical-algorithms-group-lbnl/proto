@@ -531,6 +531,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         State WFaceBar_R_temp = idOP(WFaceBar_R); 
         Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,W,dir,dxiR, dxiPerp, dxiPerp);
         Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,dir,dxiR, dxiPerp, dxiPerp);
+        // Limiters_minmod(WFace_L,WFace_R,W,this->dx(),dir);
+        // Limiters_minmod(WFaceBar_L,WFaceBar_R,WBar,this->dx(),dir);
       }
 
       // Fluxes on dir face.
@@ -1586,6 +1588,93 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
     a_W_ave_L_lim_flat = alias(W_ave_L_ahead_lim_flat,Point::Basis(a_d)*(1));
   }
 }
+
+template<typename T,MemType MEM>
+PROTO_KERNEL_START
+void minmod_calcF(const Point& a_pt,
+                  Var<T,NUMCOMPS,MEM>& W_low_ahead_limited,
+                  Var<T,NUMCOMPS,MEM>& W_high_limited,
+                  const Var<T,NUMCOMPS,MEM>& a_W,
+                  const Var<T,NUMCOMPS,MEM>& a_dWL,
+                  const Var<T,NUMCOMPS,MEM>& a_dWR,
+                  Var<T,DIM,MEM>& a_dx_sph,
+                  Var<T,DIM,MEM>& a_dx_sph_behind,
+                  Var<T,DIM,MEM>& a_dx_sph_ahead,
+                  int a_d)
+{
+  double c1     = 1.0/(a_dx_sph(a_d) + a_dx_sph_ahead(a_d));
+  double c2     = 1.0/(a_dx_sph(a_d) + a_dx_sph_behind(a_d));
+
+  for (int i = 0; i< NUMCOMPS; i++){ 
+    double WP     = a_W(i);
+    double dWR    = a_dWR(i);
+    double dWL    = a_dWL(i);
+
+    // SLOPE  = dx*minmod( dWR*c1, dWL*c2 )
+
+    // double signA = /abs(dWR*c1);
+    double minmod;
+    double A = dWR*c1;
+    double B = dWL*c2;
+    if (A*B < 0){
+      minmod = 0;
+    } else if (abs(A) < abs(B)){
+      minmod = A;
+    } else {
+      minmod = B;
+    }
+
+    // double minmod = signA*max(0.0,min(abs(dWR*c1),signA*dWL*c2));
+    double SLOPE = a_dx_sph(a_d)*minmod;
+
+    W_low_ahead_limited(i) = WP + SLOPE;
+    W_high_limited(i) = WP - SLOPE;
+
+    // Reduce order if density or p become negative at faces
+    // if (i==0 || i==4){
+    if (i==4){
+      if (W_low_ahead_limited(i) < 0) W_low_ahead_limited(i) = 0.;//WP;
+      if (W_high_limited(i) < 0) W_high_limited(i) = 0.;//WP;
+    }
+  }
+}
+PROTO_KERNEL_END(minmod_calcF, minmod_calc)
+
+
+
+
+template<
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod(BoxData<double,NUMCOMPS>& a_W_low_lim,
+                  BoxData<double,NUMCOMPS>& a_W_high_lim,
+                  BoxData<double,NUMCOMPS>& a_W,
+                  BoxData<double,DIM>& a_dx_sph,
+                  const int a_d) const
+{
+  static Stencil<double> m_difference;
+  m_difference = -1.0*Shift(Point::Zeros()) + 1.0*Shift(Point::Basis(a_d)); 
+  static Stencil<double> m_copy;
+  m_copy = 1.0*Shift(Point::Zeros());
+
+  State W_low_ahead = alias(a_W,Point::Basis(a_d)*(-1));
+  State W_low_ahead_limited = m_copy(W_low_ahead);
+  State W_high_limited = m_copy(a_W);
+  int limiter_apply = 1;
+  if (limiter_apply == 1) {
+    State dWR = m_difference(a_W);
+    State dWL = alias(dWR,Point::Basis(a_d)*(1));
+    BoxData<double,DIM> a_dx_sph_behind = alias(a_dx_sph,Point::Basis(a_d)*(1));
+    BoxData<double,DIM> a_dx_sph_ahead = alias(a_dx_sph,Point::Basis(a_d)*(-1));
+    forallInPlace_p(minmod_calc,W_low_ahead_limited, W_high_limited, a_W, dWL,
+                      dWR, a_dx_sph, a_dx_sph_behind, a_dx_sph_ahead, a_d);
+  }
+  a_W_high_lim = alias(W_high_limited);
+  a_W_low_lim = alias(W_low_ahead_limited,Point::Basis(a_d)*(1));		
+}
+
 
 // ====================================================================================
 // Limiter implems end here.

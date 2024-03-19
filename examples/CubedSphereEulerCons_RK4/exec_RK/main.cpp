@@ -7,6 +7,8 @@
 // #include "Proto_CubedSphereShell.H"
 #include "BoxOp_EulerCubedSphere.H"
 
+int init_type = 0; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
+
 void GetCmdLineArgumenti(int argc, const char **argv, const char *name, int *rtn)
 {
   size_t len = strlen(name);
@@ -138,6 +140,65 @@ void f_radialBCs_F(
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_radialoutflowInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T> &a_radius,
+    T a_dxradius,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T u0 = 10.0;
+  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = u0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+
+PROTO_KERNEL_END(f_radialoutflowInit_F, f_radialoutflowInit)
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_radialoutflowIBCs_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_USph,
+    Var<T> &a_radius,
+    T a_dxradius,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical BCs.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T u0 = 10.0;
+  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = u0;
+  a_USph(iRHO) = rho;
+  a_USph(iMOMX) = ur * rho;
+  a_USph(iMOMY) = 0.0;
+  a_USph(iMOMZ) = 0.0;
+  a_USph(iBX) = 0.0;
+  a_USph(iBY) = 0.0;
+  a_USph(iBZ) = 0.0;
+  T umag = sqrt(a_USph(iMOMX) * a_USph(iMOMX) + a_USph(iMOMY) * a_USph(iMOMY) + a_USph(iMOMZ) * a_USph(iMOMZ)) / a_USph(iRHO);
+  T Bmag = sqrt(a_USph(iBX) * a_USph(iBX) + a_USph(iBY) * a_USph(iBY) + a_USph(iBZ) * a_USph(iBZ));
+  a_USph(iE) = p / (a_gamma - 1.0) + 0.5 * a_USph(iRHO) * umag * umag + Bmag * Bmag/8.0/M_PI;
+}
+PROTO_KERNEL_END(f_radialoutflowIBCs_F, f_radialoutflowIBCs)
+
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              auto &eulerOp,
              MBInterpOp& a_iop,
@@ -174,19 +235,47 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     unsigned int block = layout.block(dit);
     // Set radial boundary condtions in radial ghost cells.
     Box blockBox = layout.getBlock(block).domain().box();
+    // Outer BCs
     if (blockBox.high()[0] < bxGhosted.high()[0])
     {
       Point low = bxGhosted.low();
       low[0] = blockBox.high()[0] + 1;
       Box bdryBoxHigh(low, bxGhosted.high());
-      forallInPlace_p(f_radialBCs, bdryBoxHigh, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+
+      if (init_type == 0 || init_type == 1){
+        forallInPlace_p(f_radialBCs, bdryBoxHigh, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+      }
+      if (init_type == 2){
+        // Extrapolate to ghost cells.
+        Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
+        Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
+        Box sourceBox(source_low,source_high);
+        Box sourceBox1 = sourceBox.grow(1);
+
+        State a_U_exterp(sourceBox1);
+        State a_U_ghost(bdryBoxHigh);
+        Stencil<double> m_exterp_f_2nd;
+        for (int i = 1; i <= NGHOST; i++ ) {
+          //Using outermost 2 layers to extrapolate to rest.
+          m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
+          a_U_exterp = m_exterp_f_2nd(JUTemp[dit]);
+          a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
+        }
+        a_U_ghost.copyTo(JUTemp[dit],bdryBoxHigh);
+      }
     }
+    // Inner BCs
     if (blockBox.low()[0] > bxGhosted.low()[0])
     {
       Point high = bxGhosted.high();
-      high[0] = blockBox.low()[0] + 1;
+      high[0] = blockBox.low()[0] - 1;
       Box bdryBoxLow(bxGhosted.low(), high);
-      forallInPlace_p(f_radialBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+      if (init_type == 0 || init_type == 1){
+        forallInPlace_p(f_radialBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+      }
+      if (init_type == 2){
+        forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+      }
     }
   }
 
@@ -210,8 +299,8 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 64;
-  int max_iter = 15;
-  double dt = 0.01;
+  int max_iter = 10;
+  double dt = 0.001;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
@@ -264,7 +353,7 @@ int main(int argc, char *argv[])
     double gamma = 5.0 / 3.0;
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
+    eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
     Box b_i = C2C.domain(layout[dit]).grow(6);
     BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
     auto block = layout.block(dit);
@@ -275,8 +364,9 @@ int main(int argc, char *argv[])
     double half = 0.5;
     BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
     (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-    // forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
-    forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+    if (init_type == 0) forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+    if (init_type == 1) forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
+    if (init_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, dxradius, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
     JU_i.setVal(0.);
     JUTemp.copyTo(JU_i, layout[dit]);
@@ -310,19 +400,46 @@ int main(int argc, char *argv[])
 
       // Set radial boundary condtions in radial ghost cells.
       Box blockBox = layout.getBlock(block).domain().box();
+      // Outer BCs
       if (blockBox.high()[0] < bxGhosted.high()[0])
       {
         Point low = bxGhosted.low();
         low[0] = blockBox.high()[0] + 1;
         Box bdryBoxHigh(low, bxGhosted.high());
-        forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+        if (init_type == 0 || init_type == 1){
+          forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+        } 
+        if (init_type == 2){
+          // Extrapolate to ghost cells.
+          Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
+          Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
+          Box sourceBox(source_low,source_high);
+          Box sourceBox1 = sourceBox.grow(1);
+
+          State a_U_exterp(sourceBox1);
+          State a_U_ghost(bdryBoxHigh);
+          Stencil<double> m_exterp_f_2nd;
+          for (int i = 1; i <= NGHOST; i++ ) {
+            //Using outermost 2 layers to extrapolate to rest.
+            m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
+            a_U_exterp = m_exterp_f_2nd(USph_i);
+            a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
+          }
+          a_U_ghost.copyTo(USph_i,bdryBoxHigh);
+        }
       }
+      // Inner BCs
       if (blockBox.low()[0] > bxGhosted.low()[0])
       {
         Point high = bxGhosted.high();
-        high[0] = blockBox.low()[0] + 1;
+        high[0] = blockBox.low()[0] - 1;
         Box bdryBoxLow(bxGhosted.low(), high);
-        forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+        if (init_type == 0 || init_type == 1){
+          forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+        }
+        if (init_type == 2){
+          forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+        }
       }
       int block_i = layout.block(dit);
       Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
@@ -339,7 +456,7 @@ int main(int argc, char *argv[])
     }
     // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
 
-    bool linear_visc = false;
+    bool linear_visc = true;
     if (linear_visc){
       for (auto dit : layout)
       {
@@ -363,19 +480,46 @@ int main(int argc, char *argv[])
 
         // Set radial boundary condtions in radial ghost cells.
         Box blockBox = layout.getBlock(block).domain().box();
+        // Outer BCs
         if (blockBox.high()[0] < bxGhosted.high()[0])
         {
           Point low = bxGhosted.low();
           low[0] = blockBox.high()[0] + 1;
           Box bdryBoxHigh(low, bxGhosted.high());
-          forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+          if (init_type == 0 || init_type == 1){
+            forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
+          } 
+          if (init_type == 2){
+            // Extrapolate to ghost cells.
+            Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
+            Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
+            Box sourceBox(source_low,source_high);
+            Box sourceBox1 = sourceBox.grow(1);
+
+            State a_U_exterp(sourceBox1);
+            State a_U_ghost(bdryBoxHigh);
+            Stencil<double> m_exterp_f_2nd;
+            for (int i = 1; i <= NGHOST; i++ ) {
+              //Using outermost 2 layers to extrapolate to rest.
+              m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
+              a_U_exterp = m_exterp_f_2nd(USph_i);
+              a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
+            }
+            a_U_ghost.copyTo(USph_i,bdryBoxHigh);
+          }
         }
+        // Inner BCs
         if (blockBox.low()[0] > bxGhosted.low()[0])
         {
           Point high = bxGhosted.high();
-          high[0] = blockBox.low()[0] + 1;
+          high[0] = blockBox.low()[0] - 1;
           Box bdryBoxLow(bxGhosted.low(), high);
-          forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+          if (init_type == 0 || init_type == 1){
+            forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+          }
+          if (init_type == 2){
+            forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+          }
         }
         int block_i = layout.block(dit);
         eulerOp[dit].LinearVisc(rhs_i, USph_i, block_i, 1.0);
