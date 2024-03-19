@@ -75,14 +75,30 @@ MBPointInterpOp::MBPointInterpOp(
     
     if (N > M)
     {
+        pr_out() << "====================================================================" << std::endl;
         pr_out() << "Underdetermined system detected" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
         pr_out() << "\tDst Point: " << a_dst << std::endl;
+        pr_out() << "\tGhost: " << a_ghost << std::endl;
+        #if PR_VERBOSE > 1
+        pr_out() << "\tFootprint: " << std::endl;
+        for (auto fi : a_footprint)
+        {
+            pr_out() << "\t\t" << fi << std::endl;
+        }
         pr_out() << "\tSrc Points: " << std::endl;
         for (auto si : m_srcs)
         {
             pr_out() << "\t\t" << si << std::endl;
         }
+        pr_out() << "\tExponents: " << std::endl;
+        for (auto ei : exponents)
+        {
+            pr_out() << "\t\t" << ei << std::endl;
+        }
+    
+        #endif
+        pr_out() << "====================================================================" << std::endl;
     }
     //std::cout << "N: " << N << " | M: " << M << std::endl;
 
@@ -316,6 +332,16 @@ void MBInterpOp::define(
         int                         a_order,
         int                         a_block)
 {
+#if PR_VERBOSE > 1
+    pr_out() << "MBInterpOp Constructor" << std::endl;
+    pr_out() << "Order: " << a_order << " | Block: " << a_block << std::endl;
+    pr_out() << "Base Footprint: " << std::endl;
+    for (auto fi : a_footprint)
+    {
+        pr_out() << fi << ", ";
+    }
+    pr_out() << std::endl;
+#endif
     PR_TIME("MBInterpOp::define");
     m_ghost = a_map.ghost()[0];
     
@@ -328,21 +354,45 @@ void MBInterpOp::define(
         if ((a_block >= 0) && (block != a_block)) {continue; }
         Box blockDomainBox = layout.domain().getBlock(block).box(); 
         Box patchBox = layout[iter];
+#if PR_VERBOSE > 1
+        pr_out() << "\tPatch: " << patch_i << " | Block: " << block << std::endl;
+        pr_out() << "\tPatch Box: " << patchBox << " | Block Box: " << blockDomainBox << std::endl;
+#endif
         for (auto dir : Box::Kernel(1))
         {
             Point patch_j = patch_i + dir; 
-            //if (layout.isDomainBoundary(iter, dir)) { continue; }
-            if (patchDomain.inDomainBoundary(patch_j, block)) { continue; }
+#if PR_VERBOSE > 1
+            pr_out() << "\t\tDir: " << dir << " | Neighbor: " << patch_j << std::endl;
+            if (patchDomain.inInterior(patch_j, block))
+            {
+                pr_out() << "\t\t\tNeighbor is in the interior -> skipping" << std::endl;
+            }
+            if (patchDomain.inDomainBoundary(patch_j, block))
+            {
+                pr_out() << "\t\t\tNeighbor is in the domain boundary -> skipping" << std::endl;
+            }
+#endif
             if (patchDomain.inInterior(patch_j, block)) { continue; }
+            if (patchDomain.inDomainBoundary(patch_j, block)) { continue; }
             Box boundBox = patchBox.adjacent(m_ghost*dir);
-            //std::cout << "\nBLOCK: " << block << " BOX: " << layout[iter] << " | DIR: " << dir << " | BOUND_BOX: " << boundBox << std::endl;
-            //if (layout.domain().graph().isTriplePoint(block, dir))
             if (patchDomain.inTriplePoint(patch_j, block))
             {
+#if PR_VERBOSE > 1
+                pr_out() << "\t\t\tNeighbor is inside a triple point region: " << boundBox << std::endl;
+#endif
                 for (auto bi : boundBox)
                 {
+#if PR_VERBOSE > 1
+                    pr_out() << "\t\t\tChecking point: " << bi << std::endl;
+#endif
                     PR_TIME("add_triple_point");
                     MBPointID key(bi, iter.global());
+#if PR_VERBOSE > 1
+                    if (m_points.count(key))
+                    {
+                        pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
+                    }
+#endif
                     if (m_points.count(key)) { continue; }
                     Point corner = patchBox.edge(dir,1).low();
                     std::set<Point> fset;
@@ -355,8 +405,19 @@ void MBInterpOp::define(
                             fset.insert(fi + s);
                         }
                     }
-                    
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
+#if PR_VERBOSE > 1
+                    pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
+                    for (auto fi : extFootprint)
+                    {
+                        pr_out() << "\t\t\t\t" << fi << std::endl;
+                        if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
+                        {
+                            pr_out() << " <- added";
+                        }
+                        pr_out() << std::endl;
+                    }
+#endif
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
@@ -395,8 +456,9 @@ void MBInterpOp::define(
             PROTO_ASSERT(patchDomain.inBlockBoundary(patch_j, block),
                     "MBInterpOp::define | Data corruption.");
             auto bounds = a_map.map().bounds(iter, dir);
-            //std::cout << "---------------------------------------------------------------------------------------------------" << std::endl;
-            //std::cout << "NO TRIPLE POINTS FOUND. CHECKING " << bounds.size() << " BOUNDS IN DIRECTION " << dir << std::endl;
+#if PR_VERBOSE > 1
+            pr_out() << "\t\t\tNeighbor is inside a normal boundary region: " << boundBox << " | number of boundaries: " << bounds.size() << std::endl;
+#endif
             std::set<Point> fset;
             for (auto fi : a_footprint)
             {
@@ -404,26 +466,38 @@ void MBInterpOp::define(
             }
             for (auto bound : bounds)
             {
+
                 //handle points adjacent to triple points
                 for (auto bi : boundBox)
                 {
+#if PR_VERBOSE > 1
+                    pr_out() << "\t\t\tChecking point: " << bi << std::endl;
+#endif
                     PR_TIME("add_non_triple_point");
                     MBPointID key(bi, iter.global());
+#if PR_VERBOSE > 1
+                    if (m_points.count(key))
+                    {
+                        pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
+                    }
+#endif
                     if (m_points.count(key)) { continue; }
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         PR_TIME("adjacent_triple_point_logic");
                         Point d2 = Point::Basis(ii);
-                        //if (dir[ii] != 0) {continue; }
                         bool onLoEdge = boundBox.edge(-d2).contains(bi);
                         bool onHiEdge = boundBox.edge( d2).contains(bi);
                         bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
                         bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
-                        //bool hasLoTriplePoint = layout.domain().graph().isTriplePoint(block, dir-d2);
-                        //bool hasHiTriplePoint = layout.domain().graph().isTriplePoint(block, dir+d2);
-                        //std::cout << "\t\tonLoEdge: " << onLoEdge << " | onHiEdge: " << onHiEdge << " | hasLoTriplePoint: " << hasLoTriplePoint << " | hasHiTriplePoint: " << hasHiTriplePoint << std::endl;
                         if (onLoEdge && hasLoTriplePoint)
                         {
+#if PR_VERBOSE > 1
+                            if (m_points.count(key))
+                            {
+                                pr_out() << "\t\t\t\tDetected adjacent triple point patch (lo): " << patch_j - d2 << std::endl;
+                            }
+#endif
                             for (auto fi : a_footprint)
                             {
                                 fset.insert(fi + d2);
@@ -431,6 +505,12 @@ void MBInterpOp::define(
                         }
                         if (onHiEdge && hasHiTriplePoint)
                         {
+#if PR_VERBOSE > 1
+                            if (m_points.count(key))
+                            {
+                                pr_out() << "\t\t\t\tDetected adjacent triple point patch (hi): " << patch_j + d2 << std::endl;
+                            }
+#endif
                             for (auto fi : a_footprint)
                             {
                                 fset.insert(fi - d2);
@@ -438,6 +518,18 @@ void MBInterpOp::define(
                         }
                     }
                     std::vector<Point> extFootprint(fset.begin(), fset.end());
+#if PR_VERBOSE > 1
+                    pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
+                    for (auto fi : extFootprint)
+                    {
+                        pr_out() << "\t\t\t\t" << fi;
+                        if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
+                        {
+                            pr_out() << " <- added";
+                        }
+                        pr_out() << std::endl;
+                    }
+#endif
                     MBDataPoint dstDataPoint(iter, bi, layout);
                     auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
                     m_ops.push_back(op);
