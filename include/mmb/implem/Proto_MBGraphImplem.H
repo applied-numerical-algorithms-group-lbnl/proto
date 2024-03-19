@@ -425,6 +425,16 @@ bool MBGraph::isTriplePoint(
 
 }
 
+bool MBGraph::isDomainBoundary(
+        BlockIndex a_srcBlock,
+        Point a_dir) const
+{
+
+    if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
+    if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
+    return true;
+}
+
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
     // TODO: Most applications won't need more than one graph

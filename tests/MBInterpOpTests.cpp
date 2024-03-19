@@ -284,9 +284,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 4;
-    int boxSize = 4;
-    int thickness = 8;
+    int domainSize = 16;
+    int boxSize = 16;
+    int thickness = 32;
     int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;

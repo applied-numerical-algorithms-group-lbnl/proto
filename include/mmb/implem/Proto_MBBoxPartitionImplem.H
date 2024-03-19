@@ -120,57 +120,6 @@ void MBBoxPartition::findBoundaries()
     m_blockBoundaries.clear();
     m_domainBoundaries.clear();
     auto& graph = m_patchDomain.graph();
-#if 0
-    for (uint64_t ind_i = 0; ind_i < numBoxes(); ind_i++)
-    {
-        auto& partitionData = m_partition[ind_i];
-        auto  block_i = partitionData.first.second;
-        auto  patch_i = partitionData.first.first;
-        Box   patchDomain = m_patchDomain.getBlock(block_i).box();
-        PROTO_ASSERT(patchDomain.contains(patch_i),
-                "MBBoxPartition::findBoundaries | Error: Data corruption.");
-
-        for (auto dir : Box::Kernel(1))
-        {
-            PatchBound key; key.index = ind_i; key.dir = dir;
-            if (dir == Point::Zeros()) { continue; }
-            auto patch_ji = patch_i + dir;
-            Point conn_ij = Point::Zeros();
-            for (int di = 0; di < DIM; di++)
-            {
-                Point patch_j = patch_i + Point::Basis(di) * dir;
-                if (!patchDomain.contains(patch_j))
-                {
-                    conn_ij[di] = dir[di];
-                }
-            }
-            PROTO_ASSERT(conn_ij.codim() < 3,
-                    "MBBoxPartition::findBoundaries | Codimension-3+ block boundaries are not implemented.");
-            if (conn_ij == Point::Zeros()) { continue; } //interior patch
-            if (graph.isBlockBoundary(block_i, conn_ij)
-                    || graph.isTriplePoint(block_i, conn_ij))
-            {
-                auto block_j = graph.adjacent(block_i, conn_ij);
-                
-                Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
-                auto R = graph.rotation(block_i, conn_ij, block_j);
-
-                Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
-                Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
-
-                Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
-                
-                auto ind_j = find(patch_jj, block_j);
-                if (ind_j < numBoxes())
-                {
-                    m_blockBoundaries[key].push_back(ind_j);
-                }
-            } else {
-                m_domainBoundaries.insert(key);
-            }
-        }
-    }
-#else
     for (uint64_t ind_i = 0; ind_i < numBoxes(); ind_i++)
     {
         auto& partitionData = m_partition[ind_i];
@@ -179,7 +128,7 @@ void MBBoxPartition::findBoundaries()
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
-            if (graph.isTriplePoint(block_i, dir)) { continue; }
+            if (m_patchDomain.inTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().contains(patch_ji))
             {
@@ -219,7 +168,6 @@ void MBBoxPartition::findBoundaries()
             }
         }
     }
-#endif
 }
 
 BlockIndex MBBoxPartition::block(uint64_t a_index) const

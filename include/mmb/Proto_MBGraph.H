@@ -226,8 +226,12 @@ namespace Proto
          *  three blocks meet. This function is used to infer corrections that must be made 
          *  when building interpolation operators in such regions. */
         inline bool isTriplePoint(
-                BlockIndex a_srcBlock,
+                BlockIndex  a_srcBlock,
                 Point        a_dir) const;
+
+        inline bool isDomainBoundary(
+                BlockIndex  a_srcBlock,
+                Point       a_dir) const;
 
         /// Print
         inline void print() const;
