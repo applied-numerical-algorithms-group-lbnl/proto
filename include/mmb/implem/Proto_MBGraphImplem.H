@@ -359,22 +359,80 @@ std::vector<MBGraphArc> MBGraph::boundaries(BlockIndex a_block, Point a_dir) con
     return bounds;
 }
 
+std::vector<Point> MBGraph::triplePoints(
+        BlockIndex a_srcBlock, 
+        Point a_dir) const
+{
+    int codim = a_dir.codim();
+    std::vector<Point> points;
+    if (codim <= 1) { return points; }
+    else if (codim == 2)
+    {
+        if (isTriplePoint(a_srcBlock, a_dir))
+        {
+            points.push_back(a_dir);
+        }
+    }
+    else {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (a_dir[ii] == 0) { continue; }
+            Point dir = a_dir;
+            dir[ii] = 0;
+            PROTO_ASSERT(dir.codim() < codim,
+                    "MBGraph::isTriplePoint | Recursion Error");
+            for (auto pi : triplePoints(a_srcBlock, dir))
+            {
+                points.push_back(pi);
+            }
+        }
+
+    }
+    return points;
+}
+
 bool MBGraph::isTriplePoint(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
-    if (a_dir.codim() != 2) {return false;}
-    auto dirs = a_dir.split();
-    auto b0 = adjacent(a_srcBlock, dirs[0]);
-    auto b1 = adjacent(a_srcBlock, dirs[1]);
-    if (b0 >= size() || b1 >= size()) { return false; }
-    auto R0 = rotation(a_srcBlock, dirs[0]);  
-    auto R1 = rotation(a_srcBlock, dirs[1]);
-    auto d01 = R0(dirs[1]);
-    auto d10 = R1(dirs[0]);
-    auto b01 = adjacent(b0, d01); 
-    auto b10 = adjacent(b1, d10); 
-    return (b01 == b1 && b10 == b0);
+    int codim = a_dir.codim();
+    if (codim <= 1) { return false; }
+    else if (codim > 2)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (a_dir[ii] == 0) { continue; }
+            Point dir = a_dir;
+            dir[ii] = 0;
+            PROTO_ASSERT(dir.codim() < codim,
+                    "MBGraph::isTriplePoint | Recursion Error");
+            if (!isTriplePoint(a_srcBlock, dir)) { return false; }
+        }
+        return true;
+    } else {
+        auto dirs = a_dir.split();
+        auto b0 = adjacent(a_srcBlock, dirs[0]);
+        auto b1 = adjacent(a_srcBlock, dirs[1]);
+        if (b0 >= size() || b1 >= size()) { return false; }
+        auto R0 = rotation(a_srcBlock, dirs[0]);  
+        auto R1 = rotation(a_srcBlock, dirs[1]);
+        auto d01 = R0(dirs[1]);
+        auto d10 = R1(dirs[0]);
+        auto b01 = adjacent(b0, d01); 
+        auto b10 = adjacent(b1, d10); 
+        return (b01 == b1 && b10 == b0);
+    }
+
+}
+
+bool MBGraph::isDomainBoundary(
+        BlockIndex a_srcBlock,
+        Point a_dir) const
+{
+
+    if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
+    if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
+    return true;
 }
 
 bool MBGraph::operator==(const MBGraph& a_rhs) const

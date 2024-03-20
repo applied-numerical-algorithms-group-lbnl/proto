@@ -265,10 +265,30 @@ TEST(MBGraph, TriplePoint) {
     EXPECT_FALSE(g0.isTriplePoint(0,X-Y));
     EXPECT_FALSE(g0.isTriplePoint(0,-X+Y));
     EXPECT_FALSE(g0.isTriplePoint(0,-X-Y));
+#if DIM > 2
+    auto Z = Point::Z();
+    EXPECT_FALSE(g0.isTriplePoint(0,X+Y+Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,X-Y+Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X+Y+Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X-Y+Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,X+Y-Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,X-Y-Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X+Y-Z));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X-Y-Z));
+#endif
+
     g0.defineBoundary(1,2,X,CW);
     EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
     EXPECT_TRUE(g0.isTriplePoint(1,X+Y));
     EXPECT_TRUE(g0.isTriplePoint(2,-X-Y));
+#if DIM > 2
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y+Z));
+    EXPECT_TRUE(g0.isTriplePoint(1,X+Y+Z));
+    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y+Z));
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y-Z));
+    EXPECT_TRUE(g0.isTriplePoint(1,X+Y-Z));
+    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y-Z));
+#endif
 }
 
 int main(int argc, char *argv[]) {

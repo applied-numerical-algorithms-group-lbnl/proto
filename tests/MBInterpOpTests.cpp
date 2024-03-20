@@ -279,16 +279,16 @@ TEST(MBInterpOp, XPointTest)
 #if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
-#if PR_VERBOSE > 0
 #define CUBED_SPHERE_SHELL_R0 0.5
 #define CUBED_SPHERE_SHELL_R1 1.0
+#if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
+    int domainSize = 16;
     int boxSize = 16;
-    int thickness = 16;
-    int ghostSize = 2;
-    bool cullRadialGhost = true;
+    int thickness = 32;
+    int ghostSize = 1;
+    bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{1,1,1,0,0,0};
@@ -362,6 +362,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
+        op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();
@@ -381,20 +382,21 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #endif
         domainSize *= 2;
         boxSize *= 2;
+        thickness *= 2;
     }
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
         //EXPECT_GT(rate, 3.5);
-        EXPECT_TRUE(errL1[ii] < 1e-12 || rateL1 >  order - 1.0);
+        EXPECT_TRUE(err[ii] < 1e-12 || rate >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {
             std::cout << "Convergence Rate (Max Norm): " << rate;
             std::cout << " | (L1 Norm): " << rateL1 << std::endl;
         }
-        std::cout << "Convergence pass / fail is determined by L1 Norm" << std::endl;
+        std::cout << "Convergence pass / fail is determined by Max Norm" << std::endl;
 #endif
     }
 }

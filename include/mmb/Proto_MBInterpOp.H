@@ -213,7 +213,12 @@ namespace Proto
         inline void copyAxis(unsigned int a_axis, bool a_flag);
 
         void print() const;
-        
+       
+        template<typename T, unsigned int C, MemType MEM>
+        void printErrorPoints(
+                MBLevelBoxData<T,C,MEM>& a_err,
+                T                        a_eps = 0);
+
         private:
      
         mutable Array<bool, DIM> m_copyAxes;
