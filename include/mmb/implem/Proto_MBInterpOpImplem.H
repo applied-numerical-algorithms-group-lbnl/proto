@@ -410,7 +410,7 @@ void MBInterpOp::define(
                     pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
                     for (auto fi : extFootprint)
                     {
-                        pr_out() << "\t\t\t\t" << fi << std::endl;
+                        pr_out() << "\t\t\t\t" << fi;
                         if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
                         {
                             pr_out() << " <- added";
