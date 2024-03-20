@@ -287,7 +287,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
     int boxSize = 16;
     int thickness = 32;
-    int ghostSize = 1;
+    int ghostSize = 4;
     bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;

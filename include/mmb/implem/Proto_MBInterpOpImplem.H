@@ -72,7 +72,11 @@ MBPointInterpOp::MBPointInterpOp(
 
     int N = exponents.size();
     int M = m_srcs.size();
-    
+   
+#if PR_VERBOSE > 1
+    pr_out() << "\t\t\t\t\tAdding MBPointInterpOp | point: " << m_dst.point() << " | N: " << N << " | M: " << M << std::endl;
+#endif
+
     if (N > M)
     {
         pr_out() << "====================================================================" << std::endl;
@@ -332,6 +336,19 @@ void MBInterpOp::define(
         int                         a_order,
         int                         a_block)
 {
+    Box spanBox;
+    for (auto fi : a_footprint)
+    {
+        spanBox &= fi;
+    }
+    Point footprintDims = Point::Zeros();
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (spanBox.sizes()[dd] > 1)
+        {
+            footprintDims[dd] = 1;
+        }
+    }
 #if PR_VERBOSE > 1
     pr_out() << "MBInterpOp Constructor" << std::endl;
     pr_out() << "Order: " << a_order << " | Block: " << a_block << std::endl;
@@ -399,7 +416,7 @@ void MBInterpOp::define(
                     for (int ii = 0; ii < DIM; ii++)
                     {
                         if (dir[ii] == 0) { continue; }
-                        Point s = Point::Basis(ii,-1)*(bi-corner);
+                        Point s = Point::Basis(ii,-1)*(bi-corner)*footprintDims;
                         for (auto fi : a_footprint)
                         {
                             fset.insert(fi + s);
@@ -500,7 +517,7 @@ void MBInterpOp::define(
 #endif
                             for (auto fi : a_footprint)
                             {
-                                fset.insert(fi + d2);
+                                fset.insert((fi + d2)*footprintDims);
                             }
                         }
                         if (onHiEdge && hasHiTriplePoint)
@@ -513,7 +530,7 @@ void MBInterpOp::define(
 #endif
                             for (auto fi : a_footprint)
                             {
-                                fset.insert(fi - d2);
+                                fset.insert((fi - d2)*footprintDims);
                             }
                         }
                     }
