@@ -79,7 +79,8 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
 #endif
     }
     //FIXME: This function applies the operator all over again to populate the register
-    //and then applies the register. We should be JUST applying the register -CLG
+    //and then applies the register. We should be JUST applying the register. See the implementation
+    //of MBLevelOp::matchFlux below
     //matchFlux(a_output, a_state);
 }
 
@@ -196,14 +197,14 @@ template<template<typename, template<MemType> typename, MemType> class OPType,
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
-        LevelStateData& a_rhs,
+        LevelStateData& a_output,
         const LevelStateData& a_state)
 {
     auto& layout = m_map->map().layout();
     for (auto iter : layout)
     {
         auto& op = (*this)[iter];
-        auto& rhs = a_rhs[iter];
+        auto& output = a_output[iter];
         const auto& state = a_state[iter];
         for (int dd = 0; dd < DIM; dd++)
         {
@@ -218,7 +219,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
                     auto& locFlux = m_boundRegister.local(iter, dd, *siter);
                     // this is the function that must be implemented in the MBBoxOp class. The default implementation is a null-op.
                     // it's entirely possible that this interface is not correct
-                    op.matchFlux(rhs, locFlux, adjFlux, state, dir);
+                    op.matchFlux(output, locFlux, adjFlux, state, dir);
                 }
             }
         }
