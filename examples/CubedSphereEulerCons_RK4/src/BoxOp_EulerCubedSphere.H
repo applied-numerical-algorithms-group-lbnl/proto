@@ -7,7 +7,7 @@
 //#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS 2*DIM+2
-#define NGHOST 4
+#define NGHOST 7
 #if DIM == 2
 #define iRHO 0
 #define iVX 1

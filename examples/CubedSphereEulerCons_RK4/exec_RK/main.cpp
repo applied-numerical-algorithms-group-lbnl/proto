@@ -7,7 +7,7 @@
 // #include "Proto_CubedSphereShell.H"
 #include "BoxOp_EulerCubedSphere.H"
 
-int init_type = 0; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
+int init_type = 2; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
 
 void GetCmdLineArgumenti(int argc, const char **argv, const char *name, int *rtn)
 {
@@ -146,7 +146,7 @@ void f_radialoutflowInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
     Var<T> &a_radius,
-    T a_dxradius,
+    Var<T, DIM> &a_X_cart,
     T a_gamma,
     int a_nradius)
 {
@@ -175,7 +175,7 @@ void f_radialoutflowIBCs_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_USph,
     Var<T> &a_radius,
-    T a_dxradius,
+    Var<T, DIM> &a_X_cart,
     T a_gamma,
     int a_nradius)
 {
@@ -274,7 +274,12 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
         forallInPlace_p(f_radialBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
       }
       if (init_type == 2){
-        forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
+        auto block = JUTemp.layout().block(dit);
+        double half = 0.5;
+        dx = eulerOp[dit].dx();
+        BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+        (f_cubedSphereMap3,radiusLev[dit].box(),radiusLev[dit],dx,half,half,block);  
+        forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], XCart, gamma, thickness);
       }
     }
   }
@@ -298,9 +303,10 @@ int main(int argc, char *argv[])
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   HDF5Handler h5;
   int domainSize = 32;
-  int thickness = 64;
-  int max_iter = 10;
-  double dt = 0.001;
+  int thickness = 32;
+  int max_iter = 4000;
+  double dt = 0.0001;
+  int write_cadence = 100;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);
@@ -366,7 +372,7 @@ int main(int argc, char *argv[])
     (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
     if (init_type == 0) forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
     if (init_type == 1) forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
-    if (init_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, dxradius, gamma, thickness);
+    if (init_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, XCart, gamma, thickness);
     eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
     JU_i.setVal(0.);
     JUTemp.copyTo(JU_i, layout[dit]);
@@ -438,7 +444,12 @@ int main(int argc, char *argv[])
           forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
         }
         if (init_type == 2){
-          forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+          auto block = JU_Temp.layout().block(dit);
+          double half = 0.5;
+          dx = eulerOp[dit].dx();
+          BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+          (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+          forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, XCart, gamma, thickness);
         }
       }
       int block_i = layout.block(dit);
@@ -456,7 +467,7 @@ int main(int argc, char *argv[])
     }
     // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
 
-    bool linear_visc = true;
+    bool linear_visc = false;
     if (linear_visc){
       for (auto dit : layout)
       {
@@ -518,7 +529,12 @@ int main(int argc, char *argv[])
             forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
           }
           if (init_type == 2){
-            forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
+            auto block = JU_Temp.layout().block(dit);
+            double half = 0.5;
+            dx = eulerOp[dit].dx();
+            BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+            (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+            forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, XCart, gamma, thickness);
           }
         }
         int block_i = layout.block(dit);
@@ -529,7 +545,7 @@ int main(int argc, char *argv[])
     }
 
     time += dt;
-    if (iter % 1 == 0) Write_W(JU, eulerOp, iop, thickness, iter);
+    if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
   }
   PR_TIMER_REPORT();
 #ifdef PR_MPI
