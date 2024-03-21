@@ -522,7 +522,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       State WFace_R = Stencil<T>::CellToFace(dir)(W);
       State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
  
-      bool limiter = false;
+      bool limiter = true;
       if (limiter){
         Stencil<double> idOP = 1.0*Shift(Point::Zeros());
         State WFace_L_temp = idOP(WFace_L);
