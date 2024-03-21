@@ -60,7 +60,26 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         auto& state = a_state[index];
         auto& output = a_output[index];
         op(output, state, a_scale);
+        // FIXME: should look like this:
+#if 0
+        FluxBoxData<T, OP::numState(), MEM> fluxes(layout[index]);
+        op(output, fluxes, state, a_scale);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(index, dir))
+                {
+                    // copy fluxes into the register
+                }
+            }
+        }
+#endif
     }
+    //FIXME: This function applies the operator all over again to populate the register
+    //and then applies the register. We should be JUST applying the register -CLG
     //matchFlux(a_output, a_state);
 }
 
@@ -168,7 +187,46 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
         m_ops[iter].setRKStage(a_stage);
     }
 }
-/*
+
+// FIXME: this function should not be applying the operator, but instead updating the state
+// using data that is already inside of the register. See comments in MBLevelOp::operator()
+template<template<typename, template<MemType> typename, MemType> class OPType,
+    template<MemType> typename MAP,
+    typename T,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
+        LevelStateData& a_rhs,
+        const LevelStateData& a_state)
+{
+    auto& layout = m_map->map().layout();
+    for (auto iter : layout)
+    {
+        auto& op = (*this)[iter];
+        auto& rhs = a_rhs[iter];
+        const auto& state = a_state[iter];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(iter, dir))
+                {
+                    // FIXME: I think there is a coordinate rotation issue here that needs to be debugged
+                    auto& adjFlux = m_boundRegister.adjacent(iter, dd, *siter);
+                    auto& locFlux = m_boundRegister.local(iter, dd, *siter);
+                    // this is the function that must be implemented in the MBBoxOp class. The default implementation is a null-op.
+                    // it's entirely possible that this interface is not correct
+                    op.matchFlux(rhs, locFlux, adjFlux, state, dir);
+                }
+            }
+        }
+    }
+}
+
+/* FIXME: This is the old implementation that both fills the registers AND applies them. Keeping it around because
+ * it's useful for debugging, but we want to use the above version. 
 template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
