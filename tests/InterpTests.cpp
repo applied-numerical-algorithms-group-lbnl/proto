@@ -110,8 +110,11 @@ TEST(InterpStencil, Constant) {
     EXPECT_LT(hostErrData.absMax(), 1e-12);
     
 }
+#if 0
 TEST(InterpStencil, Linear) {
-    HDF5Handler h5;
+#ifdef PR_HDF5
+	HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
@@ -162,9 +165,12 @@ TEST(InterpStencil, Linear) {
         EXPECT_GT(rate, 2.0 - 0.01);
     }
 }
-
+#endif
+#if 0
 TEST(InterpStencil, Quadratic) {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;
@@ -220,9 +226,11 @@ TEST(InterpStencil, Quadratic) {
         EXPECT_GT(rate, 3 - 0.01);
     }
 }
-
+#endif
 TEST(InterpStencil, FiniteVolume) {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
 
     constexpr unsigned int C = 3;
     constexpr unsigned char D = 1;

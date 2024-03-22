@@ -4,7 +4,7 @@
 
 using namespace Proto;
 
-
+/*
 template<typename T, unsigned int C>
 bool compareBoxData(
         const BoxData<T, C, HOST>& a_src,
@@ -24,7 +24,7 @@ bool compareBoxData(
     }
     return true;
 }
-
+*/
 TEST(AMRData, Initialize) {
     int domainSize = 32;
     int numLevels = 3;
@@ -262,8 +262,8 @@ constexpr int PLOT_NUM = 0;
             LevelBoxData<double> dataCF(layoutCF, ghost);
             dataCF.setVal(1e6);
             dataC.copyTo(dataCF);
-            pout() << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-            pout() << "NOW PRINTING " << kk+1 << "-PATCH DATASET" << std::endl;
+            pr_out() << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+            pr_out() << "NOW PRINTING " << kk+1 << "-PATCH DATASET" << std::endl;
             for (auto iter : dataCF)
             {
                 dataCF[iter].printData();

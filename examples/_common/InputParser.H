@@ -9,7 +9,7 @@
 #include <fstream>
 #include <regex>
 
-using Proto::pout; using Proto::procID;
+using Proto::pr_out;
 
 class InputArgs
 {
@@ -70,7 +70,7 @@ class InputArgs
                     *stringArgs[argName] = argVal;
                     argNum += 2;
                 } else {
-                    pout() << "InputArgs::parse | Warning: Unrecognized argument: " << argName << std::endl;
+                    pr_out() << "InputArgs::parse | Warning: Unrecognized argument: " << argName << std::endl;
                     argNum += 2;
                 }
             } else {
@@ -118,34 +118,40 @@ class InputArgs
     
     inline void print()
     {
-        using Proto::pout;
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
-        pout() << "Input Arguments:" << std::endl;
-        pout() << setw(50) << setfill('-') << "-" << std::endl;
+//<<<<<<< HEAD:examples/common/InputParser.H
+//        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
+//        pr_out() << "Input Arguments:" << std::endl;
+//        pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+//=======
+//        using Proto::pr_out;
+//        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
+//        pr_out() << "Input Arguments:" << std::endl;
+//        pr_out() << setw(50) << setfill('-') << "-" << std::endl;
+//>>>>>>> dev:examples/_common/InputParser.H
         for (auto iter = stringArgs.begin(); iter != stringArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pr_out() << setw(30) << left << setfill(' ') << iter->first;
+            pr_out() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = boolArgs.begin(); iter != boolArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pr_out() << setw(30) << left << setfill(' ') << iter->first;
+            pr_out() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = intArgs.begin(); iter != intArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pr_out() << setw(30) << left << setfill(' ') << iter->first;
+            pr_out() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
         }
         for (auto iter = doubleArgs.begin(); iter != doubleArgs.end(); ++iter)
         {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            pr_out() << setw(30) << left << setfill(' ') << iter->first;
+            pr_out() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
         }
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
+        pr_out() << setw(50) << setfill('=') << "=" << std::endl;
 #ifdef PR_MPI
         // also print to the command line for better user feedback
-        if (procID() == 0)
+        if (Proto::procID() == 0)
         {
             std::cout << setw(50) << setfill('=') << "=" << std::endl;
             std::cout << "Input Arguments:" << std::endl;

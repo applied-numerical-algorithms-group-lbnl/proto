@@ -112,13 +112,13 @@ int main(int argc, char** argv)
         }
         h5.writeLevel(dx/PR_AMR_REFRATIO, PhiErr, "PhiErr_N%i", nn);
         err[nn] = errNorm.fetch();
-        pout() << "Error: " << err[nn] << std::endl;
+        pr_out() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;
     }
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
     }
 
     #ifdef PR_MPI

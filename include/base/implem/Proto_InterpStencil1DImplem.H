@@ -59,7 +59,7 @@ Point InterpStencil1D<T>::ghost() const
 template<class T>
 void InterpStencil1D<T>::print() const
 {
-    pout() << "InterpStencil1D | r: " << m_r << " | dir: " << m_dir << " | span: " << span() << std::endl;
+    pr_out() << "InterpStencil1D | r: " << m_r << " | dir: " << m_dir << " | span: " << span() << std::endl;
     for (auto& S : m_s) { m_s.print(); }
 }
 

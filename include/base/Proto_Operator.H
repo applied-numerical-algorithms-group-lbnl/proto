@@ -762,20 +762,28 @@ namespace Operator {
             BoxData<T,DIM,MEM>&       a_N,
             const BoxData<T,DIM,MEM>& a_X,
             int a_dir);
-
+    
+    // Divided Difference overload
+    template <class T, MemType MEM>
+    inline BoxData<T,DIM,MEM>
+    cofactor(
+            const BoxData<T,DIM,MEM>& a_X,
+            int             a_dir,
+            Array<T, DIM>   a_dx);
+    
     //==========================================================================================
     /// Compute Matrix of Cofactors
     template<class T, MemType MEM>
     inline BoxData<T,DIM,MEM,DIM>
     cofactorMatrix(
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            const FluxBoxData<T,DIM,MEM>& a_NTFaces,
             int a_dirNorm);
     
     template<class T, MemType MEM>
     inline void
     cofactorMatrix(
             BoxData<T,DIM,MEM,DIM>&               a_NTMatrix,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+            const FluxBoxData<T,DIM,MEM>& a_NTFaces,
             int a_dirNorm);
 
     //==========================================================================================
@@ -783,14 +791,16 @@ namespace Operator {
     inline BoxData<T,1,MEM>
     jacobian(
             const BoxData<T,DIM,MEM>& a_X,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+            const FluxBoxData<T,DIM,MEM>& a_NT);
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
     
     template <class T, MemType MEM>
     inline void
     jacobian(
             BoxData<T,1,MEM>&         a_J,
             const BoxData<T,DIM,MEM>& a_X,
-            const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+            const FluxBoxData<T,DIM,MEM>& a_NT);
+            //const Array<BoxData<T,DIM,MEM>, DIM>& a_NT);
 
     //==========================================================================================
     template<class T, MemType MEM>
@@ -1025,9 +1035,9 @@ namespace Operator {
                 int a_dir);
 
   /// Spreads a slice.
-  template<class T,unsigned int C,MemType MEM>
+   template<class T,unsigned int C,MemType MEM,unsigned char D, unsigned char E>
   inline void
-  spreadSlice(BoxData<T,C,MEM>& a_bd);
+  spreadSlice(BoxData<T,C,MEM,D,E>& a_bd);
   
   /// Calculation of equiangular cubed-sphere finite-volume metric terms using a semi-analytic approach.
    /** 
@@ -1046,7 +1056,7 @@ For more details, see ref[].
   template<class T, MemType MEM>
   inline void
   cubedSphereGeometry(BoxData<T,DIM,MEM>& a_X,
-                      Array<BoxData<T,DIM,MEM>, DIM>& a_NT,
+                      FluxBoxData<T,DIM,MEM>& a_NT,
                       BoxData<T,1,MEM>& a_J,
                       BoxData<T,1,MEM>& a_radius,
                       const Box& a_bx,
@@ -1066,7 +1076,7 @@ For more details, see ref[].
   template<class T, MemType MEM>
   inline void
   cubedSphereGeometry(BoxData<T, DIM, MEM>& a_X,
-                      Array<BoxData<T, DIM, MEM>, DIM>& a_NT,
+                      FluxBoxData<T,DIM,MEM>& a_NT,
                       BoxData<T, 1,   MEM>& a_J,
                       BoxData<T, 1,   MEM>& a_radius,
                       const Box& a_bx,

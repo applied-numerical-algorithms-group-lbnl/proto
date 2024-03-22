@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     auto points = pointSet.points();
     for (auto iter = points.begin(); iter != points.end(); ++iter)
     {
-        pout() << *iter << std::endl;
+        pr_out() << *iter << std::endl;
     }
 
     #ifdef PR_MPI

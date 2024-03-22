@@ -6,9 +6,9 @@ void printBuffer(int* buffer, int size)
 {
     for (int ii = 0; ii < size; ii++)
     {
-        pout() << buffer[ii] << ", ";
+        pr_out() << buffer[ii] << ", ";
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -64,13 +64,13 @@ int main(int argc, char** argv)
     {
         globalBuffer_h[ii] = -1;
     }
-    pout() << "proc " << procID() << " is sending " << *localBuffer_h << std::endl;
+    pr_out() << "proc " << procID() << " is sending " << *localBuffer_h << std::endl;
     printBuffer(globalBuffer_h, numProc());
     
     // COPY HOST -> DEVICE
     cudaMemcpy(localBuffer_d, localBuffer_h, sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(globalBuffer_d, globalBuffer_h, numProc()*sizeof(int), cudaMemcpyHostToDevice);
-    pout() << "copied to device" << std::endl;
+    pr_out() << "copied to device" << std::endl;
     
     // DATA MOVEMENT
     MPI_Allgather(localBuffer_d, 1, MPI_INT, globalBuffer_d, 1, MPI_INT, MPI_COMM_WORLD);
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     // COPY DEVICE -> HOST
     cudaMemcpy(localBuffer_h, localBuffer_d, sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(globalBuffer_h, globalBuffer_d, numProc()*sizeof(int), cudaMemcpyDeviceToHost);
-    pout() << "copied from device" << std::endl;
+    pr_out() << "copied from device" << std::endl;
     printBuffer(globalBuffer_h, numProc());
 
     // FREE BUFFERS

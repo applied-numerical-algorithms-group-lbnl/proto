@@ -405,22 +405,24 @@ template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(
     const Box& a_box,
+    const Array<double, DIM>& a_dx,
     const BoxData<double, DIM, MEM>& a_x,
     const BoxData<double, 1,   MEM>& a_J)
 {
-    define(a_box, a_x, a_J);
+    define(a_box, a_dx, a_x, a_J);
 }
 
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
 void BoxOp<T, C_STATE, C_AUX, MEM>::define(
     const Box& a_box,
+    const Array<double, DIM>& a_dx,
     const BoxData<double, DIM, MEM>& a_x,
     const BoxData<double, 1,   MEM>& a_J)
 {
     m_x = &a_x;
     m_J = &a_J;
-    define(a_box, 1);
+    define(a_box, a_dx);
 }
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>

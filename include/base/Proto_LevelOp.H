@@ -12,8 +12,6 @@ namespace Proto {
     LevelOp contains the necessary tools to apply a user-defined descendent of 
     BoxOp on a level.
 
-    TODO: This level of abstraction might be unnecessary.
-
     \tparam OpType  A BoxOp class
     \tparam T       Datatype of the data holder (e.g. int, double, etc.)
     \tparam MEM     Proto::MemType of the data holder
@@ -70,7 +68,8 @@ class LevelOp
     inline LevelOp(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx);
 
     inline LevelOp(LevelOp<OpType, T, BCType, MEM>&& a_op) = default;
-    inline LevelOp<OpType, T, BCType, MEM>& operator=(LevelOp<OpType, T, BCType, MEM>&& a_op) = default;
+    inline LevelOp<OpType, T, BCType, MEM>&
+        operator=(LevelOp<OpType, T, BCType, MEM>&& a_op) = default;
 
     /// Lazy Constructor
     /**
@@ -128,6 +127,7 @@ class LevelOp
     inline const BC& bc() const { return m_bc; }
     inline const DisjointBoxLayout& layout() const {return m_layout; }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
+    inline OP& operator[](const LevelIndex& a_index) { return m_ops[a_index]; }
     private:
    
     T m_diagScale;

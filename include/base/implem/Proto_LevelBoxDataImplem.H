@@ -41,7 +41,6 @@ LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
                     m_data[iter].push_back(
                             std::make_shared<BoxData<T, C, MEM>>(
                                 patch.data(p, a_comp), patch.box())); 
-                    
                 }
             }
             default:
@@ -71,6 +70,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_data.resize(m_layout.localSize());
     for (auto iter : a_layout)
     {
+        Box b = patchBox(iter);
         switch (CTR)
         {
             case PR_FACE:
@@ -96,8 +96,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
             }
             default:
             {
-                Box b = a_layout[iter].grow(CTR).grow(m_ghost);
-                auto patch = std::make_shared<BoxData<T,C,MEM>>(b);
+                auto patch = std::make_shared<BoxData<T,C,MEM>>(b.grow(m_ghost));
                 m_data[iter].push_back(patch);
                 break;
             }
@@ -187,6 +186,25 @@ void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs&... a_srcs)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Box
+LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
+{
+    PROTO_ASSERT(DIM <= 6, "LevelBoxData::patchBox | Error: This function will fail for DIM > 6");
+    Box B;
+    if (CTR == PR_CELL)
+    {
+        B = layout()[a_index];
+    } else if (CTR == PR_NODE) 
+    {
+        B = layout()[a_index].extrude(Point::Ones());
+    } else {
+        int ctr = (int)CTR;
+        B = layout()[a_index].extrude(Point::Basis(ctr,1));
+    }
+    return B;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
 {
@@ -195,7 +213,8 @@ LevelBoxData<T, C, MEM, CTR>::patchSize() const
     switch (CTR)
     {
         case PR_NODE: boxSize += Point::Ones(); break;
-        default: break;
+        case PR_CELL: break;
+        default: MayDay<void>::Abort("LevelBoxData::patchSize | Specified centering not implemented");
     }
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -220,20 +239,20 @@ LevelBoxData<T, C, MEM, CTR>::size() const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setToZero(int a_comp, unsigned int a_flux)
+LevelBoxData<T, C, MEM, CTR>::setToZero(int a_comp)
 {
-    setVal(0, a_comp, a_flux);
+    setVal(0, a_comp);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp, unsigned int a_flux)
+LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp)
 {
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
             "LevelBoxData::setVal | Error: %i is not a valid component specification.", a_comp);
     for (auto iter : m_layout)
     {
-        auto& patch = (*this)(iter, a_flux);
+        auto& patch = (*this)[iter];
         if (a_comp == -1)
         {
             patch.setVal(a_value);
@@ -246,7 +265,7 @@ LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp, unsigned int a_flux)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp, unsigned int a_flux)
+LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
 {
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
             "LevelBoxData::setBoundary | Error: \
@@ -255,7 +274,7 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp, unsigned int a_
     for (auto iter : m_layout)
     {
         if (!layout().onLevelBoundary(m_layout.point(iter))) { continue; } //no boundary
-        auto& patch = (*this)(iter, a_flux);
+        auto& patch = (*this)[iter];
         if (a_comp == -1)
         {
             BoxData<T, C, MEM> tmp(layout()[iter]);
@@ -271,6 +290,18 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp, unsigned int a_
         }
     }
     //TODO: this could be coded more elegantly / efficiently 
+    exchange();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void   
+LevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
+{
+    for (auto iter : m_layout)
+    {
+        auto& patch = (*this)[iter];
+        patch.setRandom(a_low, a_high);
+    }
     exchange();
 }
 
@@ -498,48 +529,18 @@ LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) co
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
-LevelBoxData<T, C, MEM, CTR>::operator()(
-        const DataIndex<BoxPartition>& a_di,
-        unsigned int a_dir) 
+LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) 
 {
     return (*(m_data[a_di][a_dir]));
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
-LevelBoxData<T, C, MEM, CTR>::operator()(
-        const DataIndex<BoxPartition>& a_di,
-        unsigned int a_dir) const
+LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) const
 {
     return (*(m_data[a_di][a_dir]));
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-FluxBoxData<T,C,MEM>
-LevelBoxData<T, C, MEM, CTR>::fluxes(
-        const DataIndex<BoxPartition>& a_di)
-{
-    return FluxBoxData<T,C,MEM>(m_data[a_di]);
-}
-
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-const FluxBoxData<T,C,MEM>
-LevelBoxData<T, C, MEM, CTR>::fluxes(
-        const DataIndex<BoxPartition>& a_di) const
-{
-    return FluxBoxData<T,C,MEM>(m_data[a_di]);
-}
-
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-unsigned int
-LevelBoxData<T, C, MEM, CTR>::numFluxes() const
-{
-    switch (CTR)
-    {
-        case PR_FACE: return DIM;
-        default: return 1;
-    }
-}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
@@ -551,12 +552,9 @@ LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T 
     Stencil<T> INCR = a_scale*Shift::Zeros();
     for (auto iter : m_layout)
     {
-        for (int fi = 0; fi < numFluxes(); fi++)
-        {
-            auto& lhs_i = (*this)(iter, fi);
-            auto& rhs_i = a_data(iter, fi);
-            lhs_i += INCR(rhs_i);
-        }
+        auto& lhs_i = (*this)[iter];
+        auto& rhs_i = a_data[iter];
+        lhs_i += INCR(rhs_i); // using a Stencil here fuses the add and multiply in a single kernel launch -clg
     }
 }
 
@@ -567,11 +565,8 @@ LevelBoxData<T, C, MEM, CTR>::operator*=(T a_scale)
     PR_TIME("LevelBoxData::operator*=");
     for (auto iter : m_layout)
     {
-        for (int fi = 0; fi < numFluxes(); fi++)
-        {
-            auto& lhs_i = (*this)(iter, fi);
-            lhs_i *= a_scale;
-        }
+        auto& lhs_i = (*this)[iter];
+        lhs_i *= a_scale;
     }
 }
 
@@ -582,42 +577,27 @@ LevelBoxData<T, C, MEM, CTR>::operator+=(T a_scale)
     PR_TIME("LevelBoxData::operator*=");
     for (auto iter : m_layout)
     {
-        for (int fi = 0; fi < numFluxes(); fi++)
-        {
-            auto& lhs_i = (*this)(iter, fi);
-            lhs_i += a_scale;
-        }
+        auto& lhs_i = (*this)[iter];
+        lhs_i += a_scale;
     }
 }
 
-//TODO: This function needs logic for dealing with non-cell centered variables.
-// As written, the data associated with upper faces will not be involved in the reduction.
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template <Proto::Operation OP>
 double
-LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp, unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
     PR_TIME("LevelBoxData::reduce");
     Reduction<T, OP, MEM> rxn;
     for (auto iter : m_layout)
     {
-        auto& data = (*this)(iter, a_flux);
+        auto& data = (*this)[iter];
         if (ghost() == Point::Zeros())
         {
             // avoid the copyTo call if there are no ghost cells
             data.reduce(rxn, a_comp);
         } else {
-            Box tmpBox = m_layout[iter];
-            /*
-            switch (CTR)
-            {
-                case PR_FACE:
-                    tmpBox = m_layout[iter].grow((Centering)a_flux); break;
-                default:
-                    tmpBox = m_layout[iter].grow(CTR);
-            }
-            */
-            BoxData<T, 1, MEM> temp(tmpBox);
+            BoxData<T, 1, MEM> temp(patchBox(iter));
             auto comp = slice(data, a_comp);
             comp.copyTo(temp);
             temp.reduce(rxn);
@@ -629,74 +609,62 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp, unsigned int a_flux) c
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp, unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
 {
-    return reduce<Abs>(a_comp, a_flux);
+    return reduce<Abs>(a_comp);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::sum(unsigned int a_comp, unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::sum(unsigned int a_comp) const
 {
-    return reduce<Sum>(a_comp, a_flux);
+    return reduce<Sum>(a_comp);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrate(
-        double a_dx,
-        unsigned int a_comp,
-        unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::integrate(double a_dx, unsigned int a_comp) const
 {
-    return reduce<Sum>(a_comp, a_flux) * pow(a_dx, DIM);
+    return reduce<Sum>(a_comp) * pow(a_dx, DIM);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrate(
-        Array<double, DIM> a_dx,
-        unsigned int a_comp,
-        unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::integrate(Array<double, DIM> a_dx, unsigned int a_comp) const
 {
     double factor = 1.0;
     for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
-    return reduce<Sum>(a_comp, a_flux) * factor;
+    return reduce<Sum>(a_comp) * factor;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrateAbs(
-        double a_dx,
-        unsigned int a_comp,
-        unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::integrateAbs(double a_dx, unsigned int a_comp) const
 {
-    return reduce<SumAbs>(a_comp, a_flux) * pow(a_dx, DIM);
+    return reduce<SumAbs>(a_comp) * pow(a_dx, DIM);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::integrateAbs(
-        Array<double, DIM> a_dx,
-        unsigned int a_comp,
-        unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::integrateAbs(Array<double, DIM> a_dx, unsigned int a_comp) const
 {
     double factor = 1.0;
     for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
-    return reduce<SumAbs>(a_comp, a_flux) * factor;
+    return reduce<SumAbs>(a_comp) * factor;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::max(unsigned int a_comp, unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::max(unsigned int a_comp) const
 {
-    return reduce<Max>(a_comp, a_flux);
+    return reduce<Max>(a_comp);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp, unsigned int a_flux) const
+LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
 {
-    return reduce<Min>(a_comp, a_flux);
+    return reduce<Min>(a_comp);
 }
 
 
@@ -722,16 +690,6 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
 {
     //TODO: Does this do the right thing?
     return C*a_box.size()*sizeof(T);
-    /*
-    switch (CTR)
-    {
-        case PR_FACE:
-        case PR_EDGE:
-            return C*a_box.size()*sizeof(T)*DIM;
-        default:
-            return C*a_box.size()*sizeof(T);
-    }
-    */
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
@@ -743,20 +701,17 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
     PROTO_ASSERT(mem == SRC_MEM,
         "LevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
         mem, SRC_MEM);
-    for (int fi = 0; fi < m_src->numFluxes(); fi++)
+    auto& patch = (*m_src)[a_info.fromIndex];
+    CInterval cint(0,C-1);
+    if (a_info.rotation.isIdentity())
     {
-        auto& patch = (*m_src)(a_info.fromIndex, fi);
-        CInterval cint(0,C-1);
-        if (a_info.rotation.isIdentity())
-        {
-            patch.linearOut(a_buf, a_info.fromRegion, cint); 
-        } else {
-            BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
-            patch.copyTo(tmp);
-            BoxData<T, C, SRC_MEM> buffer;
-            buffer.define((T*)a_buf, a_info.toRegion);
-            tmp.copyTo(buffer, a_info.rotation);
-        }
+        patch.linearOut(a_buf, a_info.fromRegion, cint); 
+    } else {
+        BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
+        patch.copyTo(tmp);
+        BoxData<T, C, SRC_MEM> buffer;
+        buffer.define((T*)a_buf, a_info.toRegion);
+        tmp.copyTo(buffer, a_info.rotation);
     }
 }
 
@@ -849,7 +804,8 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     // to this Box.
     for (auto diter : destlayout) 
     {
-        Box bx = destlayout[diter].grow(CTR).grow(destGhost);
+        //Box bx = destlayout[diter].grow(destGhost);
+        Box bx = a_op.m_dst->patchBox(diter).grow(destGhost);
 
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
 
@@ -900,7 +856,8 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
         // We grow the source Box by dstGhost to capture all the patches that the
         // source will copy to. dProbC contains all the points in the bitmap for
         // the destination.
-        Box srcBox = srclayout[siter].grow(CTR);
+        //Box srcBox = srclayout[siter];
+        Box srcBox = a_op.m_src->patchBox(siter);
         Box dProbC = srcBox.grow(destGhost).coarsen(destlayout.boxSize());
         for (auto pt : dProbC)
         {
@@ -938,7 +895,8 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     int myProcID = Proto::procID();
     for (auto dit : layout)
     {
-        Box bx0 = layout[dit].grow(CTR);
+        //Box bx0 = layout[dit];
+        Box bx0 = a_op.m_src->patchBox(dit);
         Box bx = layout.domain() & bx0.grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)

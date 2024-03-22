@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     // SOLVE
     LevelMultigrid mg(layout, dx, numLevels);
     double resmax0 = mg.resnorm(phi, rho);
-    Proto::pout() << "initial residual = " << resmax0 << endl;
+    Proto::pr_out() << "initial residual = " << resmax0 << endl;
     for (int iter = 0; iter < maxIter; iter++)
     {
         PR_TIMERS("main::solver");
@@ -84,10 +84,10 @@ int main(int argc, char* argv[])
         h5.writeLevel(phi, "MG_Phi_I%i.hdf5", iter);
 #endif
         double resmax = mg.resnorm(phi, rho);
-        Proto::pout() << "\titer: " << iter << " | resnorm (max-norm): " << resmax << endl;
+        Proto::pr_out() << "\titer: " << iter << " | resnorm (max-norm): " << resmax << endl;
         if (resmax < tolerance*resmax0)
         {
-            Proto::pout() << "Converged in " << iter+1 << " iterations." << std::endl;
+            Proto::pr_out() << "Converged in " << iter+1 << " iterations." << std::endl;
             break;
         }
     }

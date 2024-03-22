@@ -3,11 +3,10 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 3
+#define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
-#define CUBED_SPHERE_R0 1.0
-#define CUBED_SPHERE_R1 1.1
 #define SHEAR_SLOPE 1.0
+#define CUBED_SPHERE_SHELL_R0 1.0
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -73,88 +72,6 @@ void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
 }
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 
-#ifdef DIM == 3
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_cubeSphereMapF(Point& a_pt, Var<double,DIM,MEM>& a_X, Var<double,1,MEM>& a_J,
-        Array<double, DIM> a_dx, double a_r0, double a_r1, int a_block = 0)
-{
-    // subscript 0 are at corners
-    Array<double, DIM> x  = a_pt;
-    x += 0.5;
-    x *= a_dx;
-    Array<double, DIM> x0 = x - (0.5*a_dx);
-
-    // Z Radial
-#if 0
-    double r0   = a_r0 + (a_r1-a_r0)*x0[2];
-    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[0];
-    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[1];
-    
-    double r   = a_r0 + (a_r1-a_r0)*x[2];
-    double xi  = -M_PI/4.0 + M_PI/2.0*x[0];
-    double eta = -M_PI/4.0 + M_PI/2.0*x[1];
-    
-#else
-    // X Radial
-    double r0   = a_r0 + (a_r1-a_r0)*x0[0];
-    double xi0  = -M_PI/4.0 + M_PI/2.0*x0[1];
-    double eta0 = -M_PI/4.0 + M_PI/2.0*x0[2];
-    
-    double r   = a_r0 + (a_r1-a_r0)*x[0];
-    double xi  = -M_PI/4.0 + M_PI/2.0*x[1];
-    double eta = -M_PI/4.0 + M_PI/2.0*x[2];
-#endif
-    double X0 = tan(xi0);
-    double Y0 = tan(eta0);
-    double d0 = sqrt(1+X0*X0+Y0*Y0);
-    
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = sqrt(1+X*X+Y*Y);
-
-    a_J(0) = r*r*(1+X*X)*(1+Y*Y)/(d*d*d);
-    switch (a_block)
-    {
-        case 0:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0*Y0/d0;
-            a_X(2) = -r0/d0;
-            break;
-        case 1:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = r0*Y0/d0;
-            a_X(2) = r0/d0;
-            break;
-        case 2:
-            a_X(0) = r0*X0/d0;
-            a_X(1) = -r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 3:
-            a_X(0) = r0/d0;
-            a_X(1) = r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 4:
-            a_X(0) = -r0*X0/d0;
-            a_X(1) = r0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        case 5:
-            a_X(0) = -r0/d0;
-            a_X(1) = -r0*X0/d0;
-            a_X(2) = r0*Y0/d0;
-            break;
-        default:
-            a_X(0) = 0;
-            a_X(1) = 0;
-            a_X(2) = 0;
-            break;
-    }
-}
-PROTO_KERNEL_END(f_cubeSphereMapF, f_cubeSphereMap);
-
 PROTO_KERNEL_START
 void f_classicSphereMapF(Point& a_pt, Var<double,3>& a_X, Var<double,1>& a_J,
         Array<double, 3> a_dx, double a_r0, double a_r1)
@@ -202,15 +119,15 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize)
+MBProblemDomain buildXPoint(int a_domainSize, int a_numBlocks)
 {
-    MBProblemDomain domain(XPOINT_SIZE);
+    MBProblemDomain domain(a_numBlocks);
     auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    for (int ii = 0; ii < a_numBlocks; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % a_numBlocks, 0, Side::Hi, CCW);
     }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    for (int bi = 0; bi < a_numBlocks; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
@@ -232,8 +149,8 @@ MBProblemDomain buildShear(int a_domainSize)
     }
     return domain;
 }
-#endif
 
+#if DIM > 2
 MBProblemDomain buildRing(Point a_domainSize)
 {
     MBProblemDomain domain(4);
@@ -246,76 +163,6 @@ MBProblemDomain buildRing(Point a_domainSize)
     for (int bi = 0; bi < 4; bi++)
     {
         domain.defineDomain(bi, a_domainSize);
-    }
-    return domain;
-}
-
-#if DIM > 2
-MBProblemDomain buildCubeSphere(int a_domainSize)
-{
-    MBProblemDomain domain(6);
-    auto R_theta = CoordPermutation::ccw(1);
-    auto R_north = CoordPermutation::cw(0);
-    auto R_south = CoordPermutation::ccw(0);
-    CoordPermutation R_I;
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
-        domain.defineBoundary(srcBlock, 1, y, R_north);
-        domain.defineBoundary(srcBlock, 0, -y, R_south);
-        R_north = R_north*R_theta;
-        R_south = R_south*R_theta;
-    }
-    domain.graph().fixRotations();
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-MBProblemDomain buildCubeSphereShell(int a_domainSize, int a_thickness, int a_radialDir = 0)
-{
-    MBProblemDomain domain(6);
-    auto CCW = CoordPermutation::ccw(a_radialDir);
-    auto CW = CoordPermutation::cw(a_radialDir);
-    CoordPermutation RNorth, RSouth, RI;
-    Point x = Point::X();
-    Point y = Point::Y();
-    Point z = Point::Z();
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        switch (a_radialDir)
-        {
-            case 0:
-                domain.defineBoundary(srcBlock, dstBlock, y, RI);
-                domain.defineBoundary(srcBlock, 1, z, RNorth);
-                domain.defineBoundary(srcBlock, 0, -z, RSouth);
-                break;
-            case 2:
-                domain.defineBoundary(srcBlock, dstBlock, x, RI);
-                domain.defineBoundary(srcBlock, 1, y, RNorth);
-                domain.defineBoundary(srcBlock, 0, -y, RSouth);
-                break;
-            default:
-                MayDay<void>::Abort("NOT IMPLEMENTED");
-        }
-        RNorth = RNorth*CW;
-        RSouth = RSouth*CCW;
-    }
-    domain.graph().fixRotations();
-    Point domainSize = Point::Ones(a_domainSize);
-    domainSize[a_radialDir] = a_thickness;
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, domainSize);
     }
     return domain;
 }
@@ -337,6 +184,7 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     return domain;
 }
 #endif
+#endif
 
 
 template<MemType MEM>
@@ -356,12 +204,13 @@ void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, 
 }
 PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 
+#if DIM > 2
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSize)
 {
-    double r0 = CUBED_SPHERE_R0 - 0.1;
-    double r1 = CUBED_SPHERE_R0 + 0.1;
+    double r0 = CUBED_SPHERE_SHELL_R0 - 0.1;
+    double r1 = CUBED_SPHERE_SHELL_R0 + 0.1;
 
     double L = -M_PI/4;
     double H = M_PI/4;
@@ -530,6 +379,26 @@ void f_phiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_bloc
     }
 }
 PROTO_KERNEL_END(f_phiMF, f_phiM);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_LphiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
+        Var<double, DIM, MEM>& a_X, Array<double, DIM> a_k, Array<double, DIM> a_offset)
+{
+    double phi = 1.0;
+    double k2 = 0.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        double k = a_k[dir]*M_PI*2;
+        k2 -= k*k;
+        phi *= sin(k*(a_X(dir) + a_offset[dir]));
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = k2*phi;
+    }
+}
+PROTO_KERNEL_END(f_LphiMF, f_LphiM);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
@@ -786,5 +655,75 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
-#endif //end if PR_AMR
+#endif
+
+template<typename T, unsigned int C>
+bool compareBoxData(
+        const BoxData<T, C, HOST>& a_src,
+        const BoxData<T, C, HOST>& a_dst)
+{
+    auto B = a_src.box() & a_dst.box();
+    for (auto pt : B)
+    {
+        for (int cc = 0; cc < C; cc++)
+        {
+            T diff = abs(a_src(pt, cc) - a_dst(pt, cc));
+            if (diff > 1e-12)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<typename T, unsigned int C>
+bool compareLevelData(
+        const LevelBoxData<T, C, HOST>& a_src,
+        const LevelBoxData<T, C, HOST>& a_dst)
+{
+    for (auto iter : a_src.layout())
+    {
+        auto& src = a_src[iter];
+        auto& dst = a_dst[iter];
+        BoxData<T, C, HOST> srcTmp(a_src.layout()[iter]);
+        BoxData<T, C, HOST> dstTmp(a_src.layout()[iter]);
+        src.copyTo(srcTmp);
+        dst.copyTo(dstTmp);
+        if (!compareBoxData(srcTmp, dstTmp)) { return false; }
+    }
+    return true; 
+}
+
+template<typename T, unsigned int C>
+bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
+{
+    auto layout = a_data.layout();
+    //FIXME: Assumes isotropic ghost region
+    int ghostSize = a_data.ghost()[0];
+    for (auto iter : layout)
+    {
+        auto& data_i = a_data[iter];
+        Point p = layout.point(iter);
+        Box B = layout[iter];
+        Box N = Box::Kernel(1).shift(p);
+        for (auto n : N)
+        {
+            if (n == Point::Zeros()) { continue; }
+            if (!layout.contains(n)) {continue; }
+            Box ghostRegion = B.adjacent(n-p, ghostSize);
+            Box shiftedGhostRegion = layout.domain().image(ghostRegion);
+            Point shift = ghostRegion.low() - shiftedGhostRegion.low();
+            BoxData<double, C, HOST> ghostData(ghostRegion);
+            BoxData<double, C, HOST> shiftedGhostData(shiftedGhostRegion);
+            forallInPlace_p(f_pointID, shiftedGhostData);
+            shiftedGhostData.copyTo(ghostData, shiftedGhostRegion, shift);
+            if (!compareBoxData(ghostData, data_i))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 #endif //end include guard

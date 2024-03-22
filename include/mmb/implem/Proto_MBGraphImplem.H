@@ -14,22 +14,7 @@ std::vector<Point> codimDirs(unsigned int a_codim)
     return dirs;
 }
 
-std::vector<Point> getBasisVectors(const Point& a_pt)
-{
-    std::vector<Point> basis;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        if (a_pt[dir] != 0)
-        {
-            basis.push_back(Point::Basis(dir)*a_pt[dir]);
-        }
-    }
-    PROTO_ASSERT(a_pt.codim() == basis.size(),
-            "getBasisVector | Error: Data corruption.");
-    return basis;
-}
-
-//=================================================================================================
+//=============================================================================================
 // BLOCK GRAPH NODE
 
 MBGraphNode::MBGraphNode(unsigned int a_index)
@@ -40,12 +25,19 @@ MBGraphNode::MBGraphNode(unsigned int a_index)
 void MBGraphNode::addArc(unsigned int a_block,
     Point a_toDst, Point a_fromDst)
 {
+    // ignore self-arcs
     if (a_block == index) { return; }
+    
+    // create the arc
     MBGraphArc arc(index, a_block, a_toDst, a_fromDst); 
+    
+    // check for redundancies
     for (auto arc : arcs[a_toDst])
     {
-        if (arc.dstBlock == a_block) {return; } //redundant arc
+        if (arc.dstBlock == a_block) {return; }
     }
+
+    // add the arc to the map
     arcs[a_toDst].push_back(arc);
 }
 
@@ -312,7 +304,6 @@ inline CoordPermutation& MBGraph::rotation(unsigned int a_block, Point a_dir) co
     return m_blocks[a_block]->arcs[a_dir][0].R;
 }
 
-/// START HERE
 inline CoordPermutation& MBGraph::rotation(
         unsigned int a_srcBlock,
         Point a_dir,
@@ -368,6 +359,24 @@ std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) c
     return bounds;
 }
 
+bool MBGraph::isTriplePoint(
+        unsigned int a_srcBlock,
+        Point a_dir) const
+{
+    if (a_dir.codim() != 2) {return false;}
+    auto dirs = a_dir.split();
+    auto b0 = adjacent(a_srcBlock, dirs[0]);
+    auto b1 = adjacent(a_srcBlock, dirs[1]);
+    if (b0 >= size() || b1 >= size()) { return false; }
+    auto R0 = rotation(a_srcBlock, dirs[0]);  
+    auto R1 = rotation(a_srcBlock, dirs[1]);
+    auto d01 = R0(dirs[1]);
+    auto d10 = R1(dirs[0]);
+    auto b01 = adjacent(b0, d01); 
+    auto b10 = adjacent(b1, d10); 
+    return (b01 == b1 && b10 == b0);
+}
+
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
     // TODO: Most applications won't need more than one graph
@@ -390,17 +399,17 @@ bool MBGraph::isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const
 
 void MBGraph::print() const
 {
-    using Proto::pout;
+    using Proto::pr_out;
     for (auto block : m_blocks)
     {
-        pout() << "Block " << block->index << std::endl;
+        pr_out() << "Block " << block->index << std::endl;
         Box K = Box::Kernel(1);
         for (auto dir : K)
         {
-            pout() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
+            pr_out() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
             for (auto arc : block->arcs[dir])
             {
-                pout() << "\t\tBound: Block " << arc.dstBlock << " | Local Dir: " << arc.srcToDst << std::endl;
+                pr_out() << "\t\tBound: Block " << arc.dstBlock << " | Local Dir: " << arc.srcToDst << std::endl;
             }
         }
     }

@@ -251,6 +251,26 @@ TEST(MBGraph, CubedSphere) {
         }
     }
 }
+TEST(MBGraph, TriplePoint) {
+    
+    MBGraph g0(3);
+    auto CCW = CoordPermutation::ccw();
+    auto CW = CoordPermutation::cw();
+    auto I = CoordPermutation::identity();
+    auto X = Point::X();
+    auto Y = Point::Y();
+    g0.defineBoundary(0,1,X, CCW);
+    g0.defineBoundary(0,2,Y, CCW);
+    EXPECT_FALSE(g0.isTriplePoint(0,X+Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,X-Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X+Y));
+    EXPECT_FALSE(g0.isTriplePoint(0,-X-Y));
+    g0.defineBoundary(1,2,X,CW);
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
+    EXPECT_TRUE(g0.isTriplePoint(1,X+Y));
+    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y));
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

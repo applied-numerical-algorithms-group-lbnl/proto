@@ -18,10 +18,16 @@ namespace Proto
     class LevelFluxRegister;
 #endif
 #ifdef PR_MMB
-    template<MemType MEM>
+    template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
+#ifdef PR_AMR
+    template<template<MemType> typename MAP, MemType MEM>
+    class MBAMRMap;
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBAMRData;
+#endif
 #endif
 
 #ifdef PR_HDF5
@@ -275,10 +281,11 @@ namespace Proto
                         Args... a_params);
 #endif
 #ifdef PR_MMB
-        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        template<template<MemType> typename MAP, typename T, unsigned int C,
+            MemType MEM, Centering CTR, typename... Args>
         inline void writeMBLevel(
                 std::vector<std::string> a_varNames,
-                const MBLevelMap<MEM>& a_map,
+                const MBLevelMap<MAP, MEM>& a_map,
                 const MBLevelBoxData<T, C, MEM, CTR>& a_data,
                 std::string a_filename,
                 Args... a_params);
@@ -302,8 +309,28 @@ namespace Proto
         inline void addMBLevel(
                 hid_t* a_file,
                 const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                Array<double, DIM> a_dx,
                 Point a_refRatio,
                 int a_level);
+
+#ifdef PR_AMR
+        template<template<MemType> typename MAP, typename T, unsigned int C,
+            MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const MBAMRMap<MAP, MEM>& a_map,
+                const MBAMRData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const MBAMRData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
+
+#endif
 #endif
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }
@@ -322,9 +349,16 @@ namespace Proto
         double m_time = 0.0;
         double m_dt = 1.0;
 
-        template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        template<typename T, unsigned int C, Centering CTR>
         inline void addLevel(hid_t* a_file,
-            const LevelBoxData<T, C, MEM, CTR>& a_data,
+            const LevelBoxData<T, C, DEVICE, CTR>& a_data,
+            Array<double, DIM>& a_dx0,
+            Point a_refRatio,
+            int a_level);
+        
+        template<typename T, unsigned int C, Centering CTR>
+        inline void addLevel(hid_t* a_file,
+            const LevelBoxData<T, C, HOST, CTR>& a_data,
             Array<double, DIM>& a_dx0,
             Point a_refRatio,
             int a_level);

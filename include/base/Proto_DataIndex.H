@@ -70,7 +70,11 @@ namespace Proto
         /**
          *  Returns the integer value associated with the LOCAL (in the sense of MPI process) index of the iterate.
         */
-        inline int local() const { return m_currentInt - m_partition->procStartIndex(procID()); } 
+        inline int local() const
+        {
+            return m_partition->localIndex(m_currentInt, procID());
+            //return m_currentInt - m_partition->procStartIndex(procID());
+        } 
         
         /// Local Value
         /**

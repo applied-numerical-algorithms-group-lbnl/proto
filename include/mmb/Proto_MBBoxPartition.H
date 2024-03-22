@@ -2,31 +2,37 @@
 #ifndef _PROTO_MB_BOX_PARTITION_
 #define _PROTO_MB_BOX_PARTITION_
 
-#include "Proto.H"
 #include "Proto_MBProblemDomain.H"
 #include <unordered_map>
 namespace Proto
 {
-    typedef std::pair<Point, unsigned int> MBPatchID_t;
     
     class MBBoxPartition
     {
         public:
 
+        inline MBBoxPartition(){}
+        inline MBBoxPartition(
+                const MBProblemDomain& a_domain);
         inline MBBoxPartition(
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
         inline void define(
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
+        inline void define(
+                const std::vector<MBPatchID_t>& a_patches);
         inline void loadBalance();
         inline bool compatible(const MBBoxPartition& a_rhs);
+        inline const MBProblemDomain& domain() const {return m_patchDomain; }
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc);
         inline unsigned int numBlocks() const;
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
+        inline uint64_t localIndex(uint64_t a_globalIndex, unsigned int a_proc) const;
+        inline uint64_t globalIndex(uint64_t a_localIndex, unsigned int a_proc) const;
         inline uint64_t find(Point a_patch, unsigned int a_block) const;
         inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const
         { return m_partition; }

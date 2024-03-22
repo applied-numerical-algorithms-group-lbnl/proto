@@ -39,12 +39,12 @@ int main(int argc, char** argv)
 
     MPI_Allgatherv(localBuffer, bufferSize, MPI_INT, totalBuffer, bufferSizes, offsets, MPI_INT, MPI_COMM_WORLD);
 
-    pout() << "Final Buffer" << std::endl;
+    pr_out() << "Final Buffer" << std::endl;
     for (int ii = 0; ii < totalBufferSize; ii++)
     {
-        pout() << totalBuffer[ii] << ", ";
+        pr_out() << totalBuffer[ii] << ", ";
     }
-    pout() << std::endl;
+    pr_out() << std::endl;
 
 
     MPI_Finalize();

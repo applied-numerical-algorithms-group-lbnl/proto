@@ -10,8 +10,37 @@ using namespace Proto;
 int TIME_STEP = 0;
 int PLOT_NUM = 0;
 
+    Array<double,NUMCOMPS>
+integrate(AMRData<double,NUMCOMPS>& a_U,double a_dx)
+{
+    Array<double,NUMCOMPS> retval;
+    for (int c = 0; c< NUMCOMPS; c++)
+    {
+        retval[c] = a_U.integrate(a_dx,c);
+    }
+    return retval;
+};
+
+void checkcons(AMRData<double,NUMCOMPS>& a_U,
+        Array<double,NUMCOMPS>& a_consOld,
+        double a_dx,
+        double normalize,
+        string a_str)
+{
+    auto consNew = integrate(a_U,a_dx);
+    cout << a_str << endl;
+    for (int c = 0;c < NUMCOMPS;c++)
+    {
+        auto consdiff = (consNew[c] - a_consOld[c])/normalize;
+        cout << c << ":"
+            << " cons quantity, consdiff: "
+            << consNew[c] << ", "
+            << consdiff << endl;
+    }
+}
+
 template<unsigned int C>
-PROTO_KERNEL_START
+    PROTO_KERNEL_START
 void f_eulerInitializeF(
         Point& a_pt,
         Var<double,C>& a_U,
@@ -60,7 +89,7 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-using Proto::pout; 
+using Proto::pr_out; 
     typedef BoxOp_Euler<double> OP;
 
     int domainSize = 64;
@@ -104,7 +133,7 @@ using Proto::pout;
 
         if (boxSize > domainSize)
           {
-            pout() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
+            pr_out() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
             boxSize = domainSize;
           }
         PR_TIMER_SETFILE(to_string(domainSize) 
@@ -178,7 +207,7 @@ using Proto::pout;
               int step = 0;
               sizeout << step << " " << usage.ru_maxrss << endl;
             }
-          // pout() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
+          // pr_out() << "memory HWM before evolution: " << usage.ru_maxrss << endl;
         }
         for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
           {

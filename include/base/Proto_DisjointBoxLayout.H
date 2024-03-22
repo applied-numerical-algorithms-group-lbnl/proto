@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <stack>
 #include <memory>
+#include <array>
 #include <unordered_map>
 
 namespace Proto 
@@ -129,6 +130,11 @@ namespace Proto
                 const ProblemDomain   & a_problemDomain,
                 const Box             & a_region,
                 const Point           & a_boxSize);
+
+        /// Get Sorted Version of This
+        inline DisjointBoxLayout sorted() const;
+        
+        inline bool isSorted() const {return m_partition->isSorted(); }
 
         /// Load Balance
         /**
@@ -289,7 +295,8 @@ namespace Proto
           Returns the problem domain box in patch-space.
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
-
+        
+        inline std::shared_ptr<BoxPartition> partition() {return m_partition; }
         /// Find Index
         /**
           Given a patch Point, return the DataIndex of the associated Box if

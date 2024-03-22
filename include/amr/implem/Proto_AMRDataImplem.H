@@ -1,5 +1,12 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+AMRData<T,C,MEM,CTR>::AMRData(
+        std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data)
+{
+    define(a_data);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 {
     m_ghost = a_ghost;
@@ -12,6 +19,44 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
     }
     m_defined = true;
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void AMRData<T, C, MEM, CTR>::define(
+        std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data)
+{
+    if (a_data.size() == 0)
+    {
+        m_ghost = Point::Zeros();
+        m_grid = AMRGrid();
+        m_data.clear();
+        m_defined = false;
+        return;
+    }
+
+    Point ghost = a_data[0]->ghost();
+    std::vector<DisjointBoxLayout> layouts;
+    std::vector<Point> refRatios;
+    int numLevels = a_data.size();
+    for (int li = 0; li < numLevels; li++)
+    {
+        PROTO_ASSERT(a_data[li]->ghost() == ghost,
+                "AMRData::define (alias) | Error: inconsistent ghost region sizes.");
+        layouts.push_back(a_data[li]->layout());
+        if (li > 0)
+        {
+            Point coarseDomainSize = layouts[li-1].domain().box().sizes();
+            Point fineDomainSize = layouts[li].domain().box().sizes();
+            PROTO_ASSERT(fineDomainSize % coarseDomainSize == Point::Zeros(),
+                    "AMRData::define (alias) | Error: cant determine refinement ratio");
+            Point refRatio = fineDomainSize / coarseDomainSize;
+            refRatios.push_back(refRatio);
+        }
+    }
+    m_ghost = ghost;
+    m_grid.define(layouts, refRatios, numLevels);
+    m_data = a_data;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
 {

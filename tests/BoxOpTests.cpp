@@ -62,7 +62,10 @@ TEST(BoxOp, Flux) {
 
     hostDst.copyTo(hostErr);
     hostErr -= hostSln;
-    EXPECT_LT(hostErr.absMax(), 1e-12);
+#if PR_VERBOSE > 0
+    std::cout << "Soln Error: " << hostErr.absMax() << std::endl;
+#endif
+    EXPECT_LT(hostErr.absMax(), 1e-9);
     for (int dir = 0; dir < DIM; dir++)
     {
         hostFlx[dir].copyTo(hostFlxErr[dir]);

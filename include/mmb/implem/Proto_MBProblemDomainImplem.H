@@ -175,8 +175,10 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
     return coarsened;
 }
 
-MBProblemDomain MBProblemDomain::coarsen(std::vector<Point> a_refRatios) const
+MBProblemDomain MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
     MBProblemDomain coarsened(size());
     for (int ii = 0; ii < size(); ii++)
     {
@@ -195,6 +197,20 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
     for (int ii = 0; ii < size(); ii++)
     {
         refined.m_domains[ii] = m_domains[ii].refine(a_refRatio);
+        refined.m_domainsDefined[ii] = true;
+    }
+    refined.m_graph = m_graph;
+    return refined;
+}
+
+MBProblemDomain MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
+{
+    PROTO_ASSERT(size() == a_refRatios.size(),
+            "MBProblemDomain::refine | Error: Wrong number of refinement ratios");
+    MBProblemDomain refined(size());
+    for (int ii = 0; ii < size(); ii++)
+    {
+        refined.m_domains[ii] = m_domains[ii].refine(a_refRatios[ii]);
         refined.m_domainsDefined[ii] = true;
     }
     refined.m_graph = m_graph;
@@ -263,4 +279,33 @@ void MBProblemDomain::close()
         }
     }
     m_closed = true;
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(int a_boxSize) const
+{
+    return patches(Point::Ones(a_boxSize));
+}
+std::vector<MBPatchID_t> MBProblemDomain::patches(Point a_boxSize) const
+{
+    std::vector<Point> boxSizes(numBlocks(), a_boxSize);
+    return patches(boxSizes);
+}
+
+std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+{
+    PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
+            "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
+    std::vector<MBPatchID_t> patchVect;
+
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        PROTO_ASSERT(coarsenable(bi, a_boxSizes[bi]),
+                "MBProblemDomain::patches | Error: Domain is not coarsenable by box size");
+        Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
+        for (auto pi : patchDomain)
+        {
+            patchVect.push_back(MBPatchID_t(pi, bi));
+        }
+    }
+    return patchVect;
 }

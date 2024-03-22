@@ -1,4 +1,16 @@
 BoxPartition::BoxPartition(
+        const ProblemDomain& a_patchDomain)
+{
+    std::vector<Point> patches;
+    for (auto pi : a_patchDomain.box())
+    {
+        patches.push_back(pi);
+    }
+    define(a_patchDomain, patches, 0, numProc());
+}
+
+
+BoxPartition::BoxPartition(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches)
 {
@@ -14,6 +26,13 @@ BoxPartition::BoxPartition(
     define(a_patchDomain, a_patches, a_startProc, a_endProc);
 }
 
+BoxPartition::BoxPartition(
+        const ProblemDomain& a_patchDomain,
+        const std::vector<std::pair<Point, unsigned int>>& a_patches)
+{
+    define(a_patchDomain, a_patches);
+}
+
 void BoxPartition::define(
         const ProblemDomain& a_patchDomain,
         const std::vector<Point>& a_patches,
@@ -26,12 +45,89 @@ void BoxPartition::define(
                 "BoxPartion::Constructor | Error: \
                 All patches must be contained in the patchDomain.");
     }
-    
+    m_doLoadBalance = true; 
+    m_procSorted = true;
     m_patchDomain = a_patchDomain;
     std::vector<Point> sortedPatches = a_patches;
     Morton::sort(sortedPatches);
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
+
+
+bool BoxPartition::checkProcSorting(const std::vector<std::pair<Point, unsigned int>> a_data)
+{
+    if (a_data.size() == 0) { return true; }
+    unsigned int proc = a_data[0].second;
+    for (auto data : a_data)
+    {
+        if (data.second < proc) { return false; }
+        if (data.second > proc) { proc = data.second; }
+    }
+    return true;
+}
+
+void BoxPartition::define(
+        const ProblemDomain& a_patchDomain,
+        const std::vector<std::pair<Point, unsigned int>>& a_patches)
+{
+
+    PROTO_ASSERT(a_patchDomain.box().low().min() >= 0,
+            "BoxPartition::define | Error: domain must be in the positive index space.");
+    for (auto iter : a_patches)
+    {
+        PROTO_ASSERT(a_patchDomain.box().contains(iter.first),
+                "BoxPartition::define | Error: Patch not contained in domain.");
+        PROTO_ASSERT(iter.second < numProc(),
+                "BoxPartition::define | Error: invalid process %i.", iter.second);
+    }
+
+    m_procSorted = checkProcSorting(a_patches);
+    m_doLoadBalance = false;
+    m_patchDomain = a_patchDomain;
+    m_indexMap.clear();
+    m_partition.clear();
+    m_partition = a_patches;
+    m_procMap.clear();
+    m_procMapUnsorted.clear();
+    if (a_patches.size() == 0) { return; } //nothing else to do
+    
+    unsigned int procIndexStart = 0;
+    unsigned int currentProc = a_patches[0].second;
+    for (int global = 0; global < a_patches.size(); global++)
+    {
+        auto patch = a_patches[global].first;
+        m_indexMap.insert(std::pair<uint64_t, int>(Morton::index(patch), global));
+        
+        if (m_procSorted) {
+            if (a_patches[global].second > currentProc)
+            {
+                m_procMap[currentProc] =
+                    std::pair<unsigned int, unsigned int>(procIndexStart, global);
+                procIndexStart = global;
+                currentProc = a_patches[global].second;
+            }
+            if (global == a_patches.size()-1)
+            {
+                m_procMap[currentProc] =
+                    std::pair<unsigned int, unsigned int>(procIndexStart, global+1);
+            }
+        } else {
+            m_procMapUnsorted[a_patches[global].second].push_back(global);
+        }
+    }
+}
+
+std::shared_ptr<BoxPartition> BoxPartition::sortByProc() const
+{
+    std::vector<std::pair<Point, unsigned int>> sorted = m_partition;
+    std::sort(sorted.begin(), sorted.end(),
+        [](const std::pair<Point, unsigned int>& a, const std::pair<Point, unsigned int>& b)
+        {
+            return a.second < b.second;
+        });
+    return std::make_shared<BoxPartition>(m_patchDomain, sorted);
+}
+
 
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
@@ -55,6 +151,7 @@ void BoxPartition::loadAssign(
         std::vector<Point>& a_patches,
         vals... a_args)
 {
+    if (!m_doLoadBalance) {return; }
     m_procMap.clear();
     m_indexMap.clear();
     m_partition.clear();
@@ -64,6 +161,7 @@ void BoxPartition::loadAssign(
 void BoxPartition::loadAssign(
         std::vector<std::pair<int, unsigned int>>& a_assignment)
 {
+    if (!m_doLoadBalance) {return;}
     std::vector<Point> patches;
     for (auto data : m_partition)
     {
@@ -75,6 +173,7 @@ void BoxPartition::loadAssign(
         std::vector<std::pair<int, unsigned int>>& a_assignment,
         std::vector<Point>& a_patches)
 {
+    if (!m_doLoadBalance) {return;}
     m_procMap.clear();
     m_indexMap.clear();
     m_partition.clear();
@@ -99,6 +198,7 @@ void BoxPartition::loadBalance(
         unsigned int a_startProc,
         unsigned int a_endProc)
 {
+    if (!m_doLoadBalance) {return;}
     m_procMap.clear();
     m_indexMap.clear();
     m_partition.clear();
@@ -149,7 +249,12 @@ bool BoxPartition::compatible(const BoxPartition& a_rhs)
 
 unsigned int BoxPartition::numProcs() const
 {
-    return m_procMap.size();
+    if (m_procSorted)
+    {
+        return m_procMap.size();
+    } else {
+        return m_procMapUnsorted.size();
+    }
 }
 
 unsigned int BoxPartition::numBoxes() const
@@ -159,11 +264,23 @@ unsigned int BoxPartition::numBoxes() const
 
 unsigned int BoxPartition::numBoxes(unsigned int a_proc) const
 {
-    return procEndIndex(a_proc) - procStartIndex(a_proc);
+    if (m_procSorted)
+    {
+        return procEndIndex(a_proc) - procStartIndex(a_proc);
+    } else {
+        auto iter = m_procMapUnsorted.find(a_proc);
+        if (iter != m_procMapUnsorted.end())
+        {
+            return iter->second.size();
+        }
+        return 0;
+    }
 }
 
 unsigned int BoxPartition::procStartIndex(unsigned int a_proc) const
 {
+    PROTO_ASSERT(m_procSorted,
+            "BoxPartition::procStartIndex() | Error: This function is invalid for unsorted objects.");
     auto data = m_procMap.find(a_proc);
     if (data == m_procMap.end()) { return numBoxes(); }
     return (*data).second.first;
@@ -171,21 +288,37 @@ unsigned int BoxPartition::procStartIndex(unsigned int a_proc) const
 
 unsigned int BoxPartition::procEndIndex(unsigned int a_proc) const
 {
+    PROTO_ASSERT(m_procSorted,
+            "BoxPartition::procEndIndex() | Error: This function is invalid for unsorted objects.");
     auto data = m_procMap.find(a_proc);
     if (data == m_procMap.end()) { return numBoxes(); }
     return (*data).second.second;
 }
 
-/*
-unsigned int BoxPartition::patchIndex(Point a_pt)
+unsigned int BoxPartition::globalIndex(unsigned int a_localIndex, unsigned int a_proc)
 {
-    PROTO_ASSERT(m_patchDomain.contains(a_pt),
-            "BoxPartition::patchIndex | Error: \
-            The input patch is not contained in the domain or any of its periodic images.");
-    Point image = m_patchDomain.image(a_pt);
-    return m_indexMap[Morton::index(image)];
+    if (m_procSorted)
+    {
+        return procStartIndex(a_proc) + a_localIndex;
+    } else {
+        return m_procMapUnsorted[a_proc][a_localIndex];
+    }
 }
-*/
+
+unsigned int BoxPartition::localIndex(unsigned int a_globalIndex, unsigned int a_proc)
+{
+    if (m_procSorted)
+    {
+        return a_globalIndex - procStartIndex(a_proc);
+    } else {
+        auto indices = m_procMapUnsorted[a_proc];
+        for (int ii = 0; ii < indices.size(); ii++)
+        {
+            if (indices[ii] == a_globalIndex) {return ii; }
+        }
+        MayDay<void>::Error("BoxPartition::localIndex | Error: global index is not present on this proc");
+    }
+}
 
 unsigned int BoxPartition::find(Point a_pt)
 {
@@ -204,23 +337,25 @@ unsigned int BoxPartition::find(Point a_pt)
 
 void BoxPartition::print() const
 {
-    using Proto::pout;
-    pout() << "Box Partition: " << std::endl;
-    pout() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
-    pout() << "\tNum Boxes: " << numBoxes() << std::endl;
-    pout() << "\tNum Procs: " << numProcs() << std::endl;
-    pout() << "\tData By Processor: " << std::endl;
-    for (auto procData : m_procMap)
+    pr_out() << "Box Partition: " << std::endl;
+    pr_out() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
+    pr_out() << "\tNum Boxes: " << numBoxes() << std::endl;
+    pr_out() << "\tNum Procs: " << numProcs() << std::endl;
+    pr_out() << "\tData By Processor: " << std::endl;
+    if (m_procSorted)
     {
-        unsigned int proc = procData.first;
-        pout() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
-        pout() << " | Start Index: " << procStartIndex(proc);
-        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
+        for (auto procData : m_procMap)
+        {
+            unsigned int proc = procData.first;
+            pr_out() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
+            pr_out() << " | Start Index: " << procStartIndex(proc);
+            pr_out() << " | End Index: " << procEndIndex(proc) << std::endl;
+        }
     }
-    pout() << "\tData Partition: " << std::endl;
+    pr_out() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
     {
-        pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
+        pr_out() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
 }
 

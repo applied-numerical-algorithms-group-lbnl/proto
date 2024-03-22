@@ -204,7 +204,9 @@ inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned in
     
     int tuple[DIM];
     tuple[0] = m_low[0] + a_idx;
+#if DIM > 1
     tuple[1] = m_low[1] + a_idy;
+#endif 
 #if DIM == 3
     tuple[2] = m_low[2] + a_idz;
 #endif 
@@ -577,13 +579,19 @@ Box Box::edge(const Point& a_dir) const
 }
 Box Box::edge(const Point& a_dir, int a_dist) const
 {
+    if (a_dist == 0) {return Box(); }
     Point dir = Point::Zeros();
-    for (int ii = 0; ii < DIM; ii++)
+    if (a_dist > 0)
     {
-        if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
-        else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
+            else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
+        }
+        return edge(dir);
+    } else {
+        return adjacent(a_dir, -a_dist);
     }
-    return edge(dir);
 }
 
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
@@ -637,6 +645,7 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
     Point L = low();
     Point H = high();
+    if (a_dist == 0) {return Box(); }
     if (a_dist > 0)
     {
         Point dir = Point::Zeros();
@@ -647,6 +656,8 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
         }
         return adjacent(dir);
     } else {
+        return edge(a_dir, -a_dist);
+        /*
         for (int ii = 0; ii < DIM; ii++)
         {
             if (a_dir[ii] > 0)
@@ -659,6 +670,7 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
                 L[ii] = L[ii] - size(ii);
             }
         }
+        */
     }
     return Box(L,H);
 }

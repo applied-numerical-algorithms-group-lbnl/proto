@@ -65,8 +65,8 @@ int main(int argc, char* argv[])
         double h = length/nx;            
         PatchMap mapping(arr,coef,h);
         BoxData<double,DIM> X = mapping.map(bx,nGhost+2);
-        Array<BoxData<double,DIM>,DIM> NT;
-        
+        //Array<BoxData<double,DIM>,DIM> NT;
+        FluxBoxData<double, DIM> NT; 
         for (int dir = 0; dir < DIM;dir++)
         {
             PR_TIMERS("NT");

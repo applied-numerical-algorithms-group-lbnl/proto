@@ -4,7 +4,7 @@
 using namespace Proto;
 
 template<typename T, MemType MEM = MEMTYPE_DEFAULT>
-class BoxOp_TestMBLaplace : public BoxOp<T, 1, 0, MEM>
+class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
 {
     public:
 
@@ -29,35 +29,37 @@ class BoxOp_TestMBLaplace : public BoxOp<T, 1, 0, MEM>
             const BoxData<T, 1>& a_state,
             int a_dir) const
     {
-        auto flux =  Operator::_faceGradxPhi(
+        // Lphi = (1/<J>)*div(<NT>_d*<grad(phi)>_d)
+        // faceGrad = <grad(phi)>_d
+        auto faceGrad =  Operator::_faceGradxPhi(
                 a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
                 m_Jf[a_dir], m_Jf[a_dir], a_dir);
+        // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
         a_flux = Operator::_faceMatrixProductAB(
-                flux,m_NT[a_dir],flux,m_NT[a_dir],a_dir);
+                faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
     }
 
+    // Cache metric terms and Jacobian
     inline void init()
     {
-        m_NT.clear();
+        m_NT.define(this->x().box());
         m_NTMatrix.clear();
         m_Jf.clear();
-        Array<BoxData<T,DIM>, DIM> NT;
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NT.push_back(Operator::cofactor(this->x(),dir));
-            m_Jf.push_back(Stencil<double>::CellToFace(dir)(this->jacobian()));
-            NT[dir].define(m_NT[dir].box());
-            m_NT[dir].copyTo(NT[dir]);
+            auto C2F = Stencil<double>::CellToFace(dir);
+            m_NT[dir] = Operator::cofactor(this->x(), dir, this->dx());
+            m_Jf.push_back(C2F(this->jacobian()));
         }
         for (int dir = 0; dir < DIM; dir++)
         {
-            m_NTMatrix.push_back(Operator::cofactorMatrix(NT, dir));
+            m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
     }
 
     private:
 
-    std::vector<BoxData<T, DIM>> m_NT;
+    FluxBoxData<T,DIM> m_NT;
     std::vector<BoxData<T,DIM,MEM,DIM>> m_NTMatrix;
     std::vector<BoxData<T,1,MEM>> m_Jf;
 };

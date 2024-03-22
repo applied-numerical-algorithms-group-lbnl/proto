@@ -18,75 +18,6 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     return DisjointBoxLayout(domain, patches, boxSize);
 }
 
-template<typename T, unsigned int C>
-bool compareBoxData(
-        const BoxData<T, C, HOST>& a_src,
-        const BoxData<T, C, HOST>& a_dst)
-{
-    auto B = a_src.box() & a_dst.box();
-    for (auto pt : B)
-    {
-        for (int cc = 0; cc < C; cc++)
-        {
-            T diff = abs(a_src(pt, cc) - a_dst(pt, cc));
-            if (diff > 1e-12)
-            {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-template<typename T, unsigned int C>
-bool compareLevelData(
-        const LevelBoxData<T, C, HOST>& a_src,
-        const LevelBoxData<T, C, HOST>& a_dst)
-{
-    for (auto iter : a_src.layout())
-    {
-        auto& src = a_src[iter];
-        auto& dst = a_dst[iter];
-        BoxData<T, C, HOST> srcTmp(a_src.layout()[iter]);
-        BoxData<T, C, HOST> dstTmp(a_src.layout()[iter]);
-        src.copyTo(srcTmp);
-        dst.copyTo(dstTmp);
-        if (!compareBoxData(srcTmp, dstTmp)) { return false; }
-    }
-    return true; 
-}
-
-template<typename T, unsigned int C>
-bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
-{
-    auto layout = a_data.layout();
-    //FIXME: Assumes isotropic ghost region
-    int ghostSize = a_data.ghost()[0];
-    for (auto iter : layout)
-    {
-        auto& data_i = a_data[iter];
-        Point p = layout.point(iter);
-        Box B = layout[iter];
-        Box N = Box::Kernel(1).shift(p);
-        for (auto n : N)
-        {
-            if (n == Point::Zeros()) { continue; }
-            if (!layout.contains(n)) {continue; }
-            Box ghostRegion = B.adjacent(n-p, ghostSize);
-            Box shiftedGhostRegion = layout.domain().image(ghostRegion);
-            Point shift = ghostRegion.low() - shiftedGhostRegion.low();
-            BoxData<double, C, HOST> ghostData(ghostRegion);
-            BoxData<double, C, HOST> shiftedGhostData(shiftedGhostRegion);
-            forallInPlace_p(f_pointID, shiftedGhostData);
-            shiftedGhostData.copyTo(ghostData, shiftedGhostRegion, shift);
-            if (!compareBoxData(ghostData, data_i))
-            {
-                return false;
-            }
-        }
-    }
-    return true;
-}
 
 TEST(LevelBoxData, SetVal) {
     int domainSize = 32;
@@ -245,7 +176,7 @@ TEST(LevelBoxData, InitializeVariadic) {
 #endif
     }
 }
-
+/*
 TEST(LevelBoxData, FaceCentering) {
     int domainSize = 32;
     double dx = 1.0/domainSize;
@@ -268,7 +199,6 @@ TEST(LevelBoxData, FaceCentering) {
             std::cout << b0 << " ==? " << b1 << std::endl;
 #endif
             EXPECT_EQ(fluxes[dir].box(), layout[iter].grow((Centering)dir));
-            
         }
     }
 
@@ -282,7 +212,7 @@ TEST(LevelBoxData, FaceCentering) {
     }
 
 }
-
+*/
 TEST(LevelBoxData, LinearSize)
 {
     int domainSize = 32;

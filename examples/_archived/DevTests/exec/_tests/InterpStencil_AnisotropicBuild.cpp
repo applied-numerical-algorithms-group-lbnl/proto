@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
-    using Proto::pout;
+    using Proto::pr_out;
     HDF5Handler h5;
     InputArgs args;
     args.parse();
@@ -114,17 +114,17 @@ int main(int argc, char** argv)
         err_y[nn] = errorY.absMax();
         err_xy[nn] = errorXY.absMax();
 
-        pout() << "Error (X): " << err_x[nn] << std::endl;
-        pout() << "Error (Y): " << err_y[nn] << std::endl;
-        pout() << "Error (XY): " << err_xy[nn] << std::endl;
+        pr_out() << "Error (X): " << err_x[nn] << std::endl;
+        pr_out() << "Error (Y): " << err_y[nn] << std::endl;
+        pr_out() << "Error (XY): " << err_xy[nn] << std::endl;
         domainSize *= 2;
     }
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate (X): "  << log(err_x[ii-1] / err_x[ii]) / log(2.0) << std::endl;
-        pout() << "Convergence Rate (Y): "  << log(err_y[ii-1] / err_y[ii]) / log(2.0) << std::endl;
-        pout() << "Convergence Rate (XY): " << log(err_xy[ii-1] / err_xy[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate (X): "  << log(err_x[ii-1] / err_x[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate (Y): "  << log(err_y[ii-1] / err_y[ii]) / log(2.0) << std::endl;
+        pr_out() << "Convergence Rate (XY): " << log(err_xy[ii-1] / err_xy[ii]) / log(2.0) << std::endl;
     }
 
     #ifdef PR_MPI

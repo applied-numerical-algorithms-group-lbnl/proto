@@ -24,6 +24,7 @@
 #include <cstdlib>  // for size_t
 #include <cmath>    // floating point abs
 #include <map>
+#include <random>   // random initialization
 #include <unordered_map>
 
 
@@ -966,6 +967,9 @@ namespace Proto
                 int a_d = 0,
                 int a_e = 0);
 
+        /// Set Random Noise
+        inline void setRandom(T a_low, T a_high);
+
         /// Generic Reduction (Global)
         /**
           Computes a reduction operation
@@ -1405,17 +1409,10 @@ namespace Proto
     class FluxBoxData
     {
         public:
+            FluxBoxData(){}
             FluxBoxData(const Box& a_box, bool a_doExtrude = true)
             {
-                for (int dir = 0; dir < DIM; dir++)
-                {
-                    Box Bd = a_box;
-                    if (a_doExtrude)
-                    {
-                        Bd = a_box.extrude(Point::Basis(dir));
-                    }
-                    m_data[dir] = std::make_shared<BoxData<T,C,MEM,D,E>>(Bd);
-                }
+                define(a_box, a_doExtrude);
             }
             FluxBoxData(Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& a_data)
             {
@@ -1428,6 +1425,19 @@ namespace Proto
                 for (int ii = 0; ii < DIM; ii++)
                 {
                     m_data[ii] = a_data[ii];
+                }
+            }
+            void define(const Box& a_box, bool a_doExtrude = true)
+            {
+                m_box0 = a_box;
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    Box Bd = a_box;
+                    if (a_doExtrude)
+                    {
+                        Bd = a_box.extrude(Point::Basis(dir));
+                    }
+                    m_data[dir] = std::make_shared<BoxData<T,C,MEM,D,E>>(Bd);
                 }
             }
             BoxData<T,C,MEM,D,E>& operator[](unsigned int a_index)
@@ -1444,7 +1454,10 @@ namespace Proto
             }
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() {return m_data;}
             const Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() const {return m_data;}
+            Box box() {return m_box0; }
+            Box box(int a_dir) {return m_data[a_dir]->box(); }
         private:
+            Box m_box0;
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
     };
 

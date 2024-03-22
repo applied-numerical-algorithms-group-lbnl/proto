@@ -7,6 +7,7 @@
 
 namespace Proto
 {
+    typedef std::pair<Point, unsigned int> MBPatchID_t;
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -16,7 +17,7 @@ namespace Proto
     class MBProblemDomain
     {
         public:
-        
+       
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
@@ -76,14 +77,19 @@ namespace Proto
                 Centering a_ctr = PR_CELL) const;
 
         inline MBProblemDomain coarsen(Point a_refRatio) const;
-        inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;
+        inline MBProblemDomain coarsen(const std::vector<Point>& a_refRatios) const;
         inline MBProblemDomain refine(Point a_refRatio) const;
+        inline MBProblemDomain refine(const std::vector<Point>& a_refRatios) const;
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
         inline bool defined();
         inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void close();
+        
+        inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
+        inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
+        inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
         private:
 
         mutable bool m_closed;

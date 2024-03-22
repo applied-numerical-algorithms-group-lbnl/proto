@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     Box domainBox = Box::Cube(domainSize);
     ProblemDomain domain(domainBox, periodicity);
 
-    pout() << "POINT 0" << std::endl;    
+    pr_out() << "POINT 0" << std::endl;    
     DisjointBoxLayout srcLayout;
     DisjointBoxLayout dstLayout;
     if (testNum == 0)
@@ -53,24 +53,24 @@ int main(int argc, char** argv)
         srcLayout.define(domain, boxSizeV);
         dstLayout.define(domain, boxSizeV / 2);
     } else {
-        pout() << "Invalid testNum: " << testNum << std::endl;
+        pr_out() << "Invalid testNum: " << testNum << std::endl;
         std::abort();
     }
-    pout() << "POINT 1" << std::endl;    
+    pr_out() << "POINT 1" << std::endl;    
 
     LevelBoxData<double> src(srcLayout,  Point::Zeros());
     LevelBoxData<double> sln(dstLayout,  Point::Zeros());
     LevelBoxData<double> dst(dstLayout,  Point::Ones());
 
-    pout() << "POINT 2" << std::endl;    
+    pr_out() << "POINT 2" << std::endl;    
     src.initialize(f_ramp, dx);
     sln.initialize(f_ramp, dx);
     dst.setToZero();
-    pout() << "POINT 3" << std::endl;    
+    pr_out() << "POINT 3" << std::endl;    
     //h5.writeLevel(dx, dst, "DST_0");
-    pout() << "POINT 4" << std::endl;    
+    pr_out() << "POINT 4" << std::endl;    
     src.copyTo(dst);
-    pout() << "POINT 5" << std::endl;    
+    pr_out() << "POINT 5" << std::endl;    
     //h5.writeLevel(dx, src, "SRC");
     //h5.writeLevel(dx, dst, "DST_1");
 

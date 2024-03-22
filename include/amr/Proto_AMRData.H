@@ -18,7 +18,8 @@ namespace Proto
         \tparam MEM     Proto::MemType. HOST or DEVICE. 
         \tparam CTR     Centering of underlying LevelBoxData  
     */
-    template<typename T, unsigned int C = 1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
+    template<typename T, unsigned int C = 1,
+        MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
     class AMRData
     {
         public:
@@ -36,21 +37,9 @@ namespace Proto
         */
         AMRData(AMRGrid& a_grid, Point a_ghost) { define (a_grid, a_ghost); }
 
-        /// Single Level Constructor
-        /**
-            Creates an AMRGrid with a single level.
+        /// Alias Constructor
+        AMRData(std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data);
 
-            \param layout       Coarsest level layout
-            \param maxLevels    Maximum number of levels allowable in the grid
-            \param ghost    Specifies the number of ghost cells to allocate
-        */
-        /*
-        AMRData(DisjointBoxLayout& a_layout, int a_maxLevels, Point a_ghost)
-        {
-            AMRGrid grid(a_layout, a_maxLevels);
-            define(grid, a_ghost);
-        }
-        */
         /// Define
         /**
             Lazy construction. If *this is not yet defined, data holders are created based on the
@@ -60,6 +49,10 @@ namespace Proto
         */
         inline void
         define(AMRGrid& a_grid, Point a_ghost);
+       
+        /// Alias Define
+        inline void
+        define(std::vector<std::shared_ptr<LevelBoxData<T,C,MEM,CTR>>> a_data);
       
        /// Reinitialize grids and data due to regridding.
       /**

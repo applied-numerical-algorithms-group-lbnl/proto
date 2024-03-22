@@ -311,15 +311,17 @@ class BoxOp
     /** a_x is node centered, a_J is cell averaged */
     inline BoxOp(
             const Box& a_box,
+            const Array<double, DIM>& a_dx,
             const BoxData<double, DIM, MEM>& a_x, 
-        const BoxData<double, 1, MEM>& a_J);
+            const BoxData<double, 1, MEM>& a_J);
     
     /// Map Define
     /** a_x is node centered, a_J is cell averaged */
     inline void define(
             const Box& a_box,
+            const Array<double, DIM>& a_dx,
             const BoxData<double, DIM, MEM>& a_x, 
-        const BoxData<double, 1, MEM>& a_J);
+            const BoxData<double, 1, MEM>& a_J);
     
     /// Get Coordinates
     /** Output is immutable and node centered */

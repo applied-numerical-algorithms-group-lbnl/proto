@@ -5,8 +5,8 @@ inline void hipErrorCheck(hipError_t a_err, std::string a_message)
 {
     if (a_err != hipSuccess)
     {
-        Proto::pout() << a_message;
-        Proto::pout() << hipGetErrorString(a_err) << std::endl;
+        Proto::pr_out() << a_message;
+        Proto::pr_out() << hipGetErrorString(a_err) << std::endl;
     }
 }
 #elif defined PROTO_CUDA
@@ -14,8 +14,8 @@ inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
     {
-        Proto::pout() << a_message;
-        Proto::pout() << cudaGetErrorString(a_err) << std::endl;
+        Proto::pr_out() << a_message;
+        Proto::pr_out() << cudaGetErrorString(a_err) << std::endl;
     }
 }
 #endif

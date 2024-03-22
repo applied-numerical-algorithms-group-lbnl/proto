@@ -7,38 +7,9 @@
 #define NUMCOMPS DIM+2
 
 using namespace Proto;
-
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> Vector;
-Array<double,NUMCOMPS>
-integrate(AMRData<double,NUMCOMPS>& a_U,double a_dx)
-{
-  Array<double,NUMCOMPS> retval;
-  for (int c = 0; c< NUMCOMPS; c++)
-    {
-      retval[c] = a_U.integrate(a_dx,c);
-    }
-  return retval;
-};
-void
-checkcons(AMRData<double,NUMCOMPS>& a_U,
-          Array<double,NUMCOMPS>& a_consOld,
-          double a_dx,
-          double normalize,
-          string a_str)
-{
-  auto consNew = integrate(a_U,a_dx);
-  cout << a_str << endl;
-  for (int c = 0;c < NUMCOMPS;c++)
-    {
-      auto consdiff = (consNew[c] - a_consOld[c])/normalize;
-      cout << c << ":"
-           << " cons quantity, consdiff: "
-           << consNew[c] << ", "
-           << consdiff << endl;
-    }
-}
-      
+
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
@@ -281,12 +252,14 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         }
         a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
     }
+#ifdef PR_AMR
   static inline void generateTags(
                                   TagData& a_tags,
                                   BoxData<T, NUMCOMPS>& a_state)
   {
     forallInPlace(f_threshold, a_tags, a_state);
   }
+#endif
 private:
 
   //Array<std::shared_ptr<Array<BoxData<double>,DIM>>,DIM> m_data;

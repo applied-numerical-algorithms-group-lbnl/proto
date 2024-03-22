@@ -10,7 +10,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
-    using Proto::pout;
+    using Proto::pr_out;
     HDF5Handler h5;
 
     int domainSize = 32;

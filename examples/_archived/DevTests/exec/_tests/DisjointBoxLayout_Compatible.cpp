@@ -10,7 +10,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
-    using Proto::pout;
+    using Proto::pr_out;
     HDF5Handler h5;
     InputArgs args;
     args.parse();
@@ -46,37 +46,37 @@ int main(int argc, char** argv)
     bool allTestsPass = true;
     bool compatible;
 
-    pout() << "Checking Compatibility: " << std::endl;
-    pout() << "===========================================================" << std::endl << std::endl;
+    pr_out() << "Checking Compatibility: " << std::endl;
+    pr_out() << "===========================================================" << std::endl << std::endl;
     layout.print();
     cfLayout.print();
     compatible = layout.compatible(cfLayout); 
-    pout() << "Are layouts compatible? " << compatible << std::endl;
+    pr_out() << "Are layouts compatible? " << compatible << std::endl;
     allTestsPass &= compatible; //should be true
-    pout() << "===========================================================" << std::endl << std::endl;
+    pr_out() << "===========================================================" << std::endl << std::endl;
     layout.print();
     crseLayout.print();
     compatible = layout.compatible(crseLayout);
-    pout() << "Are layouts compatible? " << compatible << std::endl;
+    pr_out() << "Are layouts compatible? " << compatible << std::endl;
     allTestsPass &= (!compatible); //should be false
-    pout() << "===========================================================" << std::endl << std::endl;
+    pr_out() << "===========================================================" << std::endl << std::endl;
     layout.print();
     crseLayoutAlt.print();
     compatible = layout.compatible(crseLayoutAlt);
-    pout() << "Are layouts compatible? " << compatible << std::endl;
+    pr_out() << "Are layouts compatible? " << compatible << std::endl;
     allTestsPass &= (compatible); //should be true
-    pout() << "===========================================================" << std::endl << std::endl;
+    pr_out() << "===========================================================" << std::endl << std::endl;
     singlePatchLayout_0.print();
     singlePatchLayout_1.print();
     compatible = singlePatchLayout_0.compatible(singlePatchLayout_1);
-    pout() << "Are layouts compatible? " << compatible << std::endl;
+    pr_out() << "Are layouts compatible? " << compatible << std::endl;
     allTestsPass &= (!compatible); //should be false
-    pout() << "===========================================================" << std::endl << std::endl;
+    pr_out() << "===========================================================" << std::endl << std::endl;
     if (allTestsPass)
     {
-        pout() << "ALL TESTS PASSED" << std::endl;
+        pr_out() << "ALL TESTS PASSED" << std::endl;
     } else {
-        pout() << "SOME TESTS FAILED" << std::endl;
+        pr_out() << "SOME TESTS FAILED" << std::endl;
     }
      
     #ifdef PR_MPI

@@ -29,6 +29,9 @@ public:
     inline static Array<T,N> Zeros();
 
     ACCEL_DECORATION
+    inline static Array<T,N> Ones(T a_scale = 1.0);
+
+    ACCEL_DECORATION
     inline Array();
 
     ACCEL_DECORATION

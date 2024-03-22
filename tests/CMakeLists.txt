@@ -47,10 +47,18 @@ blt_add_executable(NAME LevelBCTests SOURCES LevelBCTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME LevelBCTests COMMAND LevelBCTests)
-blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
+blt_add_executable(NAME DisjointBoxLayoutTests SOURCES DisjointBoxLayoutTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-blt_add_test(NAME InterpTests COMMAND InterpTests)
+blt_add_test(NAME DisjointBoxLayoutTests COMMAND DisjointBoxLayoutTests)
+blt_add_executable(NAME LevelBoxDataTests SOURCES LevelBoxDataTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME LevelBoxDataTests COMMAND LevelBoxDataTests)
+blt_add_executable(NAME ChomboTests SOURCES ChomboTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME ChomboTests COMMAND ChomboTests)
 endif()
 if(OPS)
   blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
@@ -59,14 +67,10 @@ if(OPS)
   blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 endif()
 if(ENABLE_ALL_TESTS)
-    blt_add_executable(NAME DisjointBoxLayoutTests SOURCES DisjointBoxLayoutTests.cpp
+    blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
         DEPENDS_ON Headers_Base ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME DisjointBoxLayoutTests COMMAND DisjointBoxLayoutTests)
-    blt_add_executable(NAME LevelBoxDataTests SOURCES LevelBoxDataTests.cpp
-        DEPENDS_ON Headers_Base ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME LevelBoxDataTests COMMAND LevelBoxDataTests)
+    blt_add_test(NAME InterpTests COMMAND InterpTests)
     if (AMR)
         blt_add_executable(NAME AMRDataTests SOURCES AMRDataTests.cpp
             DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
@@ -90,6 +94,10 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBDisjointBoxLayoutTests COMMAND MBDisjointBoxLayoutTests)
+        blt_add_executable(NAME MBBoundaryRegisterTests SOURCES MBBoundaryRegisterTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBBoundaryRegisterTests COMMAND MBBoundaryRegisterTests)
         blt_add_executable(NAME MBLevelBoxDataTests SOURCES MBLevelBoxDataTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -98,6 +106,10 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelMapTests COMMAND MBLevelMapTests)
+        blt_add_executable(NAME MBLevelRK4Tests SOURCES MBLevelRK4Tests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelRK4Tests COMMAND MBLevelRK4Tests)
     endif()
     if (OPS)
         blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
@@ -114,5 +126,15 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelOpTests COMMAND MBLevelOpTests)
+    endif()
+    if (MMB AND AMR)
+        blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBAMRGridTests COMMAND MBAMRGridTests)
+        blt_add_executable(NAME MBAMRDataTests SOURCES MBAMRDataTests.cpp
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBAMRDataTests COMMAND MBAMRDataTests)
     endif()
 endif()

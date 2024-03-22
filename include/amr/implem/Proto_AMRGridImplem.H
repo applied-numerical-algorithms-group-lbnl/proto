@@ -103,16 +103,16 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
 }
 
 AMRGrid::AMRGrid(
-    std::vector<DisjointBoxLayout>& a_layouts,
-    std::vector<Point>& a_refRatios,
+    const std::vector<DisjointBoxLayout>& a_layouts,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     define(a_layouts, a_refRatios, a_maxLevels);
 }
 
 AMRGrid::AMRGrid(
-    DisjointBoxLayout& a_layout,
-    std::vector<Point>& a_refRatios,
+    const DisjointBoxLayout& a_layout,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     define(a_layout, a_refRatios, a_maxLevels);
@@ -120,8 +120,8 @@ AMRGrid::AMRGrid(
 
 void
 AMRGrid::define(
-    std::vector<DisjointBoxLayout>& a_layouts,
-    std::vector<Point>& a_refRatios,
+    const std::vector<DisjointBoxLayout>& a_layouts,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     PROTO_ASSERT(a_maxLevels > 0,
@@ -159,8 +159,8 @@ AMRGrid::define(
 
 void
 AMRGrid::define(
-    DisjointBoxLayout& a_layout,
-    std::vector<Point>& a_refRatios,
+    const DisjointBoxLayout& a_layout,
+    const std::vector<Point>& a_refRatios,
     int a_maxLevels)
 {
     std::vector<DisjointBoxLayout> layouts;
@@ -224,7 +224,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     {
       //auto& patch = a_bufferedTags[iter];
         auto& patch = hostBufferedTags[iter];
-        TagData tags(a_bufferedTags.layout()[iter].coarsen(tagRefRatio));
+        TagDataHost tags(a_bufferedTags.layout()[iter].coarsen(tagRefRatio));
         tags |= Stencil<short>::Sum(tagRefRatio)(patch);
          
         for (auto biter : tags.box())
@@ -451,7 +451,7 @@ void AMRGrid::addFinerTags(
 
 void AMRGrid::print() const
 {
-    Proto::pout() << "AMRGrid | numLevels: " << numLevels() << " | maxLevels: " << maxLevels() << std::endl;
+    Proto::pr_out() << "AMRGrid | numLevels: " << numLevels() << " | maxLevels: " << maxLevels() << std::endl;
     for (int lvl = 0; lvl < numLevels(); lvl++)
     {
         (*this)[lvl].print();

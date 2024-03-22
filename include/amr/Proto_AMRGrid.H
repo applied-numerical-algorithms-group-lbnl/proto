@@ -15,8 +15,8 @@ namespace Proto
     // manipulate them (e.g. for buffering). -CLG
     typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, PR_CELL> LevelTagData;
     typedef LevelBoxData<short, 1, MemType::HOST,   PR_CELL> LevelTagDataHost;
-    typedef BoxData<short, 1, MemType::HOST> TagData;
-    
+    typedef BoxData<short, 1, MEMTYPE_DEFAULT> TagData;
+    typedef BoxData<short, 1, MemType::HOST>   TagDataHost;
     
     /// AMR Grid
     /**
@@ -49,7 +49,8 @@ namespace Proto
         /**
             Computes tags with an isotropic buffer radius. 
         */
-        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
+        template<typename T, unsigned int C=1,
+            MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
         inline static void computeTags(
             LevelTagData&                 a_tags, 
             LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -82,8 +83,8 @@ namespace Proto
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline AMRGrid(
-            std::vector<DisjointBoxLayout>& a_layouts,
-            std::vector<Point>& a_refRatios,
+            const std::vector<DisjointBoxLayout>& a_layouts,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);
         
         /// Single-Level Constructor
@@ -95,8 +96,8 @@ namespace Proto
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline AMRGrid(
-            DisjointBoxLayout& a_layout,
-            std::vector<Point>& a_refRatios,
+            const DisjointBoxLayout& a_layout,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);
         
         /// Multi-Level Define
@@ -109,8 +110,8 @@ namespace Proto
         */
         inline void
         define(
-            std::vector<DisjointBoxLayout>& a_layouts,
-            std::vector<Point>& a_refRatios,
+            const std::vector<DisjointBoxLayout>& a_layouts,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);        
         
         /// Single-Level Define
@@ -123,8 +124,8 @@ namespace Proto
         */
         inline void
         define(
-            DisjointBoxLayout& a_layout,
-            std::vector<Point>& a_refRatios,
+            const DisjointBoxLayout& a_layout,
+            const std::vector<Point>& a_refRatios,
             int a_maxLevels);        
         
         /// Layout Access (Const)
