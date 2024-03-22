@@ -122,7 +122,7 @@ void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, Array<T,DIM> a_dx, Array<T,
         }
     }
 }
-PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota);
+PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset)
@@ -975,10 +975,6 @@ void interpBoundaries(
         fine_i.copyTo(fine_0);  // save a copy of non-interior data
         fine_i |= a_interp(crse_i);
         fine_0.copyTo(fine_i);
-        // This method seems like a shortcut / hack, but each interpolation call
-        // results in refRatio^DIM stencil applies, each of which is a kernel
-        // launch for GPU targets. I suspect that two BoxData::copyTo calls
-        // are faster, but this should be tested. -CLG
     }
     a_fine.exchange();
 }

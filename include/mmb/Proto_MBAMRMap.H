@@ -26,6 +26,11 @@ class MBAMRMap
                 const Array<Point, DIM+1>&  a_ghost,
                 unsigned int                a_focalBlock = 0);
         
+        inline void define(
+                const MBAMRGrid&            a_grid,
+                const Point                 a_ghost,
+                unsigned int                a_focalBlock = 0);
+        
         /// Get Level Map
         inline const MBLevelMap<MAP,MEM>& getLevel(unsigned int a_level) const;
 
@@ -37,6 +42,8 @@ class MBAMRMap
 
         /// Get Cached Jacobian
         inline const MBAMRData<double, 1, MEM, PR_NODE>& jacobian() const {return m_J; }
+
+        inline MBLevelMap<MAP,MEM>& operator[](unsigned int a_level){ return *m_maps[a_level];}
 
     private:
         const MBAMRGrid* m_grid; 

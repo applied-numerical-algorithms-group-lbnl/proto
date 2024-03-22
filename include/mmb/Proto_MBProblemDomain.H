@@ -7,7 +7,7 @@
 
 namespace Proto
 {
-    typedef std::pair<Point, unsigned int> MBPatchID_t;
+    typedef std::pair<Point, BlockIndex> MBPatchID_t;
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -23,20 +23,20 @@ namespace Proto
         inline MBProblemDomain(unsigned int a_numBlocks);
        
         // Set Size of Specified Block
-        inline void defineDomain(unsigned int a_blockID, Point a_domainSize);
+        inline void defineDomain(BlockIndex a_blockID, Point a_domainSize);
         
         // Add a Codimension-1 Boundary to the Graph
         inline void defineBoundary(
-                unsigned int        a_srcBlock,
-                unsigned int        a_dstBlock,
+                BlockIndex        a_srcBlock,
+                BlockIndex        a_dstBlock,
                 unsigned int        a_dir,
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
         
         // Add a Codimension-1 Boundary to the Graph
         inline void defineBoundary(
-                unsigned int        a_srcBlock,
-                unsigned int        a_dstBlock,
+                BlockIndex        a_srcBlock,
+                BlockIndex        a_dstBlock,
                 Point               a_dir,
                 CoordPermutation&   a_rotation);
 
@@ -49,31 +49,34 @@ namespace Proto
         // Get Graph Reference
         inline MBGraph& graph() const { return *m_graph; }
         
+        // Get Graph Reference
+        inline std::shared_ptr<MBGraph> graphPtr() const { return m_graph; }
+        
         // Get Local Problem Domain
-        inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
+        inline const ProblemDomain& getBlock(BlockIndex a_blockID) const;
         
         // Get Size of Block
-        inline Point blockSize(unsigned int a_blockID) const;
+        inline Point blockSize(BlockIndex a_blockID) const;
         
         // Get Differential Volume
-        inline double dv(unsigned int a_blockID) const;
+        inline double dv(BlockIndex a_blockID) const;
 
 
         inline std::vector<MBGraphArc> boundaries(
-                unsigned int a_srcBlock,
+                BlockIndex a_srcBlock,
                 Point        a_dir) const;
         
         // Convert a Point Between Block Coordinate Systems
         inline Point convert(
                 Point a_point,
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock) const;
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock) const;
 
         // Convert a Box Between Block Coordinate Systems
         inline Box convert(
                 Box a_box,
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
                 Centering a_ctr = PR_CELL) const;
 
         inline MBProblemDomain coarsen(Point a_refRatio) const;
@@ -82,7 +85,7 @@ namespace Proto
         inline MBProblemDomain refine(const std::vector<Point>& a_refRatios) const;
 
         inline bool coarsenable(Point a_refRatio) const;
-        inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
+        inline bool coarsenable(BlockIndex a_block, Point a_refRatio) const;
         inline bool defined();
         inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void close();
@@ -90,6 +93,13 @@ namespace Proto
         inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
+
+        inline Point getDir(Point a_point, BlockIndex a_block) const;
+        inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;
+        inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool inInterior(Point a_point, BlockIndex a_block) const;
+
         private:
 
         mutable bool m_closed;

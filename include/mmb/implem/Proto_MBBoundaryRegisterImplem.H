@@ -24,7 +24,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.getBlock(block);
+        auto& localLayout = a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -64,7 +64,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                                  "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.getBlock(adjBlock);
+                    auto& adjLocalLayout = a_layout.getBlock(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
                     auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
@@ -167,7 +167,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::bound(
 {
     for (auto bound : bounds(a_index, a_dir))
     {
-        if (bound.dstBlock = a_adjBlock)
+        if (bound.dstBlock == a_adjBlock)
         {
             return bound;
         }

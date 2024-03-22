@@ -154,7 +154,7 @@ namespace Proto
 
             \param a_index  Index in [0,DIM)
         */
-        ACCEL_DECORATION inline const int&  operator[](unsigned char a_index) const;
+        ACCEL_DECORATION inline const int&  operator[](unsigned int a_index) const;
 
         /// Get Component (Non-Const)
         /**
@@ -162,7 +162,7 @@ namespace Proto
 
             \param a_index  Index in [0,DIM)
         */
-        ACCEL_DECORATION inline int&  operator[](unsigned char a_index);
+        ACCEL_DECORATION inline int&  operator[](unsigned int a_index);
             
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////

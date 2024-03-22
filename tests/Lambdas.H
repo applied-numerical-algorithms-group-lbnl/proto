@@ -2,12 +2,55 @@
 #define TEST_LAMBDAS
 #include <cmath>
 #include "Proto.H"
-
-#define XPOINT_SIZE 5
-#define XPOINT_RADIUS 2.0
-#define SHEAR_SLOPE 1.0
-#define CUBED_SPHERE_SHELL_R0 1.0
+#ifdef PR_MMB
+#include "MBMap_XPointRigid.H"
+#endif
 using namespace Proto;
+
+PROTO_KERNEL_START
+void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
+{
+    double p = 6.0;
+    double s = 1.0;
+    double r2 = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        double xi = (a_X(ii) - a_X0[ii])*s;
+        r2 += xi*xi;
+    }
+    double r = sqrt(r2);
+    a_data(0) = (r < M_PI/2.0) ? pow(cos(r),p) : 0.0;
+}
+PROTO_KERNEL_END(f_bellF, f_bell)
+
+PROTO_KERNEL_START
+void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
+{
+    double p = 6.0;
+    double s = 1.0;
+    double r2 = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        double xi = (a_X(ii) - a_X0[ii]);
+        r2 += xi*xi;
+    }
+    double r = sqrt(r2);
+    double sr = sin(s*r);
+    double cr = cos(s*r);
+    a_data(0) = 0;
+    if (s*r < M_PI/2.0)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            double x = (a_X(dir) - a_X0[dir]);
+            a_data(0) -= p*s*s*x*x*pow(cr,p)/(r*r);
+            a_data(0) += p*(p-1)*s*s*x*x*pow(sr,2)*pow(cr,p-2)/(r*r);
+            a_data(0) -= p*s*sr*pow(cr,p-1)/r;
+            a_data(0) += p*s*x*x*sr*pow(cr,p-1)/(r*r*r);
+        }
+    }
+}
+PROTO_KERNEL_END(f_LbellF, f_Lbell)
 
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
@@ -119,15 +162,16 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize, int a_numBlocks)
+MBProblemDomain buildXPoint(int a_domainSize)
 {
-    MBProblemDomain domain(a_numBlocks);
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < a_numBlocks; ii++)
+    for (int ii = 0; ii < numBlocks; ii++)
     {
-        domain.defineBoundary(ii, (ii+1) % a_numBlocks, 0, Side::Hi, CCW);
+        domain.defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
     }
-    for (int bi = 0; bi < a_numBlocks; bi++)
+    for (int bi = 0; bi < numBlocks; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
@@ -184,8 +228,6 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     return domain;
 }
 #endif
-#endif
-
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -256,7 +298,7 @@ void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSi
 }
 PROTO_KERNEL_END(f_JCubeSphere_, f_JCubeSphere);
 #endif
-
+#endif
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
@@ -341,6 +383,45 @@ void cosxFuncF(Point p, Var<double> v, double dx)
   v(0) = cos(x);
 }
 PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_polyF(Var<double, C, MEM>& a_data, Var<double, DIM, MEM>& a_X,
+        Array<double, DIM> a_exp, Array<double, DIM> a_offset)
+{
+    double phi = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (a_exp[dir] != 0)
+        {
+            phi += pow(a_X(dir) - a_offset[dir], a_exp[dir]);
+        }
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_polyF, f_poly);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_LpolyF(Var<double, C, MEM>& a_data, Var<double, DIM, MEM>& a_X,
+        Array<double, DIM> a_exp, Array<double, DIM> a_offset)
+{
+    double phi = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (a_exp[dir] < 2) {continue; }
+        double e = a_exp[dir]*(a_exp[dir]-1);
+        phi += e*pow(a_X(dir) - a_offset[dir], a_exp[dir]-2);
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_LpolyF, f_Lpoly);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
@@ -621,12 +702,47 @@ void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Po
 PROTO_KERNEL_END(f_Lphi_avgF, f_Lphi_avg);
 
 #ifdef PR_AMR
+AMRGrid cornerGrid(
+        Point crseDomainSize,
+        unsigned int numLevels,
+        std::vector<Point> refRatios,
+        std::vector<Point> boxSizes,
+        Array<bool, DIM> periodicity)
+{
+    std::vector<DisjointBoxLayout> layouts;
+    layouts.resize(numLevels);
+    Box domainBox(crseDomainSize);
+    ProblemDomain domain(crseDomainSize, periodicity);
+    layouts[0].define(domain, domainBox, boxSizes[0]);
+    for (int lvl = 1; lvl < numLevels; lvl++)
+    {
+        domain = domain.refine(refRatios[lvl-1]);
+        //domainBox = domainBox.grow(-domainBox.sizes()/4).refine(refRatios[lvl-1]);
+        layouts[lvl].define(domain, domainBox, boxSizes[lvl]); 
+    }
+    return AMRGrid(layouts, refRatios, numLevels);
+}
+
+AMRGrid cornerGrid(
+        int domainSize,
+        unsigned int numLevels,
+        Point refRatio,
+        Point boxSize)
+{
+    std::vector<Point> refRatios(numLevels-1, refRatio);
+    std::vector<Point> boxSizes(numLevels, boxSize);
+    Point crseDomainSize = Point::Ones(domainSize);
+    Array<bool, DIM> periodicity;
+    periodicity.fill(false);
+    return cornerGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
+}
+
 AMRGrid telescopingGrid(
         Point crseDomainSize,
         unsigned int numLevels,
         std::vector<Point> refRatios,
         std::vector<Point>   boxSizes,
-        std::array<bool, DIM> periodicity)
+        Array<bool, DIM> periodicity)
 {
     std::vector<DisjointBoxLayout> layouts;
     layouts.resize(numLevels);
@@ -651,8 +767,8 @@ AMRGrid telescopingGrid(
     std::vector<Point> refRatios(numLevels-1, refRatio);
     std::vector<Point> boxSizes(numLevels, boxSize);
     Point crseDomainSize = Point::Ones(domainSize);
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
+    Array<bool, DIM> periodicity;
+    periodicity.fill(false);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
 #endif

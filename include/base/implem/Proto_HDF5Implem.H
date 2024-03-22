@@ -1135,6 +1135,21 @@ void HDF5Handler::writePatch(
 #ifdef PR_MMB
 template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
+        const MBLevelMap<MAP, MEM>& a_map,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
+}
+
+template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1163,6 +1178,20 @@ void HDF5Handler::writeMBLevel(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeMBLevel(varnames, a_data, a_filename, a_params...);
+    
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
@@ -1188,7 +1217,7 @@ void HDF5Handler::writeMBLevel(
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
     assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -1196,7 +1225,7 @@ void HDF5Handler::writeMBLevel(
     Array<double,DIM> dx;
     dx.fill(1.0);
     writeHeader<C,CTR>(&file, 1, a_varNames);
-    addMBLevel(&file, a_data, dx, Point::Ones(), 0);
+    addMBLevel(&file, a_data, dx, Point::Ones(), 0); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Fclose(file) >= 0);
 
 }

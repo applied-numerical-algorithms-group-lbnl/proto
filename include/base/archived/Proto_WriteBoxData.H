@@ -46,7 +46,7 @@ inline void WriteBoxData(const char*                a_filename,
     \param a_corner   DIM long array of doubles defining the desired origin
     \param a_h        Physical spacing between points
 */
-  template<class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+  template<class T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline void WriteBoxData(const char*           a_filename,
              BoxData<T, C,MEMTYPE, D, E>&       a_array,
              const char* const          a_varnames[C*D*E],
@@ -63,7 +63,7 @@ inline void WriteBoxData(const char*           a_filename,
     \param a_corner   DIM long array of doubles defining the desired origin
     \param a_h        Physical spacing between points
 */
-  template<class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
+  template<class T, unsigned int C,MemType MEMTYPE, unsigned int D, unsigned int E>
 inline void WriteBoxData(FILE*                 a_fp,
                          BoxData<T,C,MEMTYPE,D,E>&          a_array,
              const char* const          a_varnames[C*D*E],

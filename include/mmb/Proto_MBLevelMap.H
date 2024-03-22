@@ -6,6 +6,7 @@
 #include "Proto_MBLevelBoxData.H"
 #include "Proto_MBMapOp.H"
 #include "Proto_Operator.H"
+//#include "Proto_CubedSphereKernels.H"
 
 namespace Proto
 {
@@ -43,6 +44,12 @@ class MBLevelMap
             const Array<Point, DIM+1>& a_ghost,
             unsigned int         a_focalBlock = 0);
     
+    /// Non-Trivial Constructor
+    inline MBLevelMap(
+            const MBDisjointBoxLayout& a_layout,
+            Point                      a_ghost,
+            unsigned int         a_focalBlock = 0);
+    
     /// Define
     /** Delayed construction.
      *
@@ -55,6 +62,11 @@ class MBLevelMap
     inline void define(
             const MBDisjointBoxLayout& a_layout,
             const Array<Point, DIM+1>& a_ghost,
+            unsigned int               a_focalBlock = 0);
+    
+    inline void define(
+            const MBDisjointBoxLayout& a_layout,
+            Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
 
     /// Access Cached Coordinate Values
@@ -140,7 +152,8 @@ class MBLevelMap
             const Box& a_box,
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
-    
+   
+
     /// Compute Cell Centered Coordinates
     /** Returns the cell-averaged coordinates on a specified range.
      *
@@ -152,11 +165,34 @@ class MBLevelMap
             const Box& a_box,
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
+    
+    /// Compute Mapped Coordinates
+    /** Returns coordinates in mapped space of a given data point. The Coordinates
+     *  are of the cell center of the point plus the offset which is in units of the grid spacing. 
+     */
+    inline Array<double, DIM> mappedCoords(
+            const MBDataPoint&          a_point,
+            const Array<double, DIM>&   a_offset) const;
+    
+    /// Compute Mapped Coordinates (No Offset)
+    inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point) const;
+
+    /// Analytic Map (DataPoint Cell Center)
+    inline Array<double, DIM> apply(const MBDataPoint& a_point) const;
+    
+    /// Analytic Map (DataPoint With Offset)
+    inline Array<double, DIM> apply(
+            const MBDataPoint&          a_point,
+            const Array<double, DIM>&   a_offset) const;
 
     /// Compute Cell Centered Coordinates
     /** Computes the cell-centered coodinate values at a specified MBDataPoint */
     inline Array<double, DIM> cellCentered(const MBDataPoint& a_point) const;
-    
+
+    /// Compute Cell Centered Coordinates, analytic case.
+    /** Computes the cell-centered coodinate valuesas a specified analytic function, */
+    inline Array<double, DIM> analyticCellCentered(const MBDataPoint& a_point) const;
+  
     /// Compute Cell Averaged Coordinates
     /** Computes the cell-averaged coodinate values at a specified MBDataPoint */
     inline Array<double, DIM> cellAveraged(const MBDataPoint& a_point) const;
@@ -170,6 +206,9 @@ class MBLevelMap
     /// Get Operator
     inline MAP<MEM>& op(int a_block) const;
 
+    /// Get Ghost Sizes
+    inline Array<Point, DIM+1> ghost() const { return m_ghost; }
+
     /// Get Mapped Coordinate Values
     /** Given a node-centered box and grid spacing, generate the node centered mapped
      *  coordinates. This assumes that the origin corresponds to the point (0,0,...,0) and
@@ -182,6 +221,7 @@ class MBLevelMap
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
     private:
+        Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
         mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators

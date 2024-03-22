@@ -10,7 +10,7 @@ TEST(MBAMRData, Construction) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    int numBlocks = XPOINT_NUM_BLOCKS;
     int numLevels = 3;
     int refRatio = 2;
     int numGhost = 1;
@@ -18,7 +18,7 @@ TEST(MBAMRData, Construction) {
     ghost.fill(Point::Ones(numGhost));
     ghost[0] = Point::Ones(numGhost);
 
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 

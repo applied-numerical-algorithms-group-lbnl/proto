@@ -88,6 +88,10 @@ namespace Proto
                 const Box&              a_region, 
                 const Point&            a_boxSize);
 
+        inline DisjointBoxLayout(
+                std::shared_ptr<BoxPartition>   a_partition,
+                const Point&                    a_boxSize);
+
         /// Direct Define
         /**
             Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 
@@ -322,6 +326,8 @@ namespace Proto
             \param a_pt A valid patch Point.
         */
         inline bool onDomainBoundary(const Point& a_pt) const;
+
+        inline bool isDomainBoundary(const LevelIndex& a_patch, const Point& a_dir) const;
 
         /// On Level Boundary
         /**

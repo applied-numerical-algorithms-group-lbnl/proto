@@ -68,7 +68,7 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
 }
 
 ACCEL_DECORATION
-const int& Point::operator[](unsigned char a_index) const
+const int& Point::operator[](unsigned int a_index) const
 {
     PROTO_ASSERT((a_index < DIM),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -78,7 +78,7 @@ const int& Point::operator[](unsigned char a_index) const
 }
 
 ACCEL_DECORATION
-int& Point::operator[](unsigned char a_index)
+int& Point::operator[](unsigned int a_index)
 {
     PROTO_ASSERT(((a_index < DIM)),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -487,6 +487,11 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     a_os << "(" ;
     for (int dir = 0; dir < DIM; dir++) 
     {
+      //keeps positive and negative stuff lined up --dtg
+      if(a_pt[dir] >= 0)
+      {
+        a_os << " ";
+      }
         a_os << a_pt[dir];
         if (dir < DIM-1) 
         {

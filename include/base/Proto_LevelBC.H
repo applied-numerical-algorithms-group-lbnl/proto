@@ -3,7 +3,6 @@
 #define __PROTO_LEVEL_BC__
 
 #include "Proto_LevelBoxData.H"
-
 namespace Proto {
     
     /// Storage for the LevelBCOps on each face 
@@ -20,49 +19,33 @@ namespace Proto {
         inline virtual void init() {}
         inline virtual void apply(LevelBoxData<T,C,MEM,CTR>& a_data) const {}
 
-        // Helper methods (not yet implemented)
-        inline const DisjointBoxLayout& layout() { return m_layout; }
+        
+        // NOT IMPLEMENTED YET
+        inline void fillGhost(LevelBoxData<T,C,MEM,CTR>& a_data,
+                T a_value, int a_comp, int a_coordinate, Side::LoHiSide a_size);
+        // NOT IMPLEMENTED YET
         inline void setFlux(LevelBoxData<T,C,MEM,CTR>& a_data,
                 T a_fluxValue, int a_comp, int a_coordinate, Side::LoHiSide a_side);
+        // NOT IMPLEMENTED
         inline void setValue(LevelBoxData<T,C,MEM,CTR>& a_data,
-                T a_fluxValue, int a_comp, int a_coordinate, Side::LoHiSide a_side);
+                T a_value, int a_comp, int a_coordinate, Side::LoHiSide a_side);
         
-        // ... many useful things here ...
-
-        inline void setTime(T a_time) const;
         inline T time() const { return m_time; }
-
-        // Scalar constant interface
-        /// Set Number of Varying Constants
-        inline void setNumConstants(int a_numConst) const;
-        /// Set Specific Varying Constant
-        inline void setConstant(int a_index, T a_value) const;
-        /// Get Specific Varying Constant
-        inline T getConstant(int a_index) const;
-
-        // Fixed data interface
-        /// Set Number of Variable LevelData
-        inline void setNumLevelData(int a_numFixed) const;
-        /// Set Variable LevelData
-        inline void setLevelData(int a_index, const LevelBoxData<T,C,MEM,CTR>& a_data) const;
-        /// Get Variable LevelData
-        inline const LevelBoxData<T,C,MEM,CTR>& getLevelData(int a_index) const;
+        inline int rkStage() { return m_rkStage; }
+        inline const DisjointBoxLayout& layout() { return m_layout; }
 
         // RK interface
+        inline void setTime(T a_time) const;
         inline void setRKStage(int a_stage) const { m_rkStage = a_stage; }
         inline void setNumRKStages(int a_numStages) const;
         inline void setRKStageData(int a_stage, const LevelBoxData<T,C,MEM,CTR>& a_data) const;
         inline const LevelBoxData<T,C,MEM,CTR>& getRKStageData(int a_index) const;
-        inline int rkStage() { return m_rkStage; }
 
         private:
 
         DisjointBoxLayout m_layout;
-
         mutable T m_time;
         mutable int m_rkStage;
-        mutable std::vector<T> m_constData;
-        mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_fixedData;
         mutable std::vector<const LevelBoxData<T,C,MEM,CTR>*> m_rkStageData;
     };
 

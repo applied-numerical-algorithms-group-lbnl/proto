@@ -6,9 +6,9 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData()
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    const MBDisjointBoxLayout& a_layout,
-    Point               a_ghost,
-    Point               a_boundGhost)
+    const MBDisjointBoxLayout&  a_layout,
+    Point                       a_ghost,
+    Point                       a_boundGhost)
 {
     Array<Point, DIM + 1> ghost;
     if (a_ghost == Point::Zeros())
@@ -25,23 +25,23 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    const MBDisjointBoxLayout&    a_layout,
-    const Array<Point, DIM+1>&    a_ghost,
-    Point                         a_boundGhost)
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost,
+    Point                      a_boundGhost)
 {
     define(a_layout, a_ghost, a_boundGhost);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
-    const MBDisjointBoxLayout&    a_layout,
-    const Array<Point, DIM+1>&    a_ghost,
-    Point                   a_boundGhost)
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost,
+    Point                      a_boundGhost)
 {
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
     m_ghost = a_ghost;
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_data.clear();
     m_data.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
@@ -49,11 +49,43 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
             a_layout.getBlock(bi), a_ghost[0]);
     }
+    //FIXME: this is a cleaner way of initializing boundary data, but it doesn't quite work yet
+    // The working implementation is maintained for the time being. 
+#if 0
+    for (auto srcIter : a_layout)
+    {
+        for (auto dstIter : a_layout)
+        {
+            BlockIndex srcBlock = a_layout.block(srcIter);
+            BlockIndex dstBlock = a_layout.block(dstIter);
+            Point srcPatchID = a_layout.point(srcIter);
+            Point dstPatchID = a_layout.point(srcIter);
+            if (srcBlock == dstBlock) { continue; }
+            Point dir01 = a_layout.connectivity(srcIter, dstIter);
+            if (dir01 == Point::Zeros()) { continue; }
+            Point dir10 = a_layout.connectivity(dstIter, srcIter);
+
+            // indices are a valid block boundary
+            int codim = dir01.codim();
+            int ghostSize = m_ghost[codim].max();
+            Box locBoundBox = a_layout[srcIter].adjacent(dir01*ghostSize);
+            Box adjBoundBox = a_layout[dstIter].edge(dir10*ghostSize);
+            boundsKey_t key(srcPatchID, srcBlock, dir01);
+
+            auto R = a_layout.domain().graph().rotation(dstBlock, dir10, srcBlock);
+            MBBoundaryData<T, C, MEM> boundData(
+                    srcIter, dstIter, locBoundBox, adjBoundBox,
+                    R, a_boundGhost);
+            m_bounds[key].push_back(boundData);
+        }
+    }
+
+#else
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.getBlock(block);
+        auto& localLayout = a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -90,7 +122,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                  "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.getBlock(adjBlock);
+                    const auto& adjLocalLayout = a_layout.getBlock(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
                     auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
@@ -116,7 +148,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
-                            if (adjIter == *a_layout.end()) { continue; } //patch was not found
+                            if (adjIter == a_layout.end()) { continue; } //patch was not found
                             MBBoundaryData<T, C, MEM> boundData(
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
@@ -127,6 +159,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
+#endif
     if (a_ghost[0] != Point::Zeros())
     {
         m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
@@ -203,7 +236,7 @@ template <typename Func, typename... Srcs>
 void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs&... a_srcs)
 {
     auto srcs = std::tuple<Srcs&...>(a_srcs...);
-    for (auto iter : layout())
+    for (auto iter : (m_layout))
     {
         auto& patch = (*this)[iter];
         auto block = layout().block(iter);
@@ -224,11 +257,11 @@ void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func &a_func, Srcs&... a_srcs)
 {
     auto g = ghost();
     g[0] = g[0] + Point::Ones();
-    MBLevelBoxData<T, C, MEM, CTR> tmp(layout(), g);
+    MBLevelBoxData<T, C, MEM, CTR> tmp(m_layout, g);
 
     tmp.initialize(a_func, a_srcs...);
 
-    for (auto iter : layout())
+    for (auto iter : m_layout)
     {
         auto& tmp_i = tmp[iter];
         auto& patch = (*this)[iter];
@@ -244,6 +277,32 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
         data->setVal(a_value);
     }
     exchange();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
+{
+    if (ghost()[0] == Point::Zeros()) { return; } //nothing to do
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "MBLevelBoxData::setBoundary | Error: \
+            %i is not a valid component specification.", a_comp);
+    for (auto iter : layout())
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            if (dir == Point::Zeros()) { continue; }
+            if (!layout().isDomainBoundary(iter, dir)) { continue; }
+            auto& patch = (*this)[iter];
+            Box b = layout()[iter].adjacent(dir * ghost()[0]); 
+            if (a_comp == -1)
+            {
+                patch.setVal(a_value, b);
+            } else {
+                BoxData<T,1,MEM> tmp = slice(patch, a_comp);
+                tmp.setVal(a_value, b);
+            }
+        }
+    }
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -267,6 +326,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
+    for (int bi = 0; bi < layout().numBlocks(); bi++)
+    {
+        m_data[bi]->exchange();
+    }
     m_exchangeCopier.execute();
 }
 
@@ -275,8 +338,8 @@ template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
 {
     PR_TIME("MBLevelBoxData::copyTo");
-    PROTO_ASSERT(a_rhs.layout().compatible(layout()),
-                 "MBLevelBoxData::copyTo | Error: Incompatible datasets");
+    //PROTO_ASSERT(a_rhs.layout().compatible(layout()),
+    //             "MBLevelBoxData::copyTo | Error: Incompatible datasets");
     if (SRC_MEM == DST_MEM)
     {
         auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);
@@ -295,8 +358,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -304,8 +367,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
-    unsigned int block = m_layout->block(a_index);
-    auto localIndex = m_layout->blockIndex(a_index);
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
@@ -319,7 +382,7 @@ MBLevelBoxData<T, C, MEM, CTR>::increment(
         "MBLevelBoxData::increment | Error: Incompatible layouts");
     PR_TIME("MBLevelBoxData::increment");
     Stencil<T> INCR = a_scale*Shift::Zeros();
-    for (auto iter : layout())
+    for (auto iter : m_layout)
     {
         auto& lhs = (*this)[iter];
         const auto& rhs = a_data[iter];
@@ -368,7 +431,7 @@ size_t
 MBLevelBoxData<T, C, MEM, CTR>::linearSize() const
 {
     size_t ret = 0;
-    for (auto iter : layout())
+    for (auto iter : m_layout)
     {
         ret += linearSize(iter);
     }
@@ -408,7 +471,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::linearOut(void *a_buffer) const
 {
     char *writePoint = (char *)a_buffer;
-    for (auto iter : layout())
+    for (auto iter : m_layout)
     {
         linearOut(writePoint, iter);
         writePoint += linearSize(iter);
@@ -442,8 +505,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -451,8 +514,9 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
-    auto patch = m_layout->point(a_index);
-    auto block = m_layout->block(a_index);
+    PR_TIME("MBLevelBoxData::bound");
+    auto patch = m_layout.point(a_index);
+    auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
@@ -460,12 +524,13 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     MBIndex a_index, Point a_dir, unsigned int a_block)
 {
+    PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
     /*
     auto &boundaries = bounds(a_index, a_dir);
     for (auto b : boundaries)
     {
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return true;
         }
@@ -478,6 +543,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
 {
+    PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -486,7 +552,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     {
         auto &b = boundaries[bi];
         // END TEST CODE
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -498,6 +564,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
 {
+    PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -505,7 +572,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
     for (int bi = 0; bi < boundaries.size(); bi++)
     {
         auto &b = boundaries[bi];
-        if (m_layout->block(b.adjIndex) == a_block)
+        if (m_layout.block(b.adjIndex) == a_block)
         {
             return b;
         }
@@ -517,33 +584,36 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool
 MBLevelBoxData<T, C, MEM, CTR>::compatible(const MBDisjointBoxLayout& a_layout) const
 {
-    return (m_layout->compatible(a_layout));
+    return (m_layout.compatible(a_layout));
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
 MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
+    PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
     if (!a_point.inBoundary())
     {
+        PR_TIME("get bulk data");
         // bulk data is requested
-        auto &patch = (*this)[a_point.index];
-        PROTO_ASSERT(patch.box().contains(a_point.point),
+        auto &patch = (*this)[a_point.index()];
+        PROTO_ASSERT(patch.box().contains(a_point.point()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
-        return patch.var(a_point.point);
+        return patch.var(a_point.point());
     }
     else
     {
+        PR_TIME("get boundary data");
         PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
                 "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 input is not in an MBBoundaryData");
         auto &boundData = (*this).bound(
-            a_point.index, a_point.boundaryDir, a_point.srcBlock());
-        PROTO_ASSERT(boundData.localData->box().contains(a_point.point),
+            a_point.index(), a_point.boundaryDir(), a_point.srcBlock());
+        PROTO_ASSERT(boundData.localData->box().contains(a_point.point()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
-        return boundData.localData->var(a_point.point);
+        return boundData.localData->var(a_point.point());
     }
 }
 
@@ -593,6 +663,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const std::vector<Point> &a_footprint,
     const MBIndex &a_index) const
 {
+  PR_TIME("MBLevelBoxData::interpFootprint");
     //const auto &srcPatch = (*this)[a_index];
     Box patchDomain = this->layout()[a_index].grow(a_ghost);
 
@@ -651,23 +722,31 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     std::set<MBDataPoint> footprint;
     for (auto shift : extendedFootprint)
     {
+      PR_TIMERS("extendedFootprint loop");
         Point p = a_center + shift;
+        //std::cout << "Attempting to add stencil point " << p << std::endl;
         if (blockDomain.contains(p) && patchDomain.contains(p))
         {
-            MBDataPoint data(a_index, p, layout());
+            //std::cout << "\tPoint is in the patch AND block domains: Adding" << std::endl;
+            MBDataPoint data(a_index, p, m_layout);
             footprint.insert(data);
         }
         else if (!blockDomain.contains(p))
         {
+            //std::cout << "\tPoint is NOT in the block domain. checking bounds" << std::endl;
             for (auto dir : Box::Kernel(1))
             {
+              PR_TIMERS("checking bounds loop");
                 if (dir == Point::Zeros()) { continue; }
                 auto boundData = bounds(a_index, dir);
                 for (auto bi : boundData)
                 {
+                    //std::cout << "\t\tChecking boundary in direction " << dir << " with box " << bi.localBox() << std::endl;
+                    //std::cout << "\t\tbi.localBox().contains(p) ? " << bi.localBox().contains(p) << std::endl;
                     if (bi.localBox().contains(p))
                     {
-                        MBDataPoint data(a_index, p, layout(), dir, layout().block(bi.adjIndex));
+                        //std::cout << "\t\t\tPoint is in the boundary: Adding" << std::endl;
+                        MBDataPoint data(a_index, p, m_layout, dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }
                 }
@@ -700,28 +779,28 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end()
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin() const
 {
-    return m_layout->begin();
+    return m_layout.begin();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end() const
 {
-    return m_layout->end();
+    return m_layout.end();
 }
 
 //=======================================================================================
@@ -799,7 +878,7 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
     const auto &range = a_info.toRegion;
     const auto &dstIndex = a_info.toIndex;
 
-    auto &layout = m_data->layout();
+    auto& layout = m_data->layout();
     auto srcBlock = layout.block(srcIndex);
     auto dstBlock = layout.block(dstIndex);
     PROTO_ASSERT(srcBlock != dstBlock,
@@ -865,9 +944,9 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
     MBLevelExchangeCopierOp<T, C, MEM, CTR> &a_op)
 {
-    auto layout = a_op.m_data->layout();
+    auto& layout = a_op.m_data->layout();
     auto ghostArray = a_op.m_data->ghost();
-    auto &graph = layout.domain().graph();
+    auto& graph = layout.domain().graph();
     Box dirs = Box::Kernel(1);
     int localRank = procID();
     for (auto iter : layout)
@@ -1020,16 +1099,16 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     PROTO_ASSERT(SRC_MEM == DST_MEM,
                  "MBLevelCopier::buildMotionPlans | Error: \
         Copy operations between HOST and DEVICE are not yet implemented.");
-    auto srcLayout = a_op.m_src->layout();
-    auto dstLayout = a_op.m_dst->layout();
+    auto& srcLayout = a_op.m_src->layout();
+    auto& dstLayout = a_op.m_dst->layout();
     auto dstGhost = a_op.m_dst->ghost()[0];
     // For each Box on this processor, compute all the pairs of motionItems that move data
     // to this Box.
     for (auto diter : dstLayout)
     {
         unsigned int block = dstLayout.block(diter);
-        auto srcBlockLayout = srcLayout.getBlock(block);
-        auto dstBlockLayout = dstLayout.getBlock(block);
+        auto& srcBlockLayout = srcLayout.getBlock(block);
+        auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
         auto dstBlockDomain = dstBlockLayout.domain();
         auto srcBoxSize = srcBlockLayout.boxSize();
@@ -1083,8 +1162,8 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     for (auto siter : srcLayout)
     {
         unsigned int block = srcLayout.block(siter);
-        auto srcBlockLayout = srcLayout.getBlock(block);
-        auto dstBlockLayout = dstLayout.getBlock(block);
+        auto& srcBlockLayout = srcLayout.getBlock(block);
+        auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
         auto dstBlockDomain = dstBlockLayout.domain();
         auto srcBoxSize = srcBlockLayout.boxSize();
@@ -1120,111 +1199,3 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     } // end src loop
     this->sort();
 }
-
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout)
-{
-    index = a_index;
-    point = a_point;
-    block = -1;  // this means the block is the same as implied by a_index
-    boundaryDir = Point::Zeros();
-    m_inBoundary = false;
-    layout = &a_layout;
-}
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
-        Point a_boundaryDir, int a_block)
-{
-    index = a_index;
-    block = a_block;
-    boundaryDir = a_boundaryDir;
-    point = a_point;
-    m_inBoundary = true;
-    layout = &a_layout;
-}
-
-bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
-{
-    if (index.global() != a_rhs.index.global())
-    {
-        return index.global() < a_rhs.index.global();
-    }
-    else if (point != a_rhs.point)
-    {
-        return point < a_rhs.point;
-    }
-    if (m_inBoundary)
-    {
-        if (block != a_rhs.block)
-        {
-            return block < a_rhs.block;
-        }
-        else if (boundaryDir != a_rhs.boundaryDir)
-        {
-            return boundaryDir < a_rhs.boundaryDir;
-        } else {
-            return false;
-        }
-    }
-    return false;
-}
-
-bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
-{
-    if (index != a_rhs.index)
-    {
-        return false;
-    }
-    if (point != a_rhs.point)
-    {
-        return false;
-    }
-    if (m_inBoundary)
-    {
-        if (block != a_rhs.block)
-        {
-            return false;
-        }
-        if (boundaryDir != a_rhs.boundaryDir)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-unsigned int MBDataPoint::srcBlock() const
-{
-    return block >= 0 ? block : layout->block(index); 
-}
-
-unsigned int MBDataPoint::dstBlock() const
-{
-    return layout->block(index); 
-}
-
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-{
-    if (m_inBoundary)
-    {
-        auto& boundData = a_data.bound(index, boundaryDir, block);
-        return *boundData.localData;
-    } else {
-        return a_data[index];
-    }
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-{
-    if (m_inBoundary)
-    {
-        auto& boundData = a_data.bound(index, boundaryDir, block);
-        return *boundData.adjData;
-    } else {
-        return a_data[index];
-    }
-}
-
-
-
-
-
-

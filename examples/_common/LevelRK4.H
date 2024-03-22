@@ -36,11 +36,13 @@ public:
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
     inline void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
     inline LOP& op() { return m_f; }
+    inline BC& bc() {return m_bc; }
 protected:
     LevelStateData m_k;
     LevelStateData m_delta;
     LOP m_f;
     LevelStateData m_U0;
+    BC m_bc;
 };
 
 template <
@@ -55,6 +57,8 @@ LevelRK4<OPType, T, BCType, MEM>::LevelRK4(
     m_delta.define(a_layout, Point::Zeros());
     m_k.define(a_layout, Point::Zeros());
     m_U0.define(a_layout, OP::ghost());
+    m_bc.define(a_layout);
+    m_bc.setNumRKStages(4);
 }
 
 template <
@@ -76,27 +80,38 @@ void LevelRK4<OPType, T, BCType, MEM>::advance(
     m_delta.setVal(0);
 
     m_f.setTime(a_time);
-    a_state.exchange();
+    //a_state.exchange();
+    m_bc.setTime(a_time);
+    m_bc.setRKStage(0);
+    m_bc.apply(a_state);
     m_f(m_k, a_state, a_dt);    // compute k1*dt
     m_delta.increment(m_k, sixth);
     
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
-    m_U0.exchange();
+    //m_U0.exchange();
+    m_bc.setTime(a_time + half*a_dt);
+    m_bc.setRKStage(1);
+    m_bc.apply(m_U0);
     m_f.setTime(a_time+half*a_dt);
     m_f(m_k, m_U0, a_dt);  // compute k2*dt
     m_delta.increment(m_k, third);
     
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
-    m_U0.exchange();
+    //m_U0.exchange();
+    m_bc.setRKStage(2);
+    m_bc.apply(m_U0);
     m_f(m_k, a_state, a_dt);  // compute k3*dt
     m_delta.increment(m_k, third);
     
     m_f.setTime(a_time+a_dt);
     a_state.copyTo(m_U0);
     m_U0.increment(m_k);
-    m_U0.exchange();
+    //m_U0.exchange();
+    m_bc.setRKStage(3);
+    m_bc.setTime(a_time+a_dt);
+    m_bc.apply(m_U0);
     m_f(m_k, a_state, a_dt); // compute k4*dt
     m_delta.increment(m_k, sixth);
     

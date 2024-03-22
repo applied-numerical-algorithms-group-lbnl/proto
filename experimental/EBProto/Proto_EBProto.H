@@ -55,7 +55,7 @@ namespace Proto
 
  
   
-  template<CENTERING Center=CELL, typename T=double, unsigned int C=1, unsigned char D=0, unsigned char E=0>
+  template<CENTERING Center=CELL, typename T=double, unsigned int C=1, unsigned int D=0, unsigned int E=0>
   class EBData : private BoxData<T,C,D,E>
   {
   public:
@@ -70,7 +70,7 @@ namespace Proto
     Irreg<Center> m_geom;
   };
 
-  template<typename T, unsigned char DType, unsigned char RType>
+  template<typename T, unsigned int DType, unsigned int RType>
   class Discretizer
   {
   public:

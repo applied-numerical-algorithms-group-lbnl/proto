@@ -18,9 +18,13 @@ if(hasParent)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++11 unavailable
-set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++11
+set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++17 unavailable
+set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++17, not gnu++17
+set(CMAKE_VERBOSE_MAKEFILE ON) # if ON, prints the full compilation command when building
 
+#override compiler if desired
+#set(ENV{CC} "gcc")
+#set(ENV{CXX} "g++")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)

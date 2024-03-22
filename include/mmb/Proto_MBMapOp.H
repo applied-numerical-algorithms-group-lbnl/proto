@@ -66,7 +66,13 @@ class MBMapOp
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
             FluxBoxData<double, DIM, MEM>& a_NT);
-   
+  
+    
+    /// Analytic Map
+    /** Users should override this function
+     */
+    inline virtual Array<double, DIM> apply(const Array<double, DIM>& a_xi) { return a_xi; }
+
     // Used internally to fix inheritance of virtual functions
     inline void _apply(
             BoxData<double, DIM, MEM>& a_X,

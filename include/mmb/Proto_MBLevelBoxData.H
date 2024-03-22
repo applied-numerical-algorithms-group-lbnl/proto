@@ -17,53 +17,10 @@ namespace Proto
     class MBLevelBoxData;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
+    class MBDataPoint;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
   
-    /// Multiblock Data Point
-    /** This structure is used to specify a data point in the context of mapped multiblock
-     *  which may exist in either the interior of a block or in the boundary region
-     *  which is allocated between each pair of blocks according to the supplied ghost sizing
-     *  when a MBLevelBoxData is created.
-     *
-     *  This structure is used heavily in the implementation of block boundary interpolation,
-     *  but it is otherwise not very useful and is not recommended for public use.
-     */
-    struct MBDataPoint
-    {
-        public:
-            MBIndex index;
-            Point   boundaryDir;
-            Point   point;
-            
-            inline MBDataPoint(){}
-            inline MBDataPoint(MBIndex a_index, Point a_point,
-                    const MBDisjointBoxLayout& a_layout);
-            inline MBDataPoint(MBIndex a_index, Point a_point,
-                    const MBDisjointBoxLayout& a_layout, 
-                    Point a_boundaryDir, int a_block);
-            inline bool operator==(const MBDataPoint& a_rhs) const;
-
-            inline bool operator<(const MBDataPoint& a_rhs) const;
-            inline bool inBoundary() const {return m_inBoundary; }
-            inline unsigned int srcBlock() const;
-            inline unsigned int dstBlock() const;
-
-            template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-            template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>& srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-        private:
-            int  block;
-            bool m_inBoundary;
-            const MBDisjointBoxLayout* layout;
-    };
-
-   inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
-   {
-       a_os << "point: " << a_point.point << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir;
-   }
- 
     /// Level Copier Operator
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class MBLevelCopierOp
@@ -203,6 +160,9 @@ namespace Proto
         /// Constant Initialization
         inline void setVal(T a_value);
 
+        /// Initialize Boundary Ghost Cells
+        inline void setBoundary(T a_val, int a_comp = -1);
+
         /// Initialize with Random Noise
         inline void setRandom(T a_low, T a_high); 
 
@@ -246,7 +206,7 @@ namespace Proto
         inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
        
         /// Get Layout
-        inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
+        inline const MBDisjointBoxLayout& layout() const {return m_layout; }    
      
         /// Get Patch Box
         /** multiblock analog of LevelBoxData::patchBox. Returns the Box which defines the domain
@@ -357,7 +317,7 @@ namespace Proto
         inline void printBounds(const MBIndex& a_index, int a_prec = 4);
         
         /// Get Number of Blocks
-        inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
+        inline unsigned int numBlocks() const { return m_layout.numBlocks(); }
         inline MBIterator begin();
         inline MBIterator end();
         inline const MBIterator begin() const;
@@ -366,10 +326,11 @@ namespace Proto
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
-        const MBDisjointBoxLayout*     m_layout;
+        MBDisjointBoxLayout m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };
+    
 #include "implem/Proto_MBLevelBoxDataImplem.H"
 } // end namespace Proto
 #endif //end include guard

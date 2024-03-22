@@ -74,7 +74,7 @@ namespace Proto
         */
         inline Point rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
         
-        template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+        template< typename T, unsigned int C=1, unsigned int D=1, unsigned int E=1>
         inline void rotateBuffer(T* srcData, T* dstData,
                 const Box& srcBox, const Box& dstBox) const;
 

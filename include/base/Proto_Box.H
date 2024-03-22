@@ -192,7 +192,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-        inline std::size_t size(unsigned char a_dim) const;
+        inline std::size_t size(unsigned int a_dim) const;
 
         /// Volumetric Size
         /**
@@ -928,13 +928,13 @@ namespace Proto
         inline void print() const; 
         ///@}
 
-        private:  
+        //private:  // these should be treated as private.  Some wise guy needs access.
 
         inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
 
-        Point m_low; ///< Point object containing the lower bounds of the Box.
-        Point m_high;  ///< Point object containing the upper bounds of the Box.
-        int m_size; ///< "Volume" of the box.
+        Point m_low;  ///< Point object containing the lower bounds of the Box.
+        Point m_high; ///< Point object containing the upper bounds of the Box.
+        int   m_size; ///< "Volume" of the box.
 
     }; //end class Box
 

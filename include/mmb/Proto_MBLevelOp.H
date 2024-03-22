@@ -4,30 +4,31 @@
 
 #include "Proto_MBLevelBoxData.H"
 #include "Proto_MBLevelMap.H"
+#include "Proto_MBBoxOp.H"
 
 namespace Proto {
 
 /// Level-Scope Operator
 /**
     MBLevelOp contains the necessary tools to apply a user-defined descendent of 
-    BoxOp on a mapped multiblock level
+    MBBoxOp on a mapped multiblock level
 
-    \tparam OpType  A BoxOp class
+    \tparam OpType  A MBBoxOp class
     \tparam MAP     A MBMapOp class
     \tparam T       Datatype of the data holder (e.g. int, double, etc.)
     \tparam BCType  A LevelBC class
     \tparam MEM     Proto::MemType of the data holder
 */
-template<template<typename, MemType> class OPType,
+template<template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> typename MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelOp
 {
     public:
-    typedef OPType<T, MEM> OP;
-    typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef OPType<T, MAP, MEM> OP;
+    typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef BoxData<T, OP::numAux(),   MEM>   AuxData;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
@@ -69,15 +70,16 @@ class MBLevelOp
     inline unsigned int RKStage() const {return m_rkStage; }
     inline const MBDisjointBoxLayout& layout() const {return m_map->map().layout(); }
     inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
-    
+    inline void matchFlux(LevelStateData& a_rhs, const LevelStateData& a_state);
     private:
     
     T m_diagScale;
     T m_fluxScale;
     T m_time;
     unsigned int m_rkStage;
-    
+       
     const MBLevelMap<MAP,MEM>* m_map;
+   // mutable MBBoundaryRegister<T, OP::numState(), MEM>  m_boundRegister;
     std::vector<OP> m_ops;
 };
 

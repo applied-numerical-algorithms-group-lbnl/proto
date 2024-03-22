@@ -245,6 +245,14 @@ inline T Array<T,N>::norm() const {
 
 template<typename T, size_t N>
 ACCEL_DECORATION
+inline T Array<T,N>::product() const {
+    T prod = 1.0;
+    for (int ii = 0; ii < DIM; ii++) { prod *= m_data[ii]; }
+    return prod;
+}
+
+template<typename T, size_t N>
+ACCEL_DECORATION
 inline T Array<T,N>::dot(const Array<T,N> &a_rhs) const {
     T res = 0;
     for (size_t ii = 0; ii < N; ii++) { res += m_data[ii]*a_rhs[ii]; }

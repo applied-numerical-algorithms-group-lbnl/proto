@@ -13,8 +13,11 @@
 #include "mmb/Proto_MBDisjointBoxLayout.H"
 #include "mmb/Proto_MBBoundaryRegister.H"
 #include "mmb/Proto_MBLevelBoxData.H"
+#include "mmb/Proto_MBDataPoint.H"
 #include "mmb/Proto_MBMapOp.H"
 #include "mmb/Proto_MBLevelMap.H"
+#include "mmb/Proto_MBBoxOp.H"
+#include "mmb/Proto_MBLevelBC.H"
 #include "mmb/Proto_MBLevelOp.H"
 #ifdef PR_OPS 
 #include "mmb/Proto_MBInterpOp.H"
@@ -27,8 +30,15 @@
 #include "mmb/Proto_MBAMRMap.H"
 #endif
 
+// Maps
+#include "utils/MBMap_CubedSphereShell.H"
+
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
+#include "utils/Proto_MBMultigrid.H"
+#ifdef PR_AMR
+#include "utils/Proto_MBAMR.H"
+#endif
 #if DIM == 3
 #include "utils/Proto_CubedSphereShell.H"
 #endif

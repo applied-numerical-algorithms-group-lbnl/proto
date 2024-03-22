@@ -140,7 +140,7 @@ namespace Proto
 
             \param a_dir    A coordinate direction in [0,DIM)
         */
-        inline bool isPeriodic(int a_dir) {return m_isPeriodic[a_dir]; }
+        inline bool isPeriodic(int a_dir) const {return m_isPeriodic[a_dir]; }
 
         /// Coarsen (Anisotropic)
         /**

@@ -19,7 +19,7 @@ namespace Proto {
     template <typename T>
     class Stencil;
     
-    template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
     class BoxData;
 
 //=======================================================================================
@@ -167,7 +167,7 @@ namespace Proto {
       LazyStencil is not explicitly part of the user interface, and is only public by
       virtue of necessity.
     */
-    template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
     struct LazyStencil {
         
         inline LazyStencil() {};
@@ -230,18 +230,18 @@ namespace Proto {
         public:
 
         // Friend declarations
-        template <typename TT, unsigned int C, MemType MEMTYPE , unsigned char D, unsigned char E>
+        template <typename TT, unsigned int C, MemType MEMTYPE , unsigned int D, unsigned int E>
         friend class LazyStencil;
 
-        template <typename TT, unsigned int C , MemType MEMTYPE, unsigned char D, unsigned char E>
+        template <typename TT, unsigned int C , MemType MEMTYPE, unsigned int D, unsigned int E>
         friend class BoxData;
 
-        template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+        template <typename TT, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
         friend BoxData<TT,C,MEMTYPE,D,E>& operator|=(
                 BoxData<TT,C,MEMTYPE,D,E>& a_dest,
                 LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
 
-        template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+        template <typename TT, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
         friend BoxData<TT,C,MEMTYPE,D,E>& operator+=(
                 BoxData<TT,C,MEMTYPE,D,E>& a_dest,
                 LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
@@ -494,7 +494,7 @@ namespace Proto {
           \param a_scr    Source BoxData
           \param a_scale  (Optional) Scale the output of the Stencil operation (Default: 1)
         */
-        template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
         inline LazyStencil <T,C,MEMTYPE,D,E>
         operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, T a_scale = 1) const;
 
@@ -508,7 +508,7 @@ namespace Proto {
           \param a_box    Confinement Box. Must be a subset of the allowable range of *this
           \param a_scale  (Optional) Scale the output of the Stencil operation (Default: 1)
         */
-        template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
         inline LazyStencil <T,C,MEMTYPE,D,E>
         operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_scale = 1) const;
         ///@}
@@ -531,7 +531,7 @@ namespace Proto {
           After transpose, coefficients associated with
           the offset (a,...,b,...) will be associated instead with (b,...,a,...)
           */
-        inline void transpose(unsigned char a, unsigned char b);
+        inline void transpose(unsigned int a, unsigned int b);
 
         /// Get Max Index Range
         /**
@@ -818,7 +818,7 @@ namespace Proto {
           \param a_replace    (Optional) If true, zero out the data in a_dest and replace with the computation result. If true, solution will be added to existing data. Default false.
           \param a_scale      (Optional) Scale the computation by some value.
           */
-        template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+        template<unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
         void apply(
                 const BoxData<T,C,MEMTYPE,D,E>& a_src,
                 BoxData<T,C,MEMTYPE,D,E>&       a_dest,
@@ -827,7 +827,7 @@ namespace Proto {
                 const T                         a_scale = 1) const;
 
         //TODO: Documentation 
-        template<unsigned int C, unsigned char D, unsigned char E>
+        template<unsigned int C, unsigned int D, unsigned int E>
         void protoApply(
                 const BoxData<T,C,HOST,D,E>& a_src,
                 BoxData<T,C,HOST,D,E>&       a_dst,
@@ -836,7 +836,7 @@ namespace Proto {
                 T                               a_scale = 1);
         
         //TODO: Documentation 
-        template<unsigned int C, unsigned char D, unsigned char E>
+        template<unsigned int C, unsigned int D, unsigned int E>
         void protoApply(
                 const BoxData<T,C,DEVICE,D,E>& a_src,
                 BoxData<T,C,DEVICE,D,E>&       a_dst,
@@ -845,7 +845,7 @@ namespace Proto {
                 T                               a_scale = 1);
 
         //TODO: Documentation
-        template<unsigned int C, unsigned char D, unsigned char E>   
+        template<unsigned int C, unsigned int D, unsigned int E>   
             void hostApply(  const BoxData<T,C,MemType::HOST,D,E>&  a_src,
                     BoxData<T,C,MemType::HOST,D,E>&  a_dst,
                     const Box&               a_box,
@@ -946,7 +946,7 @@ inline Stencil<T> operator-(Stencil<T> a_stencil) { return a_stencil*(-1); }
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation (output of Stencil::operator())
 */
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 inline BoxData<T,C,MEMTYPE,D,E>& operator|=(
         BoxData<T,C,MEMTYPE,D,E>&       a_dest,
         LazyStencil<T,C,MEMTYPE,D,E>&&  a_op);
@@ -976,7 +976,7 @@ inline BoxData<T,C,MEMTYPE,D,E>& operator|=(
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation (output of Stencil::operator())
 */
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template <class T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E>
 BoxData<T,C,MEMTYPE,D,E>& operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 ///@}

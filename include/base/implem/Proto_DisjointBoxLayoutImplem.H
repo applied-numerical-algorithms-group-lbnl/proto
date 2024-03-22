@@ -29,6 +29,13 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_region, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(
+        std::shared_ptr<BoxPartition> a_partition,
+        const Point&  a_boxSize)
+{
+    define(a_partition, a_boxSize);
+}
+
 void DisjointBoxLayout::define(
         std::shared_ptr<BoxPartition> a_partition,
         const Point&  a_boxSize)
@@ -283,6 +290,21 @@ DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
         if (!patchDomain().contains(*biter)) { return true; }
     }
     return false;
+}
+
+bool
+DisjointBoxLayout::isDomainBoundary(const LevelIndex& a_patch, const Point& a_dir) const
+{
+
+    PROTO_ASSERT(this->compatible(a_patch),
+            "DisjointBoxLayout::isDomainBoundary | Error: Index is not compatible");
+    PROTO_ASSERT(a_dir.abs().max() <= 1,
+            "DisjointBoxLayout::isDomainBoundary | Error: Dir is not an adjacent patch.");
+    if (a_dir == Point::Zeros()) { return false; }
+    Point patchID = this->point(a_patch); 
+    Point adjPatchID = patchID + a_dir;
+    if (patchDomain().contains(adjPatchID)) { return false; }
+    return true; 
 }
 
 bool

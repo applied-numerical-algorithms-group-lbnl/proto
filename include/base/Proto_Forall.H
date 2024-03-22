@@ -60,7 +60,7 @@ namespace Proto {
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 
     */  
-    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT,unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT,unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
 
@@ -77,7 +77,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
     */
-    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
          typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forallOp(
             unsigned long long int a_num_flops_point,   
@@ -113,7 +113,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
       */
-    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
          typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
@@ -131,7 +131,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
     */
-    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forallOp(
             unsigned long long int  a_num_flops_point,   
@@ -160,7 +160,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
       */
-    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT,unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT,unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs);
 
@@ -177,7 +177,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
     */
-    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1,  MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forallOp_p(
             unsigned long long int a_num_flops_point,   
@@ -210,7 +210,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
       */
-    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
@@ -228,7 +228,7 @@ namespace Proto {
       \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
       \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
     */
-    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1,
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1,
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forallOp_p(
             unsigned long long int a_num_flops_point,   

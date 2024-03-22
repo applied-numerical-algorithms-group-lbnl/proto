@@ -58,14 +58,14 @@ TEST(MBLevelMapTests, InterBlockApply_Shear) {
 
         BoxData<double, DIM> Xi(Bi.grow(PR_NODE));
         BoxData<double, DIM> EXi(Bi.grow(PR_NODE));
-        BoxData<double, 1>   Ji(Bi);
+        BoxData<double, 1>   Ji(Bi.grow(PR_NODE));
         BoxData<double, DIM> Xij(Bi.grow(PR_NODE));
-        BoxData<double, 1>   Jij(Bi);
+        BoxData<double, 1>   Jij(Bi.grow(PR_NODE));
         BoxData<double, DIM> Xj(Bj.grow(PR_NODE));
         BoxData<double, DIM> EXj(Bj.grow(PR_NODE));
-        BoxData<double, 1>   Jj(Bj);
+        BoxData<double, 1>   Jj(Bj.grow(PR_NODE));
         BoxData<double, DIM> Xji(Bj.grow(PR_NODE));
-        BoxData<double, 1>   Jji(Bj);
+        BoxData<double, 1>   Jji(Bj.grow(PR_NODE));
 
         map.apply(Xi, Ji, bi); // normal compution in bi
         map.apply(Xj, Jj, bj); // normal compution in bi
