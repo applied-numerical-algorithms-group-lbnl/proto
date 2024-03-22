@@ -79,7 +79,7 @@ class LevelOp
     inline void define(DisjointBoxLayout& a_layout, Array<T, DIM> a_dx);
 
     /// Spectral Radius
-    inline T spectralRadius() const {return m_ops[0].spectralRadius(); }
+    inline T spectralRadius() const {return (*m_ops[0]).spectralRadius(); }
             
     /// Apply
     /**
@@ -126,8 +126,8 @@ class LevelOp
     inline Array<T, DIM> dx() const { return m_dx; }
     inline BC& bc() { return m_bc; }
     inline const DisjointBoxLayout& layout() const {return m_layout; }
-    inline const OP& operator[](const LevelIndex& a_index) const { return m_ops[a_index]; }
-    inline OP& operator[](const LevelIndex& a_index) { return m_ops[a_index]; }
+    inline const OP& operator[](const LevelIndex& a_index) const { return *m_ops[a_index]; }
+    inline OP& operator[](const LevelIndex& a_index) { return *m_ops[a_index]; }
     private:
    
     T m_diagScale;
@@ -137,7 +137,7 @@ class LevelOp
     Array<T, DIM> m_dx;
 
     DisjointBoxLayout m_layout;
-    std::vector<OP> m_ops;
+    std::vector<std::shared_ptr<OP>> m_ops;
     BC m_bc;
 };
 

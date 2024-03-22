@@ -42,7 +42,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, Array<T, DIM>& a_cdx)
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         m_dx[lvl] = dx;
-        m_levelOps[lvl].define(a_grid[lvl], dx);
+        m_levelOps[lvl] = std::make_shared<LOP>(a_grid[lvl], dx);
         if (lvl < numLevels - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
@@ -78,7 +78,7 @@ void AMROp<OPType, T, MEM>::operator()(
         auto& output = a_output[lvl];
         auto& state  = a_state[lvl];
         auto& aux    = a_aux[lvl];
-        auto& op     = m_levelOps[lvl];
+        auto& op     = levelOp(lvl);
         
         // interpolate boundary conditions
         if (lvl > 0)
@@ -116,7 +116,7 @@ void AMROp<OPType, T, MEM>::operator()(
     {
         auto& output = a_output[lvl];
         auto& state  = a_state[lvl];
-        auto& op     = m_levelOps[lvl];
+        auto& op     = levelOp(lvl);
         
         // if a coarser level exists, interpolate boundaries
         if (lvl > 0)
@@ -155,7 +155,7 @@ void AMROp<OPType, T, MEM>::levelApply(
 
     auto& state = a_state[a_level];
     auto& aux   = a_aux[a_level];
-    auto& op = m_levelOps[a_level];
+    auto& op = levelOp(a_level);
     
     // if there is a finer level, average down to this level
     if (a_level < m_grid.numLevels() - 1)
@@ -198,7 +198,7 @@ void AMROp<OPType, T, MEM>::levelApply(
         "AMROp::operator() | Error: output and state[%i] have incompatible layouts.", a_level);
      
     auto& state = a_state[a_level];
-    auto& op = m_levelOps[a_level];
+    auto& op = levelOp[a_level];
     
     // if there is a finer level, average down to this level
     if (a_level < m_grid.numLevels() - 1)
@@ -238,8 +238,8 @@ void AMROp<OPType, T, MEM>::reflux(
         T   a_scale) const
 {
     auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
-    auto& crseOp = m_levelOps[a_crseLevel];
-    auto& fineOp = m_levelOps[a_crseLevel+1];
+    auto& crseOp = levelOp(a_crseLevel);
+    auto& fineOp = levelOp(a_crseLevel+1);
     
     PROTO_ASSERT(a_crseOut.layout().compatible(fluxRegister.crseLayout()),
             "AMROp::reflux | Error coarse output has an incompatible layout.");
@@ -289,7 +289,7 @@ void AMROp<OPType, T, MEM>::setDiagScale(T a_value, int a_gridFactor)
     T value = a_value;
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
-        m_levelOps[lvl].setDiagScale(value);
+        m_levelOps[lvl]->setDiagScale(value);
         if (lvl < m_grid.numLevels() - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
@@ -312,7 +312,7 @@ void AMROp<OPType, T, MEM>::setFluxScale(T a_value, int a_gridFactor)
     T value = a_value;
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
-        m_levelOps[lvl].setFluxScale(value);
+        m_levelOps[lvl]->setFluxScale(value);
         if (lvl < m_grid.numLevels() - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
