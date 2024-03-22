@@ -198,7 +198,7 @@ void AMROp<OPType, T, MEM>::levelApply(
         "AMROp::operator() | Error: output and state[%i] have incompatible layouts.", a_level);
      
     auto& state = a_state[a_level];
-    auto& op = levelOp[a_level];
+    auto& op = levelOp(a_level);
     
     // if there is a finer level, average down to this level
     if (a_level < m_grid.numLevels() - 1)
