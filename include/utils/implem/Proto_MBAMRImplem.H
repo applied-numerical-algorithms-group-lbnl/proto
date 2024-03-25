@@ -1,9 +1,9 @@
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
             const MBAMRGrid&            a_grid,
@@ -14,10 +14,10 @@ MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
             const MBAMRGrid&            a_grid,
@@ -27,10 +27,10 @@ MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             const MBAMRGrid&            a_grid,
@@ -109,10 +109,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
         AMRStateData&   a_state,
@@ -147,10 +147,10 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         AMRStateData&         a_state,
@@ -181,10 +181,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
         LevelStateData&     a_crseData,
@@ -213,10 +213,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
         LevelStateData&     a_crseData,
@@ -235,10 +235,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
     crseTmp.copyTo(a_crseData);
 }
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 {
@@ -248,10 +248,10 @@ MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBInterpOp& MBAMR<OPType, MAP, T, BCType, MEM>::interpOp(int a_level)
 {
@@ -261,10 +261,10 @@ MBInterpOp& MBAMR<OPType, MAP, T, BCType, MEM>::interpOp(int a_level)
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelOp<OPType, MAP, double, BCType, MEM>& MBAMR<OPType, MAP, T, BCType, MEM>::op(int a_level)
 {

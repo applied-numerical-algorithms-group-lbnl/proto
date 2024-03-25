@@ -7,6 +7,8 @@
 
 namespace Proto
 {
+    typedef int BlockIndex;
+
     /// Codimension Directions
     /** Returns a list of points with the desired codimension in space DIM */
     inline std::vector<Point> codimDirs(unsigned int a_codim);
@@ -16,8 +18,8 @@ namespace Proto
     struct MBGraphArc
     {
         inline MBGraphArc(
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
                 Point a_srcToDst,
                 Point a_dstToSrc)
         {
@@ -27,6 +29,8 @@ namespace Proto
             dstToSrc = a_dstToSrc;
         }
 
+        inline ~MBGraphArc(){}
+
         inline void print() {
             std::cout << "srcBlock: " << srcBlock;
             std::cout << " | dstBlock: " << dstBlock;
@@ -34,8 +38,8 @@ namespace Proto
             std::cout << " | dstToSrc: " << dstToSrc << std::endl;
         }
 
-        unsigned int srcBlock; ///< The block index at the arc's origin
-        unsigned int dstBlock; ///< The block index at the arc's end
+        BlockIndex srcBlock; ///< The block index at the arc's origin
+        BlockIndex dstBlock; ///< The block index at the arc's end
         Point srcToDst;        ///< Direction of dstBlock relative to srcBlock in src coords
         Point dstToSrc;        ///< Direction of srcBlock relative to dstBlock in dst coords
         CoordPermutation R;    ///< Coordinate transformation from src to dst coords
@@ -45,10 +49,10 @@ namespace Proto
     /** Represents a block in an MBGraph. Contains MBGraphArc objects*/
     struct MBGraphNode
     {
-        inline MBGraphNode(unsigned int a_index);
+        inline MBGraphNode(BlockIndex a_index);
     
         /// Add Arc
-        inline void addArc(unsigned int a_block, Point a_toDst, Point a_fromDst);
+        inline void addArc(BlockIndex a_block, Point a_toDst, Point a_fromDst);
         
         /// Get Coordinate Rotation
         /** Retrieve the coordinate rotation between this block and a specified block
@@ -57,9 +61,9 @@ namespace Proto
          *  \param a_dir    Direction of desired output in this block's coordinates
          *  \param a_block  The specified neighboring block 
          */
-        inline CoordPermutation& rotation(Point a_dir, unsigned int a_block);
+        inline CoordPermutation& rotation(Point a_dir, BlockIndex a_block);
 
-        unsigned int index; ///< The block associated with this node
+        BlockIndex index; ///< The block associated with this node
         mutable std::map<Point, std::vector<MBGraphArc>> arcs; ///< List of arcs
     };
   
@@ -84,7 +88,7 @@ namespace Proto
 
         /// Constructor
         /** Creates an empty graph with a specified number of nodes and no connections */
-        inline MBGraph(unsigned int a_numBlocks);
+        inline MBGraph(BlockIndex a_numBlocks);
 
         /// Define Boundary
         /** Adds a codimension-1 boundary to the graph. This function creates both directional
@@ -100,16 +104,16 @@ namespace Proto
          *  \param a_rotation   Coordinate permutation from A to B
          */
         inline void defineBoundary(
-                unsigned int        a_srcBlock,
-                unsigned int        a_dstBlock,
+                BlockIndex        a_srcBlock,
+                BlockIndex        a_dstBlock,
                 Point               a_dir,
                 CoordPermutation&   a_rotation);
 
         /// Define Boundary (overload)
         inline void defineBoundary(
-                unsigned int        a_srcBlock,
-                unsigned int        a_dstBlock,
-                unsigned int        a_dir,
+                BlockIndex        a_srcBlock,
+                BlockIndex        a_dstBlock,
+                unsigned int      a_dir,
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
 
@@ -124,14 +128,14 @@ namespace Proto
 
         /// Get Number of Boundaries
         /** If the specified boundary is codimension-1, the output will be at most 1. */
-        inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
+        inline unsigned int numBoundaries(BlockIndex a_blockIndex, Point& a_dir) const;
         
         /// Get Boundary Arcs
         /** Get a list of MBGraphArc objects associated with a boundary. If the boundary
          *  does not exist, an empty vector is returned. Not intended for public use.
          */
         inline std::vector<MBGraphArc> boundaries(
-                unsigned int a_srcBlock,
+                BlockIndex a_srcBlock,
                 Point        a_dir) const;
 
         /// Full Connectivity
@@ -139,15 +143,15 @@ namespace Proto
          *  boundary between the two specified blocks. The returned Point set is in the
          *  coordinates of the source block.
          *  */
-        inline std::set<Point> fullConnectivity(
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock) const;
+        inline std::vector<Point> fullConnectivity(
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock) const;
         
         /// Connectivity
         /** Returns the direction associated with the boundary of minimal codimension between
          *  the two specified blocks. The Point returned is in the source block coordinates.
          */
-        inline Point connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
+        inline Point connectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const;
 
         /// Reverse Arc
         /** Get direction from dst to src along the graph arc from a_dir. The input Point
@@ -155,8 +159,8 @@ namespace Proto
          *  The input direction must correspond to a boundary between the two blocks.
          */
         inline Point reverseArc(
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
                 Point a_dir) const;
         
         /// Reverse Direction
@@ -165,8 +169,8 @@ namespace Proto
          *  dstBlock's coordinates.
          */
         inline Point reverseDir(
-                unsigned int a_srcBlock,
-                unsigned int a_dstBlock,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
                 Point a_dir) const;
 
         /// Get Rotation
@@ -175,9 +179,9 @@ namespace Proto
          *  to a valid block boundary, this function will yield an error.
          */
         inline CoordPermutation& rotation(
-                unsigned int a_srcBlock,
+                BlockIndex a_srcBlock,
                 Point a_dir,
-                unsigned int a_dstBlock) const;
+                BlockIndex a_dstBlock) const;
         
         /// Get Rotation
         /** Obtain the coordinate rotation from a specified block to an adjacent block which is
@@ -185,22 +189,22 @@ namespace Proto
          *  not codimension-1, this function will yield an error.
          */
         inline CoordPermutation& rotation(
-                unsigned int a_block,
+                BlockIndex a_block,
                 Point a_dir) const;
 
         /// Get Adjacent Block
         /** Obtain the block adjacent to a specified block in a specified codimension-1
          *  direction */
-        inline unsigned int adjacent(
-                unsigned int    a_srcBlock,
+        inline BlockIndex adjacent(
+                BlockIndex    a_srcBlock,
                 unsigned int    a_dir,
                 Side::LoHiSide  a_side) const;
         
         /// Get Adjacent Block (Overload)
         /** This function is the same as the other version of adjacent. This function will fail
          *  if a codimension-2+ point is supplied. */
-        inline unsigned int adjacent(
-                unsigned int    a_srcBlock,
+        inline BlockIndex adjacent(
+                BlockIndex    a_srcBlock,
                 Point           a_dir) const;
         
 
@@ -209,7 +213,7 @@ namespace Proto
 
         /// Detect Block Boundary
         /** Returns true if the specified inputs correspond to a boundary between two blocks. */
-        inline bool isBlockBoundary(unsigned int a_srcBlock, Point a_dir) const;
+        inline bool isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const;
         
         /// Detect Triple Point
         /** Returns true if the specified block boundary corresponds to a "triple point".
@@ -217,7 +221,7 @@ namespace Proto
          *  three blocks meet. This function is used to infer corrections that must be made 
          *  when building interpolation operators in such regions. */
         inline bool isTriplePoint(
-                unsigned int a_srcBlock,
+                BlockIndex a_srcBlock,
                 Point        a_dir) const;
 
         /// Print

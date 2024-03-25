@@ -7,16 +7,16 @@
 namespace Proto {
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType = PeriodicBC,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBMultigrid
 {
 public:
-    typedef OPType<T, MEM> OP; 
-    typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
+    typedef OPType<T, MAP, MEM> OP; 
+    typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
     typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     

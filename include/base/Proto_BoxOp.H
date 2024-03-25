@@ -348,8 +348,6 @@ class BoxOp
 #endif
 
     protected:
-
-    private:
     bool m_isMapped;
     T m_scaleDiag;
     T m_scaleFlux;
@@ -361,6 +359,8 @@ class BoxOp
     mutable bool m_definedFlux;
 
     Array<T, DIM> m_dx;
+
+    private:
 
 #ifdef PR_MMB
     const BoxData<double, DIM, MEM>* m_x;

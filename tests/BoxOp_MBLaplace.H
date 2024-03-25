@@ -3,13 +3,15 @@
 
 using namespace Proto;
 
-template<typename T, MemType MEM = MEMTYPE_DEFAULT>
-class BoxOp_MBLaplace : public BoxOp<T, 1, 0, MEM>
+template<typename T,
+    template<MemType> typename MAP,
+    MemType MEM = MEMTYPE_DEFAULT>
+class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 {
     public:
 
     // inherit constructors
-    using BoxOp<T, 1, 0, MEM>::BoxOp;
+    using MBBoxOp<T, MAP, 1, 0, MEM>::MBBoxOp;
     
     // How many ghost cells does the operator need from the state variables
     inline static Point ghost() { return Point::Ones(3);}

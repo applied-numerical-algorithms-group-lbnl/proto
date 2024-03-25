@@ -907,7 +907,7 @@ namespace Operator {
             const BoxData<T,CL,MEM,DL,E>& a_ql2,
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
-    
+   //===========================================================================================
     template<class T, unsigned int CL, unsigned int DL,
          unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline void
@@ -961,18 +961,18 @@ namespace Operator {
     template<class T, unsigned int CL, unsigned int DL,
          unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
     inline BoxData<T,DL,MEM,DR,E>
-    _matrixProductATB(
-            const BoxData<T,CL,MEM,DL,E>& a_ql,
-            const BoxData<T,CR,MEM,DR,E>& a_qr);
+    matrixProductATB(
+                     const BoxData<T,CL,MEM,DL,E>& a_ql,
+                     const BoxData<T,CR,MEM,DR,E>& a_qr);
     
-    template<class T, unsigned int CL, unsigned int DL,
-         unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
-    inline void
-    _matrixProductATB(
-            BoxData<T,DL,MEM,DR,E>&       a_product,
-            const BoxData<T,CL,MEM,DL,E>& a_ql,
-            const BoxData<T,CR,MEM,DR,E>& a_qr);
-    
+  template<class T, unsigned int CL, unsigned int DL,
+           unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>
+  inline void
+  matrixProductATB(
+                   BoxData<T,DL,MEM,DR,E>&       a_product,
+                   const BoxData<T,DL,MEM,CL,E>& a_ql,
+                   const BoxData<T,CR,MEM,DR,E>& a_qr);
+  
     //==========================================================================================
     template<class T, unsigned int CL, unsigned int DL,
          unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>

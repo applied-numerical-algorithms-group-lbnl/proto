@@ -1,8 +1,8 @@
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBMultigrid<OPType, MAP, T, BCType, MEM>::MBMultigrid(
         const MBDisjointBoxLayout&  a_fineLayout,
@@ -18,10 +18,10 @@ MBMultigrid<OPType, MAP, T, BCType, MEM>::MBMultigrid(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBMultigrid<OPType, MAP, T, BCType, MEM>::MBMultigrid(
         const MBDisjointBoxLayout&  a_fineLayout,
@@ -32,10 +32,10 @@ MBMultigrid<OPType, MAP, T, BCType, MEM>::MBMultigrid(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         const MBDisjointBoxLayout&  a_fineLayout,
@@ -168,10 +168,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 bool MBMultigrid<OPType, MAP, T, BCType, MEM>::validate(
         const MBDisjointBoxLayout&  a_fineLayout,
@@ -200,10 +200,10 @@ bool MBMultigrid<OPType, MAP, T, BCType, MEM>::validate(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         LevelStateData& a_state,
@@ -244,10 +244,10 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::fineCorrect(
         LevelStateData&         a_fine,
@@ -277,10 +277,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::fineCorrect(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::averageDown(
         LevelStateData&         a_crse,
@@ -298,10 +298,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::averageDown(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::crseForce(
         LevelStateData&         a_crseForce,
@@ -337,10 +337,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::crseForce(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         LevelStateData&         a_state,
@@ -390,10 +390,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         LevelStateData&         a_state,
@@ -435,10 +435,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
         LevelStateData&         a_residual,
@@ -460,10 +460,10 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
 }
 
 template <
-    template<typename, MemType> class OPType,
+    template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
     typename T,
-    template<typename, unsigned int, MemType, Centering> class BCType,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         LevelStateData&         a_residual,

@@ -5,11 +5,60 @@
 #include "Proto.H"
 #include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
 #include "Proto_MBLevelMap.H"
+#include "Proto_MBInterpLayout.H"
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
+#include <unordered_set>
+#include <algorithm>
 
 namespace Proto
 {
+    // used for the hash table
+    class MBPointID
+    {
+        public:
+
+        inline MBPointID(Point a_pt, int a_index) : m_point(a_pt), m_index(a_index) {}
+
+        inline MBPointID(const MBPointID& a_rhs) : m_point(a_rhs.m_point), m_index(a_rhs.m_index) {}
+        inline bool operator<(const MBPointID& a_rhs) const
+        {
+            if (m_index != a_rhs.m_index) { return m_index < a_rhs.m_index; }
+            if (m_point != a_rhs.m_point) { return m_point < a_rhs.m_point; }
+            return false;
+        }
+
+        inline bool operator==(const MBPointID& a_rhs) const
+        {
+            return ((m_index == a_rhs.m_index) && (m_point == a_rhs.m_point));
+        }
+        
+        inline Point point() const { return m_point; }
+        inline BlockIndex index() const {return m_index; }
+
+        struct Hash {
+            std::size_t operator()(const MBPointID& a_pt) const {
+                std::size_t hashValue = 0;
+                hash_combine(hashValue, a_pt.index());
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    hash_combine(hashValue, a_pt.point()[ii]);
+                }
+                return hashValue;
+            }
+            
+            void hash_combine(std::size_t& seed, int value) const {
+                seed ^= std::hash<int>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
+        };
+        
+        private: 
+        
+        const Point m_point;
+        const int   m_index;
+    };
+
+
     /// Mapped Multiblock Block Boundary Interpolation Operator
     /** MBPointInterpOp interpolates to exactly one point in a
      *  MBLevelBoxData. This object is used by MBInterpOp which executes the
@@ -37,6 +86,11 @@ namespace Proto
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
         
+        inline MBPointInterpOp(
+            MBDataPoint a_dst,
+            std::vector<MBDataPoint> a_srcs,
+            std::vector<double> a_coefs);
+
         /// Apply
         /** computes the interpolation */
         template<typename T, unsigned int C, MemType MEM>
@@ -53,10 +107,10 @@ namespace Proto
          *  specified component in a specified data set.
          *
          *  Mostly used for debugging. */
-        template<typename T, unsigned int C, MemType MEM>
-        inline Matrix<double> coefs(
-                MBLevelBoxData<T, C, MEM>& a_src,
-                int a_srcComponent = 0);
+        //template<typename T, unsigned int C, MemType MEM>
+        //inline Matrix<double> coefs(
+        //        MBLevelBoxData<T, C, MEM>& a_src,
+        //        int a_srcComponent = 0);
         
         /// Target
         /** Returns the MBDataPoint corresponding to the point of interpolation */
@@ -66,42 +120,44 @@ namespace Proto
         /** Returns the list of locations used for input data to the interpolation
          *  as a list of MBDataPoint objects. The order of the returnd points corresponds
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
-        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
-
+        inline std::vector<MBDataPoint> sources() const {return m_srcs;}
+        inline std::vector<double> coefs() const {return m_coefs; }
         /// Exponents
         /** Returns the list of multidimensional exponents used in the interpolating
          *  polynomial. The order of these exponents corresponds with the columns of the
          *  C and D matrices (outputs of CMatrix and DMatrix) */
-        inline std::vector<Point> exponents() const {return m_exponents; }
+        //inline std::vector<Point> exponents() const {return m_exponents; }
 
         /// C Matrix
         /** Returns the matrix of source moments used to generate the interpolation operator.
          *  The number of rows corresponds to the number of source points and the number of
          *  columns correspond to the polynomial terms (see exponents)*/
-        inline Matrix<double>& CMatrix() {return m_C; }
+        //inline Matrix<double>& CMatrix() {return m_C; }
         
         /// D Matrix
         /** Returns the matrix of destination moments used to generate the operator.
          *  The output has a single row associated with the destination point and the
          *  columns correspond to the polynomial terms (see exponents)*/
-        inline Matrix<double>& DMatrix() {return m_D; }
+        //inline Matrix<double>& DMatrix() {return m_D; }
 
         /// S Matrix
         /** Matrix of coefficients used to weight the source data and compute the interpolation.
          *  S has a single row with entries equal to size(). Each entry is the coeffcient that
          *  scales the data point from the associated source */
-        inline Matrix<double>& SMatrix() {return m_S; }
+        //inline Matrix<double>& SMatrix() {return m_S; }
 
         inline void print() const; 
-
+        
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
        
-        std::vector<Point> m_exponents;
+        //std::vector<Point> m_exponents;
         MBDataPoint m_dst;
-        Matrix<double> m_C;
-        Matrix<double> m_D;
-        Matrix<double> m_S;
-        Matrix<double> m_Cinv;
+        //Matrix<double> m_C;
+        //Matrix<double> m_D;
+        //Matrix<double> m_S;
+        //Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
         std::vector<double> m_coefs;
     };
@@ -114,7 +170,7 @@ namespace Proto
     {
         public:
        
-        inline MBInterpOp(){}
+        inline MBInterpOp();
 
         /// Initialize 
         /** This function does not create any operators. The user must call define separately */
@@ -162,11 +218,13 @@ namespace Proto
         /// Coefficients
         /** Writes the first P coefficients of the interpolating polynomial to a specified
          *  component of a specified source data array. Useful for debugging */
+        /*
         template<typename T, unsigned int C, unsigned int P, MemType MEM>
         inline void coefs(
                 MBLevelBoxData<T, P, MEM>& a_coefs,
                 MBLevelBoxData<T, C, MEM>& a_src,
                 int a_srcComponent = 0);
+        */
 
         /// Get Point Operator
         /** Returns the MBPointInterpOp associated with a specified target cell. */
@@ -174,17 +232,25 @@ namespace Proto
         {
             for (auto& op : m_ops)
             {
-                if (a_target == op.target()) {return op;}
+                if (a_target == op->target()) {return *op;}
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
 
+        inline void copyAxis(unsigned int a_axis, bool a_flag);
+
         void print() const;
+        
+        //FIXME: Test code, should be removed
+        inline bool validate() const;
         private:
-       
+     
+        mutable Array<bool, DIM> m_copyAxes;
         Point m_ghost;
         int m_order;
-        std::vector<MBPointInterpOp> m_ops;
+        std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
+        std::unordered_set<MBPointID, MBPointID::Hash> m_points;
+        //std::vector<MBPointID> m_points;
     };
 
     // Interpolate Block Boundaries
