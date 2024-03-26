@@ -188,7 +188,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::setRKStage(unsigned int a_stage)
         m_ops[iter].setRKStage(a_stage);
     }
 }
-
+/*
 // FIXME: this function should not be applying the operator, but instead updating the state
 // using data that is already inside of the register. See comments in MBLevelOp::operator()
 template<template<typename, template<MemType> typename, MemType> class OPType,
@@ -225,7 +225,7 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::matchFlux(
         }
     }
 }
-
+*/
 /* FIXME: This is the old implementation that both fills the registers AND applies them. Keeping it around because
  * it's useful for debugging, but we want to use the above version. 
 template<template<typename, template<MemType> typename, MemType> class OPType,

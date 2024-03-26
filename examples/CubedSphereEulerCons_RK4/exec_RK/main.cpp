@@ -179,6 +179,8 @@ void f_radialoutflowIBCs_F(
     T a_gamma,
     int a_nradius)
 {
+  T r = sqrt(a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1) + a_X_cart(2) * a_X_cart(2));
+  T theta = acos(a_X_cart(2) / r);
   // Compute spherical BCs.
   T p0 = 1.0;
   T rho0 = 1.0;
@@ -186,6 +188,7 @@ void f_radialoutflowIBCs_F(
   T rho = rho0*pow(a_radius(0)/0.1, -2.0);
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = u0;
+  // T ur = u0 - u0/10 * sin(theta);
   a_USph(iRHO) = rho;
   a_USph(iMOMX) = ur * rho;
   a_USph(iMOMY) = 0.0;
@@ -304,9 +307,9 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 32;
-  int max_iter = 4000;
-  double dt = 0.0001;
-  int write_cadence = 100;
+  int max_iter = 400;
+  double dt = 0.001;
+  int write_cadence = 50;
   InputArgs args;
   args.add("nsph", domainSize);
   args.add("nrad", thickness);

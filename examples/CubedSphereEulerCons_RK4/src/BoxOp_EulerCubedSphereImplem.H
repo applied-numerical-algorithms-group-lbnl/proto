@@ -521,30 +521,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
       State WFace_R = Stencil<T>::CellToFace(dir)(W);
       State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
- 
-      bool limiter = true;
-      if (limiter){
-        Stencil<double> idOP = 1.0*Shift(Point::Zeros());
-        State WFace_L_temp = idOP(WFace_L);
-        State WFaceBar_L_temp = idOP(WFaceBar_L);    
-        State WFace_R_temp = idOP(WFace_R);
-        State WFaceBar_R_temp = idOP(WFaceBar_R); 
-        Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,W,dir,dxiR, dxiPerp, dxiPerp);
-        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,dir,dxiR, dxiPerp, dxiPerp);
-        // Limiters_minmod(WFace_L,WFace_R,W,this->dx(),dir);
-        // Limiters_minmod(WFaceBar_L,WFaceBar_R,WBar,this->dx(),dir);
-      }
-
-      // Fluxes on dir face.
-      // Average of advective fluxes in spherical variables at the
-      // face center, given point values of W.
-      BoxData<T,NUMCOMPS> physFlux_L,physFlux_R;
-      BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
-      primToFlux(physFlux_L,WFace_L,WFaceBar_L,adjDrDir,a_block,dir);
-      primToFlux(physFlux_R,WFace_R,WFaceBar_R,adjDrDir,a_block,dir);
 
       //Required mapping variables.
-      Box bxface = physFlux_L.box();
+      Box bxface = WFace_L.box().grow(-2);
+      BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
       BoxData<T,DIM,MEM,DIM> deta_a = CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir); 
       Box bx = W.box();
@@ -564,6 +544,52 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
                       dxiPerp,offseta,offsetb);
       spreadSlice(A_matrix);
+ 
+      int limiter = 0;
+
+      if (limiter == 1){
+        Stencil<double> idOP = 1.0*Shift(Point::Zeros());
+        State WFace_L_temp = idOP(WFace_L);
+        State WFaceBar_L_temp = idOP(WFaceBar_L);    
+        State WFace_R_temp = idOP(WFace_R);
+        State WFaceBar_R_temp = idOP(WFaceBar_R); 
+        Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,W,dir,dxiR, dxiPerp, dxiPerp);
+        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,dir,dxiR, dxiPerp, dxiPerp);
+      }
+
+      if (limiter == 2){
+        BoxData<T,DIM> dx(bxface);
+        forallInPlace([ ] PROTO_LAMBDA
+        ( Var<T,DIM,MEM>& a_dx_d,
+          const Var<T,DIM,MEM>& a_adjA,
+          const Var<T,1,MEM>& a_adjDrDir,
+          const Var<T,1,MEM>& a_detA,
+          const Var<T,1,MEM>& a_dVolr,
+          const Var<T,DIM,MEM>& a_Dr,
+          const T a_dxiPerp,
+          const T a_dxiR,
+          const int a_d)
+        { 
+          if (a_d > 0){
+            T adjA_mag = sqrt(a_adjA(0)*a_adjA(0) + a_adjA(1)*a_adjA(1) + a_adjA(2)*a_adjA(2));
+            a_dx_d(a_d) = a_dVolr(0) * a_detA(0) * a_dxiPerp / a_adjDrDir(0) / adjA_mag;
+          } 
+          if (a_d == 0){
+            a_dx_d(a_d) = a_Dr(0) * a_dxiR;
+          }                   
+        },dx,ntrow,adjDrDir,deta,dVolr,Dr,dxiPerp,dxiR,dir);
+        Limiters_minmod(WFace_L,WFace_R,W,dx,dir);
+        Limiters_minmod(WFaceBar_L,WFaceBar_R,WBar,dx,dir);
+      }
+
+
+
+      // Fluxes on dir face.
+      // Average of advective fluxes in spherical variables at the
+      // face center, given point values of W.
+      BoxData<T,NUMCOMPS> physFlux_L,physFlux_R;
+      primToFlux(physFlux_L,WFace_L,WFaceBar_L,adjDrDir,a_block,dir);
+      primToFlux(physFlux_R,WFace_R,WFaceBar_R,adjDrDir,a_block,dir);
 
       State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface),fluxdir_Rus(bxface);
       primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
