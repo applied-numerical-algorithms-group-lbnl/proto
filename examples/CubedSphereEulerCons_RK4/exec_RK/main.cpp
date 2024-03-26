@@ -307,8 +307,8 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 32;
-  int max_iter = 400;
-  double dt = 0.001;
+  int max_iter = 1400;
+  double dt = 0.0001;
   int write_cadence = 50;
   InputArgs args;
   args.add("nsph", domainSize);

@@ -545,7 +545,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
                       dxiPerp,offseta,offsetb);
       spreadSlice(A_matrix);
  
-      int limiter = 0;
+      int limiter = 1;
 
       if (limiter == 1){
         Stencil<double> idOP = 1.0*Shift(Point::Zeros());
