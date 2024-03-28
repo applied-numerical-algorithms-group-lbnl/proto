@@ -273,6 +273,36 @@ public:
 
   // End Limiter.
   
+  // Use case: park local boundary conditions here. 
+  inline void
+  PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
+                T a_time,
+                T a_dt,
+                int a_kstage);
+  
+  // Use case: exchange, block boundary conditions, transform from JU to USph.
+  static inline void
+  preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+                const MBInterpOp& a_iop,
+                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+
+  // Use case: fill boundary registers. Need to add boundary register argument.
+  // PC Implement.
+  inline void
+  PostStagePatch(BoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
+                 const BoxData<T,NUMCOMPS,MEM>& a_rhs,
+                 const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes,
+                 T a_time,
+                 T a_dt,
+                 int a_kstage);
+
+  // Use case: update solution, impose flux matching, apply artificial viscosity, divergence cleaning.
+  static inline void
+  postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_U,
+                MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
+                MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg,
+                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+  
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
                                              T a_h,

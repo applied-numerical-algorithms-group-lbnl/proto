@@ -1164,11 +1164,15 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
     
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
 
-      Stencil<double> SPlus = 1.0*Shift(Point::Zeros()); // This SPlus, SMinus, and IdOp should give D5 at lower face.
-      Stencil<double> SMinus = 1.0*Shift(-2*Point::Basis(dir));
-      Stencil<double> IdOp = 1.0*Shift(-Point::Basis(dir));
-      Stencil<double> D1 = SPlus - IdOp;
-      Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
+      //Stencil<double> SPlus = 1.0*Shift(Point::Zeros()); // This SPlus, SMinus, and IdOp should give D5 at lower face.
+      //Stencil<double> SMinus = 1.0*Shift(-2*Point::Basis(dir));
+      //Stencil<double> IdOp = 1.0*Shift(-Point::Basis(dir));
+      //Stencil<double> D1 = SPlus - IdOp;
+      //Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
+      
+      D2 = 1.0*Shift(Point::Basis(dir)) + (-2.0)*Shift(Point::Zeros())
+       + 1.0*Shift(-Point::Basis(dir));
+      D1 = 1.0*Shift(Point::Zeros()) + (-1.0)*Shift(-Point::Basis(dir));
       Stencil<double> D5 = (-1.0) * D1 * D2  * D2;
       State physFlux = D5(a_USph, 1.0/64);
 
