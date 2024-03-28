@@ -474,8 +474,7 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        //LevelIndex   m_end;     
-        shared_ptr<BoxPartition>  m_partition;
+        std::shared_ptr<BoxPartition>  m_partition;
 };
 
 inline std::ostream& operator<< (std::ostream& os, const LevelIndex& a_dbl);
