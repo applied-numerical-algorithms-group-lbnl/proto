@@ -92,7 +92,7 @@ void MBAMRGrid::setPatches(
 }
 
 void MBAMRGrid::setPatches(
-        unsigned int a_level,
+        int a_level,
         const std::vector<MBPatchID_t>& a_patches)
 {
     auto part = m_partition->getLevel(a_level);
@@ -101,28 +101,54 @@ void MBAMRGrid::setPatches(
 }
 
 
-const AMRGrid& MBAMRGrid::getBlock(unsigned int a_block) const
+const AMRGrid& MBAMRGrid::getBlock(BlockIndex a_block) const
 {
     PROTO_ASSERT(a_block < numBlocks(),
         "MBAMRGrid::block | Error: block index out of bounds");
     return m_grids[a_block];
 }
-AMRGrid& MBAMRGrid::getBlock(unsigned int a_block)
+AMRGrid& MBAMRGrid::getBlock(BlockIndex a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
         "MBAMRGrid::block | Error: block index out of bounds");
     return m_grids[a_block];
 }
-const MBDisjointBoxLayout& MBAMRGrid::getLevel(unsigned int a_level) const
+const MBDisjointBoxLayout& MBAMRGrid::getLevel(int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
         "MBAMRGrid::level | Error: level index out of bounds");
     return m_layouts[a_level];
 }
 
-MBDisjointBoxLayout& MBAMRGrid::getLevel(unsigned int a_level)
+MBDisjointBoxLayout& MBAMRGrid::getLevel(int a_level)
 {
     PROTO_ASSERT(a_level < numLevels(),
         "MBAMRGrid::level | Error: level index out of bounds");
     return m_layouts[a_level];
 }
+
+MBIterator MBAMRGrid::begin(int a_level) const
+{
+    PROTO_ASSERT(a_level < numLevels(),
+        "MBAMRGrid::level | Error: level index out of bounds");
+    return m_layouts[a_level].begin();    
+
+}
+
+MBIterator MBAMRGrid::end(int a_level) const
+{
+    PROTO_ASSERT(a_level < numLevels(),
+        "MBAMRGrid::level | Error: level index out of bounds");
+    return m_layouts[a_level].end();    
+
+}
+
+MBIndex MBAMRGrid::find(Point a_point, BlockIndex a_block, int a_level) const
+{
+    PROTO_ASSERT(a_level < numLevels(),
+        "MBAMRGrid::level | Error: level index out of bounds");
+
+    return m_layouts[a_level].find(a_point, a_block);
+}
+
+

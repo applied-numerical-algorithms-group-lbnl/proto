@@ -771,6 +771,36 @@ AMRGrid telescopingGrid(
     periodicity.fill(false);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
+#ifdef PR_MMB
+MBAMRGrid telescopingXPointGrid(
+        int domainSize,
+        int numLevels,
+        int refRatio,
+        int boxSize)
+{
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
+    std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
+    std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
+    auto coarsePatches = domain.patches(boxSize);
+    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    for (int li = 1; li < numLevels; li++)
+    {
+        auto domain = grid[li].domain();
+        std::vector<MBPatchID_t> patches;
+        Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
+        Point patch = patchDomain.high();
+        for (int bi = 0; bi < domain.size(); bi++)
+        {
+            patches.push_back(MBPatchID_t(patch, bi));
+        }
+        grid[li].define(domain, patches, boxSizeVect);
+    }
+    return grid;
+}
+
+
+#endif
 #endif
 
 template<typename T, unsigned int C>

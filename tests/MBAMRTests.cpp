@@ -18,6 +18,7 @@ TEST(MBAMR, Construction) {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
     
+    /*
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
@@ -36,6 +37,17 @@ TEST(MBAMR, Construction) {
         }
         grid[li].define(domain, patches, boxSizeVect);
     }
+    */
+
+    MBAMRGrid grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
+    for (int li = 0; li < numLevels; li++)
+    {
+        for (auto iter : grid[li])
+        {
+            std::cout << "p: " << grid[li].point(iter) << " | b: " << grid[li].block(iter) << " | l: " << li << std::endl;
+        }
+    }
+
 
     MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
             grid, Point::Ones(refRatio)); 
@@ -66,26 +78,23 @@ TEST(MBAMR, Construction) {
         }
 
     }
+    err.setVal(0);
     auto& crse = phi[0]; 
     auto& fine = phi0[1];
-    crse.setVal(0);
     amr.averageDown(crse, fine, 1);
 #if PR_VERBOSE > 0
     h5.writeMBAMRData({"phi"}, map, phi0, "PHI_0");
     h5.writeMBAMRData({"phi"}, map, phi, "PHI_1");
 #endif
-    for (int li = 0; li < numLevels; li++)
+    auto& layout = grid[0];
+    for (auto iter : layout)
     {
-        auto& layout = grid[li];
-        for (auto iter : layout)
-        {
-            auto& phi0_i = phi0[li][iter];
-            auto& phi_i = phi[li][iter];
-            auto& err_i = err[li][iter];
-            phi_i.copyTo(err_i);
-            err_i -= phi0_i;
-            err_i.setVal(0, layout[iter]);
-        }
+        auto& phi0_i = phi0[0][iter];
+        auto& phi_i = phi[0][iter];
+        auto& err_i = err[0][iter];
+        err_i.setVal(0);
+        phi_i.copyTo(err_i);
+        err_i -= phi0_i;
     }
 #if PR_VERBOSE > 0
     h5.writeMBAMRData({"err"}, map, err, "ERR");

@@ -39,19 +39,22 @@ namespace Proto
             const std::vector<MBPatchID_t>& a_coarsePatches);
         
         inline void setPatches(
-            unsigned int a_level,
+            int a_level,
             const std::vector<MBPatchID_t>& a_coarsePatches);
         
-        inline const AMRGrid& getBlock(unsigned int a_block) const;
-        inline AMRGrid& getBlock(unsigned int a_block);
-        inline const MBDisjointBoxLayout& getLevel(unsigned int a_level) const;
-        inline MBDisjointBoxLayout& getLevel(unsigned int a_level);
-        inline const MBDisjointBoxLayout& operator[](unsigned int a_level) const {return getLevel(a_level); }
-        inline MBDisjointBoxLayout& operator[](unsigned int a_level) {return getLevel(a_level); }
+        inline const AMRGrid& getBlock(BlockIndex a_block) const;
+        inline AMRGrid& getBlock(BlockIndex a_block);
+        inline const MBDisjointBoxLayout& getLevel(int a_level) const;
+        inline MBDisjointBoxLayout& getLevel(int a_level);
+        inline const MBDisjointBoxLayout& operator[](int a_level) const {return getLevel(a_level); }
+        inline MBDisjointBoxLayout& operator[](int a_level) {return getLevel(a_level); }
         inline unsigned int numLevels() const { return m_layouts.size(); }
         inline unsigned int maxLevels() const { return numLevels(); }
         inline unsigned int numBlocks() const { return m_grids.size(); }
         inline std::vector<Point> refRatios() const { return m_refRatios; } 
+        inline MBIndex find(Point a_point, BlockIndex a_block, int a_level) const;
+        inline MBIterator begin(int a_level) const;
+        inline MBIterator end(int a_level) const;
         private:
         
         std::vector<Point>                  m_refRatios;
