@@ -387,6 +387,7 @@ int main(int argc, char *argv[])
     }
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+    MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     Write_W(JU, eulerOp, iop, thickness, 0);
     double time = 0.0;
     for (int iter = 1; iter <= max_iter; iter++)

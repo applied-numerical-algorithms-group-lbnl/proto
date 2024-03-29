@@ -1170,9 +1170,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
       //Stencil<double> D1 = SPlus - IdOp;
       //Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
       
-      D2 = 1.0*Shift(Point::Basis(dir)) + (-2.0)*Shift(Point::Zeros())
+      Stencil<double> D2 = 1.0*Shift(Point::Basis(dir)) + (-2.0)*Shift(Point::Zeros())
        + 1.0*Shift(-Point::Basis(dir));
-      D1 = 1.0*Shift(Point::Zeros()) + (-1.0)*Shift(-Point::Basis(dir));
+      Stencil<double> D1 = 1.0*Shift(Point::Zeros()) + (-1.0)*Shift(-Point::Basis(dir));
       Stencil<double> D5 = (-1.0) * D1 * D2  * D2;
       State physFlux = D5(a_USph, 1.0/64);
 
