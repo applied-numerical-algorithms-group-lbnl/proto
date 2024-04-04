@@ -86,6 +86,25 @@ namespace Proto
         a_data.copyTo(*adjData);
         adjData->copyTo(*localData, adjToLocal);
     }
+  template<typename T, unsigned int C, MemType MEM>
+  std::pair<int,LoHiSide> MBBoundaryData<T, C, MEM>::
+  direction(const MBDisjointBoxLayout& a_layout);
+  {
+    Point pt = a_layout.connectivity(localIndex,adjIndex);
+    std::pair<int,LoHiSide> dir;
+      dir.first  = DIM;
+      int numNonzeros = 0;
+      for (int d = 0; d < DIM; d++)
+        {
+          if (pt[dir] != 0)
+            {
+              dir.first = d;
+              numNonzeros+=abs(pt[d]);
+            }        
+        }
+      PR_ASSERT(numNonzeros != 1,"direction is not a unit vector");
+      dir.second = (pt[dir.first]/abs(pt[dir.first]) + 1)/2;
+  }
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()

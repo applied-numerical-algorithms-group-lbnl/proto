@@ -7,8 +7,8 @@
 //#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS 2*DIM+2
+#define NUMREG 2*NUMCOMPS
 #define NGHOST 7
-#define NUMREG 2
 #if DIM == 2
 #define iRHO 0
 #define iVX 1
@@ -274,36 +274,36 @@ public:
 
   // End Limiter.
   
-  // Use case: park local boundary conditions here. 
+  /// Local boundary conditions here. 
   inline void
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
                 T a_time,
                 T a_dt,
                 int a_kstage);
   
-  // Use case: exchange, block boundary conditions, transform from JU to USph.
+  /// Exchange, block boundary conditions, transform from JU to USph. 
+  // Implemented.
   static inline void
   preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
                 const MBInterpOp& a_iop,
                 const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
 
-  // Use case: fill boundary registers. Need to add boundary register argument.
-  // PC Implement.
+  /// Fill boundary registers. Need to add boundary register argument.
+  // Implemented.
   inline void
-  PostStagePatch(BoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
-                 const BoxData<T,NUMCOMPS,MEM>& a_rhs,
+  PostStagePatch(
+                 MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,                
                  const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes,
                  T a_time,
                  T a_dt,
                  int a_kstage);
 
-  // Use case: update solution, impose flux matching, apply artificial viscosity, divergence cleaning.
+  /// Update solution, impose flux matching.
   static inline void
-  postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_U,
+  postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
                 MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
-                MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg,
-                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
-  
+                MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg);
+
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
                                              T a_h,
@@ -316,15 +316,14 @@ public:
                           Box a_blockBox);
   
   static inline void
-  preStage(MBLevelBoxData<T,NUMCOMPS,HOST>& UStage,
-           const MBInterpOp& a_iop,
-           const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+  preStageLevel(MBLevelBoxData<T,NUMCOMPS,HOST>& UStage,
+                const MBInterpOp& a_iop,
+                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
   
   static inline void
-  postStage(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsStage,
-            MBBoundaryRegister<T,2*NUMCOMPS,MEM,PR_CELL>& a_blockReg,
-            const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
-             
+  postStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsStage,
+                 MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg,
+                 const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
 private:
   
 };

@@ -1678,11 +1678,12 @@ template<
   template<MemType> typename MAP,
   MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod(BoxData<double,NUMCOMPS>& a_W_low_lim,
-                  BoxData<double,NUMCOMPS>& a_W_high_lim,
-                  BoxData<double,NUMCOMPS>& a_W,
-                  BoxData<double,DIM>& a_dx_sph,
-                  const int a_d) const
+BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod
+(BoxData<double,NUMCOMPS>& a_W_low_lim,
+ BoxData<double,NUMCOMPS>& a_W_high_lim,
+ BoxData<double,NUMCOMPS>& a_W,
+ BoxData<double,DIM>& a_dx_sph,
+ const int a_d) const
 {
   static Stencil<double> m_difference;
   m_difference = -1.0*Shift(Point::Zeros()) + 1.0*Shift(Point::Basis(a_d)); 
@@ -1711,30 +1712,116 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod(BoxData<double,NUMCOMPS>& a_W
 // ====================================================================================
 
 #if 0
+// Radial boundary conditions here.
 template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
-static inline void
+inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
-preStage(
-         MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage)
+PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
+              BoxData<T,1,MEM>& a_dVolr,             
+              T a_time,
+              T a_dt,
+              int a_kstage)
 {
-   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, dx, 4);
 }
+/// Exchange, block boundary conditions, transform from JU to USph. Set state variables in boundary registers.
 template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
-postStage(
-          State& a_RhsStage,
-          MBBoundaryRegister<T,2*NUMCOMPS,MEM,PR_CELL>& a_blockReg,
-          const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev)
-{  
+preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+              MBLevelBoxData<T,1,MEM>& a_dVolrLev,
+              MBInterpOp& a_iop)
+{
+  // Transform JU -> USph.
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, dx, 4);
 }
 template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+// Use case: increment boundary registers. 
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+PostStagePatch(
+               MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,
+               const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
+               T a_time,
+               T a_dt,
+               T a_weight,
+               int a_kstage)
+{
+  // Increment boundary registers.
+  auto layout = this->layout();
+  auto& mbdata = a_MBBlockReg.bounds(dit);
+  int numNonzeros = 0;
+  for (it = mbdata.begin(); it != mbdata.end(); it++)
+    {
+      auto& mb = mbdata[it];
+      pair<int,LoHiSide> direction = mb.direction(layout);
+      int dir = direction.first;
+      BoxData<T,NUMCOMPS,MEM> tmp = a_fluxes[dir]*(a_dt*a_weight);
+      BoxData<T,NUMCOMPS,MEM> fluxRegister
+        = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);
+      fluxRegister += tmp;     
+    }
+}
+// Update solution, impose flux matching, apply artificial viscosity, divergence cleaning.
+template<
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+              MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
+              MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg)
+{
+  a_blockReg.exchange();
+  auto layout = a_JU.layout();
+  
+  for (auto dit : layout)
+    {
+      // Update Solution.
+      a_JU += a_rhsTotal;
+      // Flux matching.
+      for (it = mbdata.begin(); it != mbdata.end(); it++)
+        {
+          auto& mb = mbdata[it];
+         pair<int,LoHiSide> direction = mb.direction(layout);
+         int dir = direction.first;
+         int sign = direction.second.sign();          
+
+         BoxData<T,NUMCOMPS,MEM> fluxLocal
+           = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);        
+         BoxData<T,NUMCOMPS,MEM> fluxAdj
+           = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.adjData),0);
+
+         BoxData<T,NUMCOMPS,MEM> fluxCorr =
+           forall([ ] PROTO_LAMBDA
+                  (Var<T,NUMCOMPS,MEM>& a_corr,
+                   const Var<T,NUMCOMPS,MEM>& a_local,
+                   const Var<T,NUMCOMPS,MEM>& a_adj)
+                  {
+                    for (int comp = 0; comp < NUMCOMPS,comp++)
+                      {
+                        a_corr(comp) .5*(a_adj(comp) - a_local(comp));
+                      }
+                  },fluxLocal,fluxAdj);
+         Stencil<T> faceStencil = 1.0*Shift(Point::Zeros());
+         if (sign = 1.)
+           {
+             faceStencil = (-1.0)*Shift(-Point::Basis(dir));
+           }        
+         a_JU += faceStencil(fluxCorr);
+        }
+    }
+}
+ template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
