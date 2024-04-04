@@ -132,7 +132,6 @@ public:
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
    const State&                    a_USph,
-   int                             a_block,
    T                               a_scale = 1.0) const;
   
   inline void primToFlux(
@@ -236,7 +235,6 @@ public:
   inline void LinearVisc(
                         State& a_Rhs,
                         const State& a_USph,
-                        int a_block,
                         T a_scale = 1.0) const;
 
   inline void primToMappedViscFlux(
@@ -277,6 +275,7 @@ public:
   /// Local boundary conditions here. 
   inline void
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
+                BoxData<T,1,MEM>& a_dVolr,
                 T a_time,
                 T a_dt,
                 int a_kstage);

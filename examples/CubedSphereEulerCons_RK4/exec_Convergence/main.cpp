@@ -1,10 +1,5 @@
-// #include <gtest/gtest.h>
 #include "Proto.H"
 #include "InputParser.H"
-// #include "Lambdas.H"
-// #include "MBLevelMap_Shear.H"
-// #include "MBLevelMap_XPointRigid.H"
-// #include "Proto_CubedSphereShell.H"
 #include "BoxOp_EulerCubedSphere.H"
 
 int init_type = 2; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
@@ -100,45 +95,6 @@ void f_nonradialInit_F(
 }
 PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
 
-PROTO_KERNEL_START
-template <typename T, MemType MEM>
-void f_radialBCs_F(
-    Point a_pt,
-    Var<T, NUMCOMPS, MEM> &a_USph,
-    Var<T> &a_radius,
-    T a_dxradius,
-    T a_gamma,
-    int a_nradius)
-{
-  // Compute spherical BCs.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T eps = 0.1;
-  T amplitude;
-  T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
-  if (abs(arg) < .25)
-  {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
-  }
-  else
-  {
-    amplitude = 0.;
-  }
-  T rho = rho0 + amplitude * rho0;
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_USph(iRHO) = rho;
-  a_USph(iMOMX) = ur * rho;
-  a_USph(iMOMY) = 0.0;
-  a_USph(iMOMZ) = 0.0;
-  a_USph(iBX) = 0.0;
-  a_USph(iBY) = 0.0;
-  a_USph(iBZ) = 0.0;
-  T umag = sqrt(a_USph(iMOMX) * a_USph(iMOMX) + a_USph(iMOMY) * a_USph(iMOMY) + a_USph(iMOMZ) * a_USph(iMOMZ)) / a_USph(iRHO);
-  T Bmag = sqrt(a_USph(iBX) * a_USph(iBX) + a_USph(iBY) * a_USph(iBY) + a_USph(iBZ) * a_USph(iBZ));
-  a_USph(iE) = p / (a_gamma - 1.0) + 0.5 * a_USph(iRHO) * umag * umag + Bmag * Bmag/8.0/M_PI;
-}
-PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
@@ -169,44 +125,14 @@ void f_radialoutflowInit_F(
 
 PROTO_KERNEL_END(f_radialoutflowInit_F, f_radialoutflowInit)
 
-PROTO_KERNEL_START
-template <typename T, MemType MEM>
-void f_radialoutflowIBCs_F(
-    Point a_pt,
-    Var<T, NUMCOMPS, MEM> &a_USph,
-    Var<T> &a_radius,
-    Var<T, DIM> &a_X_cart,
-    T a_gamma,
-    int a_nradius)
-{
-  T r = sqrt(a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1) + a_X_cart(2) * a_X_cart(2));
-  T theta = acos(a_X_cart(2) / r);
-  // Compute spherical BCs.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T u0 = 10.0;
-  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = u0;
-  // T ur = u0 - u0/10 * sin(theta);
-  a_USph(iRHO) = rho;
-  a_USph(iMOMX) = ur * rho;
-  a_USph(iMOMY) = 0.0;
-  a_USph(iMOMZ) = 0.0;
-  a_USph(iBX) = 0.0;
-  a_USph(iBY) = 0.0;
-  a_USph(iBZ) = 0.0;
-  T umag = sqrt(a_USph(iMOMX) * a_USph(iMOMX) + a_USph(iMOMY) * a_USph(iMOMY) + a_USph(iMOMZ) * a_USph(iMOMZ)) / a_USph(iRHO);
-  T Bmag = sqrt(a_USph(iBX) * a_USph(iBX) + a_USph(iBY) * a_USph(iBY) + a_USph(iBZ) * a_USph(iBZ));
-  a_USph(iE) = p / (a_gamma - 1.0) + 0.5 * a_USph(iRHO) * umag * umag + Bmag * Bmag/8.0/M_PI;
-}
-PROTO_KERNEL_END(f_radialoutflowIBCs_F, f_radialoutflowIBCs)
 
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              auto &eulerOp,
              MBInterpOp& a_iop,
              double thickness,
-             int iter)
+             int iter,
+             double time = 0.0,
+             double dt = 0.0)
 {
   Array<double, DIM> dx;
   double dxradius = 1.0 / thickness;
@@ -234,57 +160,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 
   for (auto dit : a_JU.layout())
   {
-    Box bxGhosted = JUTemp[dit].box();
-    unsigned int block = layout.block(dit);
-    // Set radial boundary condtions in radial ghost cells.
-    Box blockBox = layout.getBlock(block).domain().box();
-    // Outer BCs
-    if (blockBox.high()[0] < bxGhosted.high()[0])
-    {
-      Point low = bxGhosted.low();
-      low[0] = blockBox.high()[0] + 1;
-      Box bdryBoxHigh(low, bxGhosted.high());
-
-      if (init_type == 0 || init_type == 1){
-        forallInPlace_p(f_radialBCs, bdryBoxHigh, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
-      }
-      if (init_type == 2){
-        // Extrapolate to ghost cells.
-        Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
-        Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
-        Box sourceBox(source_low,source_high);
-        Box sourceBox1 = sourceBox.grow(1);
-
-        State a_U_exterp(sourceBox1);
-        State a_U_ghost(bdryBoxHigh);
-        Stencil<double> m_exterp_f_2nd;
-        for (int i = 1; i <= NGHOST; i++ ) {
-          //Using outermost 2 layers to extrapolate to rest.
-          m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
-          a_U_exterp = m_exterp_f_2nd(JUTemp[dit]);
-          a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
-        }
-        a_U_ghost.copyTo(JUTemp[dit],bdryBoxHigh);
-      }
-    }
-    // Inner BCs
-    if (blockBox.low()[0] > bxGhosted.low()[0])
-    {
-      Point high = bxGhosted.high();
-      high[0] = blockBox.low()[0] - 1;
-      Box bdryBoxLow(bxGhosted.low(), high);
-      if (init_type == 0 || init_type == 1){
-        forallInPlace_p(f_radialBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], dxradius, gamma, thickness);
-      }
-      if (init_type == 2){
-        auto block = JUTemp.layout().block(dit);
-        double half = 0.5;
-        dx = eulerOp[dit].dx();
-        BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-        (f_cubedSphereMap3,radiusLev[dit].box(),radiusLev[dit],dx,half,half,block);  
-        forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, JUTemp[dit], radiusLev[dit], XCart, gamma, thickness);
-      }
-    }
+    int kstage = 0;
+    eulerOp[dit].PreStagePatch(JUTemp[dit],dVolrLev[dit],time,dt,kstage);
   }
 
   for (auto dit : a_JU.layout())
@@ -306,9 +183,9 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 32;
-  int max_iter = 1500;
+  int max_iter = 100;
   double dt = 0.0001;
-  int write_cadence = 50;
+  int write_cadence = 10;
   int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test
   int levmax = 3;
   InputArgs args;
@@ -329,8 +206,6 @@ int main(int argc, char *argv[])
     bool cullRadialGhost = true;
     bool use2DFootprint = true;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    // Array<Point, DIM+1> ghost;
-    // ghost.fill(Point::Ones(5));
     Array<Array<uint, DIM>, 6> permute = {{2, 1, 0}, {2, 1, 0}, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, {0, 1, 2}};
     Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}};
     auto domain =
@@ -405,69 +280,13 @@ int main(int argc, char *argv[])
         PR_TIMERS("RHS Calculation");
         auto &rhs_i = rhs[dit];
         auto &USph_i = JU_Temp[dit];
-        Box bx_i = layout[dit];
-        Box bxGhosted = USph_i.box();
-        BoxData<double> radius(dVolrLev[dit].box());
-        double gamma = 5.0 / 3.0;
-        BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-        BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-        unsigned int block = layout.block(dit);
-        eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
-
-        // Set radial boundary condtions in radial ghost cells.
-        Box blockBox = layout.getBlock(block).domain().box();
-        // Outer BCs
-        if (blockBox.high()[0] < bxGhosted.high()[0])
-        {
-          Point low = bxGhosted.low();
-          low[0] = blockBox.high()[0] + 1;
-          Box bdryBoxHigh(low, bxGhosted.high());
-          if (init_type == 0 || init_type == 1){
-            forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
-          } 
-          if (init_type == 2){
-            // Extrapolate to ghost cells.
-            Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
-            Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
-            Box sourceBox(source_low,source_high);
-            Box sourceBox1 = sourceBox.grow(1);
-
-            State a_U_exterp(sourceBox1);
-            State a_U_ghost(bdryBoxHigh);
-            Stencil<double> m_exterp_f_2nd;
-            for (int i = 1; i <= NGHOST; i++ ) {
-              //Using outermost 2 layers to extrapolate to rest.
-              m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
-              a_U_exterp = m_exterp_f_2nd(USph_i);
-              a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
-            }
-            a_U_ghost.copyTo(USph_i,bdryBoxHigh);
-          }
-        }
-        // Inner BCs
-        if (blockBox.low()[0] > bxGhosted.low()[0])
-        {
-          Point high = bxGhosted.high();
-          high[0] = blockBox.low()[0] - 1;
-          Box bdryBoxLow(bxGhosted.low(), high);
-          if (init_type == 0 || init_type == 1){
-            forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
-          }
-          if (init_type == 2){
-            auto block = JU_Temp.layout().block(dit);
-            double half = 0.5;
-            dx = eulerOp[dit].dx();
-            BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-            (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-            forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, XCart, gamma, thickness);
-          }
-        }
-        int block_i = layout.block(dit);
+        int kstage = 0;
+        eulerOp[dit].PreStagePatch(USph_i,dVolrLev[dit],time,dt,kstage);
         Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
         fluxes[0].define(rhs_i.box().extrude(0));
         fluxes[1].define(rhs_i.box().extrude(1));
         fluxes[2].define(rhs_i.box().extrude(2));
-        eulerOp[dit](rhs_i, fluxes, USph_i, block_i, 1.0);
+        eulerOp[dit](rhs_i, fluxes, USph_i, 1.0);
         rhs_i *= dt;
         JU[dit] -= rhs_i;
         // CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
@@ -490,66 +309,9 @@ int main(int argc, char *argv[])
           PR_TIMERS("RHS Calculation");
           auto &rhs_i = rhs[dit];
           auto &USph_i = JU_Temp[dit];
-          Box bx_i = layout[dit];
-          Box bxGhosted = USph_i.box();
-          // BoxData<double> radius(layout[dit].grow(6));
-          BoxData<double> radius(dVolrLev[dit].box());
-          double gamma = 5.0 / 3.0;
-          BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-          BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-          unsigned int block = layout.block(dit);
-          eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());//, thickness);
-
-          // Set radial boundary condtions in radial ghost cells.
-          Box blockBox = layout.getBlock(block).domain().box();
-          // Outer BCs
-          if (blockBox.high()[0] < bxGhosted.high()[0])
-          {
-            Point low = bxGhosted.low();
-            low[0] = blockBox.high()[0] + 1;
-            Box bdryBoxHigh(low, bxGhosted.high());
-            if (init_type == 0 || init_type == 1){
-              forallInPlace_p(f_radialBCs, bdryBoxHigh, USph_i, radius, dxradius, gamma, thickness);
-            } 
-            if (init_type == 2){
-              // Extrapolate to ghost cells.
-              Point source_low = Point(blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
-              Point source_high = Point(blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
-              Box sourceBox(source_low,source_high);
-              Box sourceBox1 = sourceBox.grow(1);
-
-              State a_U_exterp(sourceBox1);
-              State a_U_ghost(bdryBoxHigh);
-              Stencil<double> m_exterp_f_2nd;
-              for (int i = 1; i <= NGHOST; i++ ) {
-                //Using outermost 2 layers to extrapolate to rest.
-                m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
-                a_U_exterp = m_exterp_f_2nd(USph_i);
-                a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
-              }
-              a_U_ghost.copyTo(USph_i,bdryBoxHigh);
-            }
-          }
-          // Inner BCs
-          if (blockBox.low()[0] > bxGhosted.low()[0])
-          {
-            Point high = bxGhosted.high();
-            high[0] = blockBox.low()[0] - 1;
-            Box bdryBoxLow(bxGhosted.low(), high);
-            if (init_type == 0 || init_type == 1){
-              forallInPlace_p(f_radialBCs, bdryBoxLow, USph_i, radius, dxradius, gamma, thickness);
-            }
-            if (init_type == 2){
-              auto block = JU_Temp.layout().block(dit);
-              double half = 0.5;
-              dx = eulerOp[dit].dx();
-              BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-              (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-              forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, USph_i, radius, XCart, gamma, thickness);
-            }
-          }
-          int block_i = layout.block(dit);
-          eulerOp[dit].LinearVisc(rhs_i, USph_i, block_i, 1.0);
+          int kstage = 0;
+          eulerOp[dit].PreStagePatch(USph_i,dVolrLev[dit],time,dt,kstage);
+          eulerOp[dit].LinearVisc(rhs_i, USph_i, 1.0);
           rhs_i *= dt;
           JU[dit] -= rhs_i;
         }
@@ -565,6 +327,7 @@ int main(int argc, char *argv[])
       {
         rhs[dit].copyTo(U_conv_test[lev][dit]);
         // JU[dit].copyTo(U_conv_test[lev][dit]);
+        // JU_Temp[dit].copyTo(U_conv_test[lev][dit]);
       }
       h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
       domainSize *= 2;
