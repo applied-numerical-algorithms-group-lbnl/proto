@@ -27,6 +27,7 @@ namespace Proto
             Box a_adjBox,
             CoordPermutation a_adjToLocal,
             Point a_ghost = Point::Zeros());
+      inline std::pair<int,Side::LoHiSide> direction(const MBDisjointBoxLayout& a_layout);
 
         inline void fill(const BoxData<T, C, MEM>& a_data);
 
@@ -87,23 +88,24 @@ namespace Proto
         adjData->copyTo(*localData, adjToLocal);
     }
   template<typename T, unsigned int C, MemType MEM>
-  std::pair<int,LoHiSide> MBBoundaryData<T, C, MEM>::
-  direction(const MBDisjointBoxLayout& a_layout);
+  std::pair<int,Side::LoHiSide> MBBoundaryData<T, C, MEM>::
+  direction(const MBDisjointBoxLayout& a_layout)
   {
     Point pt = a_layout.connectivity(localIndex,adjIndex);
-    std::pair<int,LoHiSide> dir;
+    std::pair<int,Side::LoHiSide> dir;
       dir.first  = DIM;
       int numNonzeros = 0;
       for (int d = 0; d < DIM; d++)
         {
-          if (pt[dir] != 0)
+          if (pt[d] != 0)
             {
               dir.first = d;
               numNonzeros+=abs(pt[d]);
             }        
         }
-      PR_ASSERT(numNonzeros != 1,"direction is not a unit vector");
-      dir.second = (pt[dir.first]/abs(pt[dir.first]) + 1)/2;
+      PROTO_ASSERT(numNonzeros != 1,"direction is not a unit vector");
+      dir.second = Side::LoHiSide::Lo;
+      if ( pt[dir.first] > 0) dir.second = Side::LoHiSide::Hi;
   }
     
     template<typename T, unsigned int C, MemType MEM>

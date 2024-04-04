@@ -1920,7 +1920,7 @@ PostStagePatch(
   for (it = mbdata.begin(); it != mbdata.end(); it++)
     {
       auto& mb = mbdata[it];
-      pair<int,LoHiSide> direction = mb.direction(layout);
+      pair<int,Side::LoHiSide> direction = mb.direction(layout);
       int dir = direction.first;
       BoxData<T,NUMCOMPS,MEM> tmp = a_fluxes[dir]*(a_dt*a_weight);
       BoxData<T,NUMCOMPS,MEM> fluxRegister
@@ -1950,7 +1950,7 @@ postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       for (it = mbdata.begin(); it != mbdata.end(); it++)
         {
           auto& mb = mbdata[it];
-         pair<int,LoHiSide> direction = mb.direction(layout);
+          pair<int,Side::LoHiSide> direction = mb.direction(layout);
          int dir = direction.first;
          int sign = direction.second.sign();          
 
