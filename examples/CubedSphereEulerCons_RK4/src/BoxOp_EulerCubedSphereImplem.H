@@ -1734,11 +1734,17 @@ template<
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+              MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
               MBLevelBoxData<T,1,MEM>& a_dVolrLev,
-              MBInterpOp& a_iop)
+              MBInterpOp& a_iop,
+              int a_kstage)
 {
   // Transform JU -> USph.
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, dx, 4);
+  if (a_kstage == 0)
+    {
+      // Compute viscous operators here, and increment a_rhsTotal.
+    }
 }
 template<
     typename T,

@@ -285,8 +285,10 @@ public:
   // Implemented.
   static inline void
   preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+                MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,               
+                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev,
                 const MBInterpOp& a_iop,
-                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+                int a_kstage);
 
   /// Fill boundary registers. Need to add boundary register argument.
   // Implemented.
