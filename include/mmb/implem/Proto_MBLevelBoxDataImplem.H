@@ -10,6 +10,24 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     Point                       a_ghost,
     Point                       a_boundGhost)
 {
+    define(a_layout, a_ghost, a_boundGhost);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost,
+    Point                      a_boundGhost)
+{
+    define(a_layout, a_ghost, a_boundGhost);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::define(
+    const MBDisjointBoxLayout& a_layout,
+    Point                      a_ghost,
+    Point                      a_boundGhost)
+{
     Array<Point, DIM + 1> ghost;
     if (a_ghost == Point::Zeros())
     {
@@ -21,15 +39,6 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
         ghost[0] = a_ghost;
     }
     define(a_layout, ghost, a_boundGhost);
-}
-
-template <typename T, unsigned int C, MemType MEM, Centering CTR>
-MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    const MBDisjointBoxLayout& a_layout,
-    const Array<Point, DIM+1>& a_ghost,
-    Point                      a_boundGhost)
-{
-    define(a_layout, a_ghost, a_boundGhost);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>

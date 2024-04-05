@@ -138,6 +138,12 @@ namespace Proto
                 const MBDisjointBoxLayout&    a_layout,
                 const Array<Point, DIM+1>&    a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
+        
+        /// Lazy Constructor
+        inline void define(
+                const MBDisjointBoxLayout&    a_layout,
+                Point                         a_ghost,
+                Point                         a_boundGhost = Point::Zeros());
        
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
