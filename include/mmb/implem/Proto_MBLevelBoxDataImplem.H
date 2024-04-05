@@ -10,6 +10,24 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     Point                       a_ghost,
     Point                       a_boundGhost)
 {
+    define(a_layout, a_ghost, a_boundGhost);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost,
+    Point                      a_boundGhost)
+{
+    define(a_layout, a_ghost, a_boundGhost);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::define(
+    const MBDisjointBoxLayout& a_layout,
+    Point                      a_ghost,
+    Point                      a_boundGhost)
+{
     Array<Point, DIM + 1> ghost;
     if (a_ghost == Point::Zeros())
     {
@@ -21,15 +39,6 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
         ghost[0] = a_ghost;
     }
     define(a_layout, ghost, a_boundGhost);
-}
-
-template <typename T, unsigned int C, MemType MEM, Centering CTR>
-MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    const MBDisjointBoxLayout& a_layout,
-    const Array<Point, DIM+1>& a_ghost,
-    Point                      a_boundGhost)
-{
-    define(a_layout, a_ghost, a_boundGhost);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -399,21 +408,21 @@ MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block)
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block)
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block) const
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
-MBLevelBoxData<T, C, MEM, CTR>::patchSize(BlockIndex a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
 {
     return getBlock(a_block).patchSize();
 }
@@ -514,7 +523,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>> &
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
-    PR_TIME("MBLevelBoxData::bound");
+  // PR_TIME("MBLevelBoxData::bound");
     auto patch = m_layout.point(a_index);
     auto block = m_layout.block(a_index);
     return m_bounds[boundsKey_t(patch, block, a_dir)];
@@ -522,9 +531,9 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
-    MBIndex a_index, Point a_dir, BlockIndex a_block)
+    MBIndex a_index, Point a_dir, unsigned int a_block)
 {
-    PR_TIME("MBLevelBoxData::bound");
+  // PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
     /*
     auto &boundaries = bounds(a_index, a_dir);
@@ -541,9 +550,9 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
 {
-    PR_TIME("MBLevelBoxData::bound");
+  //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -562,9 +571,9 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block)
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
 {
-    PR_TIME("MBLevelBoxData::bound");
+  //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -591,10 +600,10 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
 MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
-    PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
+  //PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
     if (!a_point.inBoundary())
     {
-        PR_TIME("get bulk data");
+      //PR_TIME("get bulk data");
         // bulk data is requested
         auto &patch = (*this)[a_point.index()];
         PROTO_ASSERT(patch.box().contains(a_point.point()),
@@ -604,7 +613,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
     }
     else
     {
-        PR_TIME("get boundary data");
+      //PR_TIME("get boundary data");
         PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
                 "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 input is not in an MBBoundaryData");
@@ -624,6 +633,37 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point) const
     MBLevelBoxData<T, C, MEM, CTR> *ptr = const_cast<MBLevelBoxData<T, C, MEM, CTR> *>(*this);
     return (*ptr)[a_point];
 }
+
+// TODO: possibly deprecated
+/*
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& 
+MBLevelBoxData<T, C, MEM, CTR>::patch(const MBDataPoint &a_point)
+{
+    if (a_point.inBoundary())
+    {
+        auto& boundData = this->bound(
+                a_point.index(), a_point.boundaryDir(), a_point.block());
+        return *boundData.localData;
+    } else {
+        return (*this)[a_point.index()];
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& 
+MBLevelBoxData<T, C, MEM, CTR>::srcPatch(const MBDataPoint &a_point)
+{
+    if (a_point.inBoundary())
+    {
+        auto& boundData = this->bound(
+                a_point.index(), a_point.boundaryDir(), a_point.block());
+        return *boundData.adjData;
+    } else {
+        return (*this)[a_point.index()];
+    }
+}
+*/
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<Point>
@@ -1022,8 +1062,8 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == SRC_MEM,
-                 "MBLevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
-                 mem, SRC_MEM);
+        "MBLevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
     auto &patch = (*m_src)[a_info.fromIndex];
     CInterval cint(0, C - 1);
     patch.linearOut(a_buffer, a_info.fromRegion, cint);
@@ -1035,8 +1075,8 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == DST_MEM,
-                 "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
-                 mem, DST_MEM);
+        "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+         mem, DST_MEM);
     auto &patch = (*m_dst)[a_info.toIndex];
     CInterval cint(0, C - 1);
     patch.linearIn(a_buffer, a_info.toRegion, cint);

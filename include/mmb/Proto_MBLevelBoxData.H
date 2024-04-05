@@ -2,9 +2,9 @@
 #ifndef _PROTO_MB_LEVEL_DATA_
 #define _PROTO_MB_LEVEL_DATA_
 
-#include "Proto.H"
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBBoundaryData.H"
+#include "Proto_MBDataPoint.H"
 
 namespace Proto
 {
@@ -17,7 +17,6 @@ namespace Proto
     class MBLevelBoxData;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
-    class MBDataPoint;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
   
@@ -139,6 +138,12 @@ namespace Proto
                 const MBDisjointBoxLayout&    a_layout,
                 const Array<Point, DIM+1>&    a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
+        
+        /// Lazy Constructor
+        inline void define(
+                const MBDisjointBoxLayout&    a_layout,
+                Point                         a_ghost,
+                Point                         a_boundGhost = Point::Zeros());
        
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
@@ -200,10 +205,10 @@ namespace Proto
 
         /// Get Block Data
         /** Returns the normal LevelBoxData associated with a specified block */
-        inline LevelBoxData<T, C, MEM, CTR>& getBlock(BlockIndex a_block);
+        inline LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block);
         
         /// Get Block Data (Const Overload)
-        inline const LevelBoxData<T, C, MEM, CTR>& getBlock(BlockIndex a_block) const;
+        inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
        
         /// Get Layout
         inline const MBDisjointBoxLayout& layout() const {return m_layout; }    
@@ -217,7 +222,7 @@ namespace Proto
         /** Multiblock analog of LevelBoxData::patchSize. Returns the number of data points in any
          *  patch within the specified block accounting for centering and ghost size.
          */
-        inline unsigned int patchSize(BlockIndex a_block) const;
+        inline unsigned int patchSize(unsigned int a_block) const;
 
         /// Linear Size of Patch
         inline size_t linearSize(const MBIndex& a_index) const;
@@ -257,7 +262,7 @@ namespace Proto
         /** Determine if a specified index and direction correspond to a block boundary with a
          *  specified block index */
         inline bool isBlockBoundary(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
         
         /// Get Block Boundary
         /** Retrieve the block boundary buffer associated with the specified block boundary
@@ -265,11 +270,11 @@ namespace Proto
          *  inputs. 
          */
         inline MBBoundaryData<T, C, MEM>& bound(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
         
         /// Get Block Boundary (Const Overload)
         inline const MBBoundaryData<T, C, MEM>& bound(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock) const;
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock) const;
 
         /// Compatibility Check
         /** This is the same as this->layout().compatible(a_layout) */
@@ -282,6 +287,18 @@ namespace Proto
         /// Convert MBDataPoint to Var (Const Overload)
         /** Used by interpolation API. Not recommended for public use. */
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
+
+        /// Get BoxData containing the destination of the DataPoint
+        /** For points inside of block boundaries, this is the localData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the 
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& patch(const MBDataPoint &a_point);
+        
+        /// Get BoxData containing the source of the DataPoint
+        /** For points inside of block boundaries, this is the adjData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& srcPatch(const MBDataPoint &a_point);
 
         /// Domain Boundary Check
         /** Determines which domain boundaries - if any - a specified Point in a specified patch
