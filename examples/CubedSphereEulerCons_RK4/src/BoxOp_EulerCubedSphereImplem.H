@@ -1892,7 +1892,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               int a_kstage)
 {
   // Transform JU -> USph.
-  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, dx, 4);
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, 4);
   if (a_kstage == 0)
     {
       // Compute viscous operators here, and increment a_rhsTotal.

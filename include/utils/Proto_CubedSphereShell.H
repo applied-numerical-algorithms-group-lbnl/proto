@@ -98,12 +98,13 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+#if 0
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler( 
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                                      Array<T,DIM> a_dx,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+#endif
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void interpBoundariesMHD( 
