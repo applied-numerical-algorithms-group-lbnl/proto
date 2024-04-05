@@ -96,8 +96,7 @@ namespace Proto {
      static void consToSphInterpEuler( 
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                                       MBInterpOp& a_iop,
-                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                                      Array<T,DIM> a_dx,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler( 

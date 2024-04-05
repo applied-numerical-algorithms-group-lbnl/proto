@@ -197,18 +197,18 @@ consToSphInterpEuler(
                         MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                         MBInterpOp& a_iop,
                         MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                        Array<T,DIM> a_dx,
                         unsigned int a_order)
 {
   //HDF5Handler h5;
+  auto layout = a_JU.layout();
+  Point size = layout.domain().getBlock(0).sizes();
+  T dxiPerp = 1.0/size[1];
   for (auto dit : a_JU.layout())
     {
       unsigned int block = a_JU.layout().block(dit);
       auto& JU_i = a_JU[dit];
       auto& dVolr_i = a_dVolr[dit];
-      Box bx_i = a_JU.layout()[dit];
-      T dxiPerp = a_dx[2];
-      T dxi0 = a_dx[0];
+      Box bx_i = a_JU.layout()[dit];      
       Box blockBox = a_JU.layout().getBlock(block).domain().box();
       CubedSphereShell::
         consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
