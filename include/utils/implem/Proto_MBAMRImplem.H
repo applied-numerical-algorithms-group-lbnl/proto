@@ -234,6 +234,31 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
     }
     crseTmp.copyTo(a_crseData);
 }
+
+template <
+    template<typename, template<MemType> typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
+        LevelStateData&     a_crseResidual,
+        AMRStateData&       a_state,
+        LevelStateData&     a_crseForce,
+        LevelStateData&     a_fineForce,
+        int                 a_fineLevel)
+{
+    PROTO_ASSERT(a_fineLevel > 0,
+            "MBAMR::coarseResidual | Error: Fine Level must be greater than 0");
+    PROTO_ASSERT(a_fineLevel < a_state.numLevels(),
+            "MBAMR::coarseResidual | Error: Fine Level index is out of bounds");
+    auto& crseState = a_state[a_fineLevel-1];
+    auto& fineState = a_state[a_fineLevel];
+    interpBoundaries(crseState, fineState, a_fineLevel);
+
+
+}
+
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,

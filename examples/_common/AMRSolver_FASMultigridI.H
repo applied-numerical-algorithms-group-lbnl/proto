@@ -262,7 +262,6 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
         crseState.copyTo(m_crseState_0);
         // compute the coarse force
         crseResidual(m_crseRes, a_state, crseForce, a_levelForce);
-        //m_op->levelApply(m_crseForce, a_state, m_level-1);
         m_op->levelOp(m_level-1)(m_crseForce, crseState);
         m_crseForce.increment(m_crseRes); // LC(PhiC) + ResC
         // recursive call

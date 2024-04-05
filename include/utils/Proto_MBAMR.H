@@ -52,6 +52,10 @@ public:
             LevelStateData&     a_crseData,
             LevelStateData&     a_fineData,
             int                 a_fineLevel);
+    
+    inline void coarseResidual(
+            LevelStateData&     a_crseResidual,
+            int                 a_fineLevel);
 
     inline MBLevelMap<MAP>& map(int a_level);
     inline MBInterpOp& interpOp(int a_level);
