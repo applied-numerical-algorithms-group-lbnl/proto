@@ -1791,17 +1791,18 @@ void f_radialoutflowIBCs_F(
 }
 PROTO_KERNEL_END(f_radialoutflowIBCs_F, f_radialoutflowIBCs)
 
-// Use case: park local boundary conditions here. 
+// Radial boundary conditions here.
 template<
   typename T,
   template<MemType> typename MAP,
   MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MAP,MEM>::PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
-                                                  BoxData<T,1,MEM>& a_dVolr,
-                                                  T a_time,
-                                                  T a_dt,
-                                                  int a_kstage)
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
+              BoxData<T,1,MEM>& a_dVolr,
+              T a_time,
+              T a_dt,
+              int a_kstage)
 {
   int a_block = this->block();
   Box a_blockBox = this->box();
@@ -1863,21 +1864,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USph
   }
 }
 
-#if 0
-// Radial boundary conditions here.
-template<
-    typename T,
-    template<MemType> typename MAP,
-    MemType MEM>
-inline void
-BoxOp_EulerCubedSphere<T,MAP,MEM>::
-PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
-              BoxData<T,1,MEM>& a_dVolr,             
-              T a_time,
-              T a_dt,
-              int a_kstage)
-{
-}
+
 /// Exchange, block boundary conditions, transform from JU to USph. Set state variables in boundary registers.
 template<
     typename T,
@@ -1892,12 +1879,14 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               int a_kstage)
 {
   // Transform JU -> USph.
-  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,dVolrLev, 4);
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
   if (a_kstage == 0)
     {
       // Compute viscous operators here, and increment a_rhsTotal.
     }
 }
+
+#if 0
 template<
     typename T,
     template<MemType> typename MAP,
@@ -1928,6 +1917,7 @@ PostStagePatch(
       fluxRegister += tmp;     
     }
 }
+
 // Update solution, impose flux matching, apply artificial viscosity, divergence cleaning.
 template<
   typename T,

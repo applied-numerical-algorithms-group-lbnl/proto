@@ -156,7 +156,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     a_JU[dit].copyTo(JUTemp[dit]);
   }
 
-  CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop,dVolrLev, dx, 4);
+  CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop,dVolrLev, 4);
 
   for (auto dit : a_JU.layout())
   {
@@ -183,9 +183,9 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 32;
   int thickness = 32;
-  int max_iter = 100;
+  int max_iter = 2000;
   double dt = 0.0001;
-  int write_cadence = 10;
+  int write_cadence = 50;
   int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test
   int levmax = 3;
   InputArgs args;
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
     }
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-    MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
+    MBLevelEulerStep<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> eulerstep(map, iop);
     Write_W(JU, eulerOp, iop, thickness, 0);
     double time = 0.0;
     for (int iter = 1; iter <= max_iter; iter++)
@@ -273,14 +273,15 @@ int main(int argc, char *argv[])
       {
         JU[dit].copyTo(JU_Temp[dit]);
       }
-      CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
+      int kstage = 0;
+      OP::preStageLevel(JU_Temp, rhs, dVolrLev, iop, kstage);
       int ghostTest = 6;
       for (auto dit : USph.layout())
       {
         PR_TIMERS("RHS Calculation");
         auto &rhs_i = rhs[dit];
         auto &USph_i = JU_Temp[dit];
-        int kstage = 0;
+        
         eulerOp[dit].PreStagePatch(USph_i,dVolrLev[dit],time,dt,kstage);
         Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
         fluxes[0].define(rhs_i.box().extrude(0));
@@ -299,11 +300,11 @@ int main(int argc, char *argv[])
       bool linear_visc = true;
       if (linear_visc)
       {
-        for (auto dit : layout)
-        {
-          JU[dit].copyTo(JU_Temp[dit]);
-        }
-        CubedSphereShell::consToSphInterpEuler(JU_Temp,iop, dVolrLev, dx, 4);
+        // for (auto dit : layout)
+        // {
+        //   JU[dit].copyTo(JU_Temp[dit]);
+        // }
+        // OP::preStageLevel(JU_Temp, rhs, dVolrLev, iop, kstage);
         for (auto dit : USph.layout())
         {
           PR_TIMERS("RHS Calculation");

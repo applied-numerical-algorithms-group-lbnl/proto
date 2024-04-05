@@ -3,8 +3,6 @@
 #define _BOX_OP_EULER_
 
 #include "Proto.H"
-//#include "Proto_CubedSphereShell.H"
-//#include "Proto_CubedSphereKernels.H"
 
 #define NUMCOMPS 2*DIM+2
 #define NUMREG 2*NUMCOMPS
@@ -285,8 +283,8 @@ public:
   static inline void
   preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
                 MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,               
-                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev,
-                const MBInterpOp& a_iop,
+                MBLevelBoxData<T,1,MEM>& a_dVolrLev,
+                MBInterpOp& a_iop,
                 int a_kstage);
 
   /// Fill boundary registers. Need to add boundary register argument.

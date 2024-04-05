@@ -35,6 +35,7 @@
 
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
+#include "utils/Proto_MBLevelEulerStep.H"
 #include "utils/Proto_MBMultigrid.H"
 #ifdef PR_AMR
 #include "utils/Proto_MBAMR.H"
