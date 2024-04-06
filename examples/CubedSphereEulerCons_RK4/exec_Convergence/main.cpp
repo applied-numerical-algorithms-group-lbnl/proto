@@ -181,12 +181,12 @@ int main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
 #endif
   HDF5Handler h5;
-  int domainSize = 32;
+  int domainSize = 16;
   int thickness = 32;
-  int max_iter = 2000;
-  double dt = 0.0001;
-  int write_cadence = 50;
-  int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test
+  int max_iter = 500;
+  double dt = 0.0003;
+  int write_cadence = 10;
+  int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test, 2: Space and Time Convergence test
   int levmax = 3;
   InputArgs args;
   args.add("nsph", domainSize);
@@ -226,6 +226,7 @@ int main(int argc, char *argv[])
     MBLevelBoxData<double, NUMCOMPS, HOST> JU(layout, OP::ghost());
     MBLevelBoxData<double, NUMCOMPS, HOST> JU_Temp(layout, OP::ghost());
     MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
+    MBLevelBoxData<double, NUMCOMPS, HOST> rhs_Temp(layout, Point::Zeros());
     MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
     MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
     Array<double, DIM> dx;
@@ -262,62 +263,14 @@ int main(int argc, char *argv[])
     }
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-    MBLevelEulerStep<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> eulerstep(map, iop);
+    MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     Write_W(JU, eulerOp, iop, thickness, 0);
     double time = 0.0;
     for (int iter = 1; iter <= max_iter; iter++)
     {
       // MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
       if (procID() == 0) cout << "iter = " << iter << endl;
-      for (auto dit : layout)
-      {
-        JU[dit].copyTo(JU_Temp[dit]);
-      }
-      int kstage = 0;
-      OP::preStageLevel(JU_Temp, rhs, dVolrLev, iop, kstage);
-      int ghostTest = 6;
-      for (auto dit : USph.layout())
-      {
-        PR_TIMERS("RHS Calculation");
-        auto &rhs_i = rhs[dit];
-        auto &USph_i = JU_Temp[dit];
-        
-        eulerOp[dit].PreStagePatch(USph_i,dVolrLev[dit],time,dt,kstage);
-        Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
-        fluxes[0].define(rhs_i.box().extrude(0));
-        fluxes[1].define(rhs_i.box().extrude(1));
-        fluxes[2].define(rhs_i.box().extrude(2));
-        eulerOp[dit](rhs_i, fluxes, USph_i, 1.0);
-        rhs_i *= dt;
-        JU[dit] -= rhs_i;
-        // CubedSphereShell::consToSphNGEuler(rhs_i,dVolrLev[dit],layout[dit],
-        //                                        layout.getBlock(block).domain().box(),1.0/domainSize,
-        //                                        layout.block(dit),4);
-
-      }
-      // h5.writeMBLevel({ }, map, rhs, "MBEulerCubedSphereRHSPass" + to_string(iter));
-
-      bool linear_visc = true;
-      if (linear_visc)
-      {
-        // for (auto dit : layout)
-        // {
-        //   JU[dit].copyTo(JU_Temp[dit]);
-        // }
-        // OP::preStageLevel(JU_Temp, rhs, dVolrLev, iop, kstage);
-        for (auto dit : USph.layout())
-        {
-          PR_TIMERS("RHS Calculation");
-          auto &rhs_i = rhs[dit];
-          auto &USph_i = JU_Temp[dit];
-          int kstage = 0;
-          eulerOp[dit].PreStagePatch(USph_i,dVolrLev[dit],time,dt,kstage);
-          eulerOp[dit].LinearVisc(rhs_i, USph_i, 1.0);
-          rhs_i *= dt;
-          JU[dit] -= rhs_i;
-        }
-      }
-
+      rk4.advance(JU, dVolrLev, dt, time, 4);
       time += dt;
       if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
     }
@@ -326,16 +279,18 @@ int main(int argc, char *argv[])
       U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
       for (auto dit : layout)
       {
-        rhs[dit].copyTo(U_conv_test[lev][dit]);
-        // JU[dit].copyTo(U_conv_test[lev][dit]);
-        // JU_Temp[dit].copyTo(U_conv_test[lev][dit]);
+        JU[dit].copyTo(U_conv_test[lev][dit]);
       }
       h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
+      
       domainSize *= 2;
       thickness *= 2;
-      if (procID() == 0) cout << "domainSize = " << domainSize/2 << " is done" << endl;
+      if (conv_test_type == 2){
+        dt /= 2;
+        max_iter *= 2;
+      }
+      if (procID() == 0 ) cout << "domainSize = " << domainSize/2 << " is done" << endl;
     }
-
   }
 
   if (conv_test_type > 0){

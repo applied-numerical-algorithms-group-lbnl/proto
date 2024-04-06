@@ -607,7 +607,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       // Save fluxes, update RHS.
       fluxdir.copyTo(a_fluxes[dir]);
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
-      T dxInv = 1.0/(this->dx()[dir]);
+      T dxInv = -1.0/(this->dx()[dir]);
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
@@ -1165,13 +1165,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
       State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);      
     
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
-
-      //Stencil<double> SPlus = 1.0*Shift(Point::Zeros()); // This SPlus, SMinus, and IdOp should give D5 at lower face.
-      //Stencil<double> SMinus = 1.0*Shift(-2*Point::Basis(dir));
-      //Stencil<double> IdOp = 1.0*Shift(-Point::Basis(dir));
-      //Stencil<double> D1 = SPlus - IdOp;
-      //Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
-      
       Stencil<double> D2 = 1.0*Shift(Point::Basis(dir)) + (-2.0)*Shift(Point::Zeros())
        + 1.0*Shift(-Point::Basis(dir));
       Stencil<double> D1 = 1.0*Shift(Point::Zeros()) + (-1.0)*Shift(-Point::Basis(dir));
@@ -1205,7 +1198,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
 
       // update RHS.
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
-      T dxInv = 1.0/(this->dx()[dir]);
+      T dxInv = -1.0/(this->dx()[dir]);
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
 
       a_Rhs += rhsIncr;
@@ -1876,14 +1869,52 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
               MBLevelBoxData<T,1,MEM>& a_dVolrLev,
               MBInterpOp& a_iop,
+              T a_time,
+              T a_dt,
               int a_kstage)
 {
   // Transform JU -> USph.
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
-  if (a_kstage == 0)
-    {
-      // Compute viscous operators here, and increment a_rhsTotal.
-    }
+  // Compute viscous operators here, and increment a_rhsTotal.
+  bool linear_visc = true;
+  auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
+  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  for (auto dit : a_UStage.layout())
+  {
+    auto &rhs_i = a_rhsTotal[dit];
+    rhs_i.setVal(0.0);
+    auto &USph_i = a_UStage[dit];
+    eulerOp[dit].PreStagePatch(USph_i,a_dVolrLev[dit],a_time,a_dt,a_kstage);
+    if (linear_visc && a_kstage == 0) eulerOp[dit].LinearVisc(rhs_i, USph_i, a_dt);
+  }
+}
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
+            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,  
+            T a_time, 
+            T a_dt,         
+            int a_kstage)
+{
+  auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
+  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  for (auto dit : a_UStage.layout())
+  {
+    auto &rhs_i = a_rhs[dit];
+    auto &USph_i = a_UStage[dit];
+    Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
+    fluxes[0].define(rhs_i.box().extrude(0));
+    fluxes[1].define(rhs_i.box().extrude(1));
+    fluxes[2].define(rhs_i.box().extrude(2));
+    eulerOp[dit](rhs_i, fluxes, USph_i, a_dt);
+    // MBBoundaryRegister<T,NUMREG,MEM> MBBlockReg;
+    // eulerOp[dit].PostStagePatch(MBBlockReg, fluxes, a_time, a_dt, 1.0, a_kstage);
+  }
 }
 
 #if 0

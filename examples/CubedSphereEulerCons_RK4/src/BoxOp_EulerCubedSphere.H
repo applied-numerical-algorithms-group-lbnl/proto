@@ -285,17 +285,29 @@ public:
                 MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,               
                 MBLevelBoxData<T,1,MEM>& a_dVolrLev,
                 MBInterpOp& a_iop,
+                T a_time,
+                T a_dt,
                 int a_kstage);
+
+  /// Compute fluxes, and RHS.
+  static inline void
+  StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
+             MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,  
+             T a_time,
+             T a_dt,          
+             int a_kstage);
 
   /// Fill boundary registers. Need to add boundary register argument.
   // Implemented.
   inline void
   PostStagePatch(
-                 MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,                
-                 const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes,
-                 T a_time,
-                 T a_dt,
-                 int a_kstage);
+               MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,
+               const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
+               T a_time,
+               T a_dt,
+               T a_weight,
+               int a_kstage);
+                 
 
   /// Update solution, impose flux matching.
   static inline void
@@ -314,10 +326,10 @@ public:
                           Box a_ghostedBox,
                           Box a_blockBox);
   
-  static inline void
-  preStageLevel(MBLevelBoxData<T,NUMCOMPS,HOST>& UStage,
-                const MBInterpOp& a_iop,
-                const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
+  // static inline void
+  // preStageLevel(MBLevelBoxData<T,NUMCOMPS,HOST>& UStage,
+  //               const MBInterpOp& a_iop,
+  //               const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
   
   static inline void
   postStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsStage,
