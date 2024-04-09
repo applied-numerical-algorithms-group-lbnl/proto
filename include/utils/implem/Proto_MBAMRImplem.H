@@ -254,9 +254,21 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
             "MBAMR::coarseResidual | Error: Fine Level index is out of bounds");
     auto& crseState = a_state[a_fineLevel-1];
     auto& fineState = a_state[a_fineLevel];
+    auto& crseOp = op(a_fineLevel-1);
+    auto& fineOp = op(a_fineLevel);
     interpBoundaries(crseState, fineState, a_fineLevel);
+    fineState.exchange();
+    m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
+    crseOp(a_crseResidual, crseState, -1.0); //-LC
+    a_crseResidual.increment(a_crseForce);   //GC - LC
+    
+    for (auto iter : fineState.layout())
+    {:wq
 
-
+        // compute a_fineForce - L(fineState)
+	// average onto crse temp
+    }
+    // copy crse temp into crseResidual, overwriting the refined region
 }
 
 template <
