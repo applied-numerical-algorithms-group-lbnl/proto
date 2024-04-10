@@ -1,5 +1,4 @@
-extern int init_type;
-
+#include "Inputs_Parsing.H"
 template<
     typename T,
     template<MemType> typename MAP,
@@ -1739,7 +1738,7 @@ void f_radialBCs_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_USph(iRHO) = rho;
-  a_USph(iMOMX) = ur * rho;
+  a_USph(iMOMX) = 0.0;//ur * rho;
   a_USph(iMOMY) = 0.0;
   a_USph(iMOMZ) = 0.0;
   a_USph(iBX) = 0.0;
@@ -1810,17 +1809,17 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   double dxradius = dx[0];
   int thickness = std::round(1.0 / dxradius);
   // Set radial boundary condtions in radial ghost cells.
-  // Box blockBox = layout.getBlock(a_block).domain().box();
+  int init_condition_type = ParseInputs::get_init_condition_type();
   // Outer BCs
   if (a_blockBox.high()[0] < bxGhosted.high()[0])
   {
     Point low = bxGhosted.low();
     low[0] = a_blockBox.high()[0] + 1;
     Box bdryBoxHigh(low, bxGhosted.high());
-    if (init_type == 0 || init_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
-    if (init_type == 2){
+    if (init_condition_type == 2){
       // Extrapolate to ghost cells.
       Point source_low = Point(a_blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
       Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
@@ -1845,10 +1844,10 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point high = bxGhosted.high();
     high[0] = a_blockBox.low()[0] - 1;
     Box bdryBoxLow(bxGhosted.low(), high);
-    if (init_type == 0 || init_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
-    if (init_type == 2){
+    if (init_condition_type == 2){
       double half = 0.5;
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);  
