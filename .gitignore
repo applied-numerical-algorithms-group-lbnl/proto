@@ -1,5 +1,6 @@
 /.vscode
 *.hdf5
+*.h5
 *.vtk
 *.d
 *.o

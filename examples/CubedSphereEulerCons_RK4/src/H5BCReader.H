@@ -1,7 +1,5 @@
 #include "Proto.H"
-#include "hdf5.h"
-// #include "H5BC_Input_Parsing.H"
-// extern Parsefrominputs inputs;
+// #include "hdf5.h"
 
 using namespace Proto;
 
@@ -15,10 +13,10 @@ class H5BCReader
     inline void readFile(hid_t* a_file, std::string a_filename, Args... a_params)
     {
         char fname[100];
-        if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
-        {
-            a_filename += ".hdf5";
-        }
+        // if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+        // {
+        //     a_filename += ".hdf5";
+        // }
 
         // The following pragmas suppress some GCC warnings that are overly conservative
 #pragma GCC diagnostic push
@@ -94,10 +92,10 @@ class H5BCReader
         PR_TIME("H5BCReader::readLevel");
         // PARSE THE FILE NAME
         char fname[100];
-        if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
-        {
-            a_filename += ".hdf5";
-        }
+        // if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+        // {
+        //     a_filename += ".hdf5";
+        // }
 
         // The following pragmas suppress some GCC warnings that are overly conservative
 #pragma GCC diagnostic push

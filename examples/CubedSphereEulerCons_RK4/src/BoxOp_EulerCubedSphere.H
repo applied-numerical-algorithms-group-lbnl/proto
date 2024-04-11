@@ -250,6 +250,16 @@ public:
 
   // End Linear Viscosity.
 
+
+  // DivB cleaning starts here.
+
+  inline void DivBPowell(
+                        State& a_Rhs,
+                        const State& a_USph,
+                        T a_scale = 1.0) const;
+
+  // End DivB cleaning.
+
   // Begin Limiter.
   inline void Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave_L_lim_flat,
                               BoxData<double,NUMCOMPS>& a_W_ave_R_lim_flat,
