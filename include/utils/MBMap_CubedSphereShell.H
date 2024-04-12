@@ -19,19 +19,23 @@ namespace {
         constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
         constexpr double r0 = CUBED_SPHERE_SHELL_R0;
         constexpr double r1 = CUBED_SPHERE_SHELL_R1;
-        double r, xi, eta;
+        double r, xi, eta, C_rad, R_t;
+        C_rad = 1.0;
+        R_t = (r1 - r0) / (exp(C_rad) - 1.0);
         switch (r_dir)
         {
             case 0:
                 {
-                    r   = r0 + (r1-r0)*a_X0[0];
+                    // r   = r0 + (r1-r0)*a_X0[0];
+				    r = r0 + R_t * (exp(C_rad * a_X0[0]) - 1.0);
                     xi  = -M_PI/4.0 + M_PI/2.0*a_X0[1];
                     eta = -M_PI/4.0 + M_PI/2.0*a_X0[2];
                     break;
                 }
             case 2:
                 {
-                    r   = r0 + (r1-r0)*a_X0[2];
+                    // r   = r0 + (r1-r0)*a_X0[2];
+				    r = r0 + R_t * (exp(C_rad * a_X0[2]) - 1.0);
                     xi  = -M_PI/4.0 + M_PI/2.0*a_X0[0];
                     eta = -M_PI/4.0 + M_PI/2.0*a_X0[1];
                     break;

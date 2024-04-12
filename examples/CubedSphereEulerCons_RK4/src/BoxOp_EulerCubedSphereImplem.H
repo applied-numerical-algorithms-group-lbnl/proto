@@ -15,7 +15,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
   int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   double r0 = CUBED_SPHERE_SHELL_R0;
   double r1 = CUBED_SPHERE_SHELL_R1;
-  // T dxi0 = this->dx()[1];
   T dxi0 = this->dx()[r_dir];
   double dr = (r1-r0)*dxi0;
   forallInPlace_p([]PROTO_LAMBDA(Point a_pt,
@@ -29,9 +28,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                                  double a_dxi0,
                                  int a_rdir)
                   {
-                    a_rad(0) = a_r0 + a_dr*a_pt[a_rdir];
-                    T rlow = a_rad(0);
-                    T rhigh = a_rad(0)+a_dr;
+                    // a_rad(0) = a_r0 + a_dr*a_pt[a_rdir];
+                    // T rlow = a_rad(0);
+                    // T rhigh = a_rad(0)+a_dr;
+
+                    T C_rad = 1.0;
+                    T R_t = (a_r1 - a_r0) / (exp(C_rad) - 1.0);
+                    T etalow = a_pt[a_rdir]*a_dxi0;
+				            T rlow = a_r0 + R_t * (exp(C_rad * etalow) - 1.0);
+                    T etahigh = (a_pt[a_rdir] + 1.0)*a_dxi0;
+                    T rhigh = a_r0 + R_t * (exp(C_rad * etahigh) - 1.0);
+
                     // a_rad(0) = rlow;
                     a_rad(0) = (rlow+rhigh)/2.0;
                     a_dVolr(0) = (rhigh*rhigh*rhigh - rlow*rlow*rlow)/3.0/a_dxi0;
