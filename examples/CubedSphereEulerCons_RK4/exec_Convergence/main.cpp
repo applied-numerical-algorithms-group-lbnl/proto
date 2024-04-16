@@ -1,23 +1,7 @@
 #include "Proto.H"
-#include "InputParser.H"
+#include "Inputs_Parsing.H"
 #include "BoxOp_EulerCubedSphere.H"
 
-int init_type = 2; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
-
-void GetCmdLineArgumenti(int argc, const char **argv, const char *name, int *rtn)
-{
-  size_t len = strlen(name);
-  for (int i = 1; i < argc; i += 2)
-  {
-    if (strcmp(argv[i] + 1, name) == 0)
-    {
-      *rtn = atoi(argv[i + 1]);
-      std::cout << name << "="
-                << " " << *rtn << std::endl;
-      break;
-    }
-  }
-}
 
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
@@ -47,7 +31,7 @@ void f_radialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;
+  a_W(iVX) = 0.0; //ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -180,26 +164,23 @@ int main(int argc, char *argv[])
 #ifdef PR_MPI
   MPI_Init(&argc, &argv);
 #endif
+  ParseInputs::getInstance().parsenow(argc, argv);
   HDF5Handler h5;
-  int domainSize = 16;
-  int thickness = 32;
-  int max_iter = 5;
-  double dt = 0.0003;
-  int write_cadence = 1;
-  int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test, 2: Space and Time Convergence test
-  int levmax = 3;
-  InputArgs args;
-  args.add("nsph", domainSize);
-  args.add("nrad", thickness);
-  args.parse(argc, argv);
-  args.print();
+  int domainSize = ParseInputs::get_domainSize();
+  int thickness = ParseInputs::get_thickness();
+  int max_iter = ParseInputs::get_max_iter();
+  double dt = ParseInputs::get_CFL();
+  int write_cadence = ParseInputs::get_write_cadence();
+  int convTestType = ParseInputs::get_convTestType();
+  int init_condition_type = ParseInputs::get_init_condition_type();
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
   PR_TIMER_SETFILE(to_string(domainSize) + "_DIM" + to_string(DIM) //+ "_NProc" + to_string(numProc())
                    + "_CubeSphereTest.time.table");
   PR_TIMERS("MMBEuler");
-  if (conv_test_type == 0) levmax = 1;
+  int levmax = 3;
+  if (convTestType == 0) levmax = 1;
   for (int lev=0; lev<levmax; lev++)
 	{
     typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
@@ -254,9 +235,9 @@ int main(int argc, char *argv[])
       double half = 0.5;
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-      if (init_type == 0) forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
-      if (init_type == 1) forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
-      if (init_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, XCart, gamma, thickness);
+      if (init_condition_type == 0) forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
+      if (init_condition_type == 1) forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
+      if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, XCart, gamma, thickness);
       eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
       JU_i.setVal(0.);
       JUTemp.copyTo(JU_i, layout[dit]);
@@ -275,7 +256,7 @@ int main(int argc, char *argv[])
       if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
     }
 
-    if (conv_test_type > 0){
+    if (convTestType > 0){
       U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
       for (auto dit : layout)
       {
@@ -285,7 +266,7 @@ int main(int argc, char *argv[])
       
       domainSize *= 2;
       thickness *= 2;
-      if (conv_test_type == 2){
+      if (convTestType == 2){
         dt /= 2;
         max_iter *= 2;
       }
@@ -293,7 +274,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  if (conv_test_type > 0){
+  if (convTestType > 0){
     //Here, we perform the error calculations on a single patch.
     if(procID() == 0)
     {

@@ -1,5 +1,5 @@
-extern int init_type;
-
+#include "Inputs_Parsing.H"
+#include "H5BCReader.H"
 template<
     typename T,
     template<MemType> typename MAP,
@@ -15,7 +15,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
   int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   double r0 = CUBED_SPHERE_SHELL_R0;
   double r1 = CUBED_SPHERE_SHELL_R1;
-  // T dxi0 = this->dx()[1];
   T dxi0 = this->dx()[r_dir];
   double dr = (r1-r0)*dxi0;
   forallInPlace_p([]PROTO_LAMBDA(Point a_pt,
@@ -29,9 +28,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                                  double a_dxi0,
                                  int a_rdir)
                   {
-                    a_rad(0) = a_r0 + a_dr*a_pt[a_rdir];
-                    T rlow = a_rad(0);
-                    T rhigh = a_rad(0)+a_dr;
+                    // a_rad(0) = a_r0 + a_dr*a_pt[a_rdir];
+                    // T rlow = a_rad(0);
+                    // T rhigh = a_rad(0)+a_dr;
+
+                    T C_rad = 1.0;
+                    T R_t = (a_r1 - a_r0) / (exp(C_rad) - 1.0);
+                    T etalow = a_pt[a_rdir]*a_dxi0;
+				            T rlow = a_r0 + R_t * (exp(C_rad * etalow) - 1.0);
+                    T etahigh = (a_pt[a_rdir] + 1.0)*a_dxi0;
+                    T rhigh = a_r0 + R_t * (exp(C_rad * etahigh) - 1.0);
+
                     // a_rad(0) = rlow;
                     a_rad(0) = (rlow+rhigh)/2.0;
                     a_dVolr(0) = (rhigh*rhigh*rhigh - rlow*rlow*rlow)/3.0/a_dxi0;
@@ -1134,7 +1141,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
                         T a_scale) const
 {
   int a_block = this->block();
-  a_Rhs.setVal(0.0);
+  State rhs(a_Rhs.box());
+  rhs.setVal(0.0);
   PR_TIME("BoxOp_Euler::LinearVisc()");
   HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
@@ -1203,16 +1211,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
       fluxdir.copyTo(a_fluxes[dir]);
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
 
-      a_Rhs += rhsIncr;
+      rhs += rhsIncr;
       outputbox &= rhsIncr.box();   
     }
   if (a_block == BLOCKTEST)
     {
       HDF5Handler h5;
-      BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(a_Rhs,dxiPerp,a_block);
+      BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(rhs,dxiPerp,a_block);
       h5.writePatch(dxiPerp,rhsRadial,"rhsViscRadial");
     }
-  a_Rhs *= (a_scale);
+  rhs *= (a_scale);
+  a_Rhs += rhs;
 
 }
 
@@ -1295,6 +1304,142 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedViscFlux(
 
 // ====================================================================================
 // Linear Viscocity implems end here.
+// ====================================================================================
+
+
+// ====================================================================================
+// Divergence cleaning implems start here.
+// ====================================================================================
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::DivBPowell(
+                        State& a_Rhs,
+                        const State& a_USph,
+                        T a_scale) const
+{
+  int a_block = this->block();
+  State rhs(a_Rhs.box());
+  rhs.setVal(0.0);
+  PR_TIME("BoxOp_Euler::DivBPowell()");
+  HDF5Handler h5;
+  Box bxRad = a_USph.box().grow(Point::Basis(0,2));
+  BoxData<T,DIM,MEM> Dr(bxRad);
+  BoxData<T,1,MEM> radius(bxRad);
+  BoxData<T,DIM,MEM> adjDr(bxRad);
+  BoxData<T,1,MEM> dVolr(bxRad);
+  radialMetrics(radius,Dr,adjDr,dVolr,bxRad);
+  auto domainBox = this->layout().domain().getBlock(a_block).box();
+  // Primitive Variables. 
+  // Transform to primitive variables, spherical velocities.
+  Box bx = a_USph.box();
+  State W;
+  State WBar;
+  //cout << "inputbox = " << bx << endl;
+  
+  sphToPrim(W,WBar,a_USph,a_block);
+  // Compute Fluxes, rhs.
+  
+  Box outputbox = bx;
+  // Loop over directions.
+  T one = 1.0;
+  T half = 0.5;
+  T dxiPerp = this->dx()[1];  
+  for (int dir = 0; dir < DIM; dir++)
+  {
+    PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
+    State WFace = Stencil<T>::CellToFace(dir)(W);   
+  
+    BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
+
+    //Required mapping variables.
+    Box bxface = WFace.box();
+    BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir); 
+    Box bx = W.box();
+    Box bxdir = bx.extrude(Point::Basis(dir));
+    
+
+    State fluxdir(bxface);
+    forallInPlace([ ] PROTO_LAMBDA
+      (Var<T,NUMCOMPS,MEM>& a_fluxout,
+        const Var<T,NUMCOMPS,MEM>& a_Wsph,
+        const Var<T,1,MEM>& a_deta,
+        int a_dir)
+      {  
+        for (int comp = 0; comp < NUMCOMPS;comp++)
+        {                  
+          a_fluxout(comp) = a_deta(0)*a_Wsph(iBX + a_dir);
+        }
+      },fluxdir,WFace,deta,dir);
+  
+    for (int comp = 0; comp < NUMCOMPS;comp++)
+    {
+      BoxData<T,1,MEM> advfluxcomp = slice(fluxdir,comp);
+      BoxData<T,1,MEM> advfluxprod = faceProduct(advfluxcomp,adjDrDir,dir);
+      advfluxprod.copyTo(advfluxcomp);
+    }
+
+    // update RHS.
+    BoxData<T,NUMCOMPS,MEM> rhsIncr;
+    T dxInv = -1.0/(this->dx()[dir]);
+    rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
+
+    rhs += rhsIncr;
+    outputbox &= rhsIncr.box();   
+  }
+  if (a_block == BLOCKTEST)
+  {
+    HDF5Handler h5;
+    BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(rhs,dxiPerp,a_block);
+    h5.writePatch(dxiPerp,rhsRadial,"rhsDivBRadial");
+  }
+  rhs *= (a_scale);
+
+  // We have calculated -div(B)*dt in rhs. Need to multiply other Powell terms to get the final RHS.
+  Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+  Point high = bx.high();
+  Point low = bx.low();
+  high[0] = low[0];
+  Box bx0(low,high);
+  BoxData<T,DIM,MEM,DIM> A_matrix(bx);
+  T offseta = half;
+  T offsetb = half;
+  forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                  dxiPerp,offseta,offsetb);
+  spreadSlice(A_matrix);
+
+  BoxData<T,DIM,MEM> Vsph = slice<T,NUMCOMPS,DIM,MEM>(W,iVX);
+  BoxData<T,DIM,MEM> Vcart = Operator::_cellMatrixProductAB(A_matrix,Vsph,A_matrix,Vsph);
+
+  BoxData<T,DIM,MEM> Bsph = slice<T,NUMCOMPS,DIM,MEM>(W,iBX);
+  BoxData<T,DIM,MEM> Bcart = Operator::_cellMatrixProductAB(A_matrix,Bsph,A_matrix,Bsph);
+
+  forallInPlace([ ] PROTO_LAMBDA
+      (Var<T,NUMCOMPS,MEM>& a_rhs,
+        const Var<T,DIM,MEM>& a_Vcart,
+        const Var<T,DIM,MEM>& a_Bcart)
+      {  
+        T VdotB = a_Vcart(0)*a_Bcart(0) + a_Vcart(1)*a_Bcart(1) + a_Vcart(2)*a_Bcart(2);                
+        a_rhs(iRHO) *= 0;
+        a_rhs(iMOMX) *= a_Bcart(0)/4.0/M_PI;
+        a_rhs(iMOMY) *= a_Bcart(1)/4.0/M_PI;
+        a_rhs(iMOMZ) *= a_Bcart(2)/4.0/M_PI;
+        a_rhs(iE) *= VdotB/4.0/M_PI;
+        a_rhs(iBX) *= a_Vcart(0);
+        a_rhs(iBY) *= a_Vcart(1);
+        a_rhs(iBZ) *= a_Vcart(2);
+        
+      },rhs,Vcart,Bcart);
+
+  a_Rhs += rhs;
+}
+
+// ====================================================================================
+// Divergence Cleaning implems end here.
 // ====================================================================================
 
 
@@ -1741,7 +1886,7 @@ void f_radialBCs_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_USph(iRHO) = rho;
-  a_USph(iMOMX) = ur * rho;
+  a_USph(iMOMX) = 0.0;//ur * rho;
   a_USph(iMOMY) = 0.0;
   a_USph(iMOMZ) = 0.0;
   a_USph(iBX) = 0.0;
@@ -1812,17 +1957,17 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   double dxradius = dx[0];
   int thickness = std::round(1.0 / dxradius);
   // Set radial boundary condtions in radial ghost cells.
-  // Box blockBox = layout.getBlock(a_block).domain().box();
+  int init_condition_type = ParseInputs::get_init_condition_type();
   // Outer BCs
   if (a_blockBox.high()[0] < bxGhosted.high()[0])
   {
     Point low = bxGhosted.low();
     low[0] = a_blockBox.high()[0] + 1;
     Box bdryBoxHigh(low, bxGhosted.high());
-    if (init_type == 0 || init_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
-    if (init_type == 2){
+    if (init_condition_type == 2){
       // Extrapolate to ghost cells.
       Point source_low = Point(a_blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
       Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
@@ -1847,15 +1992,39 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point high = bxGhosted.high();
     high[0] = a_blockBox.low()[0] - 1;
     Box bdryBoxLow(bxGhosted.low(), high);
-    if (init_type == 0 || init_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
-    if (init_type == 2){
+    if (init_condition_type == 2){
       double half = 0.5;
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);  
       forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, a_USphStage, radius, XCart, m_gamma, thickness);
     }
+#if 0
+    if (init_condition_type == 3){
+      H5BCReader reader;
+      std::vector<BoxData<double, NUMCOMPS, HOST>> BC_data;
+      reader.readData(BC_data, "POT3D360x180_2020010120_2020022020_fixeddtheta.h5");
+      HDF5Handler h5;
+		  if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, BC_data[0], "BC_data");
+
+      int theta_count = BC_data[0].box().high()[1] + 1;
+      int phi_count = (BC_data[0].box().high()[2] + 1)/2;
+      double theta = 0.9*(M_PI/180); // Example theta
+      double phi = 359.9*(M_PI/180); // Example phi
+      double dphi = 2 * M_PI / (phi_count);
+      double dtheta = M_PI / (theta_count);
+      int i_phi = static_cast<int>(phi / dphi);
+      int i_theta = static_cast<int>(theta / dtheta);
+      cout << BC_data[0](Point(0,i_theta,i_phi),iRHO) << endl;
+      std::cout << "Theta index: " << i_theta << ", Phi index: " << i_phi << std::endl;
+      double half = 0.5;
+      BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+      (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);
+      forallInPlace_p(f_H5IBCs, bdryBoxLow, a_USphStage, radius, XCart, m_gamma, thickness);
+    }
+#endif
   }
 }
 
@@ -1881,6 +2050,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
   // Compute viscous operators here, and increment a_rhsTotal.
   bool linear_visc = true;
+  bool divBcleaning = false;
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   for (auto dit : a_UStage.layout())
@@ -1889,17 +2059,22 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     rhs_i.setVal(0.0);
     auto &USph_i = a_UStage[dit];
     eulerOp[dit].PreStagePatch(USph_i,a_dVolrLev[dit],a_time,a_dt,a_kstage);
+
     if (linear_visc && a_kstage == 0)
       {
         auto mbdata = a_blockreg.bounds(dit);
         Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
         fluxes[0].define(rhs_i.box().extrude(0));
+        fluxes[0].setToZero();
         fluxes[1].define(rhs_i.box().extrude(1));
+        fluxes[1].setToZero();
         fluxes[2].define(rhs_i.box().extrude(2));
+        fluxes[2].setToZero();
         eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
         T one = 1.0;
         eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
       }
+    if (divBcleaning && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
   }
 }
 template<
