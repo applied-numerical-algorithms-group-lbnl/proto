@@ -258,7 +258,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
         Point           a_dir,
         unsigned int    a_block) const
 {
-    PR_TIME("MBLevelBoxData::isBlockBoundary");
+  //PR_TIME("MBLevelBoxData::isBlockBoundary");
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
     return m_partition->isBlockBoundary(a_index.global(), a_dir, a_block);

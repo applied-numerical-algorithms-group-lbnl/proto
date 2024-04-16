@@ -76,14 +76,14 @@ namespace Proto
          *  boundary. In this case, the sign of depth has no effect.
          */
         inline MBBoundaryRegister(
-                const MBDisjointBoxLayout&  a_layout,           
+                MBDisjointBoxLayout         a_layout,           
                 int                         a_depth,            
                 Point                       a_ghost,            
                 bool                        a_bothSides = true);
         
         /// Lazy Constructor
         inline void define(
-                const MBDisjointBoxLayout&  a_layout,   
+                MBDisjointBoxLayout         a_layout,   
                 int                         a_depth,    
                 Point                       a_ghost,    
                 bool                        a_bothSides = true);
@@ -168,7 +168,7 @@ namespace Proto
         inline void exchange();
         
         // Get Layout
-        inline const MBDisjointBoxLayout& layout() {return *m_layout; }
+        inline MBDisjointBoxLayout layout() {return m_layout; }
         
         // Get Ghost Size
         inline Point ghost() {return m_ghost; }
@@ -176,7 +176,7 @@ namespace Proto
         private:
 
         Point m_ghost;
-        const MBDisjointBoxLayout* m_layout;
+        MBDisjointBoxLayout m_layout;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
         MBBoundaryCopier<T,C,MEM,CTR> m_copier; 
     };

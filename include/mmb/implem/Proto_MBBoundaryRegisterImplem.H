@@ -1,7 +1,7 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryRegister<T,C,MEM,CTR>::MBBoundaryRegister(
-        const MBDisjointBoxLayout&  a_layout,   // layout
+        MBDisjointBoxLayout         a_layout,   // layout
         int                         a_depth,    // distance from boundary
         Point                       a_ghost,    
         bool                        a_bothSides)
@@ -12,19 +12,19 @@ MBBoundaryRegister<T,C,MEM,CTR>::MBBoundaryRegister(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBBoundaryRegister<T,C,MEM,CTR>::define(
-        const MBDisjointBoxLayout&  a_layout,   // layout
+        MBDisjointBoxLayout         a_layout,   // layout
         int                         a_depth,    // distance from boundary
         Point                       a_ghost,    // additional space around each register
         bool                        a_bothSides)// allocate space on both "sides" of the boundary
 {
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_bounds.clear();
 
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto& localLayout = a_layout.getBlock(block);
+        auto localLayout = a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -132,8 +132,8 @@ std::vector<MBBoundaryData<T,C,MEM>> MBBoundaryRegister<T,C,MEM,CTR>::bounds(
         Point   a_dir)
 {
     std::vector<MBBoundaryData<T,C,MEM>> empty;
-    auto block = m_layout->block(a_index);
-    auto patch = m_layout->point(a_index);
+    auto block = m_layout.block(a_index);
+    auto patch = m_layout.point(a_index);
     boundsKey_t key(patch, block, a_dir);
     if (m_bounds.find(key) == m_bounds.end())
     {
@@ -319,7 +319,7 @@ void MBBoundaryRegister<T,C,MEM,CTR>::clear()
 {
     for (auto src : m_bounds)
     {
-        for (auto bound : src)
+        for (auto& bound : src.second)
         {
             bound.localData->setVal(0);
             bound.adjData->setVal(0);

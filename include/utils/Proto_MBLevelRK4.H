@@ -52,10 +52,11 @@ protected:
     std::shared_ptr<BC> m_bc;
     LevelStateData      m_U0;
     MBInterpOp&   m_interp;
+  MBBoundaryRegister<T,OP::numState(),MEM> m_blockreg;
 };
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+  template<typename, template<MemType> typename, MemType> class OPType,
+  template<MemType> class MAP,
     typename T,
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
@@ -66,14 +67,16 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
     m_f.define(a_map);
+    MBDisjointBoxLayout layout = a_map.layout();
+    m_blockreg.define(layout,1,Point::Zeros());
     m_delta.define(a_map.layout(), ghost);
     m_k.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost() + Point::Ones(2));
     ghost[0] = OP::ghost();
     m_U0.define(a_map.layout(), ghost);
     m_bc = std::make_shared<BC>(a_map);
+    m_blockreg.define(layout,1,Point::Zeros());
 }
-
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,
@@ -91,50 +94,58 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     sixth/=6; third/=3; half/=2;
     int kstage;
     m_delta.setVal(0.);
-
+    m_blockreg.clear();
     if (a_order == 1)
     {
-        a_state.copyTo(m_U0);
-        kstage = 0;
-        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, a_time, a_dt, kstage);
-        m_delta.increment(m_k, 1.0);
-        OP::StageLevel(m_k, m_U0, a_time, a_dt, kstage);
-        m_delta.increment(m_k, 1.0);
+      double weight = 1.0;
+      a_state.copyTo(m_U0);
+      kstage = 0;
+      OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
+      m_delta.increment(m_k, weight);
+      OP::StageLevel(m_k, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
+      m_delta.increment(m_k, weight);
     }
 
     if (a_order == 4)
     {
         a_state.copyTo(m_U0);
         kstage = 0;
-        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, a_time, a_dt, kstage);
+        double weight = sixth;
+        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
         m_delta.increment(m_k, 1.0);
-        OP::StageLevel(m_k, m_U0, a_time, a_dt, kstage);
-        m_delta.increment(m_k, sixth);
+        OP::StageLevel(m_k, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
+        m_delta.increment(m_k, weight);
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k, half);
         kstage = 1;
-        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, a_time+0.5*a_dt, a_dt, kstage);
-        OP::StageLevel(m_k, m_U0, a_time+0.5*a_dt, a_dt, kstage);
+        weight = third;
+        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time+0.5*a_dt, a_dt, weight, kstage);
+        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt,weight, kstage);
         m_delta.increment(m_k, third);
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k, half);
         kstage = 2;
-        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, a_time+0.5*a_dt, a_dt, kstage);
-        OP::StageLevel(m_k, m_U0, a_time+0.5*a_dt, a_dt, kstage);
+        weight = third;
+        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp,m_blockreg,  a_time+0.5*a_dt,
+                          a_dt, weight, kstage);
+        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, third);
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k);
         kstage = 3;
-        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, a_time+a_dt, a_dt, kstage);
-        OP::StageLevel(m_k, m_U0, a_time+a_dt, a_dt, kstage);
-        m_delta.increment(m_k, sixth);
+        weight = sixth;
+        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time+a_dt,
+                          a_dt, weight, kstage);
+        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+a_dt, a_dt, weight, kstage);
+        m_delta.increment(m_k, weight);
     }
-
+    // m_delta fixup for conservation at block boundaries.
+    OP::postStepLevel(m_delta,m_blockreg);
+    // Update State.
     a_state.increment(m_delta, 1.0);
-
 }
 
 } //end Proto namespace

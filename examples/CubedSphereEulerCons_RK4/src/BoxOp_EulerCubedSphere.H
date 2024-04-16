@@ -5,7 +5,7 @@
 #include "Proto.H"
 
 #define NUMCOMPS 2*DIM+2
-#define NUMREG 2*NUMCOMPS
+#define NUMREG NUMCOMPS
 #define NGHOST 7
 #if DIM == 2
 #define iRHO 0
@@ -232,8 +232,10 @@ public:
 
   inline void LinearVisc(
                         State& a_Rhs,
+                        Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
                         const State& a_USph,
                         T a_scale = 1.0) const;
+  
 
   inline void primToMappedViscFlux(
                                   State& a_fluxdir,
@@ -285,34 +287,36 @@ public:
                 MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,               
                 MBLevelBoxData<T,1,MEM>& a_dVolrLev,
                 MBInterpOp& a_iop,
+                MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
                 T a_time,
                 T a_dt,
+                T a_weight,
                 int a_kstage);
 
   /// Compute fluxes, and RHS.
   static inline void
   StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
-             MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,  
+             MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+             MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
              T a_time,
-             T a_dt,          
+             T a_dt,
+             T a_weight,
              int a_kstage);
 
   /// Fill boundary registers. Need to add boundary register argument.
   // Implemented.
   inline void
   PostStagePatch(
-               MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,
-               const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
-               T a_time,
-               T a_dt,
-               T a_weight,
-               int a_kstage);
+                 std::vector<MBBoundaryData<T,NUMREG,MEM> >& a_mbdata,
+                 Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
+                 T a_time,
+                 T a_dt,
+                 T a_weight);
                  
 
   /// Update solution, impose flux matching.
   static inline void
-  postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
-                MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
+  postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
                 MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg);
 
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(

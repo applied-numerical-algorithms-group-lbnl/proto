@@ -183,9 +183,9 @@ int main(int argc, char *argv[])
   HDF5Handler h5;
   int domainSize = 16;
   int thickness = 32;
-  int max_iter = 500;
+  int max_iter = 5;
   double dt = 0.0003;
-  int write_cadence = 10;
+  int write_cadence = 1;
   int conv_test_type = 0; // 0: No convergence test, 1: Space Convergence test, 2: Space and Time Convergence test
   int levmax = 3;
   InputArgs args;

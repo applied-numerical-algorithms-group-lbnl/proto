@@ -1129,6 +1129,7 @@ template<
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
                         State& a_Rhs,
+                        Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
                         const State& a_USph,
                         T a_scale) const
 {
@@ -1199,6 +1200,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
       // update RHS.
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
       T dxInv = -1.0/(this->dx()[dir]);
+      fluxdir.copyTo(a_fluxes[dir]);
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
 
       a_Rhs += rhsIncr;
@@ -1869,8 +1871,10 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
               MBLevelBoxData<T,1,MEM>& a_dVolrLev,
               MBInterpOp& a_iop,
+              MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
               T a_time,
               T a_dt,
+              T a_weight,
               int a_kstage)
 {
   // Transform JU -> USph.
@@ -1885,10 +1889,19 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     rhs_i.setVal(0.0);
     auto &USph_i = a_UStage[dit];
     eulerOp[dit].PreStagePatch(USph_i,a_dVolrLev[dit],a_time,a_dt,a_kstage);
-    if (linear_visc && a_kstage == 0) eulerOp[dit].LinearVisc(rhs_i, USph_i, a_dt);
+    if (linear_visc && a_kstage == 0)
+      {
+        auto mbdata = a_blockreg.bounds(dit);
+        Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
+        fluxes[0].define(rhs_i.box().extrude(0));
+        fluxes[1].define(rhs_i.box().extrude(1));
+        fluxes[2].define(rhs_i.box().extrude(2));
+        eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
+        T one = 1.0;
+        eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+      }
   }
 }
-
 template<
     typename T,
     template<MemType> typename MAP,
@@ -1896,13 +1909,16 @@ template<
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
-            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,  
-            T a_time, 
-            T a_dt,         
-            int a_kstage)
+           MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
+           MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
+           T a_time, 
+           T a_dt,
+           T a_weight,
+           int a_kstage)
 {
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhs[dit];
@@ -1912,12 +1928,11 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     fluxes[1].define(rhs_i.box().extrude(1));
     fluxes[2].define(rhs_i.box().extrude(2));
     eulerOp[dit](rhs_i, fluxes, USph_i, a_dt);
-    // MBBoundaryRegister<T,NUMREG,MEM> MBBlockReg;
-    // eulerOp[dit].PostStagePatch(MBBlockReg, fluxes, a_time, a_dt, 1.0, a_kstage);
+    auto mbdata = a_blockreg.bounds(dit);
+    eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,a_weight);
   }
 }
-
-#if 0
+#if 1
 template<
     typename T,
     template<MemType> typename MAP,
@@ -1926,23 +1941,31 @@ template<
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 PostStagePatch(
-               MBBoundaryRegister<T,NUMREG,MEM>& a_MBBlockReg,
-               const Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
+               std::vector<MBBoundaryData<T,NUMREG,MEM> >& a_mbdata,
+               Array<BoxData<T,NUMCOMPS,MEM>,DIM>& a_fluxes, 
                T a_time,
                T a_dt,
-               T a_weight,
-               int a_kstage)
+               T a_weight)
 {
   // Increment boundary registers.
-  auto layout = this->layout();
-  auto& mbdata = a_MBBlockReg.bounds(dit);
   int numNonzeros = 0;
-  for (it = mbdata.begin(); it != mbdata.end(); it++)
+  T wgtxdt = a_weight*a_dt;
+  auto layout = this->layout();
+  for (auto it = a_mbdata.begin(); it != a_mbdata.end(); it++)
     {
-      auto& mb = mbdata[it];
+      auto mb = *it;
       pair<int,Side::LoHiSide> direction = mb.direction(layout);
       int dir = direction.first;
-      BoxData<T,NUMCOMPS,MEM> tmp = a_fluxes[dir]*(a_dt*a_weight);
+      BoxData<T,NUMCOMPS,MEM> tmp =
+        forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA(Var<T,NUMCOMPS,MEM>& a_corr,
+                                const Var<T,NUMCOMPS,MEM>& a_fluxdir,
+                                T a_wgtxdt)
+               {
+                 for (int comp = 0; comp < NUMCOMPS; comp++)
+                   {
+                     a_corr(comp) = a_fluxdir(comp)*a_wgtxdt;
+                   }
+               },a_fluxes[dir],wgtxdt);
       BoxData<T,NUMCOMPS,MEM> fluxRegister
         = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);
       fluxRegister += tmp;     
@@ -1956,24 +1979,23 @@ template<
   MemType MEM>
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
-postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
-              MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
+postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
               MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg)
 {
+  auto layout = a_rhsTotal.layout();
   a_blockReg.exchange();
-  auto layout = a_JU.layout();
-  
   for (auto dit : layout)
     {
       // Update Solution.
-      a_JU += a_rhsTotal;
+      auto& a_rhsTotal_i = a_rhsTotal[dit];
+      auto mbdata = a_blockReg.bounds(dit);
       // Flux matching.
-      for (it = mbdata.begin(); it != mbdata.end(); it++)
+      for (auto it = mbdata.begin(); it != mbdata.end(); it++)
         {
-          auto& mb = mbdata[it];
+          auto mb = *it;
           pair<int,Side::LoHiSide> direction = mb.direction(layout);
          int dir = direction.first;
-         int sign = direction.second.sign();          
+         int sign = direction.second;          
 
          BoxData<T,NUMCOMPS,MEM> fluxLocal
            = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);        
@@ -1981,25 +2003,29 @@ postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
            = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.adjData),0);
 
          BoxData<T,NUMCOMPS,MEM> fluxCorr =
-           forall([ ] PROTO_LAMBDA
-                  (Var<T,NUMCOMPS,MEM>& a_corr,
-                   const Var<T,NUMCOMPS,MEM>& a_local,
-                   const Var<T,NUMCOMPS,MEM>& a_adj)
-                  {
-                    for (int comp = 0; comp < NUMCOMPS,comp++)
-                      {
-                        a_corr(comp) .5*(a_adj(comp) - a_local(comp));
-                      }
-                  },fluxLocal,fluxAdj);
+           forall<T,NUMCOMPS,MEM>
+           ([ ] PROTO_LAMBDA
+            (Var<T,NUMCOMPS,MEM>& a_corr,
+             Var<T,NUMCOMPS,MEM>& a_local,
+             Var<T,NUMCOMPS,MEM>& a_adj)
+            {
+              for (int comp = 0; comp < NUMCOMPS; comp++)
+                {
+                  a_corr(comp) = .5*(a_adj(comp) - a_local(comp));
+                }
+            },fluxLocal,fluxAdj);
+         
          Stencil<T> faceStencil = 1.0*Shift(Point::Zeros());
-         if (sign = 1.)
+         if (sign == 1.)
            {
              faceStencil = (-1.0)*Shift(-Point::Basis(dir));
            }        
-         a_JU += faceStencil(fluxCorr);
+         a_rhsTotal_i += faceStencil(fluxCorr);
         }
     }
 }
+#endif
+#if 0
  template<
     typename T,
     template<MemType> typename MAP,
