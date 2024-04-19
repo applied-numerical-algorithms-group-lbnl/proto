@@ -105,6 +105,7 @@ public:
 
   T m_gamma = 5.0/3.0;
   mutable T umax;
+  mutable T dt;
 
   // How many ghost cells does the operator need from the state variables
   inline static Point ghost() { return Point::Ones(NGHOST);}

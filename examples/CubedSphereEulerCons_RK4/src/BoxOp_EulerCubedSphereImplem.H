@@ -1,5 +1,6 @@
 #include "Inputs_Parsing.H"
 #include "H5BCReader.H"
+extern double dt_global;
 template<
     typename T,
     template<MemType> typename MAP,
@@ -519,6 +520,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   T half = 0.5;
   T dxiR = this->dx()[0];
   T dxiPerp = this->dx()[1];  
+  BoxData<T,1,MEM> deta0(bx);
+  BoxData<T,DIM,MEM> ntrow0(bx);
+  BoxData<T,DIM,MEM,DIM> A_matrix0(bx);
+  BoxData<T,1,MEM> dt_min(this->box());
+  dt_min.setVal(1.0e10);
   for (int dir = 0; dir < DIM; dir++)
     {
       PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
@@ -536,9 +542,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
       BoxData<T,DIM,MEM,DIM> deta_a = CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir); 
+      if (dir ==0) deta.copyTo(deta0);
       Box bx = W.box();
       Box bxdir = bx.extrude(Point::Basis(dir));
       BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,dxiPerp,a_block,dir);
+      if (dir == 0) ntrow.copyTo(ntrow0);
       Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
       Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
       Point high = bx.high();
@@ -553,6 +561,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
                       dxiPerp,offseta,offsetb);
       spreadSlice(A_matrix);
+      if (dir == 0) A_matrix.copyTo(A_matrix0);
  
       int limiter = 1;
 
@@ -618,8 +627,73 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
+
+      // Compute dt_min.
+      forallInPlace([ ] PROTO_LAMBDA
+        ( Var<T,1,MEM>& a_dt_min,
+          const Var<T,NUMCOMPS,MEM>& a_W,
+          const Var<T,DIM,MEM,DIM>& a_amat,
+          const Var<T,DIM,MEM>& a_adjA,
+          const Var<T,1,MEM>& a_adjDrDir,
+          const Var<T,1,MEM>& a_detA,
+          const Var<T,1,MEM>& a_dVolr,
+          const Var<T,DIM,MEM>& a_Dr,
+          const T a_dxiPerp,
+          const T a_dxiR,
+          const int a_d,
+          const T a_gamma)
+        { 
+          double dx_d, dt_d;
+          if (a_d > 0){
+            T adjA_mag = sqrt(a_adjA(0)*a_adjA(0) + a_adjA(1)*a_adjA(1) + a_adjA(2)*a_adjA(2));
+            dx_d = a_dVolr(0) * a_detA(0) * a_dxiPerp / a_adjDrDir(0) / adjA_mag;
+          } 
+          if (a_d == 0){
+            dx_d = a_Dr(0) * a_dxiR;
+          }   
+
+          vecType velSph;
+          vecType velCart;
+          vecType bSph;
+          vecType bCart;
+
+          velSph[0] = a_W(iVX);       
+          velSph[1] = a_W(iVY);
+          velSph[2] = a_W(iVZ);
+          velCart[0] = 0.;       
+          velCart[1] = 0.;
+          velCart[2] = 0.;
+      
+          bSph[0] = a_W(iBX);       
+          bSph[1] = a_W(iBY);
+          bSph[2] = a_W(iBZ);
+          bCart[0] = 0.;       
+          bCart[1] = 0.;
+          bCart[2] = 0.;
+          T half = .5;
+          T one = 1.0;
+          T v2 = 0.;
+          T b2 = 0.;
+          for (int dir0 = 0; dir0 < DIM; dir0++)
+          {
+            for (int dir1 = 0; dir1 < DIM; dir1++)
+            {
+              velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
+              bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
+            }
+            v2 += velCart[dir0]*velCart[dir0];
+            b2 += bCart[dir0]*bCart[dir0];
+          }
+          T rho = a_W(iRHO);
+          T B_mag = sqrt(b2);
+          T p = a_W(iP);
+          if (p < 0.0) p = 0.0;
+          T af = sqrt(a_gamma*p/rho + b2/4.0/M_PI/rho);  
+          a_dt_min(0) = min(a_dt_min(0),dx_d/(af + sqrt(v2)));
+        },dt_min,W,A_matrix0,ntrow0,adjDrDir,deta0,dVolr,Dr,dxiPerp,dxiR,dir,m_gamma);
       
     }
+  dt = dt_min.min();
   if (a_block == BLOCKTEST)
     {
       HDF5Handler h5;
@@ -627,7 +701,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
     }
   a_Rhs *= (a_scale);
-  if (procID() == 0)cout << "output box = " << outputbox << endl;
+  // if (procID() == 0)cout << "output box = " << outputbox << endl;
 }
 
 template<
@@ -2093,7 +2167,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
 {
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-  
+  T dt_min = 1.0e10;
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhs[dit];
@@ -2105,7 +2179,10 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     eulerOp[dit](rhs_i, fluxes, USph_i, a_dt);
     auto mbdata = a_blockreg.bounds(dit);
     eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,a_weight);
+    if (eulerOp[dit].dt < dt_min && a_kstage == 0) dt_min = eulerOp[dit].dt;
   }
+  if (a_kstage == 0) dt_global = dt_min;
+
 }
 #if 1
 template<
