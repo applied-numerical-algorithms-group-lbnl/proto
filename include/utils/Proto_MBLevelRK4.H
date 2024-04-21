@@ -42,7 +42,7 @@ public:
             MBInterpOp&           a_interp);
 
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
-    inline void advance(LevelStateData& a_state,LevelScalarData& a_dVolrLev, double& a_dt, double a_time = 0., int a_order = 4);
+    inline void advance(LevelStateData& a_state,T& a_dt_next,LevelScalarData& a_dVolrLev, T& a_dt, T a_time = 0., int a_order = 4);
     inline LOP& op() { return m_f; }
     inline BC& bc() {return *m_bc; }
 protected:
@@ -85,9 +85,10 @@ template <
     MemType MEM>
 void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     LevelStateData& a_state, 
+    T&              a_dt_next,
     LevelScalarData& a_dVolrLev, 
-    double&         a_dt,
-    double          a_time,
+    T&         a_dt,
+    T          a_time,
     int             a_order)
 {
     double sixth = 1, third=1, half = 1;
@@ -102,7 +103,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
       kstage = 0;
       OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
       m_delta.increment(m_k, weight);
-      OP::StageLevel(m_k, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
+      OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
       m_delta.increment(m_k, weight);
     }
 
@@ -113,7 +114,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         double weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
         m_delta.increment(m_k, 1.0);
-        OP::StageLevel(m_k, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
+        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
         m_delta.increment(m_k, weight);
 
         a_state.copyTo(m_U0);
@@ -121,7 +122,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         kstage = 1;
         weight = third;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time+0.5*a_dt, a_dt, weight, kstage);
-        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt,weight, kstage);
+        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt,weight, kstage);
         m_delta.increment(m_k, third);
 
         a_state.copyTo(m_U0);
@@ -130,7 +131,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         weight = third;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp,m_blockreg,  a_time+0.5*a_dt,
                           a_dt, weight, kstage);
-        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt, weight, kstage);
+        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time+0.5*a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, third);
 
         a_state.copyTo(m_U0);
@@ -139,7 +140,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time+a_dt,
                           a_dt, weight, kstage);
-        OP::StageLevel(m_k, m_U0, m_blockreg, a_time+a_dt, a_dt, weight, kstage);
+        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time+a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, weight);
     }
     // m_delta fixup for conservation at block boundaries.

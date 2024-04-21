@@ -105,7 +105,6 @@ public:
 
   T m_gamma = 5.0/3.0;
   mutable T umax;
-  mutable T dt;
 
   // How many ghost cells does the operator need from the state variables
   inline static Point ghost() { return Point::Ones(NGHOST);}
@@ -130,6 +129,7 @@ public:
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
+   T&                              a_dt_next,
    const State&                    a_USph,
    T                               a_scale = 1.0) const;
   
@@ -307,6 +307,7 @@ public:
   /// Compute fluxes, and RHS.
   static inline void
   StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
+             T& a_dt_next,
              MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
              MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
              T a_time,

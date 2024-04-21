@@ -1,6 +1,5 @@
 #include "Inputs_Parsing.H"
 #include "H5BCReader.H"
-extern double dt_global;
 template<
     typename T,
     template<MemType> typename MAP,
@@ -491,6 +490,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
+   T&                              a_dt_next,
    const State&                    a_USph,
    T                               a_scale) const
 {
@@ -693,7 +693,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         },dt_min,W,A_matrix0,ntrow0,adjDrDir,deta0,dVolr,Dr,dxiPerp,dxiR,dir,m_gamma);
       
     }
-  dt = dt_min.min();
+  a_dt_next = dt_min.min();
   if (a_block == BLOCKTEST)
     {
       HDF5Handler h5;
@@ -2158,6 +2158,7 @@ template<
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
+           T& a_dt_next,
            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
            MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
            T a_time, 
@@ -2176,12 +2177,12 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     fluxes[0].define(rhs_i.box().extrude(0));
     fluxes[1].define(rhs_i.box().extrude(1));
     fluxes[2].define(rhs_i.box().extrude(2));
-    eulerOp[dit](rhs_i, fluxes, USph_i, a_dt);
+    eulerOp[dit](rhs_i, fluxes, a_dt_next, USph_i, a_dt);
     auto mbdata = a_blockreg.bounds(dit);
     eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,a_weight);
-    if (eulerOp[dit].dt < dt_min && a_kstage == 0) dt_min = eulerOp[dit].dt;
+    if (a_dt_next < dt_min && a_kstage == 0) dt_min = a_dt_next;
   }
-  if (a_kstage == 0) dt_global = dt_min;
+  if (a_kstage == 0) a_dt_next = dt_min;
 
 }
 #if 1

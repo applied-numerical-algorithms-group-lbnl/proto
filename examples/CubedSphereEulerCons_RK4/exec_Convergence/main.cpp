@@ -1,7 +1,6 @@
 #include "Proto.H"
 #include "Inputs_Parsing.H"
 #include "BoxOp_EulerCubedSphere.H"
-double dt_global = 0.0;
 
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
@@ -170,6 +169,7 @@ int main(int argc, char *argv[])
   int thickness = ParseInputs::get_thickness();
   int max_iter = ParseInputs::get_max_iter();
   double dt = 0.01*ParseInputs::get_CFL();
+  double dt_next = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
@@ -252,15 +252,15 @@ int main(int argc, char *argv[])
       // MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
       if (ParseInputs::get_convTestType() == 0){
         #ifdef PR_MPI
-          MPI_Reduce(&dt_global, &dt, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
+          MPI_Reduce(&dt_next, &dt, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
           MPI_Bcast(&dt, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         #else
-          dt = dt_global;
+          dt = dt_next;
         #endif
         dt *= ParseInputs::get_CFL();
       }
 
-      rk4.advance(JU, dVolrLev, dt, time, 4);
+      rk4.advance(JU, dt_next, dVolrLev, dt, time, 4);
       time += dt;
       if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
       if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time << endl;
