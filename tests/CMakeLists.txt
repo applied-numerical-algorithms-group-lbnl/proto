@@ -132,6 +132,10 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelOpTests COMMAND MBLevelOpTests)
+        blt_add_executable(NAME CubedSphereShellTests SOURCES CubedSphereShellTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME CubedSphereShellTests COMMAND CubedSphereShellTests)
     endif()
     if (MMB AND AMR)
         blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp

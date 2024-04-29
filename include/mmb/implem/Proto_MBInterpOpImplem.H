@@ -584,6 +584,18 @@ void MBInterpOp::define(
     }
 }
 
+void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
+{
+    Point dst = a_op->target().point();
+    int globalIndex = a_op->target().index();
+    MBPointID key(dst, globalIndex);
+    PROTO_ASSERT(m_points.count(key) == 0,
+            "MBInterpOp::insert | Tried to insert a duplicate MBPointInterpOp");
+
+    m_ops.push_back(a_op);
+    m_points.insert(key);
+}
+
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,

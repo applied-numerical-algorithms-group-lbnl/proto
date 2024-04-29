@@ -111,7 +111,227 @@ CubedSphereShell::InterpOp(
 {
     return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
+
+template<typename T>
+int _findIndex(std::vector<T> sorted, T value)
+{
+    for (int ii = 0; ii < sorted.size(); ii++)
+    {
+        if (sorted[ii] > value) { return ii; }
+    }
+    return sorted.size()-1;
+}
+
+template<typename T>
+Array<T, 3> _getPolar(Array<T,3> X)
+{
+    T x = X[0]; T y = X[1]; T z = X[2];
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
     
+    Array<T,3> R;
+    T r = sqrt(x*x + y*y + z*z);
+    R[rCoord] = r;
+    R[thetaCoord] = acos(z/r);
+    T phi = atan2(y,x);
+    if (phi < 0) { phi += 2*M_PI; }
+    R[phiCoord] = phi;
+    return R;
+}
+
+Point _getPolarImage(Box b, Point p)
+{
+
+    //theta = coordinate 0;
+    //phi = coordinate 1;
+    //origin at north pole
+    Point shift = b.low();
+    Box b0 = b.shift(-shift);
+    Point q = p - shift;
+    
+    while (q[1] < 0)
+    {
+        q[1] += b0.sizes()[1];
+    }
+    q[1] = q[1] % b0.sizes()[1];
+    if (q[0] < 0)
+    {
+        q[1] = (q[1] + b0.sizes()[1]/2) % b0.sizes()[1];
+        q[0] = -(1 + q[0]);
+    } else if (q[0] >= b0.sizes()[0])
+    {
+        q[1] = (q[1] + b0.sizes()[1]/2) % b0.sizes()[1];
+        q[0] = b0.sizes()[1] - (q[0] % b0.sizes()[1]) - 1;
+    }
+    return q + shift;
+}
+
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCInterpOp(
+        const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        Side::LoHiSide             a_side)
+{
+    PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
+            "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
+
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+   
+    // build source coordinate data
+    BoxData<T,3,MEM> polarData(srcBox);
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+    std::vector<T> thetaVals(srcBoxSizes[thetaCoord]);
+    for (auto pi : srcBox)
+    {
+        T theta = (pi[0] + 0.5)*a_dtheta[pi[0]];
+        T phi = (pi[1] + 0.5)*dphi;
+        polarData(pi,0) = R*sin(theta)*cos(phi);
+        polarData(pi,1) = R*sin(theta)*sin(phi);
+        polarData(pi,2) = R*cos(theta);
+        if (pi[1] == 0)
+        {
+            thetaVals[pi[0]] = theta;
+        }
+    }
+    
+    // cache non linear theta array
+    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
+    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
+    {
+        if (ii == 0)
+        {
+            thetaArray[ii] = 0;
+        } else {
+            thetaArray[ii] = thetaArray[ii-1] + a_dtheta[ii-1];
+        }
+    }
+
+    MBInterpOp op;
+    HDF5Handler h5;
+    h5.writePatch({"x", "y", "z"}, 1, polarData, "Y");
+    auto C2C = Stencil<T>::CornersToCells(2);
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        Box blockDomain = layout.domain().getBlock(block).box();
+        Box boundDomain, boundDomain_i;
+
+        // switch exists because map generates edge centered data
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1) & boundDomain;
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1) & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+   
+        h5.writePatch({"x", "y", "z"}, 1, X, "X_%i", iter.global());
+    
+        Point prev = Point::Zeros();
+        for (auto p_dst : X.box())
+        {
+            auto x_dst = X.array(p_dst);
+            auto r_dst = _getPolar(x_dst);
+            Point p_src = Point::Zeros();
+            
+            //std::cout << "x dst: " << x_dst << " | r dst: " << r_dst << std::endl;
+
+            p_src[2] = RIndex;
+            p_src[1] = r_dst[phiCoord] / dphi;
+            p_src[0] = _findIndex(thetaArray, r_dst[thetaCoord]);
+            auto x_src = polarData.array(p_src);
+            auto r_src = _getPolar(x_src);
+            
+            auto dr = r_dst - r_src;
+            Point s0 = dr[thetaCoord] < 0 ? Point::Basis(0,-1) : Point::Basis(0);
+            Point s1 = dr[phiCoord] < 0 ? Point::Basis(1,-1) : Point::Basis(1);
+            
+            MBDataPoint d_dst(iter, p_dst, layout);
+
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(_getPolarImage(srcBox, p_src));
+            srcPoints.push_back(_getPolarImage(srcBox, p_src + s0));
+            srcPoints.push_back(_getPolarImage(srcBox, p_src + s1));
+            srcPoints.push_back(_getPolarImage(srcBox, p_src + s0 + s1));
+
+            std::vector<Array<T,3>> srcData(4);
+            for (int ii = 0; ii < 4; ii++)
+            {
+                srcData[ii] = _getPolar(polarData.array(srcPoints[ii]));
+            }
+            
+            for (int ii = 0; ii < srcPoints.size(); ii++)
+            {
+                if (a_side == Side::Lo)
+                {
+                    srcPoints[ii] = srcPoints[ii] + Point::Basis(rCoord, 1);
+                } else {
+                    srcPoints[ii] = srcPoints[ii] + Point::Basis(rCoord, -1);
+                }
+            }
+
+            Array<T,2> y{r_dst[thetaCoord], r_dst[phiCoord]};
+            Array<T,2> y0{srcData[0][thetaCoord], srcData[0][phiCoord]};
+            Array<T,2> y1{srcData[3][thetaCoord], srcData[3][phiCoord]};
+            auto dy = y1 - y0;            
+
+            Matrix<T> A1({{1, y[0], y[1], y[0]*y[1]}});
+            Matrix<T> A2({{y1[0]*y1[1], -y1[0]*y0[1], -y1[1]*y0[0], y0[0]*y0[1]},
+                         {     -y1[1],        y0[1],        y1[1],      -y0[1]},
+                         {     -y1[0],        y1[0],        y0[0],      -y0[0]},
+                         {          1,           -1,           -1,           1}});
+
+            auto A3 = A1*A2;
+            A3 *= (1.0/(dy[0]*dy[1]));
+        
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = A3(0,ii); };
+            std::vector<MBDataPoint> srcs(4);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[2], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[1], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[3], a_srcLayout);
+        
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+        }
+    }
+    return op;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 CubedSphereShell::InterpBoundaries(
@@ -812,5 +1032,4 @@ CubedSphereShell::deriv3case(
     {      
       output |= hiStencil(a_input,hiBox);
     }
-  return output;
 }
