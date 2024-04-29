@@ -68,6 +68,7 @@ double MBProblemDomain::dv(unsigned int a_blockID) const
     {
         ret /= ((double)sizes[dir]);
     }
+    return ret;
 }
 
 std::vector<MBGraphArc> MBProblemDomain::boundaries(
@@ -159,6 +160,7 @@ Box MBProblemDomain::convert(
             MayDay<void>::Abort("Method Not Implemented");
         }
     }
+    return Box(L,H); //suppresses a compiler warning
 }
 
 MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const

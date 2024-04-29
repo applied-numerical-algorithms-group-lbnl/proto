@@ -88,6 +88,10 @@ namespace Proto
                 const Box&              a_region, 
                 const Point&            a_boxSize);
 
+        inline DisjointBoxLayout(
+                std::shared_ptr<BoxPartition>   a_partition,
+                const Point&                    a_boxSize);
+
         /// Direct Define
         /**
             Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 

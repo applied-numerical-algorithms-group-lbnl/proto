@@ -16,7 +16,7 @@ namespace Proto
         public:
         typedef DataIndex<MBBoxPartition> MBIndex;
 
-        inline MBDisjointBoxLayout(){}
+        inline MBDisjointBoxLayout(){m_defined = false;}
 
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
@@ -24,30 +24,31 @@ namespace Proto
 
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
-                const std::vector<Point>& a_boxSizes);
+                std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
-                const std::vector<MBPatchID_t>& a_patches,
-                const std::vector<Point>& a_boxSizes);
+                std::vector<MBPatchID_t>         a_patches,
+                std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
-                std::shared_ptr<MBBoxPartition> a_partition,
-                const std::vector<Point>& a_boxSizes);
+                std::shared_ptr<MBBoxPartition>  a_partition,
+                std::vector<Point>               a_boxSizes);
         
         inline void define(
                 MBProblemDomain& a_domain,
-                const std::vector<Point>& a_boxSizes);
+                std::vector<Point>               a_boxSizes);
         
         inline void define(
                 MBProblemDomain& a_domain,
-                const std::vector<MBPatchID_t>& a_patches,
-                const std::vector<Point>& a_boxSizes);
+                std::vector<MBPatchID_t>         a_patches,
+                std::vector<Point>               a_boxSizes);
 
         inline void define(
-                std::shared_ptr<MBBoxPartition> a_partition,
-                const std::vector<Point>& a_boxSizes);
+                std::shared_ptr<MBBoxPartition>  a_partition,
+                std::vector<Point>               a_boxSizes);
 
+        inline const MBProblemDomain& domainPtr() const; 
         inline const MBProblemDomain& domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
@@ -64,9 +65,12 @@ namespace Proto
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& getBlock(unsigned int a_block);
         inline const DisjointBoxLayout& getBlock(unsigned int a_block) const;
-        inline DisjointBoxLayout levelLayout() const;
+        inline std::shared_ptr<DisjointBoxLayout> getBlockPtr(unsigned int a_block);
+        inline std::shared_ptr<const DisjointBoxLayout> getBlockPtr(unsigned int a_block) const;
+        inline std::shared_ptr<DisjointBoxLayout> levelLayout() const;
         inline MBIndex find(Point a_point, unsigned int a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
+        inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
         inline Point connectivity(
@@ -93,13 +97,15 @@ namespace Proto
         inline unsigned int size() const;
         inline unsigned int localSize() const;
         inline std::vector<Point> boxSizes() const;
-        inline MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
-        inline MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+        MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
+        MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
         inline void print() const;
+        inline bool defined() const {return m_defined; }
         private:
-        MBProblemDomain                 m_domain;
-        std::vector<DisjointBoxLayout>  m_layouts;
-        std::shared_ptr<MBBoxPartition> m_partition;
+        bool                                            m_defined;
+        MBProblemDomain                                 m_domain;
+        std::vector<std::shared_ptr<DisjointBoxLayout>> m_layouts;
+        std::shared_ptr<MBBoxPartition>                 m_partition;
     };
 
     inline std::ostream& operator<< (std::ostream& os, const DataIndex<MBBoxPartition>& a_index);

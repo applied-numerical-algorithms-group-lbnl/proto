@@ -29,6 +29,13 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_region, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(
+        std::shared_ptr<BoxPartition> a_partition,
+        const Point&  a_boxSize)
+{
+    define(a_partition, a_boxSize);
+}
+
 void DisjointBoxLayout::define(
         std::shared_ptr<BoxPartition> a_partition,
         const Point&  a_boxSize)

@@ -1217,7 +1217,7 @@ void HDF5Handler::writeMBLevel(
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
     assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -1225,7 +1225,7 @@ void HDF5Handler::writeMBLevel(
     Array<double,DIM> dx;
     dx.fill(1.0);
     writeHeader<C,CTR>(&file, 1, a_varNames);
-    addMBLevel(&file, a_data, dx, Point::Ones(), 0);
+    addMBLevel(&file, a_data, dx, Point::Ones(), 0); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Fclose(file) >= 0);
 
 }

@@ -18,11 +18,11 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    typedef BoxOp_MBLaplace<double> OP;
-    int domainSize = 32;
-    int boxSize = 16;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+    int domainSize = 16;
+    int boxSize = 8;
     int numBlocks = XPOINT_NUM_BLOCKS;
-    int numLevels = 5;
+    int numLevels = 3;
     double slope = 1.0;
     int comp = 0;
     Array<double, DIM> exp{4,4,0,0,0,0};
@@ -78,7 +78,6 @@ TEST(MBMultigridTests, LaplaceXPoint) {
             rhs_i |= C2C(lphi_node);
             J0 = J_i.absMax();
         }
-        std::cout << "Jacobian: " << J0 << std::endl;
 
         mg.op(numLevels-1)(rhs, phi);
         phi.setVal(0);
