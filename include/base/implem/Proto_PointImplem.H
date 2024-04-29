@@ -487,16 +487,34 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     a_os << "(" ;
     for (int dir = 0; dir < DIM; dir++) 
     {
-      //keeps positive and negative stuff lined up --dtg
-      if(a_pt[dir] >= 0)
+      /**
+      //I am trying to make printing these in columns possible.
+      //This requires I add spaces where I need to.
+      //There are probably better ways to do this.
+      dtg 4-29-2024
+      **/
+      int ptval = a_pt[dir];
+      int absptval = std::abs(ptval);
+      if(ptval >= 0)
       {
         a_os << " ";
       }
-        a_os << a_pt[dir];
-        if (dir < DIM-1) 
-        {
-            a_os << ",";
-        }
+
+      a_os << a_pt[dir];
+      
+      if(absptval < 10)
+      {
+        a_os << "  ";
+      }
+      else if(absptval < 100)
+      {
+        a_os << " ";
+      }
+      
+      if (dir < DIM-1) 
+      {
+        a_os << ",";
+      }
     }
     a_os << ")";
     return a_os;
