@@ -169,6 +169,11 @@ namespace Proto
                 int                         a_order = 4,
                 int block = -1);
         
+        /// Manual Operator Insertion
+        /** Allows a user to build an MBInterpOp by manually constructing the point ops
+         */
+        inline void insert(std::shared_ptr<MBPointInterpOp> a_op);
+
         /// Apply
         /** Interpolates from source data to all block boundary ghost cells in the destination.
          *  It is assumed that MBLevelBoxData::fillBoundaries() has been called on the source

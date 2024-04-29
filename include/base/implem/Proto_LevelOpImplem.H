@@ -47,9 +47,10 @@ void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<
     int index = 0;
     for (auto iter : a_layout)
     {
-        m_ops.push_back(OpType<T,MEM>(a_layout[iter], a_dx));
+        auto op = std::make_shared<OpType<T,MEM>>(a_layout[iter], a_dx);
+        m_ops.push_back(op);
         // make sure the user-defined initialization is called
-        m_ops[index].init();
+        m_ops[index]->init();
         index++;
     }
 }
@@ -76,7 +77,7 @@ void LevelOp<OpType, T, BCType, MEM>::operator()(
         auto& out_i = a_output[iter];
         const auto& state_i = a_state[iter];
         const auto& aux_i   = a_aux[iter];
-        m_ops[iter](out_i, state_i, aux_i, a_scale);
+        (*m_ops[iter])(out_i, state_i, aux_i, a_scale);
     }
 }
 
@@ -103,7 +104,7 @@ void LevelOp<OpType, T, BCType, MEM>::operator()(
         {
             fluxes[dir].define(out_i.box().grow(dir, Side::Hi, 1));
         }
-        m_ops[iter](out_i, fluxes, state_i, a_scale);
+        (*m_ops[iter])(out_i, fluxes, state_i, a_scale);
     }
 }
 
@@ -125,7 +126,7 @@ void LevelOp<OpType, T, BCType, MEM>::setDiagScale(T a_value)
     m_diagScale = a_value;
     for (auto iter : m_layout)
     {
-        m_ops[iter].setDiagScale(a_value);
+        (*m_ops[iter]).setDiagScale(a_value);
     }
 }
 
@@ -138,7 +139,7 @@ void LevelOp<OpType, T, BCType, MEM>::setFluxScale(T a_value)
     m_fluxScale = a_value;
     for (auto iter : m_layout)
     {
-        m_ops[iter].setFluxScale(a_value);
+        (*m_ops[iter]).setFluxScale(a_value);
     }
 }
 
@@ -152,7 +153,7 @@ void LevelOp<OpType, T, BCType, MEM>::setTime(T a_time)
     m_bc.setTime(a_time);
     for (auto iter : m_layout)
     {
-        m_ops[iter].setTime(a_time);
+        (*m_ops[iter]).setTime(a_time);
     }
 }
 
@@ -165,6 +166,6 @@ void LevelOp<OpType, T, BCType, MEM>::setRKStage(unsigned int a_stage)
     m_rkStage = a_stage;
     for (auto iter : m_layout)
     {
-        m_ops[iter].setRKStage(a_stage);
+        (*m_ops[iter]).setRKStage(a_stage);
     }
 }

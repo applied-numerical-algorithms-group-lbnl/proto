@@ -389,14 +389,14 @@ TEST(MBInterpOp, CubedSphereShellTest)
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
         //EXPECT_GT(rate, 3.5);
-        EXPECT_TRUE(errL1[ii] < 1e-12 || rateL1 >  order - 1.0);
+        EXPECT_TRUE(err[ii] < 1e-12 || rate >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)
         {
             std::cout << "Convergence Rate (Max Norm): " << rate;
             std::cout << " | (L1 Norm): " << rateL1 << std::endl;
         }
-        std::cout << "Convergence pass / fail is determined by L1 Norm" << std::endl;
+        std::cout << "Convergence pass / fail is determined by Max Norm" << std::endl;
 #endif
     }
 }

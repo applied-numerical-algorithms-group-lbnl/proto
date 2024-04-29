@@ -171,10 +171,12 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         m_mg[a_level].solve(state, force, 1);
         averageDown(crseState, state, a_level);
         crseState.copyTo(*(m_state_0[a_level-1]));
-        // compute coarse residual = RC
-        // compute level force F = RC + L(PhiC)
-        //vCycle(a_state, a_force, F, a_level-1);
-        // correct this level's state
+        coarseResidual(*m_residual[a_level-1],
+                a_state, crseForce, force, a_level);
+        op(a_level-1)(*m_force[a_level-1], crseState); //LC
+        m_force[a_level-1]->increment(*m_residual[a_level-1]);
+        vCycle(a_state, a_force, *m_force[a_level-1], a_level-1);
+        fineCorrect(state, crseState, *m_state_0[a_level-1], a_level);
         interpBounds(crseState, state, a_level);
         m_mg[a_level].solve(state, force, 1);
     }
@@ -234,6 +236,86 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
     }
     crseTmp.copyTo(a_crseData);
 }
+
+template <
+    template<typename, template<MemType> typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
+        LevelStateData&     a_crseResidual,
+        AMRStateData&       a_state,
+        LevelStateData&     a_crseForce,
+        LevelStateData&     a_fineForce,
+        int                 a_fineLevel)
+{
+    PROTO_ASSERT(a_fineLevel > 0,
+            "MBAMR::coarseResidual | Error: Fine Level must be greater than 0");
+    PROTO_ASSERT(a_fineLevel < a_state.numLevels(),
+            "MBAMR::coarseResidual | Error: Fine Level index is out of bounds");
+    auto& crseState = a_state[a_fineLevel-1];
+    auto& fineState = a_state[a_fineLevel];
+    auto& crseOp = op(a_fineLevel-1);
+    auto& fineOp = op(a_fineLevel);
+    
+    //interpolate onto file level
+    //TODO: potentially redundant
+    interpBoundaries(crseState, fineState, a_fineLevel);
+    fineState.exchange();
+    m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
+    
+    // compute coarse residual
+    crseOp(a_crseResidual, crseState, -1.0); //-LC
+    a_crseResidual.increment(a_crseForce);   //GC - LC
+    
+    for (auto iter : fineState.layout())
+    {
+        auto block = fineState.layout().block(iter);
+        auto& fineState_i = fineState[iter];
+        auto& fineForce_i = a_fineForce[iter];
+        auto& crseTmp_i = *m_local[a_fineLevel-1][iter];
+        
+        // compute fine level residual
+        BoxData<T, OP::numstate(), MEM> fineTmp(fineState.layout()[iter]);
+        fineOp[iter](fineTmp, fineState_i, -1.0);
+        fineTmp += fineForce_i;
+        // average onto crse temp
+        crseTmp_i |= m_average[block](fineTmp);
+    }
+    // copy crse temp into crseResidual, overwriting the refined region
+    m_local[a_fineLevel-1]->copyTo(a_crseResidual);
+}
+
+template <
+    template<typename, template<MemType> typename, MemType> class OPType,
+    template<MemType> class MAP,
+    typename T,
+    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType, MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
+        LevelStateData&         a_fineState,
+        const LevelStateData&   a_crseState,
+        LevelStateData&         a_crseState_0,
+        int                     a_fineLevel)
+{
+    for (auto iter : a_crseState.layout())
+    {
+        auto& crse_0 = a_crseState_0[iter];
+        const auto& crse   = a_crseState[iter];
+        crse_0 -= crse;
+        crse_0 *= -1;
+    }
+    a_crseState_0.copyTo(*m_local[a_fineLevel]);
+    for (auto iter : a_fineState.layout())
+    {
+        auto block = a_fineState.layout().block(iter);
+        auto& delta = (*m_local[a_fineLevel])[iter];
+        auto& state = a_fineState[iter];
+
+        state += m_constInterp(delta);
+    }
+}
+
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
     template<MemType> class MAP,

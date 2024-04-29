@@ -2,8 +2,9 @@
 #define TEST_LAMBDAS
 #include <cmath>
 #include "Proto.H"
+#ifdef PR_MMB
 #include "MBMap_XPointRigid.H"
-
+#endif
 using namespace Proto;
 
 PROTO_KERNEL_START
@@ -227,8 +228,6 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     return domain;
 }
 #endif
-#endif
-
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -299,7 +298,7 @@ void f_JCubeSphere_(Point& a_pt, Var<T,1,MEM>& a_J, int a_block, Point a_blockSi
 }
 PROTO_KERNEL_END(f_JCubeSphere_, f_JCubeSphere);
 #endif
-
+#endif
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
@@ -772,6 +771,36 @@ AMRGrid telescopingGrid(
     periodicity.fill(false);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
+#ifdef PR_MMB
+MBAMRGrid telescopingXPointGrid(
+        int domainSize,
+        int numLevels,
+        int refRatio,
+        int boxSize)
+{
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
+    std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
+    std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
+    auto coarsePatches = domain.patches(boxSize);
+    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    for (int li = 1; li < numLevels; li++)
+    {
+        auto domain = grid[li].domain();
+        std::vector<MBPatchID_t> patches;
+        Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
+        Point patch = patchDomain.high();
+        for (int bi = 0; bi < domain.size(); bi++)
+        {
+            patches.push_back(MBPatchID_t(patch, bi));
+        }
+        grid[li].define(domain, patches, boxSizeVect);
+    }
+    return grid;
+}
+
+
+#endif
 #endif
 
 template<typename T, unsigned int C>

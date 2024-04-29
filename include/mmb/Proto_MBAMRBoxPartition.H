@@ -7,6 +7,7 @@
 namespace Proto
 {
     /// Multiblock AMR Box Partition
+    typedef std::tuple<Point, BlockIndex, int> MBAMRPatchID_t;
     class MBAMRBoxPartition
     {
         public:

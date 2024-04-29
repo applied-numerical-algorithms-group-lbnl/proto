@@ -164,7 +164,7 @@ class AMROp
     inline void setDiagScale(T a_value, int a_gridFactor = 0);
     inline void setFluxScale(T a_value, int a_gridFactor = 0);
     inline Array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
-    const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
+    const LOP& levelOp(int a_level) const { return *m_levelOps[a_level]; }
     const BOP& boxOp(int a_level, const LevelIndex& a_index) const { return levelOp(a_level)[a_index]; }
 
     private:
@@ -172,7 +172,7 @@ class AMROp
     bool m_defined;    
     AMRGrid m_grid; //this is intentionally a deep copy.
     std::vector<Array<T, DIM>>      m_dx;
-    std::vector<LOP>         m_levelOps;
+    std::vector<std::shared_ptr<LOP>>         m_levelOps;
     std::vector<std::shared_ptr<LevelFluxRegister<T, BOP::numState(), MEM>>> m_fluxRegisters;
     std::vector<InterpStencil<T>> m_interp;
 };

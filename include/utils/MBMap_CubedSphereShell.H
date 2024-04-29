@@ -4,6 +4,7 @@
 #define CUBED_SPHERE_SHELL_R0 0.3
 #define CUBED_SPHERE_SHELL_R1 1.5
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
+#include <cmath> //for atan2
 
 namespace Proto
 {
@@ -83,6 +84,74 @@ namespace {
                 a_X[1] = 0;
                 a_X[2] = 0;
                 break;
+        }
+    }
+    
+    ACCEL_DECORATION
+    void f_cubedSphereInverseMap(
+            Array<double, DIM>& a_XMap,
+            const Array<double, DIM>& a_XCart,
+            int a_block)
+    {
+        constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        constexpr double r0 = CUBED_SPHERE_SHELL_R0;
+        constexpr double r1 = CUBED_SPHERE_SHELL_R1;
+        double xi = 0;
+        double eta = 0;
+        double x = a_XCart[0];
+        double y = a_XCart[1];
+        double z = a_XCart[2];
+        double r = sqrt(x*x + y*y + z*z);
+        switch (a_block)
+        {
+            case 0:
+                xi = atan2(-x,z);
+                eta = atan2(y,z);
+                break;
+            case 1:
+                xi = atan2(x,z);
+                eta = atan2(y,z);
+                break;
+            case 2:
+                xi = atan2(-x,y);
+                eta = atan2(-z,y);
+                break;
+            case 3:
+                xi = atan2(y,x);
+                eta = atan2(z,x);
+                break;
+            case 4:
+                xi = atan2(-x,y);
+                eta = atan2(z,y);
+                break;
+            case 5:
+                xi = atan2(y,x);
+                eta = atan2(-z,x);
+                break;
+            default:
+                xi = 0;
+                eta = 0;
+                break;
+        }
+        r = (r - r0)/(r1-r0);
+        xi = (xi + M_PI/4.0)*(2.0/M_PI);
+        eta = (eta + M_PI/4.0)*(2.0/M_PI);
+        switch (r_dir)
+        {
+            case 0:
+                {
+                    a_XMap[0] = r;
+                    a_XMap[1] = xi;
+                    a_XMap[2] = eta;
+                    break;
+                }
+            case 2:
+                {
+                    a_XMap[0] = xi;
+                    a_XMap[1] = eta;
+                    a_XMap[2] = r;
+                    break;
+                }
         }
     }
     
@@ -200,6 +269,32 @@ public:
         auto block = this->block();
         f_cubedSphereMap(X, J, a_Xi, block);
         return X;
+    }
+    
+    inline void inverse(
+            BoxData<double, DIM, MEM>& a_XMap,
+            const BoxData<double, DIM, MEM>& a_XCart)
+    {
+        auto block = this->block();
+        forallInPlace(
+            [] PROTO_LAMBDA (
+                Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0,
+                int a_block)
+            {
+                Array<double, DIM> X0;
+                Array<double, DIM> X;
+                for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
+                f_cubedSphereInverseMap(X, X0, a_block);
+                for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
+            }, a_XMap, a_XCart, block);
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_XCart)
+    {
+        Array<double, DIM> XMap;
+        auto block = this->block();
+        f_cubedSphereInverseMap(XMap, a_XCart, block);
+        return XMap;
     }
 };
 
