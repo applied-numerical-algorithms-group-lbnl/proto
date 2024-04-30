@@ -1033,4 +1033,5 @@ CubedSphereShell::deriv3case(
     {      
       output |= hiStencil(a_input,hiBox);
     }
+    return output;
 }
