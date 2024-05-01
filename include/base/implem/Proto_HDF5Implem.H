@@ -472,6 +472,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     Point boxShift = Point::Basis(0,2)*domainSize;
     domainSize[0] = domainSize[0]*(a_data.layout().numBlocks()*2-1);
     Box domainBox(domainSize);
+    std::cout << "addMBLevel: domainBox = " << domainBox << std::endl;
     // CREATE GROUP
     std::string g_level_name = "/level_" + to_string(a_level);
     auto g_level =
@@ -633,6 +634,43 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     free(boxData);
     free(rawData);
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::readMBLevel");
+    // PARSE THE FILE NAME
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+    
+    // OPEN THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+#endif
+
+
+    
+}
+
 #endif
 #endif
 
