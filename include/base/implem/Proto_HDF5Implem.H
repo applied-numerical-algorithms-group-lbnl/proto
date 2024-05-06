@@ -472,7 +472,6 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     Point boxShift = Point::Basis(0,2)*domainSize;
     domainSize[0] = domainSize[0]*(a_data.layout().numBlocks()*2-1);
     Box domainBox(domainSize);
-    std::cout << "addMBLevel: domainBox = " << domainBox << std::endl;
     // CREATE GROUP
     std::string g_level_name = "/level_" + to_string(a_level);
     auto g_level =
