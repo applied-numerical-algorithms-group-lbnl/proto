@@ -231,13 +231,19 @@ namespace Proto_Transition
     domainGhostReflection(
       pr_level_data             &    a_devi_data,
       const pr_box              &    a_domain,
-      int a_domain_face_dir,  int    a_zero_lo_one_hi,  int a_sten_sign)  
+      int a_domain_face_dir,  int    a_zero_lo_one_hi,  int a_sten_sign,
+      int a_force_num_ghost = -1)  
     {
       auto dit   = a_devi_data.dataIterator();
       auto grids = a_devi_data.layout();
       auto dombx = grids.domain().box();
       bool initToZero = true;
       int num_ghost = a_devi_data.ghost()[a_domain_face_dir];
+      if(a_force_num_ghost > 0)
+      {
+        num_ghost = a_force_num_ghost;
+      }
+      
       for(int ibox = 0; ibox < dit.localSize(); ibox++)
       {
         
@@ -268,12 +274,14 @@ namespace Proto_Transition
     domainGhostReflectEven(
       pr_level_data             &    a_devi_data,
       const pr_box              &    a_domain,
-      int a_domain_face_dir,  int    a_zero_lo_one_hi)  
+      int a_domain_face_dir,  int    a_zero_lo_one_hi,  
+      int a_force_num_ghost = -1)  
     {
       int sten_sign = 1;
       domainGhostReflection(a_devi_data,
                             a_domain, a_domain_face_dir,
-                            a_zero_lo_one_hi, sten_sign);
+                            a_zero_lo_one_hi, sten_sign,
+                            a_force_num_ghost);
     }
 
     ///
@@ -284,12 +292,14 @@ namespace Proto_Transition
     domainGhostReflectOdd(
             pr_level_data             &    a_devi_data,
             const pr_box              &    a_domain,
-            int a_domain_face_dir,  int a_zero_lo_one_hi)
+            int a_domain_face_dir,  int a_zero_lo_one_hi,
+            int a_force_num_ghost = -1)  
     {
       int sten_sign = -1;
       domainGhostReflection(a_devi_data,
                             a_domain, a_domain_face_dir,
-                            a_zero_lo_one_hi, sten_sign);
+                            a_zero_lo_one_hi, sten_sign,
+                            a_force_num_ghost);
     }
 
     /// also calls exchange
@@ -297,15 +307,15 @@ namespace Proto_Transition
     enforceReflectionBCs(pr_level_data &    a_devi_data,
                          const pr_box  &    a_domain,
                          int                a_reflect_sign_lo[DIM],
-                         int                a_reflect_sign_hi[DIM])
+                         int                a_reflect_sign_hi[DIM],
+                         int a_force_num_ghost = -1)  
     {
       const int zero_lo = 0;  const int one_hi = 1; 
       for(int idir = 0; idir < DIM; idir++)
       {
-        domainGhostReflection(a_devi_data, a_domain, idir, zero_lo, a_reflect_sign_lo[idir]);
-        domainGhostReflection(a_devi_data, a_domain, idir,  one_hi, a_reflect_sign_hi[idir]);
+        domainGhostReflection(a_devi_data, a_domain, idir, zero_lo, a_reflect_sign_lo[idir], a_force_num_ghost);
+        domainGhostReflection(a_devi_data, a_domain, idir,  one_hi, a_reflect_sign_hi[idir], a_force_num_ghost);
       }
-      a_devi_data.exchange();
     }
 
     ///
