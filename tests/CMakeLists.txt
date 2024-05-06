@@ -114,6 +114,12 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBMultigridTests COMMAND MBMultigridTests)
+        if(ENABLE_HDF5)
+            blt_add_executable(NAME HDF5Tests SOURCES HDF5Tests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME HDF5Tests COMMAND HDF5Tests)
+        endif()
     endif()
     if (OPS)
         blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp

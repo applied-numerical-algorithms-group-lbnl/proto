@@ -7,57 +7,6 @@
 
 using namespace Proto;
 
-MBProblemDomain buildCubeSphere(int a_domainSize)
-{
-    MBProblemDomain domain(6);
-#if DIM > 2
-    auto CW = CoordPermutation::cw();
-    auto CCW = CoordPermutation::ccw();
-    Point dir = Point::Basis(0);
-    Point z = Point::Basis(2);
-    std::array<CoordPermutation, 4> RNorth;
-    std::array<CoordPermutation, 4> RSouth;
-    RNorth[0] = CoordPermutation({{1,2,-1},{2,1,1}});
-    RNorth[1] = CoordPermutation({{0,2,1},{2,0,-1}});
-    RNorth[2] = CoordPermutation({{1,2,1},{2,1,-1}});
-    RNorth[3] = CoordPermutation({{0,2,-1},{2,0,1}});
-    RSouth[0] = CoordPermutation({{1,2,1},{2,1,-1}});
-    RSouth[1] = CoordPermutation({{0,2,-1},{2,0,1}});
-    RSouth[2] = CoordPermutation({{1,2,-1},{2,1,1}});
-    RSouth[3] = CoordPermutation({{0,2,1},{2,0,-1}});
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, dir, CCW);
-        domain.defineBoundary(srcBlock, 1, z, RNorth[bi-2]);
-        domain.defineBoundary(srcBlock, 0, -z, RSouth[bi-2]);
-        dir = CCW(dir);
-    }
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-#endif
-    return domain;
-}
-
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-
 DisjointBoxLayout testLayout(int domainSize, Point boxSize)
 {
     Box domainBox = Box::Cube(domainSize); 
@@ -90,6 +39,30 @@ void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
 
 }
 PROTO_KERNEL_END(f_testMapF, f_testMap);
+
+TEST(HDF5, ReadMBLevel)
+{
+    HDF5Handler h5;
+    int domainSize = 64;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    layout.toSingleBlock();
+    MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
+    data.setVal(7);
+    h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
+    
+    ProblemDomain readDomain(Box(Point(64,64)), false);
+    DisjointBoxLayout readLayout(readDomain, Point::Ones(16));
+
+    LevelBoxData<double, 3, HOST> readData(readLayout, Point::Ones());
+    readData.setVal(-7);
+    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_1");
+    h5.readLevel(readData, "DATA_0");
+
+    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_2");
+}
 
 /*
 TEST(HDF5, MMBOffsets)

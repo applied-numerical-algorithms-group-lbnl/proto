@@ -326,6 +326,11 @@ namespace Proto
                 Array<double, DIM> a_dx,
                 Point a_refRatio,
                 int a_level);
+        
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
 
 #ifdef PR_AMR
         template<template<MemType> typename MAP, typename T, unsigned int C,

@@ -66,9 +66,6 @@ namespace Proto
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
-        //inline std::shared_ptr<DisjointBoxLayout> getBlockPtr(BlockIndex a_block);
-        //inline std::shared_ptr<const DisjointBoxLayout> getBlockPtr(BlockIndex a_block) const;
-        //inline std::shared_ptr<DisjointBoxLayout> levelLayout() const;
         inline MBIndex find(Point a_point, BlockIndex a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
         inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }

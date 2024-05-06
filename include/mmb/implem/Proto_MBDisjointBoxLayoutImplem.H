@@ -184,26 +184,6 @@ unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
     auto block = data.first.second;
     return block;
 }
-#if 0
-std::shared_ptr<DisjointBoxLayout> MBDisjointBoxLayout::getBlockPtr(BlockIndex a_block)
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
-    PROTO_ASSERT(a_block < numBlocks(),
-            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
-            (numBlocks() = %u)", numBlocks());
-    return m_layouts[a_block];
-}
-
-std::shared_ptr<const DisjointBoxLayout>
-MBDisjointBoxLayout::getBlockPtr(BlockIndex a_block) const
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
-    PROTO_ASSERT(a_block < numBlocks(),
-            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
-            (numBlocks() = %u)", numBlocks());
-    return m_layouts[a_block];
-}
-#endif
 
 DisjointBoxLayout& MBDisjointBoxLayout::getBlock(BlockIndex a_block)
 {
@@ -223,13 +203,6 @@ MBDisjointBoxLayout::getBlock(BlockIndex a_block) const
             (numBlocks() = %u)", numBlocks());
     return m_layouts[a_block];
 }
-
-#if 0
-std::shared_ptr<DisjointBoxLayout> MBDisjointBoxLayout::levelLayout() const
-{
-    return m_layouts[0];
-}
-#endif
 
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex a_block) const
 {

@@ -557,7 +557,11 @@ namespace Proto
         void copyTo(
                 BoxData<T, C, MEM, D, E>&   a_dst,
                 const CoordPermutation& a_rotation) const;
-       
+      
+        /// Create a new BoxData that is transposed relative to this
+        /** Very inefficient. Only use this if you have to.  
+         */
+        BoxData<T,C,MEM,D,E> transpose(int c0, int c1) const;
         /// Rotate Coordinates
         /**
          * Permute the coordinates of this BoxData in place
