@@ -79,6 +79,13 @@ namespace Proto {
         std::vector<T>             a_dtheta,
         Side::LoHiSide             a_side);
 
+    template<typename T, MemType MEM>
+    static MBInterpOp BCNearestOp(
+        const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        Side::LoHiSide             a_side);
+
     /// Interpolate Block Boundary Ghost Cells
     /** Creates and throws away an MBInterpOp. This operator is expensive to build,
      *  so it's usually better to build the operator using InterpOp and keeping it cached.

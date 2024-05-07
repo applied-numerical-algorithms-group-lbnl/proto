@@ -14,7 +14,6 @@ int main(int argc, char** argv)
 
 #ifdef PR_MMB
 #if DIM == 3
-    std::cout << "checkpoint 0 @ " << procID() << std::endl;
     int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
     int thetaCoord = (rCoord + 1) % 3;
     int phiCoord = (rCoord + 2) % 3;
@@ -24,12 +23,10 @@ int main(int argc, char** argv)
     Box B = reader.readDomain("DATA");
     reader.readGeom(dtheta, "DATA");
     BoxData<double, 8, HOST> data_0(B);
-    if (procID() == 0)
-    {
-        reader.readData(data_0, "DATA");
-    }
+
+    reader.readData(data_0, "DATA");
+
     MPI_Bcast(data_0.data(), B.size()*8 ,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    std::cout << "checkpoint 1 @ " << procID() << std::endl;
 
     // Transpose Phi and Theta
     Point LT = B.low(); 
@@ -42,9 +39,9 @@ int main(int argc, char** argv)
     auto t = Point::Basis(thetaCoord);
     auto p = Point::Basis(phiCoord);
     CoordPermutation R{{t,p},{p,t}};
-    h5.writePatch(1, data_0, "SRC_DATA");
+    // h5.writePatch(1, data_0, "SRC_DATA");
     data_0.rotate(BT,R);
-    h5.writePatch(1, data_0, "SRC_DATA_T");
+    // h5.writePatch(1, data_0, "SRC_DATA_T");
 
     // Create a single block, single patch MBLevelBoxData
     // You may have to do this on each processor
@@ -57,8 +54,6 @@ int main(int argc, char** argv)
     MBLevelBoxData<double, 8, HOST> data(srcLayout, Point::Zeros());
     data_0.copyTo(data[*srcLayout.begin()]);
 
-    std::cout << "checkpoint 2 @ " << procID() << std::endl;
-
     // Cubed Sphere data
     int domainSize = 128;
     int boxSize = 128;
@@ -69,23 +64,29 @@ int main(int argc, char** argv)
     boxSizeVect[rCoord] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Ones());
+    MBLevelBoxData<double, 8, HOST> dstData2(layout, Point::Ones());
     dstData.setVal(0);
 
-    std::cout << "checkpoint 3 @ " << procID() << std::endl;
     auto map = CubedSphereShell::Map(layout, Point::Ones());
     
     // Get the interpolation operator
-    auto interpOp = CubedSphereShell::BCInterpOp(map, srcLayout, dtheta, Side::Lo);
+    // auto interpOp = CubedSphereShell::BCInterpOp(map, srcLayout, dtheta, Side::Lo);
+    auto interpOp = CubedSphereShell::BCNearestOp(map, srcLayout, dtheta, Side::Lo);
 
-    std::cout << "checkpoint 4 @ " << procID() << std::endl;
     // Interpolate data
     interpOp.apply(dstData, data);
-    std::cout << "checkpoint 5 @ " << procID() << std::endl;
 
-    
+    for (auto dit : dstData.layout())
+    {
+    Point source_lo = Point(dstData[dit].box().low()[0],dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
+	Point source_hi = Point(dstData[dit].box().low()[0],dstData[dit].box().high()[1],dstData[dit].box().high()[2]);
+    Box sourceBox(source_lo,source_hi);
+    dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
+    }
 
     h5.writeMBLevel(data, "SRC_DATA");
-    h5.writeMBLevel(map, dstData, "DST_DATA");
+    // h5.writeMBLevel(map, dstData, "DST_DATA");
+    h5.writeMBLevel(map, dstData2, "DST_DATA2");
 #else
     std::cout << "No test run. DIM must be equal to 3" << std::endl;
 #endif

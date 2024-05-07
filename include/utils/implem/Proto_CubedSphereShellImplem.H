@@ -181,8 +181,8 @@ CubedSphereShell::BCInterpOp(
         Side::LoHiSide             a_side)
 {
     HDF5Handler h5;
-    PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
-            "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
+    // PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
+    //         "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
 
     // SETUP
     const auto& layout = a_map.layout();
@@ -341,6 +341,114 @@ CubedSphereShell::BCInterpOp(
     }
     return op;
 }
+
+
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCNearestOp(
+        const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        Side::LoHiSide             a_side)
+{
+    HDF5Handler h5;
+
+    // SETUP
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+
+
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+    
+    // CACHE THETA ON EACH LATITUDE (used for fast search)
+    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
+    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
+    {
+        thetaArray[ii] = (ii == 0 ? 0 : thetaArray[ii-1] + a_dtheta[ii-1]);
+    }
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+
+
+
+    // BUILD THE INTERPOLATION OPERATOR
+    MBInterpOp op;
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // All points in this block (not including ghost)
+        Box blockDomain = layout.domain().getBlock(block).box();
+        // Boundary of this block and this patch respectively
+        Box boundDomain, boundDomain_i;
+
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1) & boundDomain;
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1) & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+        // CREATE POINT INTERP OP FOR EACH POINT IN CUBE SPHERE BOUNDARY
+        for (auto p_dst : X.box())
+        {
+            auto x_dst = X.array(p_dst);    //get cartesian coords at this point
+            auto r_dst = _getPolar(x_dst);  //convert cartesian to spherical polar
+            
+            // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
+            Point p_src = Point::Zeros();
+            
+            p_src[rCoord] = RIndex;
+            p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
+            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(p_src);
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            MBDataPoint d_dst(iter, p_dst, layout);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+          
+            //arguments are dst point, src points, coefficients
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+        }
+    }
+    return op;
+}
+
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
