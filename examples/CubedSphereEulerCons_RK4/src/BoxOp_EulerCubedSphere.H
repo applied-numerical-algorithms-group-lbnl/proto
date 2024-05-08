@@ -116,9 +116,12 @@ public:
   inline static constexpr int order() { return 4; }
 
   // Initialization
-  inline void init()
-  {
-  };  
+  inline void initialize( State& a_W,
+                        const State& a_BC,
+                        const Scalar& a_radius,
+                        const Vector& a_Xcart,
+                        T a_gamma,
+                        int a_nradius) const;
 
   // New factorization of the operator starts here.
   // New operator() - calls RadialMetrics from inside the operator.
@@ -286,6 +289,7 @@ public:
   /// Local boundary conditions here. 
   inline void
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
+                BoxData<T,NUMCOMPS,MEM>& a_BC,
                 BoxData<T,1,MEM>& a_dVolr,
                 T a_time,
                 T a_dt,

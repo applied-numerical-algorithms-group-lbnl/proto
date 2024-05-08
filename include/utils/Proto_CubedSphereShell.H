@@ -84,7 +84,8 @@ namespace Proto {
         const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
-        Side::LoHiSide             a_side);
+        Side::LoHiSide             a_side,
+        int                       a_ghost);
 
     /// Interpolate Block Boundary Ghost Cells
     /** Creates and throws away an MBInterpOp. This operator is expensive to build,

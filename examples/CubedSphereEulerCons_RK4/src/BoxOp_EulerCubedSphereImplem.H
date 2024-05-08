@@ -1,5 +1,5 @@
 #include "Inputs_Parsing.H"
-#include "H5BCReader.H"
+#include "MHDReader.H"
 template<
     typename T,
     template<MemType> typename MAP,
@@ -2013,6 +2013,7 @@ template<
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
+              BoxData<T,NUMCOMPS,MEM>& a_BC,
               BoxData<T,1,MEM>& a_dVolr,
               T a_time,
               T a_dt,
@@ -2041,7 +2042,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
-    if (init_condition_type == 2){
+    if (init_condition_type == 2 || init_condition_type == 3){
       // Extrapolate to ghost cells.
       Point source_low = Point(a_blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
       Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
@@ -2075,30 +2076,41 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);  
       forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, a_USphStage, radius, XCart, m_gamma, thickness);
     }
-#if 0
     if (init_condition_type == 3){
-      H5BCReader reader;
-      std::vector<BoxData<double, NUMCOMPS, HOST>> BC_data;
-      reader.readData(BC_data, "POT3D360x180_2020010120_2020022020_fixeddtheta.h5");
-      HDF5Handler h5;
-		  if (procID() == 0) h5.writePatch({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, BC_data[0], "BC_data");
-
-      int theta_count = BC_data[0].box().high()[1] + 1;
-      int phi_count = (BC_data[0].box().high()[2] + 1)/2;
-      double theta = 0.9*(M_PI/180); // Example theta
-      double phi = 359.9*(M_PI/180); // Example phi
-      double dphi = 2 * M_PI / (phi_count);
-      double dtheta = M_PI / (theta_count);
-      int i_phi = static_cast<int>(phi / dphi);
-      int i_theta = static_cast<int>(theta / dtheta);
-      cout << BC_data[0](Point(0,i_theta,i_phi),iRHO) << endl;
-      std::cout << "Theta index: " << i_theta << ", Phi index: " << i_phi << std::endl;
-      double half = 0.5;
-      BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-      (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);
-      forallInPlace_p(f_H5IBCs, bdryBoxLow, a_USphStage, radius, XCart, m_gamma, thickness);
+      Point source_lo = Point(a_BC.box().low()[0],a_BC.box().low()[1],a_BC.box().low()[2]);
+      Point source_hi = Point(a_BC.box().low()[0],a_BC.box().high()[1],a_BC.box().high()[2]);
+      Box sourceBox(source_lo,source_hi);
+      for (int i = 0; i <= NGHOST; i++){
+        a_BC.copyTo(a_USphStage,sourceBox,Point::Basis(0)*(-i));
+      }
+      // Convert primitive spherical to conserved spherical variables. in correct units. scale by radius.
+      forallInPlace_p([ ] PROTO_LAMBDA
+      (Point a_pt,
+       Var<T, NUMCOMPS, MEM> &a_USph,
+       Var<T> &a_radius,
+       T a_gamma)
+      {  
+        double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
+        double rad = a_radius(0);
+        double rho = a_USph(0)*1.67262192e-24*pow(r_BC/rad,2.0);
+        double u = a_USph(1);
+        double v = a_USph(2);
+        double w = a_USph(3);
+        double p = a_USph(4)*1.0e-12*pow(r_BC/rad,2.0*a_gamma); // From picodyne to dyne 
+        double Bx = a_USph(5)*1.0e-6*pow(r_BC/rad,2.0); // MicroGauss to Gauss
+        double By = a_USph(6)*1.0e-6*pow(r_BC/rad,1.0);
+        double Bz = a_USph(7)*1.0e-6*pow(r_BC/rad,1.0);
+        double e = p/(a_gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/M_PI;
+        a_USph(0) = rho; //rho
+        a_USph(1) = rho*u; //Momentum-x
+        a_USph(2) = rho*v; //Momentum-y
+        a_USph(3) = rho*w; //Momentum-z
+        a_USph(4) = e; //Energy
+        a_USph(5) = Bx; //Bx
+        a_USph(6) = By; //By
+        a_USph(7) = Bz; //Bz
+      },bdryBoxLow,a_USphStage,radius,m_gamma);
     }
-#endif
   }
 }
 
@@ -2126,13 +2138,42 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   bool linear_visc = true;
   bool divBcleaning = false;
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
+  auto layout = a_UStage.layout();
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  double gamma = ParseInputs::get_gamma();
+
+  HDF5Handler h5;
+
+  MHDReader reader;
+  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+  int thetaCoord = (rCoord + 1) % 3;
+  int phiCoord = (rCoord + 2) % 3;
+  MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+  reader.file_to_BC(dstData, map, "DATA.h5");
+
+  // // Move from ghosted to non-ghosted data to easily see in VisIt
+  // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+  // // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), ghost());
+  // dstData2.setVal(0);
+  
+  // for (auto dit : dstData.layout())
+  // {
+  //   Point source_lo = Point(dstData[dit].box().low()[0],dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
+  //   Point source_hi = Point(dstData[dit].box().low()[0],dstData[dit].box().high()[1],dstData[dit].box().high()[2]);
+  //   Box sourceBox(source_lo,source_hi);
+  //   dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
+  // }
+
+  // h5.writeMBLevel(map, dstData, "DST_DATA");
+  // h5.writeMBLevel(map, dstData2, "DST_DATA2");
+
+
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhsTotal[dit];
     rhs_i.setVal(0.0);
     auto &USph_i = a_UStage[dit];
-    eulerOp[dit].PreStagePatch(USph_i,a_dVolrLev[dit],a_time,a_dt,a_kstage);
+    eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],a_time,a_dt,a_kstage);
 
     if (linear_visc && a_kstage == 0)
       {
@@ -2200,29 +2241,29 @@ PostStagePatch(
                T a_dt,
                T a_weight)
 {
-  // Increment boundary registers.
-  int numNonzeros = 0;
-  T wgtxdt = a_weight*a_dt;
-  auto layout = this->layout();
-  for (auto it = a_mbdata.begin(); it != a_mbdata.end(); it++)
-    {
-      auto mb = *it;
-      pair<int,Side::LoHiSide> direction = mb.direction(layout);
-      int dir = direction.first;
-      BoxData<T,NUMCOMPS,MEM> tmp =
-        forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA(Var<T,NUMCOMPS,MEM>& a_corr,
-                                const Var<T,NUMCOMPS,MEM>& a_fluxdir,
-                                T a_wgtxdt)
-               {
-                 for (int comp = 0; comp < NUMCOMPS; comp++)
-                   {
-                     a_corr(comp) = a_fluxdir(comp)*a_wgtxdt;
-                   }
-               },a_fluxes[dir],wgtxdt);
-      BoxData<T,NUMCOMPS,MEM> fluxRegister
-        = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);
-      fluxRegister += tmp;     
-    }
+  // // Increment boundary registers.
+  // int numNonzeros = 0;
+  // T wgtxdt = a_weight*a_dt;
+  // auto layout = this->layout();
+  // for (auto it = a_mbdata.begin(); it != a_mbdata.end(); it++)
+  //   {
+  //     auto mb = *it;
+  //     pair<int,Side::LoHiSide> direction = mb.direction(layout);
+  //     int dir = direction.first;
+  //     BoxData<T,NUMCOMPS,MEM> tmp =
+  //       forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA(Var<T,NUMCOMPS,MEM>& a_corr,
+  //                               const Var<T,NUMCOMPS,MEM>& a_fluxdir,
+  //                               T a_wgtxdt)
+  //              {
+  //                for (int comp = 0; comp < NUMCOMPS; comp++)
+  //                  {
+  //                    a_corr(comp) = a_fluxdir(comp)*a_wgtxdt;
+  //                  }
+  //              },a_fluxes[dir],wgtxdt);
+  //     BoxData<T,NUMCOMPS,MEM> fluxRegister
+  //       = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);
+  //     fluxRegister += tmp;     
+  //   }
 }
 
 // Update solution, impose flux matching, apply artificial viscosity, divergence cleaning.
@@ -2235,47 +2276,47 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
 postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
               MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg)
 {
-  auto layout = a_rhsTotal.layout();
-  a_blockReg.exchange();
-  for (auto dit : layout)
-    {
-      // Update Solution.
-      auto& a_rhsTotal_i = a_rhsTotal[dit];
-      auto mbdata = a_blockReg.bounds(dit);
-      // Flux matching.
-      for (auto it = mbdata.begin(); it != mbdata.end(); it++)
-        {
-          auto mb = *it;
-          pair<int,Side::LoHiSide> direction = mb.direction(layout);
-         int dir = direction.first;
-         int sign = direction.second;          
+  // auto layout = a_rhsTotal.layout();
+  // a_blockReg.exchange();
+  // for (auto dit : layout)
+  //   {
+  //     // Update Solution.
+  //     auto& a_rhsTotal_i = a_rhsTotal[dit];
+  //     auto mbdata = a_blockReg.bounds(dit);
+  //     // Flux matching.
+  //     for (auto it = mbdata.begin(); it != mbdata.end(); it++)
+  //       {
+  //         auto mb = *it;
+  //         pair<int,Side::LoHiSide> direction = mb.direction(layout);
+  //        int dir = direction.first;
+  //        int sign = direction.second;          
 
-         BoxData<T,NUMCOMPS,MEM> fluxLocal
-           = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);        
-         BoxData<T,NUMCOMPS,MEM> fluxAdj
-           = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.adjData),0);
+  //        BoxData<T,NUMCOMPS,MEM> fluxLocal
+  //          = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.localData),0);        
+  //        BoxData<T,NUMCOMPS,MEM> fluxAdj
+  //          = slice<T,NUMREG,NUMCOMPS,MEM>(*(mb.adjData),0);
 
-         BoxData<T,NUMCOMPS,MEM> fluxCorr =
-           forall<T,NUMCOMPS,MEM>
-           ([ ] PROTO_LAMBDA
-            (Var<T,NUMCOMPS,MEM>& a_corr,
-             Var<T,NUMCOMPS,MEM>& a_local,
-             Var<T,NUMCOMPS,MEM>& a_adj)
-            {
-              for (int comp = 0; comp < NUMCOMPS; comp++)
-                {
-                  a_corr(comp) = .5*(a_adj(comp) - a_local(comp));
-                }
-            },fluxLocal,fluxAdj);
+  //        BoxData<T,NUMCOMPS,MEM> fluxCorr =
+  //          forall<T,NUMCOMPS,MEM>
+  //          ([ ] PROTO_LAMBDA
+  //           (Var<T,NUMCOMPS,MEM>& a_corr,
+  //            Var<T,NUMCOMPS,MEM>& a_local,
+  //            Var<T,NUMCOMPS,MEM>& a_adj)
+  //           {
+  //             for (int comp = 0; comp < NUMCOMPS; comp++)
+  //               {
+  //                 a_corr(comp) = .5*(a_adj(comp) - a_local(comp));
+  //               }
+  //           },fluxLocal,fluxAdj);
          
-         Stencil<T> faceStencil = 1.0*Shift(Point::Zeros());
-         if (sign == 1.)
-           {
-             faceStencil = (-1.0)*Shift(-Point::Basis(dir));
-           }        
-         a_rhsTotal_i += faceStencil(fluxCorr);
-        }
-    }
+  //        Stencil<T> faceStencil = 1.0*Shift(Point::Zeros());
+  //        if (sign == 1.)
+  //          {
+  //            faceStencil = (-1.0)*Shift(-Point::Basis(dir));
+  //          }        
+  //        a_rhsTotal_i += faceStencil(fluxCorr);
+  //       }
+  //   }
 }
 #endif
 #if 0
@@ -2310,4 +2351,174 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialGhost(State& a_U,
 
 // ====================================================================================
 // Pre and Post implems end here.
+// ====================================================================================
+
+
+
+// ====================================================================================
+// Initialization start here.
+// ====================================================================================
+
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_radialInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T> &a_radius,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T eps = 0.1;
+  T amplitude;
+  T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
+  if (abs(arg) < .25)
+  {
+    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+  }
+  else
+  {
+    amplitude = 0.;
+  }
+  T rho = rho0 + amplitude * rho0;
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.0; //ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+
+PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_nonradialInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T, DIM> &a_X_cart,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T eps = 0.1;
+  T amplitude;
+  T arg = sqrt((a_X_cart(2)+0.7) * (a_X_cart(2)+0.7) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  if (abs(arg) < .25)
+  {
+    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+  }
+  else
+  {
+    amplitude = 0.;
+  }
+  T rho = rho0 + amplitude * rho0;
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = 0.;//ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
+
+
+PROTO_KERNEL_START
+template <typename T, MemType MEM>
+void f_radialoutflowInit_F(
+    Point a_pt,
+    Var<T, NUMCOMPS, MEM> &a_W,
+    Var<T> &a_radius,
+    Var<T, DIM> &a_X_cart,
+    T a_gamma,
+    int a_nradius)
+{
+  // Compute spherical initial data.
+  T p0 = 1.0;
+  T rho0 = 1.0;
+  T u0 = 10.0;
+  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
+  T p = p0 * pow(rho / rho0, a_gamma);
+  T ur = u0;
+  a_W(iRHO) = rho;
+  a_W(iVX) = ur;
+  a_W(iVY) = 0.0;
+  a_W(iVZ) = 0.0;
+  a_W(iP) = p;
+  a_W(iBX) = 0.0;
+  a_W(iBY) = 0.0;
+  a_W(iBZ) = 0.0;
+}
+
+PROTO_KERNEL_END(f_radialoutflowInit_F, f_radialoutflowInit)
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::
+initialize(State& a_W,
+          const State& a_BC,
+          const Scalar& a_radius,
+          const Vector& a_Xcart,
+          T a_gamma,
+          int a_nradius) const
+{
+  int init_condition_type = ParseInputs::get_init_condition_type();
+  if (init_condition_type == 0) forallInPlace_p(f_radialInit, a_W, a_radius, a_gamma, a_nradius);
+  if (init_condition_type == 1) forallInPlace_p(f_nonradialInit, a_W, a_Xcart, a_gamma, a_nradius);
+  if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
+
+  if (init_condition_type == 3) {
+    Point source_lo = Point(a_BC.box().low()[0],a_BC.box().low()[1],a_BC.box().low()[2]);
+    Point source_hi = Point(a_BC.box().low()[0],a_BC.box().high()[1],a_BC.box().high()[2]);
+    Box sourceBox(source_lo,source_hi);
+    int low_index = a_W.box().low()[0];
+    int high_index = a_W.box().high()[0];
+    for (int i = low_index; i <= high_index; i++){
+      a_BC.copyTo(a_W,sourceBox,Point::Basis(0)*(i+1));
+    }
+    // In primitive spherical. To correct units. scale by radius.
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_WSph,
+    Var<double> &a_radius,
+    double a_gamma)
+    {  
+      double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
+      double rad = a_radius(0);
+      double rho = a_WSph(0)*1.67262192e-24*pow(r_BC/rad,2.0);
+      double u = a_WSph(1);
+      double v = a_WSph(2);
+      double w = a_WSph(3);
+      double p = a_WSph(4)*1.0e-12*pow(r_BC/rad,2.0*a_gamma); // From picodyne to dyne 
+      double Bx = a_WSph(5)*1.0e-6*pow(r_BC/rad,2.0); // MicroGauss to Gauss
+      double By = a_WSph(6)*1.0e-6*pow(r_BC/rad,1.0);
+      double Bz = a_WSph(7)*1.0e-6*pow(r_BC/rad,1.0);
+      a_WSph(0) = rho; //rho
+      a_WSph(1) = u; //V-x
+      a_WSph(2) = v; //V-y
+      a_WSph(3) = w; //V-z
+      a_WSph(4) = p; //Pressure
+      a_WSph(5) = Bx; //Bx
+      a_WSph(6) = By; //By
+      a_WSph(7) = Bz; //Bz
+    },a_W,a_radius,a_gamma);
+  }
+}
+
+// ====================================================================================
+// Initialization end here.
 // ====================================================================================

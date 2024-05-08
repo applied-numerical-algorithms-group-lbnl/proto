@@ -1,6 +1,6 @@
 #include "Proto.H"
 #include "MHDReader.H"
-
+#define NGHOST 6
 using namespace Proto;
 
 int main(int argc, char** argv)
@@ -63,29 +63,29 @@ int main(int argc, char** argv)
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[rCoord] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Ones());
-    MBLevelBoxData<double, 8, HOST> dstData2(layout, Point::Ones());
+    MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+    MBLevelBoxData<double, 8, HOST> dstData2(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
     dstData.setVal(0);
 
     auto map = CubedSphereShell::Map(layout, Point::Ones());
     
     // Get the interpolation operator
     // auto interpOp = CubedSphereShell::BCInterpOp(map, srcLayout, dtheta, Side::Lo);
-    auto interpOp = CubedSphereShell::BCNearestOp(map, srcLayout, dtheta, Side::Lo);
+    auto interpOp = CubedSphereShell::BCNearestOp(map, srcLayout, dtheta, Side::Lo, NGHOST);
 
     // Interpolate data
     interpOp.apply(dstData, data);
 
     for (auto dit : dstData.layout())
     {
-    Point source_lo = Point(dstData[dit].box().low()[0],dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
-	Point source_hi = Point(dstData[dit].box().low()[0],dstData[dit].box().high()[1],dstData[dit].box().high()[2]);
+    Point source_lo = Point(-1,dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
+	Point source_hi = Point(-1,dstData[dit].box().high()[1],dstData[dit].box().high()[2]);
     Box sourceBox(source_lo,source_hi);
     dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
     }
 
     h5.writeMBLevel(data, "SRC_DATA");
-    // h5.writeMBLevel(map, dstData, "DST_DATA");
+    h5.writeMBLevel(map, dstData, "DST_DATA");
     h5.writeMBLevel(map, dstData2, "DST_DATA2");
 #else
     std::cout << "No test run. DIM must be equal to 3" << std::endl;

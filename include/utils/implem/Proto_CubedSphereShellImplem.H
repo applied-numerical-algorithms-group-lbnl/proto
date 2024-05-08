@@ -349,7 +349,8 @@ CubedSphereShell::BCNearestOp(
         const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
-        Side::LoHiSide             a_side)
+        Side::LoHiSide             a_side,
+        int a_ghost)
 {
     HDF5Handler h5;
 
@@ -409,6 +410,7 @@ CubedSphereShell::BCNearestOp(
         }
         if (boundDomain_i.size() <= 0) { continue; }
 
+        boundDomain_i = boundDomain_i.grow(a_ghost*Point::Basis(thetaCoord) + a_ghost*Point::Basis(phiCoord));
         // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
         BoxData<double, DIM, MEM> X(boundDomain_i);
         BoxData<double, 1, MEM> J(boundDomain_i);

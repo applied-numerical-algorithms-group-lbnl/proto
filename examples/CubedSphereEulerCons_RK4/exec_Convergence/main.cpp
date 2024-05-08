@@ -2,112 +2,6 @@
 #include "Inputs_Parsing.H"
 #include "BoxOp_EulerCubedSphere.H"
 
-PROTO_KERNEL_START
-template <typename T, MemType MEM>
-void f_radialInit_F(
-    Point a_pt,
-    Var<T, NUMCOMPS, MEM> &a_W,
-    Var<T> &a_radius,
-    T a_dxradius,
-    T a_gamma,
-    int a_nradius)
-{
-  // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T eps = 0.1;
-  T amplitude;
-  T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
-  if (abs(arg) < .25)
-  {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
-  }
-  else
-  {
-    amplitude = 0.;
-  }
-  T rho = rho0 + amplitude * rho0;
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_W(iRHO) = rho;
-  a_W(iVX) = 0.0; //ur;
-  a_W(iVY) = 0.0;
-  a_W(iVZ) = 0.0;
-  a_W(iP) = p;
-  a_W(iBX) = 0.0;
-  a_W(iBY) = 0.0;
-  a_W(iBZ) = 0.0;
-}
-
-PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
-
-PROTO_KERNEL_START
-template <typename T, MemType MEM>
-void f_nonradialInit_F(
-    Point a_pt,
-    Var<T, NUMCOMPS, MEM> &a_W,
-    Var<T, DIM> &a_X_cart,
-    T a_gamma,
-    int a_nradius)
-{
-  // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T eps = 0.1;
-  T amplitude;
-  T arg = sqrt((a_X_cart(2)+0.7) * (a_X_cart(2)+0.7) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
-  if (abs(arg) < .25)
-  {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
-  }
-  else
-  {
-    amplitude = 0.;
-  }
-  T rho = rho0 + amplitude * rho0;
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_W(iRHO) = rho;
-  a_W(iVX) = 0.;//ur;
-  a_W(iVY) = 0.0;
-  a_W(iVZ) = 0.0;
-  a_W(iP) = p;
-  a_W(iBX) = 0.0;
-  a_W(iBY) = 0.0;
-  a_W(iBZ) = 0.0;
-}
-PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
-
-
-PROTO_KERNEL_START
-template <typename T, MemType MEM>
-void f_radialoutflowInit_F(
-    Point a_pt,
-    Var<T, NUMCOMPS, MEM> &a_W,
-    Var<T> &a_radius,
-    Var<T, DIM> &a_X_cart,
-    T a_gamma,
-    int a_nradius)
-{
-  // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T u0 = 10.0;
-  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = u0;
-  a_W(iRHO) = rho;
-  a_W(iVX) = ur;
-  a_W(iVY) = 0.0;
-  a_W(iVZ) = 0.0;
-  a_W(iP) = p;
-  a_W(iBX) = 0.0;
-  a_W(iBY) = 0.0;
-  a_W(iBZ) = 0.0;
-}
-
-PROTO_KERNEL_END(f_radialoutflowInit_F, f_radialoutflowInit)
-
 
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              auto &eulerOp,
@@ -141,10 +35,19 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 
   CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop,dVolrLev, 4);
 
+  int init_condition_type = ParseInputs::get_init_condition_type();
+  MHDReader reader;
+  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+  int thetaCoord = (rCoord + 1) % 3;
+  int phiCoord = (rCoord + 2) % 3;
+  MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+  if (init_condition_type == 3) reader.file_to_BC(dstData, map, "DATA.h5");
+
+
   for (auto dit : a_JU.layout())
   {
     int kstage = 0;
-    eulerOp[dit].PreStagePatch(JUTemp[dit],dVolrLev[dit],time,dt,kstage);
+    eulerOp[dit].PreStagePatch(JUTemp[dit],dstData[dit],dVolrLev[dit],time,dt,kstage);
   }
 
   for (auto dit : a_JU.layout())
@@ -155,7 +58,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     W.copyTo(Wout[dit]);
   }
 
-  h5.writeMBLevel({"density","Vr","Vt","Vp","P","Br","Bt","Bp"}, map, Wout, "W_visc_" + to_string(iter));
+  h5.writeMBLevel({"density","Vr","Vt","Vp","P","Br","Bt","Bp"}, map, Wout, "W_" + to_string(iter));
+  h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
 }
 
 int main(int argc, char *argv[])
@@ -168,6 +72,7 @@ int main(int argc, char *argv[])
   int domainSize = ParseInputs::get_domainSize();
   int thickness = ParseInputs::get_thickness();
   int max_iter = ParseInputs::get_max_iter();
+  int temporal_order = ParseInputs::get_temporal_order();
   double dt = 0.01*ParseInputs::get_CFL();
   double dt_next = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
@@ -215,6 +120,14 @@ int main(int argc, char *argv[])
     USph.setVal(0.);
     double dxradius = 1.0 / thickness;
     auto C2C = Stencil<double>::CornersToCells(4);
+
+    MHDReader reader;
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+    MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+    if (init_condition_type == 3) reader.file_to_BC(dstData, map, "DATA.h5");
+
     // Set input solution.
     for (auto dit : layout)
     {
@@ -235,9 +148,7 @@ int main(int argc, char *argv[])
       double half = 0.5;
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-      if (init_condition_type == 0) forallInPlace_p(f_radialInit, WPoint_i, radius, dxradius, gamma, thickness);
-      if (init_condition_type == 1) forallInPlace_p(f_nonradialInit, WPoint_i, XCart, gamma, thickness);
-      if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, WPoint_i, radius, XCart, gamma, thickness);
+      eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
       eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
       JU_i.setVal(0.);
       JUTemp.copyTo(JU_i, layout[dit]);
@@ -260,7 +171,7 @@ int main(int argc, char *argv[])
         dt *= ParseInputs::get_CFL();
       }
 
-      rk4.advance(JU, dt_next, dVolrLev, dt, time, 4);
+      rk4.advance(JU, dt_next, dVolrLev, dt, time, temporal_order);
       time += dt;
       if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
       if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time << endl;
