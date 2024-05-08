@@ -13,7 +13,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   Array<double, DIM> dx;
   double dxradius = 1.0 / thickness;
-  double gamma = 5.0 / 3.0;
+  double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
   int thickness = ParseInputs::get_thickness();
   int max_iter = ParseInputs::get_max_iter();
   int temporal_order = ParseInputs::get_temporal_order();
+  double gamma = ParseInputs::get_gamma();
   double dt = 0.01*ParseInputs::get_CFL();
   double dt_next = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
@@ -132,18 +133,13 @@ int main(int argc, char *argv[])
     for (auto dit : layout)
     {
       dx = eulerOp[dit].dx();
-      // BoxData<double> radius(layout[dit].grow(6));
       BoxData<double> radius(dVolrLev[dit].box());
-      double gamma = 5.0 / 3.0;
       BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
       BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
       eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
-      Box b_i = C2C.domain(layout[dit]).grow(6);
-      BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
       auto block = layout.block(dit);
       auto &JU_i = JU[dit];
       BoxData<double, NUMCOMPS, HOST> JUTemp;
-      BoxData<double, NUMCOMPS> WBar_i(JU_i.box());
       BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
       double half = 0.5;
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>

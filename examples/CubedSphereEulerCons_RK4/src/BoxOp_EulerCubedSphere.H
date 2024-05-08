@@ -3,6 +3,7 @@
 #define _BOX_OP_EULER_
 
 #include "Proto.H"
+#include "Inputs_Parsing.H"
 
 #define NUMCOMPS 2*DIM+2
 #define NUMREG NUMCOMPS
@@ -103,7 +104,7 @@ class BoxOp_EulerCubedSphere : public MBBoxOp<T, MAP, NUMCOMPS, 0, MEM>
 public:
   using MBBoxOp<T, MAP, NUMCOMPS,0,MEM>::MBBoxOp;
 
-  T m_gamma = 5.0/3.0;
+  T m_gamma = ParseInputs::get_gamma();
   mutable T umax;
 
   // How many ghost cells does the operator need from the state variables
@@ -358,7 +359,13 @@ public:
 private:
   
 };
+#include "BoxOp_Utilities.H"
+#include "BoxOp_Viscocity.H"
+#include "BoxOp_DivBcleaning.H"
+#include "BoxOp_Limiters.H"
+#include "BoxOp_PreStage.H"
 #include "BoxOp_EulerCubedSphereImplem.H"
+#include "BoxOp_Initialize.H"
 
 #ifdef PR_AMR
 /* TODO: this doesn't belong here and it doesn't compile
