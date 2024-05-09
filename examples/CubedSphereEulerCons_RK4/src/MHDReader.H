@@ -11,13 +11,14 @@ class MHDReader
     template<typename T, MemType MEM>
     inline void file_to_BC(MBLevelBoxData<T,8,MEM>& a_dstData, 
                            const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
-                           std::string a_filename)
+                           std::string a_filename,
+                           T a_time)
     {
         int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
         int thetaCoord = (rCoord + 1) % 3;
         int phiCoord = (rCoord + 2) % 3;
         
-        // Read meta data from "DATA.h5"
+        // Read meta data from file
         std::vector<double> dtheta;
         Box B = readDomain(a_filename);
         readGeom(dtheta, a_filename);
@@ -35,6 +36,34 @@ class MHDReader
         auto p = Point::Basis(phiCoord);
         CoordPermutation R{{t,p},{p,t}};
         data_0.rotate(BT,R);
+
+        // Extend the box to double the size in the phi direction
+        Box bx1 = data_0.box();
+        Point high = bx1.high();
+        int domainSizez = high[phiCoord]+1;
+        high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
+        Point low = bx1.low();
+        low[phiCoord] = -1;
+        Box bx2(low, high);
+        BoxData<double, 8, HOST> data_1(bx2);
+        BoxData<double, 8, HOST> data_2(bx2);
+        data_0.copyTo(data_1,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+        data_0.copyTo(data_1);
+
+        // Rotate the data
+        double carr_rot_time = 25.38*24*60*60; // Seconds
+        // We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
+        // Carrington rotation time (27.2753 days) is from Earth's prespective.
+        double angle_to_rotate = fmod(360*a_time/carr_rot_time,360);
+        int cells_to_rotate = angle_to_rotate/(360/domainSizez);
+        double needed_fraction = angle_to_rotate/(360/domainSizez) - cells_to_rotate;
+        cells_to_rotate = cells_to_rotate % domainSizez;
+        cells_to_rotate = domainSizez - cells_to_rotate;
+        static Stencil<double> m_right_shift;
+        m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
+        data_1.copyTo(data_2,bx2,Point::Basis(phiCoord)*(-cells_to_rotate));
+        data_1 = m_right_shift(data_2);
+        data_1.copyTo(data_0,bx1,Point::Zeros());
 
         // Create a single block, single patch MBLevelBoxData
         // You may have to do this on each processor

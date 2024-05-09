@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
   double gamma = ParseInputs::get_gamma();
   double dt = 0.01*ParseInputs::get_CFL();
   double dt_next = 0.0;
+  double time = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
     int thetaCoord = (rCoord + 1) % 3;
     int phiCoord = (rCoord + 2) % 3;
     MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-    if (init_condition_type == 3) reader.file_to_BC(dstData, map, BC_file);
+    if (init_condition_type == 3) reader.file_to_BC(dstData, map, BC_file, time);
 
     // Set input solution.
     for (auto dit : layout)
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
     MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     Write_W(JU, eulerOp, iop, thickness, 0);
-    double time = 0.0;
+    
     for (int iter = 1; iter <= max_iter; iter++)
     {
       // MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);

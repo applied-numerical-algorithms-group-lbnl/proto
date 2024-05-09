@@ -1,9 +1,9 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
--init_condition_type             2
+-init_condition_type             3
 -domainSize                      16
 -thickness                       32
--max_iter                        600
+-max_iter                        500
 -CFL                             0.5
 -write_cadence                   10
 -gamma                           1.6666666666666666666667
