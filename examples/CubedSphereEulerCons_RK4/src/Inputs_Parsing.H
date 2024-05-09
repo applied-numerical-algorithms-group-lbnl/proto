@@ -23,6 +23,7 @@ private:
     int temporal_order; // Temporal order of accuracy
     int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
     int linear_viscosity; // 0: No linear viscosity, 1: Linear viscosity
+    string BC_file;
 
     // Private Constructor
     ParseInputs() {}
@@ -50,6 +51,7 @@ public:
     static int get_temporal_order() {return getInstance().temporal_order;}
     static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
     static int get_linear_viscosity() {return getInstance().linear_viscosity;}
+    static string get_BC_file() {return getInstance().BC_file;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -65,6 +67,7 @@ public:
         args.add("temporal_order", temporal_order);
         args.add("divergence_cleaning", divergence_cleaning);
         args.add("linear_viscosity", linear_viscosity);
+        args.add("BC_file", BC_file);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -82,6 +85,7 @@ public:
             cout << "temporal_order: " << temporal_order << endl;
             cout << "divergence_cleaning: " << divergence_cleaning << endl;
             cout << "linear_viscosity: " << linear_viscosity << endl;
+            cout << "BC_file: " << BC_file << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }

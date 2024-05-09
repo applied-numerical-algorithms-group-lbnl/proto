@@ -204,6 +204,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // Compute viscous operators here, and increment a_rhsTotal.
   int linear_visc = ParseInputs::get_linear_viscosity();
   int divBcleaning = ParseInputs::get_divergence_cleaning();
+  string BC_file = ParseInputs::get_BC_file();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto layout = a_UStage.layout();
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
@@ -216,7 +217,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   int thetaCoord = (rCoord + 1) % 3;
   int phiCoord = (rCoord + 2) % 3;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  reader.file_to_BC(dstData, map, "DATA.h5");
+  reader.file_to_BC(dstData, map, BC_file);
 
   // // Move from ghosted to non-ghosted data to easily see in VisIt
   // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));

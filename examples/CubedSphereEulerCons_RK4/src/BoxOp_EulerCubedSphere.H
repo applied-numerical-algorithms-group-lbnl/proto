@@ -150,6 +150,12 @@ public:
                          State& a_WBar,
                          const State& a_USph,
                          uint a_block) const;
+
+  // Implemented.
+  inline void sphToPrim_2O(
+                         State& a_W,
+                         const State& a_USph,
+                         uint a_block) const;
   
   // Implemented.
   inline void primToSph(

@@ -1,6 +1,6 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
--init_condition_type             3
+-init_condition_type             2
 -domainSize                      16
 -thickness                       32
 -max_iter                        600
@@ -10,3 +10,4 @@
 -temporal_order                  4
 -divergence_cleaning             1
 -linear_viscosity                1
+-BC_file                         DATA.h5

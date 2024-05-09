@@ -684,3 +684,30 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
   T coef = 1.0/24.0;
   a_W += Stencil<T>::Laplacian()(a_WBar,coef);
 }
+
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim_2O(
+                                          State& a_W,
+                                          const State& a_USph,
+                                          uint a_block) const
+{
+  // Get radial conserved variables.
+  PR_TIMERS("USphToPrim_2O");
+   
+  a_W = forall<T,NUMCOMPS,MEM>(f_sphToPrim,a_USph);
+  // Compute pressure.
+  BoxData<T,1,MEM> kePoint = kineticEnergyW(a_W,a_block,-1);
+  BoxData<T,1,MEM> mePoint = magneticEnergyW(a_W,a_block,-1);
+    forallInPlace([ ] PROTO_LAMBDA
+                (Var<T,NUMCOMPS>& a_w,
+                 const Var<T,1,MEM>& a_ke,
+                 const Var<T,1,MEM>& a_me,
+                                  T a_gamma)
+                {
+                  a_w(iP) = (a_w(iP) - a_ke(0) - a_me(0))*(a_gamma - 1.0);
+                },a_W,kePoint,mePoint,m_gamma);
+}
