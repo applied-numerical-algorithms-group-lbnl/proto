@@ -56,8 +56,8 @@ public:
     inline void coarseResidual(
             LevelStateData&     a_crseResidual,
             AMRStateData&       a_state,
-            LevelStateData&     a_crseForce,
-            LevelStateData&     a_fineForce,
+            const LevelStateData&     a_crseForce,
+            const LevelStateData&     a_fineForce,
             int                 a_fineLevel);
     
     inline void fineCorrect(

@@ -20,6 +20,12 @@ class MBAMRMap
                 const Array<Point, DIM+1>&  a_ghost,
                 unsigned int                a_focalBlock = 0);
         
+        /// Non-Trivial Constructor
+        inline MBAMRMap(
+                const MBAMRGrid&            a_grid,
+                Point                       a_ghost,
+                unsigned int                a_focalBlock = 0);
+        
         /// Lazy Constructor
         inline void define(
                 const MBAMRGrid&            a_grid,

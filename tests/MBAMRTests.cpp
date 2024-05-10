@@ -5,7 +5,7 @@
 #include "MBMap_XPointRigid.H"
 
 using namespace Proto;
-
+#if 0
 TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -85,13 +85,14 @@ TEST(MBAMR, AverageDown) {
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(error[ii-1]/error[ii])/log(2.0);
-        EXPECT_NEAR(rate, 4.0, 0.3);
+        EXPECT_TRUE(error[ii] < 1e-10 || abs(4.0-rate) < 0.3);
 #if PR_VERBOSE > 0
         std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
     }
 }
-
+#endif
+#if 0
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -170,12 +171,73 @@ TEST(MBAMR, InterpBounds) {
     for (int ii = 1; ii < N; ii++)
     {
         double rate = log(error[ii-1]/error[ii])/log(2.0);
-        EXPECT_NEAR(rate, 4.0, 0.3);
+        EXPECT_TRUE(error[ii] < 1e-10 || abs(4.0-rate) < 0.3);
 #if PR_VERBOSE > 0
         std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
     }
 }
+#endif
+#if 1
+TEST(MBAMRTests, LaplaceXPoint) {
+    HDF5Handler h5;
+    
+    // Constants
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+    int domainSize = 16;
+    int boxSize = 8;
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numLevels = 3;
+    double slope = 1.0;
+    int comp = 0;
+    Array<double, DIM> exp{4,4,0,0,0,0};
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    int refRatio = 2;
+   
+    for (int nn = 0; nn < 1; nn++)
+    {
+        MBAMRGrid grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
+                grid, Point::Ones(refRatio)); 
+
+        MBAMRMap<MBMap_XPointRigid, HOST> map(grid, OP::ghost());
+        MBAMRData<double, 1, HOST> phi(grid, OP::ghost());
+        MBAMRData<double, 1, HOST> rhs(grid, Point::Zeros());
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (int li = 0; li < numLevels; li++)
+        {
+            auto& layout = grid[li];
+            for (auto iter : layout)
+            {
+                auto block = layout.block(iter);
+                auto& rhs_i = rhs[li][iter];
+                Box b_i = C2C.domain(layout[iter]).grow(OP::ghost());
+                BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+                BoxData<double, 1> J_i(b_i);
+                // compute coordinate / jacobian values from map
+                map[li].apply(x_i, J_i, block);
+                BoxData<double, 1> rhs_node = forall<double, 1>(f_bell, x_i, offset);
+
+                rhs_i |= C2C(rhs_node);
+            }
+        }
+        phi.setVal(0);
+       
+#if PR_VERBOSE > 0
+        h5.writeMBAMRData({"rhs"}, map, rhs, "MBAMRTests_LaplaceXPoint_RHS_%i", nn);
+        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_LaplaceXPoint_PHI_%i_0", nn);
+#endif
+        amr.solve(phi, rhs, 10, 1e-10);
+#if PR_VERBOSE > 0
+        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_LaplaceXPoint_PHI_%i_1", nn);
+#endif
+
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+}
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

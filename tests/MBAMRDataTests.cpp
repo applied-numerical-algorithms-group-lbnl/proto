@@ -16,7 +16,6 @@ TEST(MBAMRData, Construction) {
     int numGhost = 1;
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
-    ghost[0] = Point::Ones(numGhost);
 
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));

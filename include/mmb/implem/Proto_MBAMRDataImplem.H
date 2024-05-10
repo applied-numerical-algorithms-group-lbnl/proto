@@ -13,6 +13,18 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBAMRData<T,C,MEM,CTR>::MBAMRData(
         const MBAMRGrid& a_grid,
+        Point a_ghost,
+        Point a_boundGhost)
+{
+    Array<Point, DIM+1> ghost;
+    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th order interpolation
+    ghost[0] = a_ghost;
+    define(a_grid, ghost, a_boundGhost);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBAMRData<T,C,MEM,CTR>::MBAMRData(
+        const MBAMRGrid& a_grid,
         std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData)
 {
     define(a_grid, a_levelData);

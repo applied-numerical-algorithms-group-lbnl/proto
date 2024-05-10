@@ -139,6 +139,9 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
 
         //average down state
         r = m_mg[0].resnorm(crseRes, crseState, crseForce);
+#if PR_VERBOSE > 0
+        std::cout << "ii = " << ii << " | residual: " << r << std::endl;
+#endif
         if (r/r0 < a_tolerance) {
             return r;
         }
@@ -162,13 +165,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
     const auto& force = a_force[a_level]; 
     if (a_level == 0)
     {
-        m_mg[a_level].solve(state, a_levelForce, 1);
+        m_mg[a_level].solve(state, a_levelForce, 1, 1e-12);
     } else {
         auto& crseState = a_state[a_level-1];
         const auto& crseForce = a_force[a_level-1]; 
         
         interpBounds(crseState, state, a_level);
-        m_mg[a_level].solve(state, force, 1);
+        m_mg[a_level].solve(state, force, 1, 1e-12);
         averageDown(crseState, state, a_level);
         crseState.copyTo(*(m_state_0[a_level-1]));
         coarseResidual(*m_residual[a_level-1],
@@ -178,7 +181,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         vCycle(a_state, a_force, *m_force[a_level-1], a_level-1);
         fineCorrect(state, crseState, *m_state_0[a_level-1], a_level);
         interpBounds(crseState, state, a_level);
-        m_mg[a_level].solve(state, force, 1);
+        m_mg[a_level].solve(state, force, 1, 1e-12);
     }
 }
 
@@ -246,8 +249,8 @@ template <
 void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
         LevelStateData&     a_crseResidual,
         AMRStateData&       a_state,
-        LevelStateData&     a_crseForce,
-        LevelStateData&     a_fineForce,
+        const LevelStateData&     a_crseForce,
+        const LevelStateData&     a_fineForce,
         int                 a_fineLevel)
 {
     PROTO_ASSERT(a_fineLevel > 0,
@@ -261,7 +264,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
     
     //interpolate onto file level
     //TODO: potentially redundant
-    interpBoundaries(crseState, fineState, a_fineLevel);
+    interpBounds(crseState, fineState, a_fineLevel);
     fineState.exchange();
     m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
     
@@ -274,10 +277,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
         auto block = fineState.layout().block(iter);
         auto& fineState_i = fineState[iter];
         auto& fineForce_i = a_fineForce[iter];
-        auto& crseTmp_i = *m_local[a_fineLevel-1][iter];
+        auto& crseTmp_i = (*m_local[a_fineLevel-1])[iter];
         
         // compute fine level residual
-        BoxData<T, OP::numstate(), MEM> fineTmp(fineState.layout()[iter]);
+        BoxData<T, OP::numState(), MEM> fineTmp(fineState.layout()[iter]);
         fineOp[iter](fineTmp, fineState_i, -1.0);
         fineTmp += fineForce_i;
         // average onto crse temp
@@ -312,7 +315,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
         auto& delta = (*m_local[a_fineLevel])[iter];
         auto& state = a_fineState[iter];
 
-        state += m_constInterp(delta);
+        state += m_constInterp[block](delta);
     }
 }
 
