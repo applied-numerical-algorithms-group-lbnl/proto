@@ -2,6 +2,7 @@
 #include "Inputs_Parsing.H"
 #include "BoxOp_EulerCubedSphere.H"
 #include "MHD_IO.H"
+#include <chrono> // Used by timer
 
 int main(int argc, char *argv[])
 {
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
   string BC_file = ParseInputs::get_BC_file();
+  double probe_cadence = ParseInputs::get_Probe_cadence();
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
@@ -95,10 +97,12 @@ int main(int argc, char *argv[])
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
     MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
-    Write_W(JU, eulerOp, iop, thickness, 0);
-    
+    Write_W(JU, eulerOp, iop, 0, time, dt_next);
+    bool give_space_in_probe_file = true;
+    double probe_cadence_temp = 0;
     for (int iter = 1; iter <= max_iter; iter++)
     {
+      auto start = chrono::steady_clock::now();
       // MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
       if (ParseInputs::get_convTestType() == 0){
         #ifdef PR_MPI
@@ -112,8 +116,19 @@ int main(int argc, char *argv[])
 
       rk4.advance(JU, dt_next, dVolrLev, dt, time, temporal_order);
       time += dt;
-      if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, thickness, iter);
-      if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time << endl;
+      if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, iter, time, dt);
+      auto end = chrono::steady_clock::now();
+      
+      int probe_cadence_new = floor(time/probe_cadence);
+      if (probe_cadence_new > probe_cadence_temp || iter == 1){
+        Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file);
+        give_space_in_probe_file = false;
+        probe_cadence_temp = probe_cadence_new;
+        if(procID() == 0) cout << "Probed" << endl;
+      }
+      
+
+      if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time  << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms" << endl;
     }
 
     if (convTestType > 0){

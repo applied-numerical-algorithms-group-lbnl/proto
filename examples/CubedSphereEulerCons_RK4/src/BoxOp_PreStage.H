@@ -110,22 +110,36 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
     if (init_condition_type == 2 || init_condition_type == 3){
-      // Extrapolate to ghost cells.
+      // Copy last layer to ghost cells and scale by radius. // Extrapolation can make -ve P in ghost cells.
       Point source_low = Point(a_blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
       Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
       Box sourceBox(source_low,source_high);
-      Box sourceBox1 = sourceBox.grow(1);
-
-      State a_U_exterp(sourceBox1);
-      State a_U_ghost(bdryBoxHigh);
+      State U_ghost(bdryBoxHigh);
+      Scalar radius_ghost(bdryBoxHigh);
       Stencil<double> m_exterp_f_2nd;
       for (int i = 1; i <= NGHOST; i++ ) {
-        //Using outermost 2 layers to extrapolate to rest.
-        m_exterp_f_2nd = (i+1.0)*Shift(Point::Zeros()) - (i*1.0)*Shift(-Point::Basis(0)); 
-        a_U_exterp = m_exterp_f_2nd(a_USphStage);
-        a_U_exterp.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
+        a_USphStage.copyTo(U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
+        radius.copyTo(radius_ghost,sourceBox,Point::Basis(0)*(i));
       }
-      a_U_ghost.copyTo(a_USphStage,bdryBoxHigh);
+      U_ghost.copyTo(a_USphStage,bdryBoxHigh);
+      //scale by radius.
+      forallInPlace_p([ ] PROTO_LAMBDA
+      (Point a_pt,
+       Var<T, NUMCOMPS, MEM> &a_Usph,
+       Var<T> &a_radius,
+       Var<T> &a_radius_ghost)
+      {  
+        double rad = a_radius(0);
+        double rad_last = a_radius_ghost(0);
+        a_Usph(0) *= pow(rad_last/rad,2.0);
+        a_Usph(1) *= pow(rad_last/rad,2.0);
+        a_Usph(2) *= pow(rad_last/rad,2.0);
+        a_Usph(3) *= pow(rad_last/rad,2.0);
+        a_Usph(4) *= pow(rad_last/rad,2.0);
+        a_Usph(5) *= pow(rad_last/rad,2.0);
+        a_Usph(6) *= pow(rad_last/rad,1.0); 
+        a_Usph(7) *= pow(rad_last/rad,1.0);
+      },bdryBoxHigh,a_USphStage,radius,radius_ghost);
     }
   }
   // Inner BCs

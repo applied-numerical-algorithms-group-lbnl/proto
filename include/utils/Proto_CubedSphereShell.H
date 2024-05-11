@@ -113,6 +113,23 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+
+     template<typename T, unsigned int C, MemType MEM>
+    static void consToCartNGEuler( 
+                                 BoxData<T,C,MEM>& a_JU,
+                                 BoxData<T,1,MEM>& a_dVolr,
+                                 Box a_bx,
+                                 Box a_blockBox,
+                                 T a_dxiPerp,
+                                 int a_block,                 
+                                 unsigned int a_order = 4);
+    
+     template<typename T, unsigned int C, MemType MEM, Centering CTR>
+     static void consToCartInterpEuler( 
+                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                      MBInterpOp& a_iop,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                      unsigned int a_order = 4);
 #if 0
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler( 

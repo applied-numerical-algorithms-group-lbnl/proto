@@ -3,11 +3,15 @@
 -init_condition_type             3
 -domainSize                      16
 -thickness                       32
--max_iter                        500
--CFL                             0.5
+-max_iter                        1500
+-CFL                             0.8
 -write_cadence                   10
 -gamma                           1.6666666666666666666667
 -temporal_order                  4
 -divergence_cleaning             1
 -linear_viscosity                1
 -BC_file                         DATA.h5
+-Probe_trajectory_file           trajEarth2020.dat
+-Probe_data_file                 probed_data_no_interp.dat 
+-Probe_cadence                   3600
+-BC_start_time                   2020.08993624772313296903460837887067

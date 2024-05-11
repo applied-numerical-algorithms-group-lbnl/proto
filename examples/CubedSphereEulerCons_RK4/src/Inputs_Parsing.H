@@ -24,6 +24,10 @@ private:
     int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
     int linear_viscosity; // 0: No linear viscosity, 1: Linear viscosity
     string BC_file;
+    string Probe_trajectory_file;
+    string Probe_data_file;
+    double Probe_cadence; // In seconds
+    double BC_start_time;
 
     // Private Constructor
     ParseInputs() {}
@@ -52,6 +56,10 @@ public:
     static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
     static int get_linear_viscosity() {return getInstance().linear_viscosity;}
     static string get_BC_file() {return getInstance().BC_file;}
+    static string get_Probe_trajectory_file() {return getInstance().Probe_trajectory_file;}
+    static string get_Probe_data_file() {return getInstance().Probe_data_file;}
+    static double get_Probe_cadence() {return getInstance().Probe_cadence;}
+    static double get_BC_start_time() {return getInstance().BC_start_time;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -68,6 +76,10 @@ public:
         args.add("divergence_cleaning", divergence_cleaning);
         args.add("linear_viscosity", linear_viscosity);
         args.add("BC_file", BC_file);
+        args.add("Probe_trajectory_file", Probe_trajectory_file);
+        args.add("Probe_data_file", Probe_data_file);
+        args.add("Probe_cadence", Probe_cadence);
+        args.add("BC_start_time", BC_start_time);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -86,6 +98,10 @@ public:
             cout << "divergence_cleaning: " << divergence_cleaning << endl;
             cout << "linear_viscosity: " << linear_viscosity << endl;
             cout << "BC_file: " << BC_file << endl;
+            cout << "Probe_trajectory_file: " << Probe_trajectory_file << endl;
+            cout << "Probe_data_file: " << Probe_data_file << endl;
+            cout << "Probe_cadence: " << Probe_cadence << endl;
+            cout << "BC_start_time: " << BC_start_time << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }

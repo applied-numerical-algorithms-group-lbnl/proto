@@ -2,8 +2,9 @@
 #define _PROTO_MBMAP_CUBED_SPHERE_SHELL_
 
 #define CUBED_SPHERE_SHELL_R0 1495978707000.0
-#define CUBED_SPHERE_SHELL_R1 14959787070000.0
+#define CUBED_SPHERE_SHELL_R1 17951744484000.0
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
+#define CUBED_SPHERE_RADIAL_STRETCH 1.0
 #include <cmath> //for atan2
 
 namespace Proto
@@ -21,7 +22,7 @@ namespace {
         constexpr double r0 = CUBED_SPHERE_SHELL_R0;
         constexpr double r1 = CUBED_SPHERE_SHELL_R1;
         double r, xi, eta, C_rad, R_t;
-        C_rad = 1.0;
+        C_rad = CUBED_SPHERE_RADIAL_STRETCH;
         R_t = (r1 - r0) / (exp(C_rad) - 1.0);
         switch (r_dir)
         {
@@ -105,16 +106,20 @@ namespace {
         switch (a_block)
         {
             case 0:
-                xi = atan2(-x,z);
-                eta = atan2(y,z);
+                // xi = atan2(-x,z);
+                // eta = atan2(y,z);
+                xi = atan2(x,-z);
+                eta = atan2(-y,-z); 
                 break;
             case 1:
                 xi = atan2(x,z);
                 eta = atan2(y,z);
                 break;
             case 2:
-                xi = atan2(-x,y);
-                eta = atan2(-z,y);
+                // xi = atan2(-x,y);
+                // eta = atan2(-z,y);
+                xi = atan2(x,-y);
+                eta = atan2(z,-y); 
                 break;
             case 3:
                 xi = atan2(y,x);
@@ -125,15 +130,20 @@ namespace {
                 eta = atan2(z,y);
                 break;
             case 5:
-                xi = atan2(y,x);
-                eta = atan2(-z,x);
+                // xi = atan2(y,x);
+                // eta = atan2(-z,x);
+                xi = atan2(-y,-x);
+                eta = atan2(z,-x);
                 break;
             default:
                 xi = 0;
                 eta = 0;
                 break;
         }
-        r = (r - r0)/(r1-r0);
+        // r = (r - r0)/(r1-r0);
+        double C_rad = CUBED_SPHERE_RADIAL_STRETCH;
+        double R_t = (r1 - r0)/(exp(C_rad) - 1.0);
+        r = (1.0/C_rad)*log(1.0+(r - r0)/R_t);
         xi = (xi + M_PI/4.0)*(2.0/M_PI);
         eta = (eta + M_PI/4.0)*(2.0/M_PI);
         switch (r_dir)

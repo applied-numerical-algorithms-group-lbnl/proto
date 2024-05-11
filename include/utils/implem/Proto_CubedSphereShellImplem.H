@@ -559,6 +559,92 @@ consToSphInterpEuler(
   // auto op = CubedSphereShell::InterpOp(a_JU,4);
   a_iop.apply(a_JU,a_JU);
 }
+
+
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::
+consToCartNGEuler(                    
+                 BoxData<T,C,MEM>& a_JU,
+                 BoxData<T,1,MEM>& a_dVolr,
+                 Box a_bx,
+                 Box a_blockBox,
+                 T a_dxiPerp,
+                 int a_block,                 
+                 unsigned int a_order)
+{
+  PR_TIMERS("consToCartNGEuler");
+  
+  //HDF5Handler h5;
+  BoxData<T,C,MEM> UCart(a_bx);
+  UCart.setVal(1.);
+  // Get geometric data.
+  Box bxMetric = a_bx.grow(1);
+  BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
+  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+     {
+       a_output(0) = 1.0/a_deta(0);
+     }
+     ,deta);
+
+  // Slice data and compute quotients.
+  for (int comp = 0; comp < C; comp++)
+  {
+    BoxData<T,1,MEM> JCart = slice(a_JU,comp);
+    BoxData<T,1,MEM> Cart = slice(UCart,comp);      
+    cellQuotientValAndInv(Cart,deta,detaInv,JCart,a_bx,a_blockBox);
+  }
+
+  // scale out radial dVol.
+  BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
+     {
+       a_output(0) = 1.0/a_dvolr(0);
+     }
+     ,a_dVolr); 
+  for (int comp = 0; comp < C; comp++)
+    {
+      BoxData<T,1,MEM> UCartcomp = slice(UCart,comp);
+      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
+      BoxData<T,1,MEM> UCarttemp(UCartcomp.box());
+      cellQuotientValAndInvRadial(UCarttemp,a_dVolr,dVolrInv,UCartcomp,a_bx,a_blockBox);
+      UCarttemp.copyTo(JUcomp);
+    }
+  // cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
+  // h5.writePatch(a_dxiPerp,a_JU,"USph:Block=" + to_string(a_block));
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void CubedSphereShell::
+consToCartInterpEuler(                    
+                        MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                        MBInterpOp& a_iop,
+                        MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                        unsigned int a_order)
+{
+  //HDF5Handler h5;
+  auto layout = a_JU.layout();
+  Point size = layout.domain().getBlock(0).sizes();
+  T dxiPerp = 1.0/size[1];
+  for (auto dit : a_JU.layout())
+    {
+      unsigned int block = a_JU.layout().block(dit);
+      auto& JU_i = a_JU[dit];
+      auto& dVolr_i = a_dVolr[dit];
+      Box bx_i = a_JU.layout()[dit];      
+      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      CubedSphereShell::
+        consToCartNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+      //h5.writePatch(dxiPerp, JU_i, "consToCartInterpEuler:UCart:Block" + to_string(block));
+    } 
+  a_JU.exchange();
+  // cout <<  "Building interpolation operator" << endl;
+  // auto op = CubedSphereShell::InterpOp(a_JU,4);
+  a_iop.apply(a_JU,a_JU);
+}
+
+
 #if 0
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
