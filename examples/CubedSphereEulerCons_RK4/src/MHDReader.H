@@ -1,5 +1,6 @@
 #include "Proto.H"
 #include "hdf5.h"
+#include "Inputs_Parsing.H"
 
 using namespace Proto;
 
@@ -14,6 +15,7 @@ class MHDReader
                            std::string a_filename,
                            T a_time)
     {
+        HDF5Handler h5;
         int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
         int thetaCoord = (rCoord + 1) % 3;
         int phiCoord = (rCoord + 2) % 3;
@@ -21,10 +23,6 @@ class MHDReader
         // Read meta data from file
         std::vector<double> dtheta;
         Box B = readDomain(a_filename);
-        readGeom(dtheta, a_filename);
-        BoxData<double, 8, HOST> data_0(B);
-        readData(data_0, a_filename);
-        // Transpose Phi and Theta
         Point LT = B.low(); 
         LT[thetaCoord] = B.low()[phiCoord];
         LT[phiCoord] = B.low()[thetaCoord];
@@ -35,35 +33,121 @@ class MHDReader
         auto t = Point::Basis(thetaCoord);
         auto p = Point::Basis(phiCoord);
         CoordPermutation R{{t,p},{p,t}};
-        data_0.rotate(BT,R);
+        readGeom(dtheta, a_filename);
+        BoxData<double, 8, HOST> data_0(B);
+        std::vector<BoxData<double, 8, HOST>> BC_data;
+        readData(BC_data, a_filename);
 
-        // Extend the box to double the size in the phi direction
-        Box bx1 = data_0.box();
-        Point high = bx1.high();
-        int domainSizez = high[phiCoord]+1;
-        high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
-        Point low = bx1.low();
-        low[phiCoord] = -1;
-        Box bx2(low, high);
-        BoxData<double, 8, HOST> data_1(bx2);
-        BoxData<double, 8, HOST> data_2(bx2);
-        data_0.copyTo(data_1,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
-        data_0.copyTo(data_1);
+        if (BC_data.size() == 1){
+            // Transpose Phi and Theta
+            BC_data[0].rotate(BT,R);
+            data_0.rotate(BT,R);
 
-        // Rotate the data
-        double carr_rot_time = 25.38*24*60*60; // Seconds
-        // We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
-        // Carrington rotation time (27.2753 days) is from Earth's prespective.
-        double angle_to_rotate = fmod(360*a_time/carr_rot_time,360);
-        int cells_to_rotate = angle_to_rotate/(360/domainSizez);
-        double needed_fraction = angle_to_rotate/(360/domainSizez) - cells_to_rotate;
-        cells_to_rotate = cells_to_rotate % domainSizez;
-        cells_to_rotate = domainSizez - cells_to_rotate;
-        static Stencil<double> m_right_shift;
-        m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
-        data_1.copyTo(data_2,bx2,Point::Basis(phiCoord)*(-cells_to_rotate));
-        data_1 = m_right_shift(data_2);
-        data_1.copyTo(data_0,bx1,Point::Zeros());
+            // Extend the box to double the size in the phi direction
+            Box bx1 = BC_data[0].box();
+            Point high = bx1.high();
+            int domainSizez = high[phiCoord]+1;
+            high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
+            Point low = bx1.low();
+            low[phiCoord] = -1;
+            Box bx2(low, high);
+            BoxData<double, 8, HOST> data_1(bx2);
+            BoxData<double, 8, HOST> data_2(bx2);
+            BC_data[0].copyTo(data_1,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data[0].copyTo(data_1);
+
+            // Rotate the data
+            double carr_rot_time = 25.38*24*60*60; // Seconds
+            // We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
+            // Carrington rotation time (27.2753 days) is from Earth's prespective.
+            double angle_to_rotate = fmod(360*a_time/carr_rot_time,360);
+            int cells_to_rotate = angle_to_rotate/(360/domainSizez);
+            double needed_fraction = angle_to_rotate/(360/domainSizez) - cells_to_rotate;
+            cells_to_rotate = cells_to_rotate % domainSizez;
+            cells_to_rotate = domainSizez - cells_to_rotate;
+            static Stencil<double> m_right_shift;
+            m_right_shift = (1.0-needed_fraction)*Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
+            data_1.copyTo(data_2,bx2,Point::Basis(phiCoord)*(-cells_to_rotate));
+            data_1 = m_right_shift(data_2);
+            data_1.copyTo(data_0,bx1,Point::Zeros());
+
+        } else{ 
+            double h5_cadence = ParseInputs::get_BC_cadence();
+            double time_temp = a_time;
+            int low_frame = time_temp/(h5_cadence*3600);
+            int next_frame = low_frame+1;
+            PROTO_ASSERT(low_frame < BC_data.size(),
+                "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %i",low_frame,BC_data.size());
+            double needed_fraction = (time_temp - (low_frame*h5_cadence*3600))/(h5_cadence*3600);
+
+            // Transpose Phi and Theta
+            
+            BC_data[low_frame].rotate(BT,R);
+            BC_data[next_frame].rotate(BT,R);
+            data_0.rotate(BT,R);
+
+            // Extend the box to double the size in the phi direction
+            Box bx1 = BC_data[low_frame].box();
+            Point high = bx1.high();
+            int domainSizez = high[phiCoord]+1;
+            high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
+            Point low = bx1.low();
+            low[phiCoord] = -1;
+            Box bx2(low, high);
+            BoxData<double, 8, HOST> data_1a(bx2);
+            BoxData<double, 8, HOST> data_2a(bx2);
+            BC_data[low_frame].copyTo(data_1a,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data[low_frame].copyTo(data_1a);
+            
+            BoxData<double, 8, HOST> data_1b(bx2);
+            BoxData<double, 8, HOST> data_2b(bx2);
+            BC_data[next_frame].copyTo(data_1b,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data[next_frame].copyTo(data_1b);
+
+            // Rotate the data
+            double carr_rot_time = 25.38*24*60*60; // Seconds
+            // We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
+            // Carrington rotation time (27.2753 days) is from Earth's prespective.
+            double effective_time1 = 360*(time_temp+low_frame*h5_cadence*3600)/carr_rot_time;
+            double effective_time2 = 360*(time_temp+next_frame*h5_cadence*3600)/carr_rot_time; // Should effective time be the same for both? No, frames rotate as well.
+            double angle_to_rotate1 = fmod(effective_time1,360);
+            double angle_to_rotate2 = fmod(effective_time2,360);
+            int cells_to_rotate1 = angle_to_rotate1/(360/domainSizez);
+            int cells_to_rotate2 = angle_to_rotate2/(360/domainSizez);
+            double needed_fraction1 = angle_to_rotate1/(360/domainSizez) - cells_to_rotate1;
+            double needed_fraction2 = angle_to_rotate2/(360/domainSizez) - cells_to_rotate2;
+            cells_to_rotate1 = cells_to_rotate1 % domainSizez;
+            cells_to_rotate2 = cells_to_rotate2 % domainSizez;
+            cells_to_rotate1 = domainSizez - cells_to_rotate1;
+            cells_to_rotate2 = domainSizez - cells_to_rotate2;
+
+            // if(procID()==0) cout << " low_frame = " << low_frame << " needed_fraction = " << needed_fraction << " cells_to_rotate1 " << cells_to_rotate1 << " cells_to_rotate2 " << cells_to_rotate2 << endl;
+
+            static Stencil<double> m_right_shift1;
+            static Stencil<double> m_right_shift2;
+            m_right_shift1 = (1.0-needed_fraction1)*Shift(Point::Zeros()) + (needed_fraction1)*Shift(-Point::Basis(phiCoord));
+            m_right_shift2 = (1.0-needed_fraction2)*Shift(Point::Zeros()) + (needed_fraction2)*Shift(-Point::Basis(phiCoord));
+
+
+            data_1a.copyTo(data_2a,bx2,Point::Basis(phiCoord)*(-cells_to_rotate1));
+            data_1a = m_right_shift1(data_2a);
+            data_1a.copyTo(BC_data[low_frame],bx1,Point::Zeros());
+
+            data_1b.copyTo(data_2b,bx2,Point::Basis(phiCoord)*(-cells_to_rotate2));
+            data_1b = m_right_shift2(data_2b);
+            data_1b.copyTo(BC_data[next_frame],bx1,Point::Zeros());
+
+            forallInPlace([ ] PROTO_LAMBDA
+            ( Var<T,NUMCOMPS,MEM>& a_BC_data_interpolated,
+                Var<T,NUMCOMPS,MEM>& a_BC_data_lo,
+                Var<T,NUMCOMPS,MEM>& a_BC_data_hi,
+                double a_fraction)
+            {                    
+                for (int i=0; i<NUMCOMPS; i++){
+                a_BC_data_interpolated(i) = a_fraction*a_BC_data_hi(i) + (1.0-a_fraction)*a_BC_data_lo(i);
+                } 
+            },data_0, BC_data[low_frame], BC_data[next_frame], needed_fraction);
+        }
 
         // Create a single block, single patch MBLevelBoxData
         // You may have to do this on each processor

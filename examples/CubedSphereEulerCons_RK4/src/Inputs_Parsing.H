@@ -28,6 +28,7 @@ private:
     string Probe_data_file;
     double Probe_cadence; // In seconds
     double BC_start_time;
+    double BC_cadence; // In hours
 
     // Private Constructor
     ParseInputs() {}
@@ -60,6 +61,7 @@ public:
     static string get_Probe_data_file() {return getInstance().Probe_data_file;}
     static double get_Probe_cadence() {return getInstance().Probe_cadence;}
     static double get_BC_start_time() {return getInstance().BC_start_time;}
+    static double get_BC_cadence() {return getInstance().BC_cadence;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -80,6 +82,7 @@ public:
         args.add("Probe_data_file", Probe_data_file);
         args.add("Probe_cadence", Probe_cadence);
         args.add("BC_start_time", BC_start_time);
+        args.add("BC_cadence", BC_cadence);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -102,6 +105,7 @@ public:
             cout << "Probe_data_file: " << Probe_data_file << endl;
             cout << "Probe_cadence: " << Probe_cadence << endl;
             cout << "BC_start_time: " << BC_start_time << endl;
+            cout << "BC_cadence: " << BC_cadence << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }

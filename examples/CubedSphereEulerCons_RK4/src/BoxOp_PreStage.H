@@ -235,9 +235,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
 
   // // Move from ghosted to non-ghosted data to easily see in VisIt
   // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  // // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), ghost());
   // dstData2.setVal(0);
-  
   // for (auto dit : dstData.layout())
   // {
   //   Point source_lo = Point(dstData[dit].box().low()[0],dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
@@ -245,8 +243,6 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   //   Box sourceBox(source_lo,source_hi);
   //   dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
   // }
-
-  // h5.writeMBLevel(map, dstData, "DST_DATA");
   // h5.writeMBLevel(map, dstData2, "DST_DATA2");
 
 
