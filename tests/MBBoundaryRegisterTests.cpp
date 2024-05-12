@@ -240,6 +240,7 @@ TEST(MBBoundaryRegister, Exchange_XPoint) {
 }
 #endif
 #if DIM == 3
+#if 0
 TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
 
     int domainSize = 16;
@@ -340,6 +341,152 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
                 EXPECT_LT(locSln.absMax(), 1e-12);
             }
         }
+    }
+}
+#endif
+TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    int domainSize = 16;
+    int thickness = 1;
+    int c_r = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int c_t = (c_r + 1) % 3;
+    int c_p = (c_r + 2) % 3;
+    int boxSize = 16;
+    int numBlocks = 6;
+    int ghostSize = 0;
+    int depth = 1;
+    bool bothSides = true;
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, c_r);
+    Point boxSizes = Point::Ones(boxSize);
+    boxSizes[c_r] = min(thickness, boxSize);
+    std::vector<Point> boxSizeVect(numBlocks, boxSizes);
+    std::vector<MBPatchID_t> patches;
+    Point patchDomainSizes = Point::Ones(domainSize / boxSize);
+    patchDomainSizes[c_r] = 1;
+#if 0
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (auto pi : Box(patchDomainSizes))
+        {
+            if (pi == Point::Zeros()) {continue;}
+            patches.push_back(MBPatchID_t(pi,bi));
+        }
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
+#else
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+#endif
+    Point ghost = Point::Ones(depth);
+    ghost[c_r] = 0;
+    auto map = CubedSphereShell::Map(layout, ghost);
+    auto C2C = Stencil<double>::CornersToCells(4);
+    for (int ti = 0; ti < 4; ti++)
+    {
+        switch (ti)
+        {
+            case 0: depth = +1; bothSides = true; break;
+            case 1: depth = -1; bothSides = true; break;
+            case 2: depth = +1; bothSides = false; break;
+            case 3: depth = -1; bothSides = false; break;
+        }
+        MBLevelBoxData<double, DIM, HOST> LOC(layout, ghost);
+        MBLevelBoxData<double, DIM, HOST> ADJ(layout, ghost);
+        LOC.setVal(0);
+        ADJ.setVal(0);
+        MBBoundaryRegister<double, DIM, HOST, PR_CELL> boundRegister(
+                layout, depth, Point::Zeros(), bothSides);
+        for (auto iter : layout)
+        {
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                //auto p1 = layout.point(bi.localIndex);
+                //auto p2 = layout.point(bi.adjIndex);
+            
+                Box localBox = bi.localData->box();
+                BoxData<double, DIM> X0(C2C.domain(localBox));
+                BoxData<double, 1> J0(C2C.domain(localBox));
+                map.apply(X0, J0, b1);
+                (*bi.localData) |= C2C(X0);
+                bi.adjData->setVal(2);
+            }
+        }
+        
+        for (auto iter : layout)
+        {
+            auto& loc_i = LOC[iter];
+            auto& adj_i = ADJ[iter];
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                bi.localData->copyTo(loc_i);
+                bi.adjData->copyTo(adj_i);
+            }
+        }
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"x", "y", "z"}, map, LOC, "LOC_INIT_REGISTERS_%i", ti);
+        h5.writeMBLevel({"x", "y", "z"}, map, ADJ, "ADJ_INIT_REGISTERS_%i", ti);
+#endif
+        boundRegister.exchange();
+        for (auto iter : layout)
+        {
+            auto& loc_i = LOC[iter];
+            auto& adj_i = ADJ[iter];
+            for (auto bi : boundRegister.bounds(iter))
+            {
+                bi.localData->copyTo(loc_i);
+                bi.adjData->copyTo(adj_i);
+#if PR_VERBOSE > 0
+                pr_out() << "\n===================================================" << std::endl;
+                pr_out() << "BOUNDARY: " << std::endl;
+#endif
+                auto b1 = layout.block(bi.localIndex);
+                auto b2 = layout.block(bi.adjIndex);
+                auto p1 = layout.point(bi.localIndex);
+                auto p2 = layout.point(bi.adjIndex);
+                Box dstBox = bi.adjData->box();
+                auto R = bi.adjToLocal;
+#if PR_VERBOSE > 0
+                pr_out() <<    "p1: " << p1 << " | b1: " << b1;
+                pr_out() << " | p2: " << p2 << " | b2: " << b2 << std::endl;
+                pr_out() << "R (adj to local): " << std::endl;
+                R.print();
+#endif
+                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                BoxData<double, DIM> adjSln(srcBox);
+                BoxData<double, DIM> locSln(dstBox);
+                
+                BoxData<double, DIM> X0(C2C.domain(srcBox));
+                BoxData<double, 1> J0(C2C.domain(srcBox));
+                map.apply(X0, J0, b2);
+                adjSln |= C2C(X0);
+                //forallInPlace_p(f_MBPointID, adjSln, b2);
+                adjSln.copyTo(locSln, R);
+                EXPECT_EQ(locSln.box(), bi.adjData->box());
+#if PR_VERBOSE > 0
+                pr_out() << "Local Data" << std::endl;
+                bi.localData->printData();
+                pr_out() << "Adjacent Data: " << std::endl;
+                bi.adjData->printData();
+                pr_out() << "Adjacent Solution (Computed): " << std::endl;
+                adjSln.printData();
+                pr_out() << "Adjacent Solution (Computed + Rotated): " << std::endl;
+                locSln.printData();
+#endif
+                locSln -= (*bi.adjData);
+#if PR_VERBOSE > 0
+                pr_out() << "Computed Error: " << std::endl;
+                locSln.printData();
+#endif
+                EXPECT_LT(locSln.absMax(), 1e-12);
+            }
+        }
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"x", "y", "z"}, map, LOC, "LOC_REGISTERS_%i", ti);
+        h5.writeMBLevel({"x", "y", "z"}, map, ADJ, "ADJ_REGISTERS_%i", ti);
+#endif
     }
 }
 #endif
