@@ -1,7 +1,7 @@
 #include "MHDReader.H"
 extern MHDReader BC_global;
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialBCs_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_USph,
@@ -40,8 +40,9 @@ void f_radialBCs_F(
 }
 PROTO_KERNEL_END(f_radialBCs_F, f_radialBCs)
 
-PROTO_KERNEL_START
+
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialoutflowIBCs_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_USph,
@@ -201,7 +202,7 @@ template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
-static inline void
+inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,

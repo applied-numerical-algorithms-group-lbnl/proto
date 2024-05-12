@@ -521,7 +521,7 @@ template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
-static inline void
+inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
            T& a_dt_next,
@@ -596,7 +596,7 @@ template<
   typename T,
   template<MemType> typename MAP,
   MemType MEM>
-static inline void
+inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
               MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg)

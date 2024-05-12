@@ -1,6 +1,5 @@
-
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
@@ -37,8 +36,8 @@ void f_radialInit_F(
 
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
 
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_nonradialInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
@@ -74,9 +73,8 @@ void f_nonradialInit_F(
 }
 PROTO_KERNEL_END(f_nonradialInit_F, f_nonradialInit)
 
-
-PROTO_KERNEL_START
 template <typename T, MemType MEM>
+PROTO_KERNEL_START
 void f_radialoutflowInit_F(
     Point a_pt,
     Var<T, NUMCOMPS, MEM> &a_W,
