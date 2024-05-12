@@ -8,11 +8,38 @@ class MHDReader
 {
     public:
     inline MHDReader(){}
-    
+
+    std::vector<BoxData<double,8,HOST>> BC_data;
+    std::vector<double> dtheta;
+    Box Box_BC;
+
+    inline void file_to_BoxData_vec(std::string a_filename)
+    {
+        int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        int thetaCoord = (rCoord + 1) % 3;
+        int phiCoord = (rCoord + 2) % 3;
+        readData(BC_data, a_filename);
+        readGeom(dtheta, a_filename);
+        Box_BC = readDomain(a_filename);
+        Point LT = Box_BC.low(); 
+        LT[thetaCoord] = Box_BC.low()[phiCoord];
+        LT[phiCoord] = Box_BC.low()[thetaCoord];
+        Point HT = Box_BC.high(); 
+        HT[thetaCoord] = Box_BC.high()[phiCoord];
+        HT[phiCoord] = Box_BC.high()[thetaCoord];
+        Box BT(LT,HT);
+        auto t = Point::Basis(thetaCoord);
+        auto p = Point::Basis(phiCoord);
+        CoordPermutation R{{t,p},{p,t}};
+        for (int i=0; i<BC_data.size(); i++){
+            BC_data[i].rotate(BT,R);
+        }
+        Box_BC = BT;
+    }
+
     template<typename T, MemType MEM>
-    inline void file_to_BC(MBLevelBoxData<T,8,MEM>& a_dstData, 
+    inline void BoxData_to_BC(MBLevelBoxData<T,8,MEM>& a_dstData, 
                            const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
-                           std::string a_filename,
                            T a_time)
     {
         HDF5Handler h5;
@@ -20,31 +47,16 @@ class MHDReader
         int thetaCoord = (rCoord + 1) % 3;
         int phiCoord = (rCoord + 2) % 3;
         
-        // Read meta data from file
-        std::vector<double> dtheta;
-        Box B = readDomain(a_filename);
-        Point LT = B.low(); 
-        LT[thetaCoord] = B.low()[phiCoord];
-        LT[phiCoord] = B.low()[thetaCoord];
-        Point HT = B.high(); 
-        HT[thetaCoord] = B.high()[phiCoord];
-        HT[phiCoord] = B.high()[thetaCoord];
-        Box BT(LT,HT);
-        auto t = Point::Basis(thetaCoord);
-        auto p = Point::Basis(phiCoord);
-        CoordPermutation R{{t,p},{p,t}};
-        readGeom(dtheta, a_filename);
-        BoxData<double, 8, HOST> data_0(B);
-        std::vector<BoxData<double, 8, HOST>> BC_data;
-        readData(BC_data, a_filename);
+        BoxData<double, 8, HOST> data_0(Box_BC);
+        BoxData<double, 8, HOST> BC_data_temp1(Box_BC);
+        BoxData<double, 8, HOST> BC_data_temp2(Box_BC);
+        
 
         if (BC_data.size() == 1){
-            // Transpose Phi and Theta
-            BC_data[0].rotate(BT,R);
-            data_0.rotate(BT,R);
+            BC_data[0].copyTo(BC_data_temp1);
 
             // Extend the box to double the size in the phi direction
-            Box bx1 = BC_data[0].box();
+            Box bx1 = BC_data_temp1.box();
             Point high = bx1.high();
             int domainSizez = high[phiCoord]+1;
             high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
@@ -53,8 +65,8 @@ class MHDReader
             Box bx2(low, high);
             BoxData<double, 8, HOST> data_1(bx2);
             BoxData<double, 8, HOST> data_2(bx2);
-            BC_data[0].copyTo(data_1,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
-            BC_data[0].copyTo(data_1);
+            BC_data_temp1.copyTo(data_1,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data_temp1.copyTo(data_1);
 
             // Rotate the data
             double carr_rot_time = 25.38*24*60*60; // Seconds
@@ -72,6 +84,8 @@ class MHDReader
             data_1.copyTo(data_0,bx1,Point::Zeros());
 
         } else{ 
+
+
             double h5_cadence = ParseInputs::get_BC_cadence();
             double time_temp = a_time;
             int low_frame = time_temp/(h5_cadence*3600);
@@ -79,15 +93,11 @@ class MHDReader
             PROTO_ASSERT(low_frame < BC_data.size(),
                 "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %i",low_frame,BC_data.size());
             double needed_fraction = (time_temp - (low_frame*h5_cadence*3600))/(h5_cadence*3600);
-
-            // Transpose Phi and Theta
-            
-            BC_data[low_frame].rotate(BT,R);
-            BC_data[next_frame].rotate(BT,R);
-            data_0.rotate(BT,R);
+            BC_data[low_frame].copyTo(BC_data_temp1);
+            BC_data[next_frame].copyTo(BC_data_temp2);
 
             // Extend the box to double the size in the phi direction
-            Box bx1 = BC_data[low_frame].box();
+            Box bx1 = BC_data_temp1.box();
             Point high = bx1.high();
             int domainSizez = high[phiCoord]+1;
             high[phiCoord] = 2*(bx1.high()[phiCoord]+1)-1;
@@ -96,13 +106,13 @@ class MHDReader
             Box bx2(low, high);
             BoxData<double, 8, HOST> data_1a(bx2);
             BoxData<double, 8, HOST> data_2a(bx2);
-            BC_data[low_frame].copyTo(data_1a,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
-            BC_data[low_frame].copyTo(data_1a);
+            BC_data_temp1.copyTo(data_1a,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data_temp1.copyTo(data_1a);
             
             BoxData<double, 8, HOST> data_1b(bx2);
             BoxData<double, 8, HOST> data_2b(bx2);
-            BC_data[next_frame].copyTo(data_1b,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
-            BC_data[next_frame].copyTo(data_1b);
+            BC_data_temp2.copyTo(data_1b,bx1,Point::Basis(phiCoord)*(bx1.high()[phiCoord]+1));
+            BC_data_temp2.copyTo(data_1b);
 
             // Rotate the data
             double carr_rot_time = 25.38*24*60*60; // Seconds
@@ -131,11 +141,11 @@ class MHDReader
 
             data_1a.copyTo(data_2a,bx2,Point::Basis(phiCoord)*(-cells_to_rotate1));
             data_1a = m_right_shift1(data_2a);
-            data_1a.copyTo(BC_data[low_frame],bx1,Point::Zeros());
+            data_1a.copyTo(BC_data_temp1,bx1,Point::Zeros());
 
             data_1b.copyTo(data_2b,bx2,Point::Basis(phiCoord)*(-cells_to_rotate2));
             data_1b = m_right_shift2(data_2b);
-            data_1b.copyTo(BC_data[next_frame],bx1,Point::Zeros());
+            data_1b.copyTo(BC_data_temp2,bx1,Point::Zeros());
 
             forallInPlace([ ] PROTO_LAMBDA
             ( Var<T,NUMCOMPS,MEM>& a_BC_data_interpolated,
@@ -146,7 +156,7 @@ class MHDReader
                 for (int i=0; i<NUMCOMPS; i++){
                 a_BC_data_interpolated(i) = a_fraction*a_BC_data_hi(i) + (1.0-a_fraction)*a_BC_data_lo(i);
                 } 
-            },data_0, BC_data[low_frame], BC_data[next_frame], needed_fraction);
+            },data_0, BC_data_temp1, BC_data_temp2, needed_fraction);
         }
 
         // Create a single block, single patch MBLevelBoxData
@@ -154,10 +164,10 @@ class MHDReader
         MBProblemDomain srcDomain(numProc());
         for (BlockIndex bi = 0; bi < numProc(); bi++)
         {
-            srcDomain.defineDomain(bi,BT.sizes());
+            srcDomain.defineDomain(bi,Box_BC.sizes());
         }
 
-        MBDisjointBoxLayout srcLayout(srcDomain, BT.sizes());
+        MBDisjointBoxLayout srcLayout(srcDomain, Box_BC.sizes());
         MBLevelBoxData<double, 8, HOST> data(srcLayout, Point::Zeros());
         data_0.copyTo(data[*srcLayout.begin()]);
 

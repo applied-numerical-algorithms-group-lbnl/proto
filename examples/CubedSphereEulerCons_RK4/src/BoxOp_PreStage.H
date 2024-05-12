@@ -1,5 +1,5 @@
 #include "MHDReader.H"
-
+extern MHDReader BC_global;
 PROTO_KERNEL_START
 template <typename T, MemType MEM>
 void f_radialBCs_F(
@@ -218,7 +218,6 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // Compute viscous operators here, and increment a_rhsTotal.
   int linear_visc = ParseInputs::get_linear_viscosity();
   int divBcleaning = ParseInputs::get_divergence_cleaning();
-  string BC_file = ParseInputs::get_BC_file();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto layout = a_UStage.layout();
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
@@ -226,12 +225,11 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
 
   HDF5Handler h5;
 
-  MHDReader reader;
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
   int thetaCoord = (rCoord + 1) % 3;
   int phiCoord = (rCoord + 2) % 3;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  reader.file_to_BC(dstData, map, BC_file, a_time);
+  BC_global.BoxData_to_BC(dstData, map, a_time);
 
   // // Move from ghosted to non-ghosted data to easily see in VisIt
   // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));

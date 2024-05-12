@@ -4,6 +4,8 @@
 #include "MHD_IO.H"
 #include <chrono> // Used by timer
 
+MHDReader BC_global;
+
 int main(int argc, char *argv[])
 {
   #ifdef PR_MPI
@@ -11,6 +13,7 @@ int main(int argc, char *argv[])
   #endif
   ParseInputs::getInstance().parsenow(argc, argv);
   HDF5Handler h5;
+
   int domainSize = ParseInputs::get_domainSize();
   int thickness = ParseInputs::get_thickness();
   int max_iter = ParseInputs::get_max_iter();
@@ -23,6 +26,8 @@ int main(int argc, char *argv[])
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
   string BC_file = ParseInputs::get_BC_file();
+  BC_global.file_to_BoxData_vec(BC_file);
+  
   double probe_cadence = ParseInputs::get_Probe_cadence();
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
@@ -67,12 +72,11 @@ int main(int argc, char *argv[])
     double dxradius = 1.0 / thickness;
     auto C2C = Stencil<double>::CornersToCells(4);
 
-    MHDReader reader;
     int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
     int thetaCoord = (rCoord + 1) % 3;
     int phiCoord = (rCoord + 2) % 3;
     MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-    if (init_condition_type == 3) reader.file_to_BC(dstData, map, BC_file, time);
+    if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
     // Set input solution.
     for (auto dit : layout)

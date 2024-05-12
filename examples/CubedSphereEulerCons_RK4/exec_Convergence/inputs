@@ -10,8 +10,8 @@
 -temporal_order                  1
 -divergence_cleaning             1
 -linear_viscosity                1
--BC_file                         DATA.h5
-##-BC_file                         POT3D360x180_2020010120_2020022020_fixeddtheta.h5
+##-BC_file                         DATA.h5
+-BC_file                         POT3D360x180_2020010120_2020022020_fixeddtheta.h5
 -Probe_trajectory_file           trajEarth2020.dat
 -Probe_data_file                 probed_data_no_interp.dat 
 -Probe_cadence                   3600
