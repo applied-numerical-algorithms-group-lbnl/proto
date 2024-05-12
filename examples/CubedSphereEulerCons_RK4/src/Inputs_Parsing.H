@@ -19,6 +19,7 @@ private:
     int max_iter; 
     double CFL;
     int write_cadence; 
+    string data_file_prefix;
     double gamma; // Ratio of specific heats
     int temporal_order; // Temporal order of accuracy
     int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
@@ -52,6 +53,7 @@ public:
     static int get_max_iter() {return getInstance().max_iter;}
     static double get_CFL() {return getInstance().CFL;}
     static int get_write_cadence() {return getInstance().write_cadence;}
+    static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static double get_gamma() {return getInstance().gamma;}
     static int get_temporal_order() {return getInstance().temporal_order;}
     static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
@@ -73,6 +75,7 @@ public:
         args.add("max_iter", max_iter);
         args.add("CFL", CFL);
         args.add("write_cadence", write_cadence);
+        args.add("data_file_prefix", data_file_prefix);
         args.add("gamma", gamma);
         args.add("temporal_order", temporal_order);
         args.add("divergence_cleaning", divergence_cleaning);
@@ -96,6 +99,7 @@ public:
             cout << "max_iter: " << max_iter << endl;
             cout << "CFL: " << CFL << endl;
             cout << "write_cadence: " << write_cadence << endl;
+            cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "gamma: " << gamma << endl;
             cout << "temporal_order: " << temporal_order << endl;
             cout << "divergence_cleaning: " << divergence_cleaning << endl;

@@ -6,6 +6,7 @@
 -max_iter                        1500
 -CFL                             0.5
 -write_cadence                   10
+-data_file_prefix                data
 -gamma                           1.6666666666666666666667
 -temporal_order                  1
 -divergence_cleaning             1

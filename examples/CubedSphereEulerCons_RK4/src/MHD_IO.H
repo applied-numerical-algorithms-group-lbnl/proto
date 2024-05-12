@@ -59,8 +59,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(7) = a_W(7)*1e6; // microGauss
     }, Wout[dit], W);
   }
-
-  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, Wout, "W_" + to_string(iter));
+  std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
+  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
