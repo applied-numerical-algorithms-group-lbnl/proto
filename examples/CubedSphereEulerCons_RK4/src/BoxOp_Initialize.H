@@ -1,3 +1,4 @@
+#include "MHD_Constants.H"
 template <typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_radialInit_F(
@@ -84,10 +85,11 @@ void f_radialoutflowInit_F(
     int a_nradius)
 {
   // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T u0 = 10.0;
-  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
+  double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
+  T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+  T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+  T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
+  T rho = rho0*pow(a_radius(0)/r_BC, -2.0);
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = u0;
   a_W(iRHO) = rho;
@@ -136,7 +138,7 @@ initialize(State& a_W,
     {  
       double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
       double rad = a_radius(0);
-      double rho = a_WSph(0)*1.67262192e-24*pow(r_BC/rad,2.0);
+      double rho = a_WSph(0)*c_MP*pow(r_BC/rad,2.0);
       double u = a_WSph(1);
       double v = a_WSph(2);
       double w = a_WSph(3);

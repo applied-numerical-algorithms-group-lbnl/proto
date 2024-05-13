@@ -16,6 +16,8 @@ private:
     int init_condition_type; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
     int domainSize; // Number of cells in non radial direction
     int thickness; // Number of cells in radial direction
+    int boxSize_nonrad; // Size of the box for domain decomposition
+    int boxSize_rad; // Size of the box for domain decomposition
     int max_iter; 
     double CFL;
     int write_cadence; 
@@ -50,6 +52,8 @@ public:
     static int get_init_condition_type() {return getInstance().init_condition_type;}
     static int get_domainSize() {return getInstance().domainSize;}
     static int get_thickness() {return getInstance().thickness;}
+    static int get_boxSize_nonrad() {return getInstance().boxSize_nonrad;}
+    static int get_boxSize_rad() {return getInstance().boxSize_rad;}
     static int get_max_iter() {return getInstance().max_iter;}
     static double get_CFL() {return getInstance().CFL;}
     static int get_write_cadence() {return getInstance().write_cadence;}
@@ -72,6 +76,8 @@ public:
         args.add("init_condition_type", init_condition_type);
         args.add("domainSize", domainSize);
         args.add("thickness", thickness);
+        args.add("boxSize_nonrad", boxSize_nonrad);
+        args.add("boxSize_rad", boxSize_rad);
         args.add("max_iter", max_iter);
         args.add("CFL", CFL);
         args.add("write_cadence", write_cadence);
@@ -96,6 +102,8 @@ public:
             cout << "init_condition_type: " << init_condition_type << endl;
             cout << "domainSize: " << domainSize << endl;
             cout << "thickness: " << thickness << endl;
+            cout << "boxSize_nonrad: " << boxSize_nonrad << endl;
+            cout << "boxSize_rad: " << boxSize_rad << endl;
             cout << "max_iter: " << max_iter << endl;
             cout << "CFL: " << CFL << endl;
             cout << "write_cadence: " << write_cadence << endl;

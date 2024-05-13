@@ -369,9 +369,6 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     BoxData<double, NUMCOMPS, HOST> U_dim(dbx0);
     JUTemp[dit].copyTo(U_dim);
 
-    HDF5Handler h5;
-    if (pid == 2) h5.writePatch(1,U_dim,"U_dim");
-
     if (dbx1.contains(index_cc))
     {
       for (int i = 0; i < NUMCOMPS; i++)

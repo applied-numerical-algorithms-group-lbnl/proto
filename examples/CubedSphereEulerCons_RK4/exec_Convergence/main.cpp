@@ -16,6 +16,8 @@ int main(int argc, char *argv[])
 
   int domainSize = ParseInputs::get_domainSize();
   int thickness = ParseInputs::get_thickness();
+  int boxSize_nonrad = ParseInputs::get_boxSize_nonrad();
+  int boxSize_rad = ParseInputs::get_boxSize_rad();
   int max_iter = ParseInputs::get_max_iter();
   int temporal_order = ParseInputs::get_temporal_order();
   double gamma = ParseInputs::get_gamma();
@@ -47,8 +49,8 @@ int main(int argc, char *argv[])
     Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}};
     auto domain =
         CubedSphereShell::Domain(domainSize, thickness, radialDir);
-    Point boxSizeVect = Point::Ones(domainSize);
-    boxSizeVect[radialDir] = thickness;
+    Point boxSizeVect = Point::Ones(boxSize_nonrad);
+    boxSizeVect[radialDir] = boxSize_rad;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     int count = 0;
@@ -94,10 +96,13 @@ int main(int argc, char *argv[])
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
       eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
+      if (procID() == 0) h5.writePatch( 1, WPoint_i, "WPoint");
       eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
       JU_i.setVal(0.);
       JUTemp.copyTo(JU_i, layout[dit]);
+      if (procID() == 2) h5.writePatch( 1, JU_i, "JU_i");
     }
+    h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JU, "JU");
 
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
     MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);

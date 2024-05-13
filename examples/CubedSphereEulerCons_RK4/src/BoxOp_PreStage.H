@@ -1,4 +1,5 @@
 #include "MHDReader.H"
+#include "MHD_Constants.H"
 extern MHDReader BC_global;
 template <typename T, MemType MEM>
 PROTO_KERNEL_START
@@ -54,10 +55,11 @@ void f_radialoutflowIBCs_F(
   T r = sqrt(a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1) + a_X_cart(2) * a_X_cart(2));
   T theta = acos(a_X_cart(2) / r);
   // Compute spherical BCs.
-  T p0 = 1.0;
-  T rho0 = 1.0;
-  T u0 = 10.0;
-  T rho = rho0*pow(a_radius(0)/0.1, -2.0);
+  double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
+  T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+  T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+  T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
+  T rho = rho0*pow(a_radius(0)/r_BC, -2.0);
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = u0;
   // T ur = u0 - u0/10 * sin(theta);
@@ -219,6 +221,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // Compute viscous operators here, and increment a_rhsTotal.
   int linear_visc = ParseInputs::get_linear_viscosity();
   int divBcleaning = ParseInputs::get_divergence_cleaning();
+  int init_condition_type = ParseInputs::get_init_condition_type();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto layout = a_UStage.layout();
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
@@ -230,7 +233,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   int thetaCoord = (rCoord + 1) % 3;
   int phiCoord = (rCoord + 2) % 3;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  BC_global.BoxData_to_BC(dstData, map, a_time);
+  if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, a_time);
 
   // // Move from ghosted to non-ghosted data to easily see in VisIt
   // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
