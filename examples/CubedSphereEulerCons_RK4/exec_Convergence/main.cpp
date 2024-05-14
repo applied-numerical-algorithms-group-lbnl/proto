@@ -77,6 +77,8 @@ int main(int argc, char *argv[])
     int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
     int thetaCoord = (rCoord + 1) % 3;
     int phiCoord = (rCoord + 2) % 3;
+    //Point ghst = Point::Ones(NGHOST);
+    //MBLevelBoxData<double, 8, HOST> dstData(layout, ghst);
     MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
     if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
