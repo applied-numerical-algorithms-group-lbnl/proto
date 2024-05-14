@@ -204,8 +204,10 @@ TEST(MBLevelBoxData, FillBoundaries) {
         patches.push_back(MBPatchID_t(Point::Ones(), bi));
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizes);
-    
-    MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
+   
+    Point ghost = Point::Ones(ghostSize);
+    ghost += Point::X();
+    MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost);
     
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"data"}, hostData, "MBLevelBoxData_FillBoundaries"); 
@@ -314,21 +316,26 @@ TEST(MBLevelBoxData, OnDomainBoundary)
             }
         }
     }
-    
+   
+    std::vector<Box> interiorDomains(DIM);
+    interiorDomains[0] = Box::Cube(domainSize).grow(0,Side::Lo,-1);
+    interiorDomains[1] = Box::Cube(domainSize).grow(1,Side::Lo,-1);
+    for (int di = 2; di < DIM; di++)
+    {
+        interiorDomains[di] = Box::Cube(domainSize).grow(di,-1);
+    }
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
         auto& patch = hostData[iter];
-
         for (auto pi : patch.box())
         {
             for (int dir = 0; dir < DIM; dir++)
             {
-                if (pi[dir] == 0)
-                {
+                if (!Box::Cube(domainSize).contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
+                else if (interiorDomains[dir].contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
+                else {
                     EXPECT_EQ(patch(pi,dir), 1);
-                } else {
-                    EXPECT_EQ(patch(pi,dir), 0);
                 }
             }
         }
@@ -585,8 +592,8 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
-    int radialDir = 2;
-    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
