@@ -36,7 +36,7 @@ void MBDisjointBoxLayout::define(
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
     
     std::vector<MBPatchID_t> patches;
-    for (unsigned int bi = 0; bi < a_domain.numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < a_domain.numBlocks(); bi++)
     {
         Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
@@ -134,7 +134,7 @@ MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::blockIndex | Error: Layout is not defined");
     Point p = point(a_index);
-    unsigned int b = block(a_index);
+    BlockIndex b = block(a_index);
     return m_layouts[b].find(p); 
 }
 
@@ -206,6 +206,10 @@ MBDisjointBoxLayout::getBlock(BlockIndex a_block) const
 
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex a_block) const
 {
+    auto globalIndex = m_partition->find(a_point, a_block);
+    if (globalIndex == numBoxes()) { return *end(); }
+    else { return MBIndex(m_partition, globalIndex); }
+    /*
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::find | Error: Layout is not defined");
     auto patchDomain = m_layouts[a_block].patchDomain();
     if (!patchDomain.contains(a_point))
@@ -219,6 +223,7 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex
     } else {
         return MBIndex(m_partition, globalIndex);
     }
+    */
 }
 
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
@@ -275,7 +280,7 @@ std::vector<MBIndex> MBDisjointBoxLayout::bounds(
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::bounds | Error: Layout is not defined");
     std::vector<MBIndex> ret;
     auto b0 = block(a_index);
-    for (unsigned int bi = 0; bi < numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
         auto conn = domain().graph().connectivity(b0, bi);
         if (bi != b0 && conn == Point::Zeros()) { continue; }
@@ -297,8 +302,8 @@ Point MBDisjointBoxLayout::connectivity(
         const MBIndex& a_i2) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::connectivity | Error: Layout is not defined");
-    unsigned int b1 = block(a_i1);
-    unsigned int b2 = block(a_i2);
+    BlockIndex b1 = block(a_i1);
+    BlockIndex b2 = block(a_i2);
     Point p1 = point(a_i1);
     Point p2 = point(a_i2);
 

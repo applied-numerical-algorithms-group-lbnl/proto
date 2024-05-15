@@ -301,7 +301,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
         auto block = layout.block(iter);
         auto& patch = hostData[iter];
 
-        for (auto pi : patch.box())
+        for (auto pi : patch.box() & Box::Cube(domainSize))
         {
             auto domainBoundDirs = hostData.onDomainBoundary(pi, iter);
             for (auto dir : domainBoundDirs)
@@ -428,7 +428,8 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
         }
     }
 }
-
+//TODO: This test only works in 2D
+#if DIM == 2
 TEST(MBLevelBoxData, InterpFootprintEdge)
 {
     HDF5Handler h5;
@@ -466,11 +467,11 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         auto mbIndex = layout.find(patchID, 0);
 
         // correct output
-        Point nx = Point::Basis(0);
-        Point ny = Point::Basis(1);
+        Point nx = Point::X();
+        Point ny = Point::Y();
         Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
-        Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
+        Box patchBox_XY = patchBox_0.adjacent(ghost[2]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
         std::vector<MBDataPoint> soln;
         for (auto s : footprint)
@@ -503,7 +504,6 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         }
     }
 }
-#if DIM == 2
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;

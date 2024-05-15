@@ -242,14 +242,19 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(BlockIndex a
 uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
 {
     auto blockDomain = m_patchDomain.getBlock(a_block);
-    PROTO_ASSERT(blockDomain.contains(a_patch),
-            "MBBoxPartition::find | Error: \
-            Patch is not contained within the problem domain.");
     Point image = blockDomain.image(a_patch);
+    // if the image isn't in the domain, return failure
+    if (!blockDomain.contains(image)) { return numBoxes(); }
     MBPatchID_t patchID(image, a_block);
     auto data = m_indexMap.find(patchID);
+    // if the box isn't in the partition, return failure
     if (data == m_indexMap.end()) { return numBoxes(); }
     return m_indexMap[patchID];
+}
+
+bool MBBoxPartition::contains(Point a_patch, BlockIndex a_block) const
+{
+    return (find(a_patch, a_block) < numBoxes());
 }
 
 bool MBBoxPartition::isBlockBoundary(

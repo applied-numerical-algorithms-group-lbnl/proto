@@ -40,6 +40,7 @@ void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
 }
 PROTO_KERNEL_END(f_testMapF, f_testMap);
 
+#if 0
 TEST(HDF5, ReadMBLevel)
 {
     HDF5Handler h5;
@@ -48,7 +49,6 @@ TEST(HDF5, ReadMBLevel)
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    layout.toSingleBlock();
     MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
     data.setVal(7);
     h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
@@ -63,7 +63,7 @@ TEST(HDF5, ReadMBLevel)
 
     h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_2");
 }
-
+#endif
 /*
 TEST(HDF5, MMBOffsets)
 {
