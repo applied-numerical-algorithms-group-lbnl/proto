@@ -298,6 +298,7 @@ public:
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
                 BoxData<T,NUMCOMPS,MEM>& a_BC,
                 BoxData<T,1,MEM>& a_dVolr,
+                Box a_blockBox,
                 T a_time,
                 T a_dt,
                 int a_kstage);

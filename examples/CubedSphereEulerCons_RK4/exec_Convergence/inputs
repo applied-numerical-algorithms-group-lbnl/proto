@@ -1,13 +1,13 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
 -init_condition_type             3
--domainSize                      32
+-domainSize                      16
 -thickness                       32
--boxSize_nonrad                  32
+-boxSize_nonrad                  16
 -boxSize_rad                     16
--max_iter                        1
+-max_iter                        1000
 -CFL                             0.5
--write_cadence                   1
+-write_cadence                   10
 -data_file_prefix                data
 -gamma                           1.6666666666666666666667
 -temporal_order                  1

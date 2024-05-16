@@ -86,12 +86,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
 PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
               BoxData<T,NUMCOMPS,MEM>& a_BC,
               BoxData<T,1,MEM>& a_dVolr,
+              Box a_blockBox,
               T a_time,
               T a_dt,
               int a_kstage)
 {
   int a_block = this->block();
-  Box a_blockBox = this->box();
   Box bxGhosted = a_USphStage.box();
   BoxData<double> radius(a_dVolr.box());
   BoxData<double, DIM, HOST> Dr(a_dVolr.box());
@@ -250,10 +250,12 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
 
   for (auto dit : a_UStage.layout())
   {
+    unsigned int block = layout.block(dit);
+    Box blockBox = layout.getBlock(block).domain().box();
     auto &rhs_i = a_rhsTotal[dit];
     rhs_i.setVal(0.0);
     auto &USph_i = a_UStage[dit];
-    eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],a_time,a_dt,a_kstage);
+    eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
 
     if (linear_visc == 1 && a_kstage == 0)
       {
