@@ -98,14 +98,11 @@ int main(int argc, char *argv[])
       BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
       (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
       eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
-      if (procID() == 0) h5.writePatch( 1, WPoint_i, "WPoint");
+
       eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
       JU_i.setVal(0.);
       JUTemp.copyTo(JU_i, layout[dit]);
-      if (procID() == 2) h5.writePatch( 1, JU_i, "JU_i");
     }
-    h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JU, "JU");
-
     MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
     MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     Write_W(JU, eulerOp, iop, 0, time, dt_next);
@@ -114,7 +111,6 @@ int main(int argc, char *argv[])
     for (int iter = 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
-      // MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
       if (ParseInputs::get_convTestType() == 0){
         #ifdef PR_MPI
           MPI_Reduce(&dt_next, &dt, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);

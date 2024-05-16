@@ -12,6 +12,8 @@ public:
 	std::vector<BoxData<double, 8, HOST>> BC_data;
 	std::vector<BoxData<double, 8, HOST>> BC_data_extended;
 	std::vector<double> dtheta;
+	std::vector<double> theta;
+	std::vector<double> phi;
 	Box Box_BC;
 
 	inline void file_to_BoxData_vec(std::string a_filename)
@@ -21,6 +23,8 @@ public:
 		int phiCoord = (rCoord + 2) % 3;
 		readData(BC_data, a_filename);
 		readGeom(dtheta, a_filename);
+		// readTheta(theta, a_filename);
+		// readPhi(phi, a_filename);
 		Box_BC = readDomain(a_filename);
 		Point LT = Box_BC.low();
 		LT[thetaCoord] = Box_BC.low()[phiCoord];
@@ -88,7 +92,8 @@ public:
 			static Stencil<double> m_right_shift;
 			m_right_shift = (1.0 - needed_fraction) * Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
 			BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
-			data_0 = m_right_shift(data_a);
+			BC_data_temp1 = m_right_shift(data_a);
+			BC_data_temp1.copyTo(data_0);
 		}
 		else
 		{
@@ -160,7 +165,7 @@ public:
 		a_dstData.setVal(0);
 
 		// Get the interpolation or Nearest operator
-		auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, Side::Lo, NGHOST);
+		auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
 
 		// Interpolate data
 		BCOp.apply(a_dstData, data);
@@ -326,6 +331,82 @@ public:
 		// READ DATA
 		int dataSize = domainSize[1];
 		auto ds_data = H5Dopen2(file, "/geometry/dtheta", H5P_DEFAULT);
+
+		// DEFINE VECTOR
+		a_data.resize(dataSize);
+
+		// READ DATA
+		assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, &a_data[0]) >= 0);
+
+		// CLEAN UP
+		assert(H5Dclose(ds_data) >= 0);
+		barrier();
+		assert(H5Fclose(file) >= 0);
+	}
+
+	template <typename T, typename... Args>
+	inline void readTheta(
+			std::vector<T> &a_data,
+			std::string a_filename,
+			Args... a_params)
+	{
+		PROTO_ASSERT(DIM == 3,
+								 "MHDReader::readGeom | Error: Invalid for DIM != 3");
+
+		PR_TIME("MHDReader::readGeom");
+		hid_t file;
+		readFile(&file, a_filename, a_params...);
+
+		hid_t H5T_T;
+		HDF5Handler::getH5DataType<T>(&H5T_T);
+
+		// READ DOMAIN SIZES
+		int domainSize[2];
+		auto att_domain = H5Aopen(file, "domain", H5P_DEFAULT);
+		assert(H5Aread(att_domain, H5T_STD_I32LE, domainSize) >= 0);
+		assert(H5Aclose(att_domain) >= 0);
+
+		// READ DATA
+		int dataSize = domainSize[1];
+		auto ds_data = H5Dopen2(file, "/geometry/theta", H5P_DEFAULT);
+
+		// DEFINE VECTOR
+		a_data.resize(dataSize);
+
+		// READ DATA
+		assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, &a_data[0]) >= 0);
+
+		// CLEAN UP
+		assert(H5Dclose(ds_data) >= 0);
+		barrier();
+		assert(H5Fclose(file) >= 0);
+	}
+
+	template <typename T, typename... Args>
+	inline void readPhi(
+			std::vector<T> &a_data,
+			std::string a_filename,
+			Args... a_params)
+	{
+		PROTO_ASSERT(DIM == 3,
+								 "MHDReader::readGeom | Error: Invalid for DIM != 3");
+
+		PR_TIME("MHDReader::readGeom");
+		hid_t file;
+		readFile(&file, a_filename, a_params...);
+
+		hid_t H5T_T;
+		HDF5Handler::getH5DataType<T>(&H5T_T);
+
+		// READ DOMAIN SIZES
+		int domainSize[2];
+		auto att_domain = H5Aopen(file, "domain", H5P_DEFAULT);
+		assert(H5Aread(att_domain, H5T_STD_I32LE, domainSize) >= 0);
+		assert(H5Aclose(att_domain) >= 0);
+
+		// READ DATA
+		int dataSize = domainSize[0];
+		auto ds_data = H5Dopen2(file, "/geometry/phi", H5P_DEFAULT);
 
 		// DEFINE VECTOR
 		a_data.resize(dataSize);
