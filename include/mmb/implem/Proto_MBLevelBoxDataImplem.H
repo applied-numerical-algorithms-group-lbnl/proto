@@ -399,21 +399,21 @@ MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block)
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block) const
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
-MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(BlockIndex a_block) const
 {
     return getBlock(a_block).patchSize();
 }
@@ -522,7 +522,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
-    MBIndex a_index, Point a_dir, unsigned int a_block)
+    MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
     PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
@@ -541,7 +541,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block) const
 {
     PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
@@ -562,7 +562,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
     PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),

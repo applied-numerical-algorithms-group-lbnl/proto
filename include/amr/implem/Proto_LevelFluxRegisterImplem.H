@@ -210,6 +210,11 @@ void LevelFluxRegister<T,C,MEM>::define (
     m_crseIndices.resize(numCrsePatches);
     
     // Set up coarse data holders.  
+#if PR_VERBOSE > 1
+    pr_out() << "\nLevelFluxRegister::define" << std::endl;
+    pr_out() << "Coarse Data Holders:" << std::endl;
+#endif
+
     for (auto citer = m_crseLayout.begin(); citer.ok(); ++citer)
     {
         Box crseBox = m_crseLayout[*citer];
@@ -225,6 +230,9 @@ void LevelFluxRegister<T,C,MEM>::define (
         
         //std::cout << "\tCoarse Patch: " << crseBox << " | Fine Patch Points: " << finePatchPoints << std::endl;
         int k = 0;
+#if PR_VERBOSE > 1
+        pr_out() << "\tCoarse Box: " << crseBox << " | Fine Patch Points: " << finePatchPoints << std::endl;
+#endif
         for (auto biter = finePatchPoints.begin(); biter.ok(); ++biter)
         {
             Point pt = *biter;
@@ -232,6 +240,9 @@ void LevelFluxRegister<T,C,MEM>::define (
             // only check fine patches NOT in part of the fine layout
             if (fineIndex != *m_fineLayout.end()) { continue; } 
             Box cfBox = Box(pt, pt).refine(m_fineLayout.boxSize()).coarsen(m_refRatio);
+#if PR_VERBOSE > 1
+            pr_out() << "\t\tFine Patch: " << pt << " | Coarsened Fine Box: " << cfBox << std::endl;
+#endif
             //std::cout << "\t\tFound External Patch: " << pt << " | Coarsened Box: " << cfBox << std::endl;
             for (int dir = 0; dir < DIM; dir++)
             {
@@ -242,6 +253,11 @@ void LevelFluxRegister<T,C,MEM>::define (
                     //std::cout << "\t\t\tChecking Point: " << ptAdj << std::endl;
                     // find accounts for periodic boundaries
                     auto adjIndex = m_fineLayout.find(ptAdj);
+#if PR_VERBOSE > 1
+                    bool skip = (adjIndex == *m_fineLayout.end());
+                    pr_out() << "\t\t\tAdjacent Patch: " << ptAdj << std::endl;
+                    if (skip) { pr_out() << "\t\t\t\tPatch not found in the fine layout. Skipping." << std::endl; }
+#endif
                     if (adjIndex != *m_fineLayout.end())
                     {
                         // fineIndex is the index of a fine patch NOT in the fine layout
@@ -251,7 +267,9 @@ void LevelFluxRegister<T,C,MEM>::define (
                         // Intersect with the Problem domain to shift the Box to its proper 
                         // periodic image in the coarse patch.
                         destBox = m_crseLayout.domain() & destBox; 
-                        
+#if PR_VERBOSE > 1
+                        pr_out() << "\t\t\t\tCreating Register: destBox = " << destBox << std::endl;
+#endif
                         //std::cout << "\t\t\tFound Boundary Patch: " << ptAdj << " | Shifted Coarsened Box: " << destBox << std::endl;
 
                         // Create register and insert it into the coarse register data structure.
@@ -277,6 +295,9 @@ void LevelFluxRegister<T,C,MEM>::define (
     //std::cout << "FluxRegister::Define | Building sets of registers for " << numFinePatches << " coarse patches." << std::endl;
     m_fineRegisters.resize(numFinePatches);
     m_fineIndices.resize(numFinePatches);
+#if PR_VERBOSE > 1
+    pr_out() << "Fine Data Holders:" << std::endl;
+#endif
     for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
     {
         Point finePatchPoint = m_fineLayout.point(*fiter);
@@ -284,6 +305,9 @@ void LevelFluxRegister<T,C,MEM>::define (
         Box cfBox = fineBox.coarsen(m_refRatio);
         //std::cout << "\tFine Patch Point: " << finePatchPoint << " | Coarse-Fine Box: " << cfBox << std::endl;
         int k = 0;
+#if PR_VERBOSE > 1
+        pr_out() << "\tFine Patch: " << finePatchPoint << " | Fine Box: " << fineBox << " | Coarsened Fine Box: " << cfBox << std::endl;
+#endif
         for (int d = 0; d < DIM; d++)
         {
             SideIterator siter;
@@ -291,15 +315,26 @@ void LevelFluxRegister<T,C,MEM>::define (
             {
                 Point srcPt = finePatchPoint + Point::Basis(d, *siter);
                 auto adjIndex = m_fineLayout.find(srcPt);
+                bool srcPatchMissing = (adjIndex == *m_fineLayout.end());
+                bool srcPatchInDomain = m_fineLayout.domain().contains(srcPt);
                 //std::cout << "\t\tChecking Adjacent Point: " << srcPt << std::endl;
                 // look for adjacent patches NOT in the fine layout
-                if (adjIndex == *m_fineLayout.end())
+#if PR_VERBOSE > 1
+                pr_out() << "\t\tAdjacent Patch: " << srcPt << std::endl;
+                if (srcPatchMissing) { pr_out() << "\t\t\tPatch absent from fine layout." << std::endl;}
+                if (srcPatchInDomain) { pr_out() << "\t\t\tPatch is part of the domain." << std::endl;}
+#endif
+
+                if (srcPatchMissing && srcPatchInDomain)
                 {
                     // Fine registers are AVERAGED fine fluxes
                     // hence, domains are coarse
                     Box srcBox = cfBox.adjacent(d, *siter, 1);
                     // Deal with possible periodic images
                     srcBox = m_crseLayout.domain() & srcBox;
+#if PR_VERBOSE > 1
+                    pr_out() << "\t\t\tCreating Register: srcBox = " << srcBox << std::endl;
+#endif
                     shared_ptr<BoxData<T,C,MEM> > temp(new BoxData<T,C,MEM>(srcBox));
                     Register<T,C,MEM> reg(temp, d, *siter);
                     m_fineRegisters[*fiter].push_back(reg);

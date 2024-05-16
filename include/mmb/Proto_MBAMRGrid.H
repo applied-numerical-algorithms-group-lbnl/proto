@@ -54,10 +54,10 @@ namespace Proto
         inline std::vector<Point> refRatios() const { return m_refRatios; } 
         private:
         
-        std::vector<Point>   m_refRatios;
-        MBAMRBoxPartition    m_partition; ///
-        std::vector<AMRGrid> m_grids;  ///< One grid per block
-        std::vector<MBDisjointBoxLayout> m_layouts; ///< One layout per level
+        std::vector<Point>                  m_refRatios;
+        std::shared_ptr<MBAMRBoxPartition>  m_partition; 
+        std::vector<AMRGrid>                m_grids;  ///< One grid per block
+        std::vector<MBDisjointBoxLayout>    m_layouts; ///< One layout per level
     };
 
 #include "implem/Proto_MBAMRGridImplem.H"

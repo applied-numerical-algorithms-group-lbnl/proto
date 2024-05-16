@@ -3,7 +3,7 @@
 #include "Lambdas.H"
 
 using namespace Proto;
-
+#if 1
 TEST(FluxRegister, Construction) {
     constexpr unsigned int C = 2;
     int domainSize = 32;
@@ -18,7 +18,8 @@ TEST(FluxRegister, Construction) {
     dxVect.fill(dx);
     LevelFluxRegister<double, C, HOST> fr(grid[0], grid[1], refRatio, dxVect);
 }
-
+#endif
+#if 1
 TEST(FluxRegister, RefluxCenter) {
     constexpr unsigned int C = 2;
     int domainSize = 32;
@@ -71,7 +72,8 @@ TEST(FluxRegister, RefluxCenter) {
         
 
 }
-
+#endif
+#if 1
 TEST(FluxRegister, RefluxCorner) {
     constexpr unsigned int C = 2;
     int domainSize = 32;
@@ -85,13 +87,15 @@ TEST(FluxRegister, RefluxCorner) {
 
     LevelBoxData<double, C, HOST> L0(grid[0], Point::Ones(ghostSize));
     LevelBoxData<double, C, HOST> L1(grid[1], Point::Ones(ghostSize));
-
+    AMRData<double, C, HOST> L(grid, Point::Ones(ghostSize));
     L0.setVal(0);
     L1.setVal(0);
 
     std::array<double, DIM> dxVect;
     dxVect.fill(dx);
     LevelFluxRegister<double, C, HOST> fr(grid[0], grid[1], refRatio, dxVect);
+
+    
 
     for (auto citer : grid[0])
     {
@@ -115,6 +119,7 @@ TEST(FluxRegister, RefluxCorner) {
 
 #if PR_VERBOSE > 0
     HDF5Handler h5;
+    h5.writeAMRData(dx, L, "LevelFluxRegisterTests_AMR");
     h5.writeLevel(dx, L0, "LevelFluxRegisterTests_L0_0");
     h5.writeLevel(dx/refRatio[0], L1, "LevelFluxRegisterTests_L1_0");
 #endif
@@ -123,8 +128,31 @@ TEST(FluxRegister, RefluxCorner) {
     h5.writeLevel(dx, L0, "LevelFluxRegisterTests_L0_1");
     h5.writeLevel(dx/refRatio[0], L1, "LevelFluxRegisterTests_L1_1");
 #endif
-}
 
+    Box xFluxBox = Box(boxSize).adjacent(Point::X(),1);
+    Box yFluxBox = Box(boxSize).adjacent(Point::Y(),1);
+    double xUpdate = -(10 - 1)/dx;
+    double yUpdate = -(20 - 2)/dx;
+    for (auto citer : grid[0])
+    {
+        auto& patch = L0[citer];
+        for (auto pi : grid[0][citer])
+        {
+            for (int cc = 0; cc < C; cc++)
+            {
+                if (xFluxBox.contains(pi))
+                {
+                    EXPECT_NEAR(patch(pi, cc), xUpdate, 1e-12);
+                } else if (yFluxBox.contains(pi)) {
+                    EXPECT_NEAR(patch(pi, cc), yUpdate, 1e-12);
+                } else {
+                    EXPECT_NEAR(patch(pi, cc), 0, 1e-12);
+                }
+            }
+        }
+    }
+}
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
