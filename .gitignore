@@ -12,3 +12,5 @@
 *.out
 *.sh
 pout.*
+myjob.o*
+myjob.e*
