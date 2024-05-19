@@ -18,6 +18,10 @@ namespace Proto
                 const MBAMRGrid& a_grid,
                 Array<Point, DIM+1> a_ghost,
                 Point a_boundGhost = Point::Zeros());
+        inline MBAMRData(
+                const MBAMRGrid& a_grid,
+                Point            a_ghost,
+                Point a_boundGhost = Point::Zeros());
        
         inline MBAMRData(
                 const MBAMRGrid& a_grid,

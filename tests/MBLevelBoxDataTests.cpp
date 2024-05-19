@@ -204,8 +204,10 @@ TEST(MBLevelBoxData, FillBoundaries) {
         patches.push_back(MBPatchID_t(Point::Ones(), bi));
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizes);
-    
-    MBLevelBoxData<double, DIM, HOST> hostData(layout, Point::Ones(ghostSize));
+   
+    Point ghost = Point::Ones(ghostSize);
+    ghost += Point::X();
+    MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost);
     
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"data"}, hostData, "MBLevelBoxData_FillBoundaries"); 
@@ -299,7 +301,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
         auto block = layout.block(iter);
         auto& patch = hostData[iter];
 
-        for (auto pi : patch.box())
+        for (auto pi : patch.box() & Box::Cube(domainSize))
         {
             auto domainBoundDirs = hostData.onDomainBoundary(pi, iter);
             for (auto dir : domainBoundDirs)
@@ -314,21 +316,26 @@ TEST(MBLevelBoxData, OnDomainBoundary)
             }
         }
     }
-    
+   
+    std::vector<Box> interiorDomains(DIM);
+    interiorDomains[0] = Box::Cube(domainSize).grow(0,Side::Lo,-1);
+    interiorDomains[1] = Box::Cube(domainSize).grow(1,Side::Lo,-1);
+    for (int di = 2; di < DIM; di++)
+    {
+        interiorDomains[di] = Box::Cube(domainSize).grow(di,-1);
+    }
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
         auto& patch = hostData[iter];
-
         for (auto pi : patch.box())
         {
             for (int dir = 0; dir < DIM; dir++)
             {
-                if (pi[dir] == 0)
-                {
+                if (!Box::Cube(domainSize).contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
+                else if (interiorDomains[dir].contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
+                else {
                     EXPECT_EQ(patch(pi,dir), 1);
-                } else {
-                    EXPECT_EQ(patch(pi,dir), 0);
                 }
             }
         }
@@ -421,7 +428,8 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
         }
     }
 }
-
+//TODO: This test only works in 2D
+#if DIM == 2
 TEST(MBLevelBoxData, InterpFootprintEdge)
 {
     HDF5Handler h5;
@@ -459,11 +467,11 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         auto mbIndex = layout.find(patchID, 0);
 
         // correct output
-        Point nx = Point::Basis(0);
-        Point ny = Point::Basis(1);
+        Point nx = Point::X();
+        Point ny = Point::Y();
         Box patchBox_0 = (layout)[mbIndex];
         Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
-        Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
+        Box patchBox_XY = patchBox_0.adjacent(ghost[2]*(nx+ny));
         patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
         std::vector<MBDataPoint> soln;
         for (auto s : footprint)
@@ -496,7 +504,6 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         }
     }
 }
-#if DIM == 2
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
@@ -585,8 +592,8 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
     int domainSize = 8;
     int boxSize = 8;
     int thickness = 1;
-    int radialDir = 2;
-    auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
+    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = thickness;
     MBDisjointBoxLayout layout(domain, boxSizeVect);

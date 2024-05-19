@@ -201,22 +201,21 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 
 #if DIM > 2
 TEST(MBLevelMapTests, CubeSphereShell) {
-    int domainSize = 8;
-    int boxSize = 8;
-    int thickness = 1;
+    int domainSize = 32;
+    int boxSize = 32;
+    int thickness = 32;
+    int ghostSize = 7;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
     //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
-    boxSizeVect[radialDir] = thickness;
+    boxSizeVect[radialDir] = thickness/2;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Point ghost = Point::Ones(ghostSize);
 
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(1);
-
+    
     // initialize map
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(layout, ghost);
@@ -264,19 +263,21 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell) {
                 
                 pr_out() << "Checking boundary between block " << bi << " and " << bj << std::endl;
                 pr_out() << "dir_ij: " << dir_ij << " | dir_ji: " << dir_ji << std::endl;
-
-                BoxData<double, DIM> Xi(Bi.grow(PR_NODE));
-                BoxData<double, DIM> EXi(Bi.grow(PR_NODE));
-                BoxData<double, 1>   Ji(Bi);
-                FluxBoxData<double, DIM> NTi(Bi);
-                BoxData<double, DIM> Xij(Bi.grow(PR_NODE));
-                BoxData<double, 1>   Jij(Bi);
-                BoxData<double, DIM> Xj(Bj.grow(PR_NODE));
-                BoxData<double, DIM> EXj(Bj.grow(PR_NODE));
-                BoxData<double, 1>   Jj(Bj);
-                FluxBoxData<double, DIM> NTj(Bj);
-                BoxData<double, DIM> Xji(Bj.grow(PR_NODE));
-                BoxData<double, 1>   Jji(Bj);
+                
+                Box Bi_node = Bi.grow(PR_NODE);
+                Box Bj_node = Bj.grow(PR_NODE);
+                BoxData<double, DIM> Xi(Bi_node);
+                BoxData<double, DIM> EXi(Bi_node);
+                BoxData<double, 1>   Ji(Bi_node);
+                FluxBoxData<double, DIM> NTi(Bi_node);
+                BoxData<double, DIM> Xij(Bi_node);
+                BoxData<double, 1>   Jij(Bi_node);
+                BoxData<double, DIM> Xj(Bj_node);
+                BoxData<double, DIM> EXj(Bj_node);
+                BoxData<double, 1>   Jj(Bj_node);
+                FluxBoxData<double, DIM> NTj(Bj_node);
+                BoxData<double, DIM> Xji(Bj_node);
+                BoxData<double, 1>   Jji(Bj_node);
                 
                 map.apply(Xi, Ji, NTi, bi); // normal compution in bi
                 map.apply(Xj, Jj, NTj, bj); // normal compution in bi

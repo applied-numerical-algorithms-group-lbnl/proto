@@ -349,6 +349,8 @@ CubedSphereShell::BCNearestOp(
         const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
+        std::vector<T>             a_theta,
+        std::vector<T>             a_phi,
         Side::LoHiSide             a_side,
         int a_ghost)
 {
@@ -431,6 +433,8 @@ CubedSphereShell::BCNearestOp(
             p_src[rCoord] = RIndex;
             p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
             p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            // p_src[phiCoord] = _findIndex(a_phi, r_dst[phiCoord]);; 
+            // p_src[thetaCoord] = _findIndex(a_theta, r_dst[thetaCoord]); 
 
             std::vector<T> coefs(4);
             for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };

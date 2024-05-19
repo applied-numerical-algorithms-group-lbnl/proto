@@ -10,8 +10,9 @@
 #include <vector>
 #include <time.h>
 
+template<typename BOX_OP>
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
-             auto &eulerOp,
+             BOX_OP &eulerOp,
              MBInterpOp &a_iop,
              int iter,
              double time = 0.0,
@@ -166,9 +167,10 @@ double getPhysTime(double a_time)
   return PhysTime;
 }
 
+template<typename BOX_OP>
 void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
           const MBLevelMap<MBMap_CubedSphereShell, HOST>& a_map,
-          auto &a_eulerOp,
+          BOX_OP &a_eulerOp,
           MBInterpOp &a_iop,
           int a_iter,
           double a_time,
@@ -190,6 +192,8 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   int totvars = 5; // Year DOY Radius Latitude Longitude
   std::string line;
   std::ifstream myfile(probe_file);
+
+  PROTO_ASSERT(myfile.is_open(), "Error: Unable to open trajectory file");
 
   while (std::getline(myfile, line))
     ++number_of_lines;

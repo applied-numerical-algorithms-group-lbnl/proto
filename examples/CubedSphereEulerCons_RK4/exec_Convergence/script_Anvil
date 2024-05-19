@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#SBATCH --nodes=1       # Total # of nodes 
+#SBATCH --ntasks=12     # Total # of MPI tasks
+#SBATCH --time=02:00:00   # Total run time limit (hh:mm:ss)
+#SBATCH -J myjobname     # Job name
+#SBATCH -o myjob.o%j     # Name of stdout output file
+#SBATCH -e myjob.e%j     # Name of stderr error file
+##SBATCH -p wholenode     # Queue (partition) name
+#SBATCH -p debug     # Queue (partition) name
+
+# Manage processing environment, load compilers and applications.
+module purge
+module load xalt/2.10.45 
+module load numactl/2.0.14 
+module load libszip/2.1.1 
+module load zlib/1.2.11 
+module load mvapich2/2.3.6 
+module load gcc/11.2.0 
+module load hdf5/1.10.7
+module load openblas/0.3.17
+module list
+export MV2_HOMOGENEOUS_CLUSTER=1
+export LD_LIBRARY_PATH=/apps/spack/anvil/apps/hdf5/1.10.7-gcc-11.2.0-axhcpbs/lib:$LD_LIBRARY_PATH
+# Launch MPI code
+srun --mpi=pmi2 -n 12 cubedSphereTest.exe inputs

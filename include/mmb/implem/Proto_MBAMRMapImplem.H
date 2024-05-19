@@ -9,6 +9,15 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+MBAMRMap<MAP,MEM>::MBAMRMap(
+        const MBAMRGrid&            a_grid,
+        Point                       a_ghost,
+        unsigned int                a_focalBlock)
+{
+    define(a_grid, a_ghost, a_focalBlock);
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
         const MBAMRGrid&            a_grid,
         Point                       a_ghost,

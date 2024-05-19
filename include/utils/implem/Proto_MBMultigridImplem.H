@@ -207,7 +207,7 @@ template <
     MemType MEM>
 T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         LevelStateData& a_state,
-        LevelStateData& a_force,
+        const LevelStateData& a_force,
         int             a_maxIter,
         T               a_tolerance)
 {

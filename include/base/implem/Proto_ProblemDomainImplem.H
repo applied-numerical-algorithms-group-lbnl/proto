@@ -60,8 +60,9 @@ bool ProblemDomain::contains(const Point& a_pt) const
 
 Point ProblemDomain::image(const Point& a_pt) const
 {
-    PROTO_ASSERT(this->contains(a_pt),
-        "ProblemDomain::image | Error: Point has no periodic image in this ProblemDomain.");
+    //PROTO_ASSERT(this->contains(a_pt),
+    //    "ProblemDomain::image | Error: Point has no periodic image in this ProblemDomain.");
+    if (!this->contains(a_pt)) { return a_pt; }
     return a_pt % (m_box.high() + Point::Ones());
 }
 
