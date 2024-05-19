@@ -142,7 +142,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         m_delta.increment(m_k, weight);
     }
     // m_delta fixup for conservation at block boundaries.Commented out for now.
-    // m_blockreg.reflux(m_delta);
+    m_blockreg.reflux(m_delta);
     // Update State.
     a_state.increment(m_delta, 1.0);
 }
