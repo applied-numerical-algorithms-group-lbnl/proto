@@ -491,7 +491,7 @@ consToSphNGEuler(
       
   BoxData<T,DIM,MEM,DIM> deta_amat =
     CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
-  BoxData<T,DIM,MEM,DIM> invcoef(a_bx);
+  BoxData<T,DIM,MEM,DIM> invcoef(bxMetric);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
 
