@@ -65,8 +65,8 @@ void MBLevelMap<MAP,MEM>::define(
         apply(X_i, J0, block);
         J_i |= m_c2c(J0);
     }
-    m_X->exchange();
-    m_J->exchange();
+    //    m_X->exchange();
+    // m_J->exchange();
 }
 
 template<template<MemType> typename MAP, MemType MEM>
