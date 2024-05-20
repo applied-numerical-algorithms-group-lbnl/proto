@@ -13,6 +13,7 @@ namespace Proto
         MBBoundaryData();
 
         MBBoundaryData(
+			MBDisjointBoxLayout a_layout,
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
@@ -21,13 +22,15 @@ namespace Proto
             Point a_ghost = Point::Zeros());
         
         inline void define(
+			MBDisjointBoxLayout a_layout,
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
             CoordPermutation a_adjToLocal,
             Point a_ghost = Point::Zeros());
-
+		inline Face localFace() const;
+		inline Face adjFace() const;
         inline void fill(const BoxData<T, C, MEM>& a_data);
 
         inline Box localBox() {return localData->box().grow(-localGhost);}
@@ -35,8 +38,11 @@ namespace Proto
 
         inline void print();
 
+		MBDisjointBoxLayout layout;
         MBIndex localIndex;
         MBIndex adjIndex;
+		Point localDir;
+		Point adjDir;
         CoordPermutation adjToLocal;
         Point localGhost;
         Point adjGhost;
@@ -49,6 +55,7 @@ namespace Proto
 
     template<typename T, unsigned int C, MemType MEM>
     MBBoundaryData<T, C, MEM>::MBBoundaryData(
+			MBDisjointBoxLayout a_layout,
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
@@ -56,18 +63,20 @@ namespace Proto
             CoordPermutation a_adjToLocal,
             Point a_ghost)
     {
-        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox, a_adjToLocal, a_ghost);
+        define(a_layout, a_localIndex, a_adjIndex, a_localBox, a_adjBox, a_adjToLocal, a_ghost);
     }
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::define(
-            MBIndex a_localIndex,
+            MBDisjointBoxLayout a_layout,
+			MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
             CoordPermutation a_adjToLocal,
             Point a_ghost)
     {
+		layout = a_layout;
         localGhost = a_ghost;
         localIndex = a_localIndex;
         adjIndex = a_adjIndex;
@@ -77,6 +86,8 @@ namespace Proto
         Box adjBox = a_adjBox.grow(adjGhost);
         adjData = std::make_shared<BoxData<T, C, MEM>>(adjBox, 7);
         adjToLocal = a_adjToLocal;
+		localDir = layout.connectivity(localIndex, adjIndex);
+		adjDir = layout.connectivity(adjIndex, localIndex);
     }
     
     template<typename T, unsigned int C, MemType MEM>
@@ -87,6 +98,34 @@ namespace Proto
         adjData->copyTo(*localData, adjToLocal);
     }
     
+	template<typename T, unsigned int C, MemType MEM>
+    Face MBBoundaryData<T, C, MEM>::localFace() const
+	{
+		PROTO_ASSERT(localDir.codim() == 1,
+			"MBBoundaryData::localFace | Error: This boundary is not a codimension 1 face");
+		for (int ii = 0; ii < DIM; ii++)
+		{
+			if (localDir[ii] != 0)
+			{
+				return Face(ii, localDir[ii] < 0 ? Side::Lo : Side::Hi);
+			}
+		}
+	}
+ 	 
+	template<typename T, unsigned int C, MemType MEM>
+    Face MBBoundaryData<T, C, MEM>::adjFace() const
+	{
+		PROTO_ASSERT(adjDir.codim() == 1,
+			"MBBoundaryData::localFace | Error: This boundary is not a codimension 1 face");
+		for (int ii = 0; ii < DIM; ii++)
+		{
+			if (adjDir[ii] != 0)
+			{
+				return Face(ii, adjDir[ii] < 0 ? Side::Lo : Side::Hi);
+			}
+		}
+	}
+	
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()
     {

@@ -112,7 +112,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             // redundant check if the adjacent layout contains the desired patch
                             if (adjIter == *a_layout.end()) { continue; }
-                            MBBoundaryData<T, C, MEM> boundData(
+                            MBBoundaryData<T, C, MEM> boundData(a_layout,
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_ghost);
                             m_bounds[key].push_back(boundData);

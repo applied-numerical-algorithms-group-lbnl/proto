@@ -82,7 +82,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             boundsKey_t key(srcPatchID, srcBlock, dir01);
 
             auto R = a_layout.domain().graph().rotation(dstBlock, dir10, srcBlock);
-            MBBoundaryData<T, C, MEM> boundData(
+            MBBoundaryData<T, C, MEM> boundData(a_layout,
                     srcIter, dstIter, locBoundBox, adjBoundBox,
                     R, a_boundGhost);
             m_bounds[key].push_back(boundData);
@@ -124,7 +124,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                              "MBLevelBoxData::define | Error: Data corruption");
                 auto bounds = a_layout.domain().boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
-                
                 for (auto bound : bounds)
                 {
                     PROTO_ASSERT(bound.srcToDst == di,
@@ -152,14 +151,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
 
-                            // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            //Box patchBoundary = patchBox.adjacent(ki * m_ghost[cc]);
                             Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == a_layout.end()) { continue; } //patch was not found
-                            MBBoundaryData<T, C, MEM> boundData(
+                            MBBoundaryData<T, C, MEM> boundData(a_layout,
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
                             m_bounds[key].push_back(boundData);
@@ -1008,6 +1005,8 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();
+                PROTO_ASSERT(adjBox_to.size() == localBox_to.size(),
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: local and adjacent boxes are not the same size.");
                 MBMotionItem toMotionItem(
                         bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
@@ -1019,8 +1018,10 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
 
-                    Box adjBox_from = adjBox_to.shift(adjDir * ghost);
-                    Box localBox_from = localBox_to.shift(-dir * ghost);
+                    Box adjBox_from = adjBox_to.shift(adjDir * ghost.max());
+                    Box localBox_from = localBox_to.shift(-dir * ghost.max());
+                    PROTO_ASSERT(adjBox_from.size() == localBox_from.size(),
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: local and adjacent boxes are not the same size.");
                     MBMotionItem fromMotionItem(
                             bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
