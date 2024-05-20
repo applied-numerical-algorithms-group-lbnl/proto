@@ -285,40 +285,49 @@ TEST(MBLevelBoxData, FillBoundaries) {
 #if 1
 TEST(MBLevelBoxData, CopyTo) {
     HDF5Handler h5;
-    int domainSize = 32;
+    int domainSize = 128;
     int boxSize = 16;
     int ghostSize = 1;
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    for (int ti = 0; ti < 2; ti++)
+    {
+        Point srcBoxSize = boxSizeVect;
+        Point dstBoxSize = boxSizeVect;
+        switch (ti)
+        {
+            case 0: srcBoxSize *= 2; dstBoxSize *= 4; break;
+            case 1: srcBoxSize *= 4; dstBoxSize *= 2; break;
+        }
+        MBDisjointBoxLayout srcLayout(domain, srcBoxSize);
+        MBDisjointBoxLayout dstLayout(domain, dstBoxSize);
 
-    MBLevelBoxData<double, DIM, HOST> hostSrc(layout, Point::Ones(ghostSize));
-    MBLevelBoxData<double, DIM, HOST> hostDst(layout, Point::Ones(ghostSize));
-    hostSrc.initialize(f_MBPointID);
-    hostSrc.copyTo(hostDst);
+        Point ghost = Point::Ones(ghostSize) + Point::X();
+        MBLevelBoxData<double, DIM, HOST> hostSrc(srcLayout, ghost);
+        MBLevelBoxData<double, DIM, HOST> hostDst(dstLayout, ghost);
+        hostDst.setVal(7);
+        hostSrc.initialize(f_MBPointID);
+        hostSrc.copyTo(hostDst);
 
 #if PR_VERBOSE > 0
-    for (auto iter : layout)
-    {
-        int block = layout.block(iter);
-        h5.writeLevel(1, hostSrc.getBlock(block), "CopyTo_Src_B%i", block); 
-        h5.writeLevel(1, hostDst.getBlock(block), "CopyTo_Dst_B%i", block); 
-    }
+        h5.writeMBLevel({"x", "y", "z"},hostSrc, "CopyTo_Src_T%i", ti);
+        h5.writeMBLevel({"x", "y", "z"},hostDst, "CopyTo_Dst_T%i", ti);
 #endif
 
-    for (auto iter : layout)
-    {
-        auto& src = hostSrc[iter];
-        auto& dst = hostDst[iter];
-        BoxData<double, DIM, HOST> err((layout)[iter]);
-        dst.copyTo(err);
-        err -= src;
-        EXPECT_LT(err.absMax(), 1e-12);
+        for (auto iter : dstLayout)
+        {
+            auto& dst = hostDst[iter];
+            auto sln = forall_p<double, DIM>(f_MBPointID, (dstLayout)[iter], dstLayout.block(iter));
+            BoxData<double, DIM, HOST> err((dstLayout)[iter]);
+            dst.copyTo(err);
+            err -= sln;
+            EXPECT_LT(err.absMax(), 1e-12);
+        }
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBLevelBoxData, OnDomainBoundary)
 {
     HDF5Handler h5;
@@ -389,7 +398,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
 #endif
 }
 #endif
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintCorner)
 {
     HDF5Handler h5;
@@ -471,7 +480,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintEdge)
 {
     HDF5Handler h5;
@@ -548,7 +557,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 }
 #endif
 #if DIM == 2
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
@@ -631,7 +640,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 #endif
 #endif
 #if DIM == 3
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
