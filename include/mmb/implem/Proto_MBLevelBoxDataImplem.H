@@ -368,7 +368,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
-    unsigned int block = m_layout.block(a_index);
+    BlockIndex block = m_layout.block(a_index);
     auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
@@ -377,7 +377,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
-    unsigned int block = m_layout.block(a_index);
+    BlockIndex block = m_layout.block(a_index);
     auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
@@ -409,21 +409,21 @@ MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block)
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block) const
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
-MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(BlockIndex a_block) const
 {
     return getBlock(a_block).patchSize();
 }
@@ -431,7 +431,7 @@ MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Box MBLevelBoxData<T, C, MEM, CTR>::patchBox(const MBIndex &a_index) const
 {
-    unsigned int block = layout().block(a_index);
+    BlockIndex block = layout().block(a_index);
     auto blockIndex = layout().blockIndex(a_index);
     return getBlock(block).patchBox(blockIndex);
 }
@@ -532,7 +532,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
-    MBIndex a_index, Point a_dir, unsigned int a_block)
+    MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
   // PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
@@ -551,7 +551,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block) const
 {
   //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
@@ -572,7 +572,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
   //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
@@ -1147,7 +1147,7 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     // to this Box.
     for (auto diter : dstLayout)
     {
-        unsigned int block = dstLayout.block(diter);
+        BlockIndex block = dstLayout.block(diter);
         auto& srcBlockLayout = srcLayout.getBlock(block);
         auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
@@ -1202,7 +1202,7 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     // Iterate over Boxes in the source to construct fromMotionPlan
     for (auto siter : srcLayout)
     {
-        unsigned int block = srcLayout.block(siter);
+        BlockIndex block = srcLayout.block(siter);
         auto& srcBlockLayout = srcLayout.getBlock(block);
         auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
