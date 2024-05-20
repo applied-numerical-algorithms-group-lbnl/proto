@@ -343,12 +343,12 @@ void MBInterpOp::define(
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
-        std::vector<Point>          a_footprint,
+        const std::vector<Point>&   a_footprint,
         int                         a_order,
         int                         a_block)
 {
     Box spanBox;
-    for (auto fi : a_footprint)
+    for (auto& fi : a_footprint)
     {
         spanBox &= fi;
     }
