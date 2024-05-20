@@ -286,7 +286,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
     {
         data->setVal(a_value);
     }
-    exchange();
+    //    exchange();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -322,7 +322,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
     {
         data->setRandom(a_low, a_high);
     }
-    exchange();
+    //  exchange();
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
