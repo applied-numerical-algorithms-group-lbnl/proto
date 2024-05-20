@@ -553,7 +553,8 @@ consToSphInterpEuler(
       auto& JU_i = a_JU[dit];
       auto& dVolr_i = a_dVolr[dit];
       Box bx_i = a_JU.layout()[dit];      
-      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      //Box blockBox = a_JU.layout().getBlock(block).domain().box();
+       Box blockBox = a_JU.layout()[dit];
       CubedSphereShell::
         consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
       //h5.writePatch(dxiPerp, JU_i, "consToSphInterpEuler:USph:Block" + to_string(block));
