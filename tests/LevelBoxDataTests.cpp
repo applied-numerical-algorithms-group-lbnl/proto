@@ -361,25 +361,35 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
-#if 0
+#if 1
 TEST(LevelBoxData, ExchangeHost_Node)
 {
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
     constexpr unsigned int C = 2;
-    int domainSize = 64;
+    int domainSize = 16;
     double dx = 1.0/domainSize;
     int ghostSize = 1;
-    Point boxSize = Point::Ones(16);
+    Point boxSize = Point::Ones(8);
     auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, C, HOST, PR_NODE> hostData(layout, Point::Ones(ghostSize));
-    hostData.setToZero();
+    LevelBoxData<double, C, HOST, PR_NODE> hostData(layout, Point::Ones(ghostSize) + Point::X());
+    hostData.setVal(-1);
     for (auto iter : layout)
     {
         auto& hostData_i = hostData[iter];
         BoxData<double, C, HOST> tmpData(layout[iter]);
+        //tmpData.setVal(1);
         forallInPlace_p(f_pointID, tmpData);
         tmpData.copyTo(hostData_i);
     }
+#if PR_VERBOSE > 0
+    h5.writeLevel(1,hostData,"ExchangeHost_Node_0");
+#endif
     hostData.exchange();
+#if PR_VERBOSE > 0
+    h5.writeLevel(1,hostData,"ExchangeHost_Node_1");
+#endif
     EXPECT_TRUE(testExchange(hostData));
 }
 #endif

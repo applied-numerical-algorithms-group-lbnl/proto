@@ -841,8 +841,8 @@ bool compareLevelData(
     return true; 
 }
 
-template<typename T, unsigned int C>
-bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
+template<typename T, unsigned int C, Centering CTR>
+bool testExchange(const LevelBoxData<T, C, HOST, CTR>& a_data)
 {
     auto layout = a_data.layout();
     for (auto iter : layout)

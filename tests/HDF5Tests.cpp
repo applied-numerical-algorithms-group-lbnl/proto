@@ -48,7 +48,6 @@ TEST(HDF5, ReadMBLevel)
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    layout.toSingleBlock();
     MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
     data.setVal(7);
     h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
