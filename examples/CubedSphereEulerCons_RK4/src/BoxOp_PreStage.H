@@ -269,7 +269,8 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[2].setToZero();
         eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
         T one = 1.0;
-        eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+        // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+        a_blockreg.increment(fluxes, dit, a_dt);
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
   }

@@ -106,6 +106,7 @@ namespace Proto
       PROTO_ASSERT(numNonzeros == 1,"direction is not a unit vector");
       dir.second = Side::LoHiSide::Lo;
       if ( pt[dir.first] > 0) dir.second = Side::LoHiSide::Hi;
+      return dir;
   }
     
     template<typename T, unsigned int C, MemType MEM>

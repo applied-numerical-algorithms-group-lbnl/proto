@@ -28,6 +28,8 @@ Stencil<T>::Stencil(Shift a_shift,
     m_srcRefratio = a_srcRefratio;
     m_destShift = a_destShift;
     addCoef(a_coef, a_shift.point());
+    // PC : added bugfix 5/18/2024
+    m_span = Box(a_shift.point(),a_shift.point());
 }
 
 // Destructor

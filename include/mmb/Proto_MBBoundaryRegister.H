@@ -172,6 +172,13 @@ namespace Proto
         
         // Get Ghost Size
         inline Point ghost() {return m_ghost; }
+        /// Increment registers.  
+        inline void increment(
+                              Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
+                              MBIndex a_dit,
+                              T a_weight);
+      
+      void reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal);  
 
         private:
 
