@@ -1212,10 +1212,11 @@ namespace Proto
         /**
           Shifts the domain Box of this, moving all data along with it.
           e.g. data associated with Point p will now be associated with Point p + a_shift.
+          The function is const because m_box is mutable
 
           \param a_shift  A Point interpreted as a shift vector.
           */
-        inline void shift(const Point& a_shift);
+        inline void shift(const Point& a_shift) const;
 
         /// Buffer Size
         inline size_t linearSize() const;
@@ -1403,7 +1404,7 @@ namespace Proto
         private:
         bool                    m_alias; ///< was this created as an alias
         bool                    m_stackAlloc;
-        Box                     m_box; ///< Box defining the domain of *this
+        mutable Box             m_box; ///< Box defining the domain of *this
         ::std::shared_ptr<T>    m_data; ///< Data array
         T*                      m_rawPtr; ///< Raw pointer to the data
     }; // end class BoxData

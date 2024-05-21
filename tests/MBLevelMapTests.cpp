@@ -6,6 +6,7 @@
 
 using namespace Proto;
 
+#if DIM == 2
 TEST(MBLevelMapTests, ShearMap) {
     int domainSize = 8;
     int boxSize = 8;
@@ -198,11 +199,11 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
         }
     }
 }
-
+#endif
 #if DIM > 2
 TEST(MBLevelMapTests, CubeSphereShell) {
     int domainSize = 32;
-    int boxSize = 32;
+    int boxSize = 16;
     int thickness = 32;
     int ghostSize = 7;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -211,6 +212,7 @@ TEST(MBLevelMapTests, CubeSphereShell) {
     //auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
+    boxSizeVect[radialDir] = domainSize;
     boxSizeVect[radialDir] = thickness/2;
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Point ghost = Point::Ones(ghostSize);

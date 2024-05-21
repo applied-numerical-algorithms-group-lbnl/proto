@@ -82,7 +82,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             boundsKey_t key(srcPatchID, srcBlock, dir01);
 
             auto R = a_layout.domain().graph().rotation(dstBlock, dir10, srcBlock);
-            MBBoundaryData<T, C, MEM> boundData(
+            MBBoundaryData<T, C, MEM> boundData(a_layout,
                     srcIter, dstIter, locBoundBox, adjBoundBox,
                     R, a_boundGhost);
             m_bounds[key].push_back(boundData);
@@ -124,7 +124,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                              "MBLevelBoxData::define | Error: Data corruption");
                 auto bounds = a_layout.domain().boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
-                
                 for (auto bound : bounds)
                 {
                     PROTO_ASSERT(bound.srcToDst == di,
@@ -152,14 +151,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
 
-                            // TODO: make this work with anisotropic ghost regions
-                            //Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            Box patchBoundary = patchBox.adjacent(ki * m_ghost[cc]);
+                            Box patchBoundary = patchBox.adjacent(ki, ghostSize);
                             Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == a_layout.end()) { continue; } //patch was not found
-                            MBBoundaryData<T, C, MEM> boundData(
+                            MBBoundaryData<T, C, MEM> boundData(a_layout,
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
                             m_bounds[key].push_back(boundData);
@@ -368,7 +365,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
-    unsigned int block = m_layout.block(a_index);
+    BlockIndex block = m_layout.block(a_index);
     auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
@@ -377,7 +374,7 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
-    unsigned int block = m_layout.block(a_index);
+    BlockIndex block = m_layout.block(a_index);
     auto localIndex = m_layout.blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
@@ -409,21 +406,21 @@ MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block)
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR> &
-MBLevelBoxData<T, C, MEM, CTR>::getBlock(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::getBlock(BlockIndex a_block) const
 {
     return *m_data[a_block];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
-MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(BlockIndex a_block) const
 {
     return getBlock(a_block).patchSize();
 }
@@ -431,7 +428,7 @@ MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Box MBLevelBoxData<T, C, MEM, CTR>::patchBox(const MBIndex &a_index) const
 {
-    unsigned int block = layout().block(a_index);
+    BlockIndex block = layout().block(a_index);
     auto blockIndex = layout().blockIndex(a_index);
     return getBlock(block).patchBox(blockIndex);
 }
@@ -532,7 +529,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
-    MBIndex a_index, Point a_dir, unsigned int a_block)
+    MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
   // PR_TIME("MBLevelBoxData::bound");
     return layout().isBlockBoundary(a_index, a_dir, a_block);
@@ -551,7 +548,7 @@ bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block) const
 {
   //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
@@ -572,7 +569,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
-MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
   //PR_TIME("MBLevelBoxData::bound");
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
@@ -681,15 +678,25 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
     
     auto block = layout().block(a_index);
     Box blockDomain = layout().getBlock(block).domain().box();
-
+    
+    int maxGhost = 0;
+    for (auto gi : ghost()) { maxGhost = max(gi.max(), maxGhost); }
+    Box validDomain = blockDomain;
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir.codim() != 1) { continue; }
+        if (this->bounds(a_index, dir).size() > 0)
+        {
+            validDomain = validDomain.extrude(dir, maxGhost);
+        }
+    }
     std::vector<Point> domainBoundaryDirs;
     for (auto dir : Box::Kernel(1))
     {
         if (dir.codim() != 1) { continue; }
         // if there are block boundaries, there is no domain boundary
         if (this->bounds(a_index, dir).size() > 0) { continue; } 
-        Point orthDir = Point::Ones() - dir.abs();
-        Box boundBox = blockDomain.edge(dir, 1).grow(orthDir*ghost()[0]);
+        Box boundBox = validDomain.edge(dir, 1);
         if (boundBox.contains(a_point)) { domainBoundaryDirs.push_back(dir); }
     }
     return domainBoundaryDirs;
@@ -1008,6 +1015,8 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();
+                PROTO_ASSERT(adjBox_to.size() == localBox_to.size(),
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: local and adjacent boxes are not the same size.");
                 MBMotionItem toMotionItem(
                         bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
@@ -1019,8 +1028,10 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
 
-                    Box adjBox_from = adjBox_to.shift(adjDir * ghost);
-                    Box localBox_from = localBox_to.shift(-dir * ghost);
+                    Box adjBox_from = adjBox_to.shift(adjDir * ghost.max());
+                    Box localBox_from = localBox_to.shift(-dir * ghost.max());
+                    PROTO_ASSERT(adjBox_from.size() == localBox_from.size(),
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: local and adjacent boxes are not the same size.");
                     MBMotionItem fromMotionItem(
                             bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
@@ -1147,7 +1158,7 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     // to this Box.
     for (auto diter : dstLayout)
     {
-        unsigned int block = dstLayout.block(diter);
+        BlockIndex block = dstLayout.block(diter);
         auto& srcBlockLayout = srcLayout.getBlock(block);
         auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();
@@ -1202,7 +1213,7 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     // Iterate over Boxes in the source to construct fromMotionPlan
     for (auto siter : srcLayout)
     {
-        unsigned int block = srcLayout.block(siter);
+        BlockIndex block = srcLayout.block(siter);
         auto& srcBlockLayout = srcLayout.getBlock(block);
         auto& dstBlockLayout = dstLayout.getBlock(block);
         auto srcBlockDomain = srcBlockLayout.domain();

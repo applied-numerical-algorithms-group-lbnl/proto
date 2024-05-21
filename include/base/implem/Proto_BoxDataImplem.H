@@ -1495,7 +1495,7 @@ T BoxData<T,C,MEM,D,E>::integrate(Array<T, DIM> a_dx, int a_c, int a_d, int a_e)
 
 // Shift Domain
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
-void BoxData<T,C,MEM,D,E>::shift(const Point& a_shift)
+void BoxData<T,C,MEM,D,E>::shift(const Point& a_shift) const
 {
     m_box = m_box.shift(a_shift);
 }

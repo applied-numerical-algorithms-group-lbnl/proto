@@ -895,8 +895,8 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     int myProcID = Proto::procID();
     for (auto dit : layout)
     {
-        //Box bx0 = layout[dit];
-        Box bx0 = a_op.m_src->patchBox(dit);
+        Box bx0 = layout[dit];
+        //Box bx0 = a_op.m_src->patchBox(dit);
         Box bx = layout.domain() & bx0.grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)
