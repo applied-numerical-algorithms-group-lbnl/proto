@@ -730,6 +730,17 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
     PR_TIME("Stencil::hostApply");
     if (m_coefs.size() == 0){return;}
 
+    if (!m_span.contains(Point::Zeros()))
+    {
+        Point s = m_span.low();
+        a_src.shift(-s);
+        Stencil<T> dS = ((T)1)*Shift(-s);
+        Stencil<T> S = (*this)*dS;
+        S.hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
+        a_src.shift(s);
+        return;
+    }
+
     Box cross = a_box.flatten(0);
     int npencil = a_box.size(0);
     if (a_initToZero)

@@ -143,6 +143,39 @@ TEST(Stencil, LinearAvg) {
     EXPECT_EQ(D,Box(Point::Ones(3), Point::Ones(11)));
 }
 
+TEST(Stencil, Offset) {
+    Stencil<double> S = 1.0*Shift::Ones() + 2.0*Shift::Basis(0);
+    Box B = Box::Cube(8).shift(Point::Ones());
+    BoxData<double, DIM> X(B);
+    for (auto pi : B)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            X(pi,ii) = pi[ii];
+        }
+    }
+#if PR_VERBOSE > 0
+    pr_out() << "X input" << std::endl;
+    X.printData();
+#endif
+    BoxData<double, DIM> Y = S(X);
+#if PR_VERBOSE > 0
+    pr_out() << "X output" << std::endl;
+    X.printData();
+    pr_out() << "Y output" << std::endl;
+    Y.printData();
+
+#endif
+    EXPECT_EQ(Y.box(), S.range(B));
+    for (auto pi : Y.box())
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            EXPECT_EQ(Y(pi,ii), X(pi + Point::Ones(),ii) + 2.0*X(pi + Point::Basis(0),ii));
+        }
+    }
+}
+
 TEST(Stencil, LinearInterp) {
     Stencil<double> S2 = (2.0/3)*Shift::Zeros() + (1.0/3)*Shift::Basis(0);
     S2.destRatio() = Point::Ones(3);
