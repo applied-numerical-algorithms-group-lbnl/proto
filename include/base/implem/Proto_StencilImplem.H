@@ -254,6 +254,8 @@ Stencil<T>::addCoef(T a_coef, Point a_offset)
     {
         m_coefs.push_back(a_coef);
         m_offsets.push_back(a_offset);
+        m_span &= a_offset;
+        /*
         if (!m_span.contains(a_offset))
         {
             Point low = m_span.low();
@@ -265,6 +267,7 @@ Stencil<T>::addCoef(T a_coef, Point a_offset)
             }
             m_span = Box(low,high);
         }
+        */
     }
 }
 
