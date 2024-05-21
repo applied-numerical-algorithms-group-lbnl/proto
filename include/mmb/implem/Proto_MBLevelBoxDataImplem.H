@@ -678,15 +678,25 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
     
     auto block = layout().block(a_index);
     Box blockDomain = layout().getBlock(block).domain().box();
-
+    
+    int maxGhost = 0;
+    for (auto gi : ghost()) { maxGhost = max(gi.max(), maxGhost); }
+    Box validDomain = blockDomain;
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir.codim() != 1) { continue; }
+        if (this->bounds(a_index, dir).size() > 0)
+        {
+            validDomain = validDomain.extrude(dir, maxGhost);
+        }
+    }
     std::vector<Point> domainBoundaryDirs;
     for (auto dir : Box::Kernel(1))
     {
         if (dir.codim() != 1) { continue; }
         // if there are block boundaries, there is no domain boundary
         if (this->bounds(a_index, dir).size() > 0) { continue; } 
-        Point orthDir = Point::Ones() - dir.abs();
-        Box boundBox = blockDomain.edge(dir, 1).grow(orthDir*ghost()[0]);
+        Box boundBox = validDomain.edge(dir, 1);
         if (boundBox.contains(a_point)) { domainBoundaryDirs.push_back(dir); }
     }
     return domainBoundaryDirs;

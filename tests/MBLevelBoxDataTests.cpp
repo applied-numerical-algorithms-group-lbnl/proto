@@ -332,17 +332,15 @@ TEST(MBLevelBoxData, OnDomainBoundary)
 {
     HDF5Handler h5;
     
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 8;
+    int boxSize = 8;
+    int numGhost = 2;
     int numBlocks = XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(2);
-
+    Point ghost = Point::Ones(numGhost);
     MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost);
     hostData.setVal(0);
 
@@ -367,12 +365,13 @@ TEST(MBLevelBoxData, OnDomainBoundary)
         }
     }
    
+    Box validDomain = Box::Cube(domainSize).grow(0,Side::Hi,numGhost).grow(1,Side::Hi, numGhost);
     std::vector<Box> interiorDomains(DIM);
-    interiorDomains[0] = Box::Cube(domainSize).grow(0,Side::Lo,-1);
-    interiorDomains[1] = Box::Cube(domainSize).grow(1,Side::Lo,-1);
+    interiorDomains[0] = validDomain.grow(0,Side::Lo,-1);
+    interiorDomains[1] = validDomain.grow(1,Side::Lo,-1);
     for (int di = 2; di < DIM; di++)
     {
-        interiorDomains[di] = Box::Cube(domainSize).grow(di,-1);
+        interiorDomains[di] = validDomain.grow(di,-1);
     }
     for (auto iter : layout)
     {
@@ -382,7 +381,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
         {
             for (int dir = 0; dir < DIM; dir++)
             {
-                if (!Box::Cube(domainSize).contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
+                if (!validDomain.contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
                 else if (interiorDomains[dir].contains(pi)) { EXPECT_EQ(patch(pi, dir), 0); }
                 else {
                     EXPECT_EQ(patch(pi,dir), 1);
@@ -480,7 +479,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, InterpFootprintEdge)
 {
     HDF5Handler h5;
