@@ -17,8 +17,8 @@ CXXOPTFLAGS+=-DmemoryFootPrint
 CXXOPTFLAGS+=-DPR_MMB
 CXXOPTFLAGS+=-DPR_OPS
 CXXOPTFLAGS+= -DPR_HDF5=TRUE
-HDF5_LIB=/opt/homebrew/Cellar/hdf5-mpi/1.14.3/lib
-HDF5_INC=/opt/homebrew/Cellar/hdf5-mpi/1.14.3/include
+HDF5_LIB=/opt/homebrew/opt/hdf5-mpi/lib
+HDF5_INC=/opt/homebrew/opt/hdf5-mpi/include
 CXXOPTFLAGS+= -DPR_MPI=TRUE
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=cubedSphereTest.exe
