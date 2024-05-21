@@ -4,7 +4,7 @@
 -domainSize                      16
 -thickness                       32
 -boxSize_nonrad                  16
--boxSize_rad                     16
+-boxSize_rad                     32
 -max_iter                        1000
 -CFL                             0.5
 -write_cadence                   10

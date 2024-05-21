@@ -11,6 +11,8 @@
 *.err
 *.out
 *.sh
+*.jpeg
+*.mpg
 pout.*
 myjob.o*
 myjob.e*

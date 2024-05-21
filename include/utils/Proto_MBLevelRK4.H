@@ -103,6 +103,8 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
       kstage = 0;
       OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
       m_delta.increment(m_k, weight);
+      OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
+      m_delta.increment(m_k, weight);
     }
 
     if (a_order == 4)
