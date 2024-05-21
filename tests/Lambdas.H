@@ -845,8 +845,6 @@ template<typename T, unsigned int C>
 bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
 {
     auto layout = a_data.layout();
-    //FIXME: Assumes isotropic ghost region
-    int ghostSize = a_data.ghost()[0];
     for (auto iter : layout)
     {
         auto& data_i = a_data[iter];
@@ -857,7 +855,7 @@ bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
         {
             if (n == Point::Zeros()) { continue; }
             if (!layout.contains(n)) {continue; }
-            Box ghostRegion = B.adjacent(n-p, ghostSize);
+            Box ghostRegion = B.adjacent((n-p) * a_data.ghost());
             Box shiftedGhostRegion = layout.domain().image(ghostRegion);
             Point shift = ghostRegion.low() - shiftedGhostRegion.low();
             BoxData<double, C, HOST> ghostData(ghostRegion);

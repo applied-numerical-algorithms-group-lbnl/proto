@@ -346,10 +346,10 @@ TEST(LevelBoxData, ExchangeHost)
     constexpr unsigned int C = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    int ghostSize = 1;
+    int ghostSize = 2;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize));
+    LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize) + Point::X());
     hostData.setToZero();
     for (auto iter : layout)
     {
@@ -361,6 +361,28 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
+#if 0
+TEST(LevelBoxData, ExchangeHost_Node)
+{
+    constexpr unsigned int C = 2;
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    int ghostSize = 1;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, C, HOST, PR_NODE> hostData(layout, Point::Ones(ghostSize));
+    hostData.setToZero();
+    for (auto iter : layout)
+    {
+        auto& hostData_i = hostData[iter];
+        BoxData<double, C, HOST> tmpData(layout[iter]);
+        forallInPlace_p(f_pointID, tmpData);
+        tmpData.copyTo(hostData_i);
+    }
+    hostData.exchange();
+    EXPECT_TRUE(testExchange(hostData));
+}
+#endif
 #ifdef PROTO_ACCEL
 TEST(LevelBoxData, ExchangeDevice)
 {
