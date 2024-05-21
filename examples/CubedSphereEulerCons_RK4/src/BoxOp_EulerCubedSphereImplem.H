@@ -552,7 +552,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     //cout << procID()  << ", " << fluxes[1].absMax(0) << endl;
     //cout << procID()  << ", " << fluxes[2].absMax(0) << endl;
     auto mbdata = a_blockreg.bounds(dit);
-    a_blockreg.increment(fluxes,dit,wgtxdt);
+    //a_blockreg.increment(fluxes,dit,wgtxdt);
     if (a_dt_next < dt_min && a_kstage == 0) dt_min = a_dt_next;
   }
   if (a_kstage == 0) a_dt_next = dt_min;
