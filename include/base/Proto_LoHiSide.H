@@ -123,10 +123,12 @@ namespace Proto
 	{
 		public:
 		Face(int a_dir, Side::LoHiSide a_side) : dir(a_dir), side(a_side) {}
-		Face operator-() const
+        Face operator-() const
 		{
 			return Face(dir, (side == Side::Lo) ? Side::Hi : Side::Lo);
-		}		
+		}
+        int sign() const { return (side == Side::Hi ? 1 : -1); }
+        Point normal() const { return Point::Basis(dir, side); }
 		const int dir;
 		const Side::LoHiSide side;	
 	};
