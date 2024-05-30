@@ -435,6 +435,12 @@ namespace Proto
         */
         inline std::array<Point, DIM> perpUnit() const;
 
+        /// Coordinates of non-zero entries
+        inline std::vector<int> coords() const;
+
+        /// Coordinates of zero entries
+        inline std::vecotr<int> perpCoords() const;
+
         /// Scaled Unit Vectors
         inline std::vector<Point> split() const;
         
