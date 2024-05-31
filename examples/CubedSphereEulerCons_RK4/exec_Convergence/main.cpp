@@ -108,6 +108,22 @@ int main(int argc, char *argv[])
     Write_W(JU, eulerOp, iop, 0, time, dt_next);
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
+    double mass,energy,momentum;
+#ifndef PR_MPI
+    mass = 0.;
+    momentum = 0.;
+    energy = 0.;
+    for (auto dit : JU.layout())
+      {
+        double masspatch = JU[dit].sum(0);
+        mass += masspatch;
+        double energypatch = JU[dit].sum(4);
+        energy += energypatch;
+        double momentumpatch =
+          sqrt(energypatch*masspatch);
+        momentum += momentumpatch;
+      }
+#endif
     for (int iter = 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
@@ -123,7 +139,46 @@ int main(int argc, char *argv[])
 
       rk4.advance(JU, dt_next, dVolrLev, dt, time, temporal_order);
       time += dt;
-      if (iter % write_cadence == 0) Write_W(JU, eulerOp, iop, iter, time, dt);
+      if (iter % write_cadence == 0)
+        {
+          Write_W(JU, eulerOp, iop, iter, time, dt);
+          // Check conservation. Non-MPI for now.
+#ifndef PR_MPI  
+          Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.}; 
+          for (auto dit : JU.layout())
+            {
+              for (int comp = 0; comp < 8; comp++)
+                {
+                  consSum[comp] += JU[dit].sum(comp);           
+                }
+            }     
+          for (int comp = 0; comp < 8; comp++)
+            {
+              if (comp == 0)
+                {
+                  cout << "component:" << comp <<
+                    ", (conservation ratio) - 1 = " << consSum[comp] / mass - 1.0 << endl;
+                }
+              else if (comp == 4)
+                {
+                  cout << "component:" << comp <<
+                    ", (conservation ratio) - 1 = " << consSum[comp] / energy - 1.0 << endl;
+                }
+              else if (comp > 4)
+                {
+                  double norm = sqrt(energy/mass)*mass;
+                  cout << "component:" << comp <<
+                    ", scaled conservation sum = " << consSum[comp] / norm  << endl;
+                }
+              else
+                {
+                  double norm = sqrt(energy/mass)*mass;
+                  cout << "component:" << comp <<
+                    ", scaled conservation sum = " << consSum[comp] / norm << endl;
+                }
+            }
+#endif
+        }
       auto end = chrono::steady_clock::now();
       
       int probe_cadence_new = floor(time/probe_cadence);
