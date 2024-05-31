@@ -347,7 +347,7 @@ TEST(LevelBoxData, ExchangeHost)
     int domainSize = 64;
     double dx = 1.0/domainSize;
     int ghostSize = 2;
-    Point boxSize = Point::Ones(16);
+    Point boxSize = Point::Ones(32);
     auto layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize) + Point::X());
     hostData.setToZero();

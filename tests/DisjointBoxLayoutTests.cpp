@@ -55,7 +55,7 @@ TEST(DisjointBoxLayout, Iteration) {
 
 TEST(DisjointBoxLayout, LoadBalance) {
     int domainSize = 64;
-    int boxSize = 16;
+    int boxSize = 32;
     Box domainBox = Box::Cube(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     std::array<bool, DIM> periodicity;

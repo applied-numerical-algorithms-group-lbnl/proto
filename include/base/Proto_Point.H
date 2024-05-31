@@ -439,7 +439,7 @@ namespace Proto
         inline std::vector<int> coords() const;
 
         /// Coordinates of zero entries
-        inline std::vecotr<int> perpCoords() const;
+        inline std::vector<int> perpCoords() const;
 
         /// Scaled Unit Vectors
         inline std::vector<Point> split() const;
