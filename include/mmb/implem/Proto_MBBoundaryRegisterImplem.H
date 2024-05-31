@@ -340,9 +340,8 @@ increment(Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
   for (auto it = mbdata.begin(); it != mbdata.end(); it++)
     {
       auto mb = *it;  
-      pair<int,Side::LoHiSide> direction = mb.direction(layout);
-      int dir = direction.first;
-      auto side = direction.second;
+      int dir = mb.localFace().dir;
+      auto side = mb.localFace().side;
       Box bxfaces = bx.extrude(Point::Basis(dir));
       Box bxLocal = bxfaces.face(dir,side) & a_fluxes[dir].box(); 
       BoxData<T,C,MEM> tmp = forall<T,C,MEM>
@@ -356,6 +355,10 @@ increment(Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
                a_corr(comp) = a_fluxdir(comp)*a_weight;
              }
          },bxLocal,a_fluxes[dir],a_weight);
+      if (!((mb.localData->box()).contains(bxLocal)))
+        {
+          cout << mb.localData -> box() << ", " << bxLocal << endl;
+        }
       *mb.localData += tmp;
     } 
 }
@@ -377,14 +380,17 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
       for (auto it = mbdata.begin(); it != mbdata.end(); it++)
         {
           auto mb = *it;
-          pair<int,Side::LoHiSide> direction = mb.direction(layout);
-          int dir = direction.first;
-          auto side = direction.second;
+          int dir = mb.localFace().dir;
+          auto side = mb.localFace().side;
           T dx = 1.0/(nvec[dir]+1);
           auto R = mb.adjToLocal;
           auto Rinv = R.inverse();
           Point normal = Point::Basis(dir,side);
           Point adjNormal = Rinv(normal);
+          auto adjblock = mb.adjIndex.local();          
+          Point signflipPoint = Rinv(Point::Basis(dir));
+          int signflip = signflipPoint.dot(Point::Ones());
+          PROTO_ASSERT(signflip*signflip == 1,"signflip from Coordinate transform != +-1");
           adjNormal *= -1;
           Point adjBasis = adjNormal*adjNormal;
           int dp = adjNormal.dot(adjBasis);
@@ -406,13 +412,14 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             forall<T,C,MEM>([ ] PROTO_LAMBDA
                             (Var<T,C,MEM>& a_corr,
                              Var<T,C,MEM>& a_local,
-                             Var<T,C,MEM>& a_adj)
-             {
-               for (int comp = 0; comp < C; comp++)
-                 {
-                   a_corr(comp) = .5*(a_adj(comp) - a_local(comp));
-                 }
-             },*mb.localData,adjCopy);         
+                             Var<T,C,MEM>& a_adj,
+                             int a_signflip)
+                            {
+                              for (int comp = 0; comp < C; comp++)
+                                {
+                                  a_corr(comp) = .5*(a_local(comp) - a_signflip*a_adj(comp));
+                                }
+                            },*mb.localData,adjCopy,signflip);         
           Stencil<T> faceStencil;
           if (side == Side::LoHiSide::Lo)
             {
@@ -422,14 +429,9 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             { 
               faceStencil = (-1.0)*Shift(Point::Basis(dir));
             }          
-          T wgt = 1.0/dx;         
-          Box dmn = faceStencil.domain(fluxCorr.box());
-          Box rng = faceStencil.range(fluxCorr.box());
+          T wgt = -1.0/dx; 
           BoxData<T,C,MEM> tmp = faceStencil(fluxCorr,wgt);
-          cout << block << ", " << dir << ", " << side << ", " << tmp.box() <<
-            ", "  << fluxCorr.box() << ", "  << dmn
-               << ", "  << rng << endl; //", "<< tmp.absMax(1) <<  endl;         
-           a_rhsTotal_i += tmp;
+          a_rhsTotal_i += tmp;
         }
     }
 }

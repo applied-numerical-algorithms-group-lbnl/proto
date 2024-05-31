@@ -98,7 +98,7 @@ namespace Proto {
     static void InterpBoundaries(
                                  MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                  int a_order = 4);
-    
+#if 0    
     template<typename T, unsigned int C, MemType MEM>
     static void consToSphNGEuler( 
                                  BoxData<T,C,MEM>& a_JU,
@@ -108,6 +108,7 @@ namespace Proto {
                                  T a_dxiPerp,
                                  int a_block,                 
                                  unsigned int a_order = 4);
+#endif
     
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler( 
@@ -115,7 +116,13 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
-
+#if 0
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static void consToSphInterpEuler( 
+                                     MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                     MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                     unsigned int a_order = 4);
+#endif 
      template<typename T, unsigned int C, MemType MEM>
     static void consToCartNGEuler( 
                                  BoxData<T,C,MEM>& a_JU,
@@ -132,13 +139,13 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
-#if 0
+
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler( 
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
-#endif
+
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void interpBoundariesMHD( 
@@ -264,6 +271,46 @@ namespace Proto {
                                        Box a_outputBox,
                                        Box a_validBox,
                                        uint a_dir);
+    template<typename T, unsigned int C, MemType MEM>
+    static void consToSemiSphNGEuler(                    
+                                     BoxData<T,C+2,MEM>& a_USemiSph,
+                                     const BoxData<T,C,MEM>& a_JU,
+                                     const BoxData<T,1,MEM>& a_dVolr,
+                                     Box a_bx,
+                                     Box a_blockBox,
+                                     T a_dxiPerp,
+                                     int a_block,                 
+                                     unsigned int a_order);
+    template<typename T, MemType MEM>
+    static void
+    consToSemiSphVecNG(
+                       BoxData<T,DIM,MEM>& a_UPerp,
+                       BoxData<T,1,MEM>& a_uRadial,
+                       const BoxData<T,DIM,MEM>& a_JUVec,
+                       const BoxData<T,DIM,MEM,DIM>& a_AdetA,
+                       const BoxData<T,DIM,MEM,DIM>& a_invAdetA,
+                       const BoxData<T,1,MEM>& a_detA,
+                       const BoxData<T,1,MEM>& a_invDetA,
+                       Box a_blockBox);
+ 
+  template<typename T, unsigned int C, MemType MEM>
+  static void semiSphToSphNG(
+                             BoxData<T,C,MEM>& a_VSph,
+                             const BoxData<T,C+2,MEM>& a_VSemiSph,
+                             const BoxData<T,DIM,MEM,DIM>& a_ADetA,
+                             const BoxData<T,DIM,MEM,DIM>& a_invADetA,
+                             const BoxData<T,1,MEM>& a_detA,
+                             const BoxData<T,1,MEM>& a_invDetA,
+                             Box a_blockBox,
+                             int a_compvec,
+                             int a_compradial);
+    template <typename T, MemType MEM>
+    static void cellMatrixVectorProd(
+                                     BoxData<T,DIM,MEM,1>& a_qvecOut,
+                                     const BoxData<T,DIM,MEM,DIM>& a_Amat,
+                                     const BoxData<T,DIM,MEM,1>& a_qvecIn,
+                                     Box a_qBox,
+                                     Box a_blockBox);
   };
 #if 0
   template<typename T,MemType MEM>

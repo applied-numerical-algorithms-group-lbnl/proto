@@ -3,6 +3,7 @@
 #define _PROTO_MB_LEVEL_RK4_H_
 
 #include "Proto.H"
+#include "Proto_CubedSphereShell.H"
 
 namespace Proto {
 
@@ -91,6 +92,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     T          a_time,
     int             a_order)
 {
+  PR_TIMERS("MBLevelRK4::advance");
     double sixth = 1, third=1, half = 1;
     sixth/=6; third/=3; half/=2;
     int kstage;
@@ -98,16 +100,17 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     m_blockreg.clear();
     if (a_order == 1)
     {
-      double weight = 1.0;
+      T weight = 1.0;
       a_state.copyTo(m_U0);
       kstage = 0;
       OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
       m_delta.increment(m_k, weight);
+      // What is this (^) ? Doesn't appear in 4th order.
       OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
       m_delta.increment(m_k, weight);
     }
 
-    if (a_order == 4)
+    if (a_order == 4)    
     {
         a_state.copyTo(m_U0);
         kstage = 0;
@@ -143,8 +146,8 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time+a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, weight);
     }
-    // m_delta fixup for conservation at block boundaries.Commented out for now.
-    //m_blockreg.reflux(m_delta);
+    // m_delta fixup for conservation at block boundaries.
+    m_blockreg.reflux(m_delta);
     // Update State.
     a_state.increment(m_delta, 1.0);
 }
