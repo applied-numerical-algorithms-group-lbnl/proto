@@ -49,9 +49,10 @@ namespace Proto
         inline const AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block) const;
         inline int numLevels() const {return m_grid->numLevels(); }
         inline int numBlocks() const {return m_grid->numBlocks(); }
-
         // Operators
         inline void averageDown();        
+        inline void interpolate(unsigned int a_level);
+        inline void interpolate();
         inline void increment(const MBAMRData<T,C,MEM,CTR>& a_data, T a_scale);
         inline void operator*=(T a_value);
         inline void operator+=(T a_value);
