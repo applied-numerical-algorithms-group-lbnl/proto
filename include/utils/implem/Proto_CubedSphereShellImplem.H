@@ -349,8 +349,8 @@ CubedSphereShell::BCNearestOp(
         const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
-        std::vector<T>             a_theta,
-        std::vector<T>             a_phi,
+        //std::vector<T>             a_theta,
+        //std::vector<T>             a_phi,
         Side::LoHiSide             a_side,
         int a_ghost)
 {

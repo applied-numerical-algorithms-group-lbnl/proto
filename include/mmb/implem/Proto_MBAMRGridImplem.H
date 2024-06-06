@@ -15,6 +15,24 @@ MBAMRGrid::MBAMRGrid(
     define(a_coarseDomain, a_coarsePatches, a_coarseBoxSizes, a_refRatios);
 }
 
+MBAMRGrid::MBAMRGrid(
+        const MBProblemDomain&      a_coarseDomain,
+        Point                       a_coarseBoxSize,
+        Point                       a_refRatio,
+        int                         a_numLevels)
+{
+    std::vector<Point> coarseBoxSizes;
+    std::vector<Point> refRatios;
+    for (BlockIndex bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
+    {
+        coarseBoxSizes.push_back(a_coarseBoxSize);
+    }
+    for (int li = 0; li < a_numLevels-1; li++)
+    {
+        refRatios.push_back(a_refRatio);
+    }
+    define(a_coarseDomain, coarseBoxSizes, refRatios);
+}
 void MBAMRGrid::define(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<Point>&       a_coarseBoxSizes,
