@@ -58,38 +58,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
             a_layout.getBlock(bi), a_ghost[0]);
     }
-    //FIXME: this is a cleaner way of initializing boundary data, but it doesn't quite work yet
-    // The working implementation is maintained for the time being. 
-#if 0
-    for (auto srcIter : a_layout)
-    {
-        for (auto dstIter : a_layout)
-        {
-            BlockIndex srcBlock = a_layout.block(srcIter);
-            BlockIndex dstBlock = a_layout.block(dstIter);
-            Point srcPatchID = a_layout.point(srcIter);
-            Point dstPatchID = a_layout.point(srcIter);
-            if (srcBlock == dstBlock) { continue; }
-            Point dir01 = a_layout.connectivity(srcIter, dstIter);
-            if (dir01 == Point::Zeros()) { continue; }
-            Point dir10 = a_layout.connectivity(dstIter, srcIter);
-
-            // indices are a valid block boundary
-            int codim = dir01.codim();
-            int ghostSize = m_ghost[codim].max();
-            Box locBoundBox = a_layout[srcIter].adjacent(dir01*ghostSize);
-            Box adjBoundBox = a_layout[dstIter].edge(dir10*ghostSize);
-            boundsKey_t key(srcPatchID, srcBlock, dir01);
-
-            auto R = a_layout.domain().graph().rotation(dstBlock, dir10, srcBlock);
-            MBBoundaryData<T, C, MEM> boundData(a_layout,
-                    srcIter, dstIter, locBoundBox, adjBoundBox,
-                    R, a_boundGhost);
-            m_bounds[key].push_back(boundData);
-        }
-    }
-
-#else
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
@@ -149,10 +117,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // to get this right, we rotate the in-plane coordinates and
                             // use the reverse arc for the out of plane coordinates
                             
-                            Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
+                            Point kiAdj = a_layout.domain().graph()
+                                .reverseDir(block, adjBlock, ki);
 
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            Box adjPatchBoundary = a_layout.domain().convert(patchBoundary, block, adjBlock, CTR);
+                            Box adjPatchBoundary = a_layout.domain()
+                                .convert(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == a_layout.end()) { continue; } //patch was not found
@@ -166,7 +136,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
-#endif
     if (a_ghost[0] != Point::Zeros())
     {
         m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));

@@ -37,7 +37,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
         Point a_boundGhost)
 {
     m_ghost = a_ghost;
-    m_grid =  &a_grid;
+    m_grid =  a_grid;
     m_levelData.clear();
     for (int li = 0; li < a_grid.numLevels(); li++)
     {
@@ -59,7 +59,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
     PROTO_ASSERT(a_levelData.size() == a_grid.numLevels(),
             "MBAMRData::define (alias) | Error: incorrect number of levels");
     m_ghost = a_levelData[0]->ghost();
-    m_grid = &a_grid;
+    m_grid = a_grid;
     m_levelData = a_levelData;
     defineAMRData();
 }

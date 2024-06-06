@@ -144,7 +144,7 @@ namespace Proto
                 const MBDisjointBoxLayout&    a_layout,
                 Point                         a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
-       
+      
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
          *  be a valid forall kernel with the following signature:
