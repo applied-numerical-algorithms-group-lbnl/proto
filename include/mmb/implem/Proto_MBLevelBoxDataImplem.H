@@ -649,7 +649,7 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
     Box blockDomain = layout().getBlock(block).domain().box();
     
     int maxGhost = 0;
-    for (auto gi : ghost()) { maxGhost = max(gi.max(), maxGhost); }
+    for (auto gi : ghost()) { maxGhost = std::max(gi.max(), maxGhost); }
     Box validDomain = blockDomain;
     for (auto dir : Box::Kernel(1))
     {
@@ -775,6 +775,53 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
 
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
     return footprint_v;
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+template<Proto::Operation OP>
+T MBLevelBoxData<T,C,MEM,CTR>::reduce(unsigned int a_comp) const
+{
+    PR_TIME("MBLevelBoxData::reduce");
+    Reduction<T, OP, MEM> rxn;
+    for (auto iter : m_layout)
+    {
+        auto& data = (*this)[iter];
+        if (ghost()[0] == Point::Zeros())
+        {
+            // avoid the copyTo call if there are no ghost cells
+            data.reduce(rxn, a_comp);
+        } else {
+            BoxData<T, 1, MEM> temp(patchBox(iter));
+            auto comp = slice(data, a_comp);
+            comp.copyTo(temp);
+            temp.reduce(rxn);
+        }
+    }
+    return rxn.fetch();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+T MBLevelBoxData<T,C,MEM,CTR>::absMax(unsigned int a_comp) const
+{
+    return reduce<Abs>(a_comp);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+T MBLevelBoxData<T,C,MEM,CTR>::sum(unsigned int a_comp) const
+{
+    return reduce<Sum>(a_comp);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+T MBLevelBoxData<T,C,MEM,CTR>::max(unsigned int a_comp) const
+{
+    return reduce<Max>(a_comp);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+T MBLevelBoxData<T,C,MEM,CTR>::min(unsigned int a_comp) const
+{
+    return reduce<Min>(a_comp);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>

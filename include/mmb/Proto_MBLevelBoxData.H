@@ -309,6 +309,20 @@ namespace Proto
         inline std::vector<Point> onDomainBoundary(
                 const Point& a_point, const MBIndex& a_index) const;
 
+        /// Reduction
+        /**
+         */
+        template<Proto::Operation OP>
+        inline T reduce(unsigned int c = 0) const;
+        
+        inline T absMax(unsigned int c = 0) const;
+
+        inline T max(unsigned int c = 0) const;
+
+        inline T min(unsigned int c = 0) const;
+
+        inline T sum(unsigned int c = 0) const;
+
         /// Compute Interpolation Footprint
         /** Computes the list of data points which will be used as the source data for an interpolation
          *  operator to the data point specified by a_center and a_index.
