@@ -119,5 +119,18 @@ namespace Proto
     SideIterator Side::begin() { return SideIterator(0); }
     SideIterator Side::end() { return SideIterator(2); }
 
-    }
+	struct Face
+	{
+		public:
+		Face(int a_dir, Side::LoHiSide a_side) : dir(a_dir), side(a_side) {}
+        Face operator-() const
+		{
+			return Face(dir, (side == Side::Lo) ? Side::Hi : Side::Lo);
+		}
+        int sign() const { return (side == Side::Hi ? 1 : -1); }
+		const int dir;
+		const Side::LoHiSide side;	
+	};
+
+}
 #endif

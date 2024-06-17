@@ -657,20 +657,6 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
         return adjacent(dir);
     } else {
         return edge(a_dir, -a_dist);
-        /*
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            if (a_dir[ii] > 0)
-            {
-                L[ii] = H[ii] + 1;
-                H[ii] = H[ii] + size(ii);
-            } else if (a_dir[ii] < 0)
-            {
-                H[ii] = L[ii] - 1;
-                L[ii] = L[ii] - size(ii);
-            }
-        }
-        */
     }
     return Box(L,H);
 }

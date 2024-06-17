@@ -35,23 +35,27 @@ namespace Proto
         inline void define(
                 const MBAMRGrid& a_grid,
                 std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
-        
+
         inline void setVal(T a_value);
         inline void setRandom(T a_low, T a_high);
         inline void exchange();
         inline Array<Point, DIM+1> ghost() const { return m_ghost; }
-        inline const MBAMRGrid& grid() const {return *m_grid; }
+        inline const MBAMRGrid& grid() const {return m_grid; }
         inline MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level);
         inline const MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level) const;
-        inline MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level) {return getLevel(a_level);}
-        inline const MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level) const {return getLevel(a_level); }
+        inline MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level)
+            { return getLevel(a_level); }
+        inline const MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level) const
+            { return getLevel(a_level); }
         inline AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block);
         inline const AMRData<T,C,MEM,CTR>& getBlock(unsigned int a_block) const;
-        inline int numLevels() const {return m_grid->numLevels(); }
-        inline int numBlocks() const {return m_grid->numBlocks(); }
-
+        inline int numLevels() const {return m_grid.numLevels(); }
+        inline int numBlocks() const {return m_grid.numBlocks(); }
+        
         // Operators
         inline void averageDown();        
+        inline void interpolate(unsigned int a_level);
+        inline void interpolate();
         inline void increment(const MBAMRData<T,C,MEM,CTR>& a_data, T a_scale);
         inline void operator*=(T a_value);
         inline void operator+=(T a_value);
@@ -66,8 +70,8 @@ namespace Proto
         
         void defineAMRData();
         
-        Array<Point, DIM+1>         m_ghost;
-        const MBAMRGrid*  m_grid;
+        Array<Point, DIM+1>                                             m_ghost;
+        MBAMRGrid                                                       m_grid;
         std::vector<std::shared_ptr<MBLevelBoxData<T, C, MEM, CTR>>>    m_levelData;
         std::vector<std::shared_ptr<AMRData<T, C, MEM, CTR>>>           m_amrData;
     };

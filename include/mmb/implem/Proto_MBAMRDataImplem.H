@@ -37,7 +37,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
         Point a_boundGhost)
 {
     m_ghost = a_ghost;
-    m_grid =  &a_grid;
+    m_grid =  a_grid;
     m_levelData.clear();
     for (int li = 0; li < a_grid.numLevels(); li++)
     {
@@ -59,7 +59,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
     PROTO_ASSERT(a_levelData.size() == a_grid.numLevels(),
             "MBAMRData::define (alias) | Error: incorrect number of levels");
     m_ghost = a_levelData[0]->ghost();
-    m_grid = &a_grid;
+    m_grid = a_grid;
     m_levelData = a_levelData;
     defineAMRData();
 }
@@ -150,6 +150,46 @@ MBAMRData<T,C,MEM,CTR>::getBlock(unsigned int a_block) const
 // Operators
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::averageDown(){}        
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBAMRData<T,C,MEM,CTR>::interpolate(unsigned int a_level)
+{
+    if (a_level == 0) { return; } //nothing to interpolate from
+    for (BlockIndex bi = 0; bi < grid().numBlocks(); bi++)
+    {
+        auto refRatio = m_amrData[bi]->grid().refRatio(a_level-1);
+        auto I = InterpStencil<T>::Constant(refRatio);
+        auto& fineLevel = (*m_amrData[bi])[a_level];
+        auto& crseLevel = (*m_amrData[bi])[a_level-1];
+
+        DisjointBoxLayout cfLayout = fineLevel.layout().coarsen(refRatio);
+        LevelBoxData<T,C,MEM,CTR> tmp(cfLayout, ghost()[0]);
+        crseLevel.copyTo(tmp);
+        tmp.exchange();
+        for (auto iter : tmp.layout())
+        {
+            auto& crse_i = tmp[iter];
+            auto& fine_i = fineLevel[iter];
+            pr_out() << "-----------------------------------------" << std::endl; 
+            pr_out() << "stencil span: " << I.span() << " | domain: " << I.domain(fine_i.box()) << " | range: " << I.range(crse_i.box()) << std::endl;
+            pr_out() << "crse (input): " << std::endl;
+            crse_i.printData();
+            
+            fine_i |= I(crse_i);
+            pr_out() << "fine (output): " << std::endl;
+            fine_i.printData();
+        }
+    }
+}        
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBAMRData<T,C,MEM,CTR>::interpolate()
+{
+    for (unsigned int li = 1; li < numLevels(); li++)
+    {
+        interpolate(li);
+    }
+}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::increment(

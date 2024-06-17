@@ -13,6 +13,8 @@ namespace Proto
     {
         public:
 
+        inline MBAMRGrid(){}
+
         inline MBAMRGrid(
             const MBProblemDomain&          a_coarseDomain,
             const std::vector<MBPatchID_t>& a_coarsePatches,
@@ -23,6 +25,12 @@ namespace Proto
             const MBProblemDomain&          a_coarseDomain,
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
+
+        inline MBAMRGrid(
+                const MBProblemDomain&      a_coarseDomain,
+                Point                       a_coarseBoxSize,
+                Point                       a_refRatio,
+                int                         a_numLevels);
 
         inline void define(
             const MBProblemDomain&          a_coarseDomain,

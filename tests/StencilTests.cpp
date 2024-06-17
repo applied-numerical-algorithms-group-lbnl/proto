@@ -79,9 +79,7 @@ TEST(Stencil, Transpose) {
 
 TEST(Stencil, Domain_Range) {
     Box B = Box::Cube(16).shift(Point::Ones());
-    Box R, D;
 
-    // 2*DIM + 1 Point Laplacian
     Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -90,10 +88,18 @@ TEST(Stencil, Domain_Range) {
         S0 += 1.0*Shift::Basis(ii,-d);
     }
 
-    R = S0.range(B);
-    D = S0.domain(B);
-    EXPECT_EQ(R,B.grow(Point(1,2,3,4,5,6)*-1));
-    EXPECT_EQ(D,B.grow(Point(1,2,3,4,5,6)));
+    Box R0 = S0.range(B);
+    Box D0 = S0.domain(B);
+    EXPECT_EQ(R0,B.grow(Point(1,2,3,4,5,6)*-1));
+    EXPECT_EQ(D0,B.grow(Point(1,2,3,4,5,6)));
+
+    Stencil<double> S1 = 1.0*Shift::Ones() + 1.0*Shift::Basis(0);
+    Box R1 = S1.range(B);
+    Box D1 = S1.domain(B);
+    Box R1_soln = B.extrude(Point::Ones(),-1).grow(0,Side::Lo,1);
+    Box D1_soln = B.extrude(Point::Ones(),+1).grow(0,Side::Lo,-1);
+    EXPECT_EQ(R1, R1_soln);
+    EXPECT_EQ(D1, D1_soln);
 }
 TEST(Stencil, BoxInference)
 {
@@ -106,7 +112,7 @@ TEST(Stencil, BoxInference)
     S.destShift() = dstShift;
     
     Box I0 = Box::Cube(8).shift(Point::Ones());
-    Box D0(Point::Ones(2), Point::Ones(17));
+    Box D0(Point::Ones(2) + Point::X(), Point::Ones(17));
     Box R0(Point::Ones(4), Point::Ones(32));
     R0 = R0.shift(dstShift);
     
@@ -135,6 +141,39 @@ TEST(Stencil, LinearAvg) {
     auto D = S1.domain(r);
     EXPECT_EQ(R,Box(Point::Ones(), Point::Ones(3)));
     EXPECT_EQ(D,Box(Point::Ones(3), Point::Ones(11)));
+}
+
+TEST(Stencil, Offset) {
+    Stencil<double> S = 1.0*Shift::Ones() + 2.0*Shift::Basis(0);
+    Box B = Box::Cube(8).shift(Point::Ones());
+    BoxData<double, DIM> X(B);
+    for (auto pi : B)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            X(pi,ii) = pi[ii];
+        }
+    }
+#if PR_VERBOSE > 0
+    pr_out() << "X input" << std::endl;
+    X.printData();
+#endif
+    BoxData<double, DIM> Y = S(X);
+#if PR_VERBOSE > 0
+    pr_out() << "X output" << std::endl;
+    X.printData();
+    pr_out() << "Y output" << std::endl;
+    Y.printData();
+
+#endif
+    EXPECT_EQ(Y.box(), S.range(B));
+    for (auto pi : Y.box())
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            EXPECT_EQ(Y(pi,ii), X(pi + Point::Ones(),ii) + 2.0*X(pi + Point::Basis(0),ii));
+        }
+    }
 }
 
 TEST(Stencil, LinearInterp) {

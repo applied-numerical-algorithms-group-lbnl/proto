@@ -90,7 +90,7 @@ namespace Proto
     {
         public:
         // PatchID, BlockID, Dir
-        typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
+        typedef std::tuple<Point, BlockIndex, Point> boundsKey_t;
 
         // Friends
         template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>
@@ -144,7 +144,7 @@ namespace Proto
                 const MBDisjointBoxLayout&    a_layout,
                 Point                         a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
-       
+      
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
          *  be a valid forall kernel with the following signature:
@@ -205,10 +205,10 @@ namespace Proto
 
         /// Get Block Data
         /** Returns the normal LevelBoxData associated with a specified block */
-        inline LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block);
+        inline LevelBoxData<T, C, MEM, CTR>& getBlock(BlockIndex a_block);
         
         /// Get Block Data (Const Overload)
-        inline const LevelBoxData<T, C, MEM, CTR>& getBlock(unsigned int a_block) const;
+        inline const LevelBoxData<T, C, MEM, CTR>& getBlock(BlockIndex a_block) const;
        
         /// Get Layout
         inline const MBDisjointBoxLayout& layout() const {return m_layout; }    
@@ -222,7 +222,7 @@ namespace Proto
         /** Multiblock analog of LevelBoxData::patchSize. Returns the number of data points in any
          *  patch within the specified block accounting for centering and ghost size.
          */
-        inline unsigned int patchSize(unsigned int a_block) const;
+        inline unsigned int patchSize(BlockIndex a_block) const;
 
         /// Linear Size of Patch
         inline size_t linearSize(const MBIndex& a_index) const;
@@ -262,7 +262,7 @@ namespace Proto
         /** Determine if a specified index and direction correspond to a block boundary with a
          *  specified block index */
         inline bool isBlockBoundary(
-                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
         
         /// Get Block Boundary
         /** Retrieve the block boundary buffer associated with the specified block boundary
@@ -270,11 +270,11 @@ namespace Proto
          *  inputs. 
          */
         inline MBBoundaryData<T, C, MEM>& bound(
-                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
         
         /// Get Block Boundary (Const Overload)
         inline const MBBoundaryData<T, C, MEM>& bound(
-                MBIndex a_index, Point a_dir, unsigned int a_adjBlock) const;
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock) const;
 
         /// Compatibility Check
         /** This is the same as this->layout().compatible(a_layout) */
@@ -308,6 +308,20 @@ namespace Proto
          */
         inline std::vector<Point> onDomainBoundary(
                 const Point& a_point, const MBIndex& a_index) const;
+
+        /// Reduction
+        /**
+         */
+        template<Proto::Operation OP>
+        inline T reduce(unsigned int c = 0) const;
+        
+        inline T absMax(unsigned int c = 0) const;
+
+        inline T max(unsigned int c = 0) const;
+
+        inline T min(unsigned int c = 0) const;
+
+        inline T sum(unsigned int c = 0) const;
 
         /// Compute Interpolation Footprint
         /** Computes the list of data points which will be used as the source data for an interpolation
