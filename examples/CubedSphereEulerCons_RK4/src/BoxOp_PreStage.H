@@ -245,7 +245,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   int thetaCoord = (rCoord + 1) % 3;
   int phiCoord = (rCoord + 2) % 3;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, a_time);
+  if (init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
 
   // // Move from ghosted to non-ghosted data to easily see in VisIt
   // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
