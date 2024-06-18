@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
   int max_iter = ParseInputs::get_max_iter();
   int temporal_order = ParseInputs::get_temporal_order();
   double gamma = ParseInputs::get_gamma();
-  double dt = 0.01*ParseInputs::get_CFL();
+  double dt = ParseInputs::get_CFL();
   double dt_next = 0.0;
   double time = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
@@ -40,90 +40,104 @@ int main(int argc, char *argv[])
   int levmax = 3;
   if (convTestType == 0) levmax = 1;
   for (int lev=0; lev<levmax; lev++)
-	{
-    typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
-    bool cullRadialGhost = true;
-    bool use2DFootprint = true;
-    int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    Array<Array<uint, DIM>, 6> permute = {{2, 1, 0}, {2, 1, 0}, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, {0, 1, 2}};
-    Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}};
-    auto domain =
+    {
+      typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
+      bool cullRadialGhost = true;
+      bool use2DFootprint = true;
+      int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+      Array<Array<uint, DIM>, 6> permute = {{2, 1, 0}, {2, 1, 0}, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, {0, 1, 2}};
+      Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}};
+      auto domain =
         CubedSphereShell::Domain(domainSize, thickness, radialDir);
-    Point boxSizeVect = Point::Ones(boxSize_nonrad);
-    boxSizeVect[radialDir] = boxSize_rad;
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
+      Point boxSizeVect = Point::Ones(boxSize_nonrad);
+      boxSizeVect[radialDir] = boxSize_rad;
+      MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    int count = 0;
-    for (auto dit : layout)
-    {
-      count++;
-    }
-    std::cout << "proc_id: " << procID() << ";      num boxes: " << count << std::endl;
+      int count = 0;
+      for (auto dit : layout)
+        {
+          count++;
+        }
+      std::cout << "proc_id: " << procID() << ";      num boxes: " << count << std::endl;
 
-    // initialize data and map
-    auto map = CubedSphereShell::Map(layout, OP::ghost());
-    MBLevelBoxData<double, NUMCOMPS, HOST> JU(layout, OP::ghost());
-    MBLevelBoxData<double, NUMCOMPS, HOST> JU_Temp(layout, OP::ghost());
-    MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
-    MBLevelBoxData<double, NUMCOMPS, HOST> rhs_Temp(layout, Point::Zeros());
-    MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
-    MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
-    Array<double, DIM> dx;
-    auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-    USph.setVal(0.);
-    double dxradius = 1.0 / thickness;
-    auto C2C = Stencil<double>::CornersToCells(4);
+      // initialize data and map
+      auto map = CubedSphereShell::Map(layout, OP::ghost());
+      MBLevelBoxData<double, NUMCOMPS, HOST> JU(layout, OP::ghost());
+    
+      MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
+      MBLevelBoxData<double, NUMCOMPS, HOST> rhs_Temp(layout, Point::Zeros());
+      MBLevelBoxData<double, NUMCOMPS, HOST> rhs(layout, Point::Zeros());
+      MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
+      Array<double, DIM> dx;
+      auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+      USph.setVal(0.);
+      double dxradius = 1.0 / thickness;
+      auto C2C = Stencil<double>::CornersToCells(4);
 
-    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
-    int thetaCoord = (rCoord + 1) % 3;
-    int phiCoord = (rCoord + 2) % 3;
-    //Point ghst = Point::Ones(NGHOST);
-    //MBLevelBoxData<double, 8, HOST> dstData(layout, ghst);
-    MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-    if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
+      int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+      int thetaCoord = (rCoord + 1) % 3;
+      int phiCoord = (rCoord + 2) % 3;
+      //Point ghst = Point::Ones(NGHOST);
+      //MBLevelBoxData<double, 8, HOST> dstData(layout, ghst);
+      MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+      if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
-    // Set input solution.
-    for (auto dit : layout)
-    {
-      dx = eulerOp[dit].dx();
-      BoxData<double> radius(dVolrLev[dit].box());
-      BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-      BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-      eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
-      auto block = layout.block(dit);
-      auto &JU_i = JU[dit];
-      BoxData<double, NUMCOMPS, HOST> JUTemp;
-      BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
-      double half = 0.5;
-      BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-      (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-      eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
-
-      eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
-      JU_i.setVal(0.);
-      JUTemp.copyTo(JU_i, layout[dit]);
-    }
-    MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-    MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
-    Write_W(JU, eulerOp, iop, 0, time, dt_next);
+      // Set input solution.
+      for (auto dit : layout)
+        {
+          dx = eulerOp[dit].dx();
+          BoxData<double> radius(dVolrLev[dit].box());
+          BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+          BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+          eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
+          auto block = layout.block(dit);
+          auto &JU_i = JU[dit];
+          BoxData<double, NUMCOMPS, HOST> JUTemp;
+          BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
+          double half = 0.5;
+          BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+            (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+          eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
+          eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
+          JU_i.setVal(0.);
+          JUTemp.copyTo(JU_i, layout[dit]);
+        }
+    
+      // Point ghostForInterp = OP::ghost() + Point::Ones();
+      //MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),
+      //                                                  ghostForInterp,4);
+      MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+    
+      MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
+    
+      //Write_W(JU, eulerOp, iop, 0, time, dt_next);      
+      {
+        HDF5Handler h5;
+        MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+        MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
+        JU.copyTo(JUTemp);
+        CubedSphereShell::consToSphInterpEuler(JUTemp,iop,dVolrLev,4);
+        
+        //abort();
+        for (auto dit : JUTemp.layout())
+          {
+            unsigned int block = layout.block(dit);
+            Box blockBox = layout.getBlock(block).domain().box();           
+            auto &USph_i = JUTemp[dit];
+            eulerOp[dit].PreStagePatch(USph_i,JU[dit],dVolrLev[dit],blockBox,0.,0.,0);
+          }
+        auto map = CubedSphereShell::Map(JUTemp);
+        h5.writeMBLevel({}, map, JUTemp, "USphere");
+      }
+    
+  //#if 0 // Begin debug comment.
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
-    double mass,energy,momentum;
-#ifndef PR_MPI
-    mass = 0.;
-    momentum = 0.;
-    energy = 0.;
-    for (auto dit : JU.layout())
-      {
-        double masspatch = JU[dit].sum(0);
-        mass += masspatch;
-        double energypatch = JU[dit].sum(4);
-        energy += energypatch;
-        double momentumpatch =
-          sqrt(energypatch*masspatch);
-        momentum += momentumpatch;
-      }
-#endif
+    
+    double mass = JU.sum(0);
+    double energy = JU.sum(4);
+    double momentum = sqrt(energy*mass);
+
     for (int iter = 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
@@ -136,48 +150,50 @@ int main(int argc, char *argv[])
         #endif
         dt *= ParseInputs::get_CFL();
       }
-
+      
       rk4.advance(JU, dt_next, dVolrLev, dt, time, temporal_order);
       time += dt;
       if (iter % write_cadence == 0)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
           // Check conservation. Non-MPI for now.
-#ifndef PR_MPI  
-          Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.}; 
-          for (auto dit : JU.layout())
+          
+
+          Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
+          {
+            for (int comp = 0; comp < 8; comp++)
+              {
+                consSum[comp] += JU.sum(comp);           
+              }
+          }
+          if (procID() == 0)
             {
               for (int comp = 0; comp < 8; comp++)
                 {
-                  consSum[comp] += JU[dit].sum(comp);           
-                }
-            }     
-          for (int comp = 0; comp < 8; comp++)
-            {
-              if (comp == 0)
-                {
-                  cout << "component:" << comp <<
-                    ", (conservation ratio) - 1 = " << consSum[comp] / mass - 1.0 << endl;
-                }
-              else if (comp == 4)
-                {
-                  cout << "component:" << comp <<
-                    ", (conservation ratio) - 1 = " << consSum[comp] / energy - 1.0 << endl;
-                }
-              else if (comp > 4)
-                {
-                  double norm = sqrt(energy/mass)*mass;
-                  cout << "component:" << comp <<
-                    ", scaled conservation sum = " << consSum[comp] / norm  << endl;
-                }
-              else
-                {
-                  double norm = sqrt(energy/mass)*mass;
-                  cout << "component:" << comp <<
-                    ", scaled conservation sum = " << consSum[comp] / norm << endl;
+                  if (comp == 0)
+                    {
+                      cout << "component:" << comp <<
+                        ", (conservation ratio) - 1 = " << consSum[comp] / mass - 1.0 << endl;
+                    }
+                  else if (comp == 4)
+                    {
+                      cout << "component:" << comp <<
+                        ", (conservation ratio) - 1 = " << consSum[comp] / energy - 1.0 << endl;
+                    }
+                  else if (comp > 4)
+                    {
+                      double norm = sqrt(energy/mass)*mass;
+                      cout << "component:" << comp <<
+                        ", scaled conservation sum = " << consSum[comp] / norm  << endl;
+                    }
+                  else
+                    {
+                      double norm = sqrt(energy/mass)*mass;
+                      cout << "component:" << comp <<
+                        ", scaled conservation sum = " << consSum[comp] / norm << endl;
+                    }
                 }
             }
-#endif
         }
       auto end = chrono::steady_clock::now();
       
@@ -235,6 +251,7 @@ int main(int argc, char *argv[])
       }
     }
   }
+//#endif // end debug comment.
   PR_TIMER_REPORT();
 #ifdef PR_MPI
   MPI_Finalize();

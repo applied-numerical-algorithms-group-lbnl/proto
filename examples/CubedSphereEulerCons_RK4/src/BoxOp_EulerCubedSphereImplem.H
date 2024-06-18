@@ -86,6 +86,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       int limiter = 1;
 
       if (limiter == 1){
+        PR_TIMERS("BoxOp_Euler::operator()::limiters");
         Stencil<double> idOP = 1.0*Shift(Point::Zeros());
         State WFace_L_temp = idOP(WFace_L);
         State WFaceBar_L_temp = idOP(WFaceBar_L);    
@@ -241,6 +242,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
                                           uint a_block,
                                           uint a_dir) const
 {
+  PR_TIMERS("primToMappedFlux");
   // Multiply momentum and B fluxes by det(A) A.
   BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,iMOMX);
   BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(a_physFlux,iMOMX);
@@ -535,6 +537,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   T dt_min = 1.0e20;
   T wgtxdt = a_weight*a_dt;
+  
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhs[dit];
@@ -548,8 +551,8 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     fluxes[2].setToZero();
     
     eulerOp[dit](rhs_i, fluxes, a_dt_next, USph_i, a_dt);
-    auto mbdata = a_blockreg.bounds(dit);
-    a_blockreg.increment(fluxes,dit,wgtxdt);
+    //auto mbdata = a_blockreg.bounds(dit);
+    // a_blockreg.increment(fluxes,dit,wgtxdt);
     if (a_dt_next < dt_min && a_kstage == 0) dt_min = a_dt_next;
   }
   if (a_kstage == 0) a_dt_next = dt_min;

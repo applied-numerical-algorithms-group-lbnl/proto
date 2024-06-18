@@ -37,9 +37,11 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     a_JU[dit].copyTo(JUTemp[dit]);
   }
 
+  // CubedSphereShell::consToSphInterpEuler(a_JU, a_iop, dVolrLev, 4);
+  // BUG:: consToSphInterpEuler updates in place!!
   CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop, dVolrLev, 4);
 
-  for (auto dit : a_JU.layout())
+  for (auto dit : JUTemp.layout())
   {
     State W;
     // State WBar;

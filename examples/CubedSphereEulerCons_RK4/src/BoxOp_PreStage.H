@@ -12,8 +12,12 @@ void f_radialBCs_F(
     int a_nradius)
 {
   // Compute spherical BCs.
-  T p0 = 1.0;
-  T rho0 = 1.0;
+  T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+  T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+  // T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
+  //T rho = rho0;
+  //T p0 = 1.0;
+  //T rho0 = 1.0;
   T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
@@ -25,11 +29,13 @@ void f_radialBCs_F(
   {
     amplitude = 0.;
   }
-  T rho = rho0 + amplitude * rho0;
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
-  a_USph(iRHO) = rho;
-  a_USph(iMOMX) = 0.0;//ur * rho;
+  //T rho = rho0 + amplitude * rho0;
+  //T p = p0 * pow(rho / rho0, a_gamma);
+  //T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  T rho = rho0;
+  T p = p0;
+  a_USph(iRHO) = rho0;
+  a_USph(iMOMX) = 0.0;
   a_USph(iMOMY) = 0.0;
   a_USph(iMOMZ) = 0.0;
   a_USph(iBX) = 0.0;
@@ -55,13 +61,17 @@ void f_radialoutflowIBCs_F(
   T r = sqrt(a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1) + a_X_cart(2) * a_X_cart(2));
   T theta = acos(a_X_cart(2) / r);
   // Compute spherical BCs.
+  // FIX this !
   double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
   T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
   T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
   T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
-  T rho = rho0*pow(a_radius(0)/r_BC, -2.0);
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = u0;
+  T rho = rho0;
+  //T rho = rho0*pow(a_radius(0)/r_BC, -2.0);
+  //T p = p0 * pow(rho / rho0, a_gamma);
+  T p = p0;
+  //T ur = u0;
+  T ur = 0.;
   // T ur = u0 - u0/10 * sin(theta);
   a_USph(iRHO) = rho;
   a_USph(iMOMX) = ur * rho;
@@ -112,37 +122,42 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
-    if (init_condition_type == 2 || init_condition_type == 3){
-      // Copy last layer to ghost cells and scale by radius. // Extrapolation can make -ve P in ghost cells.
-      Point source_low = Point(a_blockBox.high()[0],bxGhosted.low()[1],bxGhosted.low()[2]);
-      Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],bxGhosted.high()[2]);
-      Box sourceBox(source_low,source_high);
-      State U_ghost(bdryBoxHigh);
-      Scalar radius_ghost(bdryBoxHigh);
-      Stencil<double> m_exterp_f_2nd;
-      for (int i = 1; i <= NGHOST; i++ ) {
-        a_USphStage.copyTo(U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
-        radius.copyTo(radius_ghost,sourceBox,Point::Basis(0)*(i));
-      }
-      U_ghost.copyTo(a_USphStage,bdryBoxHigh);
-      //scale by radius.
-      forallInPlace_p([ ] PROTO_LAMBDA
-      (Point a_pt,
-       Var<T, NUMCOMPS, MEM> &a_Usph,
-       Var<T> &a_radius,
-       Var<T> &a_radius_ghost)
-      {  
-        double rad = a_radius(0);
-        double rad_last = a_radius_ghost(0);
-        a_Usph(0) *= pow(rad_last/rad,2.0);
-        a_Usph(1) *= pow(rad_last/rad,2.0);
-        a_Usph(2) *= pow(rad_last/rad,2.0);
-        a_Usph(3) *= pow(rad_last/rad,2.0);
-        a_Usph(4) *= pow(rad_last/rad,2.0);
-        a_Usph(5) *= pow(rad_last/rad,2.0);
-        a_Usph(6) *= pow(rad_last/rad,1.0); 
-        a_Usph(7) *= pow(rad_last/rad,1.0);
-      },bdryBoxHigh,a_USphStage,radius,radius_ghost);
+    if (init_condition_type == 2 || init_condition_type == 3)
+      {
+        // Copy last layer to ghost cells and scale by radius.
+        // Extrapolation can make -ve P in ghost cells.
+        Point source_low = Point(a_blockBox.high()[0],
+                                 bxGhosted.low()[1],bxGhosted.low()[2]);
+        Point source_high = Point(a_blockBox.high()[0],bxGhosted.high()[1],
+                                  bxGhosted.high()[2]);
+        Box sourceBox(source_low,source_high);
+        State U_ghost(bdryBoxHigh);
+        Scalar radius_ghost(bdryBoxHigh);
+        Stencil<double> m_exterp_f_2nd;
+        for (int i = 1; i <= NGHOST; i++ ) {
+          a_USphStage.copyTo(U_ghost,sourceBox,Point::Basis(0)*(i));
+          // Using shifting option of copyTo
+          radius.copyTo(radius_ghost,sourceBox,Point::Basis(0)*(i));
+        }
+        U_ghost.copyTo(a_USphStage,bdryBoxHigh);
+        //scale by radius.
+        forallInPlace_p([ ] PROTO_LAMBDA
+                        (Point a_pt,
+                         Var<T, NUMCOMPS, MEM> &a_Usph,
+                         Var<T> &a_radius,
+                         Var<T> &a_radius_ghost)
+                        {  
+                          double rad = a_radius(0);
+                          double rad_last = a_radius_ghost(0);
+                          a_Usph(0) *= pow(rad_last/rad,2.0);
+                          a_Usph(1) *= pow(rad_last/rad,2.0);
+                          a_Usph(2) *= pow(rad_last/rad,2.0);
+                          a_Usph(3) *= pow(rad_last/rad,2.0);
+                          a_Usph(4) *= pow(rad_last/rad,2.0);
+                          a_Usph(5) *= pow(rad_last/rad,2.0);
+                          a_Usph(6) *= pow(rad_last/rad,1.0); 
+                          a_Usph(7) *= pow(rad_last/rad,1.0);
+                        },bdryBoxHigh,a_USphStage,radius,radius_ghost);
     }
   }
   // Inner BCs
@@ -217,17 +232,14 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               int a_kstage)
 {
   // Transform JU -> USph.
+  auto layout = a_UStage.layout();
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
-  // Compute viscous operators here, and increment a_rhsTotal.
-  int linear_visc = ParseInputs::get_linear_viscosity();
-  int divBcleaning = ParseInputs::get_divergence_cleaning();
+ 
+ 
   int init_condition_type = ParseInputs::get_init_condition_type();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
-  auto layout = a_UStage.layout();
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
-
-  HDF5Handler h5;
 
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
   int thetaCoord = (rCoord + 1) % 3;
@@ -246,17 +258,27 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   //   dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
   // }
   // h5.writeMBLevel(map, dstData2, "DST_DATA2");
-
-
   for (auto dit : a_UStage.layout())
   {
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     auto &rhs_i = a_rhsTotal[dit];
     rhs_i.setVal(0.0);
-    auto &USph_i = a_UStage[dit];
+    auto &USph_i =a_UStage[dit];
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
-
+    // {
+    //   HDF5Handler h5;
+    //   MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+    //   MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
+    //   JU.copyTo(JUTemp);
+    //   CubedSphereShell::consToSphInterpEuler(JUTemp,iop,dVolrLev,4);
+    //   auto map = CubedSphereShell::Map(JUTemp);
+    //   h5.writeMBLevel({}, map, JUTemp, "main_JUTempPre");
+    //   abort();
+    // }
+    // Compute viscous operators here, and increment a_rhsTotal.
+    int linear_visc = ParseInputs::get_linear_viscosity();
+    int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)
       {
         auto mbdata = a_blockreg.bounds(dit);
@@ -270,8 +292,13 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
         T one = 1.0;
         // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
-        a_blockreg.increment(fluxes, dit, a_dt);
+        //a_blockreg.increment(fluxes, dit, a_dt);
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
+  }
+  if (a_kstage == 0)
+  {
+    HDF5Handler h5;
+    h5.writeMBLevel({}, map, a_UStage, "a_UStage");
   }
 }

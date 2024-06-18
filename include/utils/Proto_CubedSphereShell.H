@@ -111,7 +111,7 @@ namespace Proto {
 #endif
     
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void consToSphInterpEuler( 
+     static void consToSphInterpEuler(
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
@@ -134,18 +134,19 @@ namespace Proto {
                                  unsigned int a_order = 4);
     
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void consToCartInterpEuler( 
-                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                                      MBInterpOp& a_iop,
-                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
-                                      unsigned int a_order = 4);
-
+     static void consToCartInterpEuler(
+                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                       MBInterpOp& a_iop,
+                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                       unsigned int a_order = 4);
+#if 0
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void consToSphInterpEuler( 
+     static void consToSphInterpEuler(
+                                      MBLevelBoxData<T,C,MEM,CTR>& a_USphere,
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
-
+#endif
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void interpBoundariesMHD( 
@@ -253,7 +254,8 @@ namespace Proto {
                                const BoxData<T,1,MEM>& a_denomInv,
                                const BoxData<T,1,MEM>& a_numerator,
                                Box a_quotBox,
-                               Box a_blockBox);
+                               Box a_blockBox,
+                               bool a_debug = false);
     
     template <typename T, MemType MEM>
     inline
@@ -270,7 +272,8 @@ namespace Proto {
                                        const BoxData<T,C,MEM>& a_input,
                                        Box a_outputBox,
                                        Box a_validBox,
-                                       uint a_dir);
+                                       uint a_dir,
+                                       bool a_debug = false);
     template<typename T, unsigned int C, MemType MEM>
     static void consToSemiSphNGEuler(                    
                                      BoxData<T,C+2,MEM>& a_USemiSph,
@@ -291,7 +294,9 @@ namespace Proto {
                        const BoxData<T,DIM,MEM,DIM>& a_invAdetA,
                        const BoxData<T,1,MEM>& a_detA,
                        const BoxData<T,1,MEM>& a_invDetA,
-                       Box a_blockBox);
+                       Box a_bx,
+                       Box a_blockBox,
+                       bool a_debug = false);
  
   template<typename T, unsigned int C, MemType MEM>
   static void semiSphToSphNG(

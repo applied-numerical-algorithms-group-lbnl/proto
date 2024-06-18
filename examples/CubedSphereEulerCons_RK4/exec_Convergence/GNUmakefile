@@ -1,25 +1,24 @@
 VARS_OLD := $(.VARIABLES)
-#DEPXX=clang++
-#CXX=clang++
-DEPXX=mpicxx
-CXX=mpicxx
+DEPXX=clang++
+CXX=clang++
+#CXX=mpicxx
 DIM=3
 USE_HDF5=TRUE
 PROTO=../../..
 
-
-LAPACK_LIB=/opt/homebrew/opt/openblas/lib
-LAPACK_INC=/opt/homebrew/opt/openblas/include
+LAPACK_LIB=-lblas -llapack
 #CXXOPTFLAGS=-g
-CXXOPTFLAGS=-O2 -g
+CXXOPTFLAGS=-O3 -g
 CXXOPTFLAGS+=-DmemoryFootPrint
 #CXXOPTFLAGS+=-DPR_AMR
 CXXOPTFLAGS+=-DPR_MMB
 CXXOPTFLAGS+=-DPR_OPS
 CXXOPTFLAGS+= -DPR_HDF5=TRUE
-HDF5_LIB=/opt/homebrew/opt/hdf5-mpi/lib
-HDF5_INC=/opt/homebrew/opt/hdf5-mpi/include
-CXXOPTFLAGS+= -DPR_MPI=TRUE
+#HDF5_LIB=/usr/local/lib
+#HDF5_INC=/usr/local/include
+HDF5_LIB=/usr/lib
+HDF5_INC=/usr/include
+#CXXOPTFLAGS+= -DPR_MPI=TRUE
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=cubedSphereTest.exe
 
@@ -37,14 +36,11 @@ VPATH=o. ../src  ../../_common
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
 
+LIBS += $(LAPACK_LIB)
+
 ifdef HDF5_LIB
 LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
 CPPFLAGS+= -I$(HDF5_INC)
-endif
-
-ifdef LAPACK_LIB
-LIBS+= -L$(LAPACK_LIB) -lopenblas
-CPPFLAGS+= -I$(LAPACK_INC)
 endif
 
 ifdef OLCF_HDF5_ROOT

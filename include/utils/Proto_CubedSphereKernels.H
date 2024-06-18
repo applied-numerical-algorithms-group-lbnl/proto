@@ -15,9 +15,9 @@ void f_matMatProd_F(
 {
   for (int ind0 = 0; ind0 < DIM; ind0++)
     {
-      for (int ind1 = 0; ind0 < DIM; ind1++)
+      for (int ind1 = 0; ind1 < DIM; ind1++)
         {      
-          a_prod(ind0,ind1) =0.;
+          a_prod(ind0,ind1) = 0.;
           for (int ind = 0; ind < DIM; ind++)
             {
               a_prod(ind0,ind1) +=
@@ -38,7 +38,7 @@ void f_matVecProd_F(
 {
   for (int ind0 = 0; ind0 < DIM; ind0++)
     {      
-      a_prod(ind0) =0.;
+      a_prod(ind0) = 0.;
       for (int ind = 0; ind < DIM; ind++)
         {
           a_prod(ind0) +=

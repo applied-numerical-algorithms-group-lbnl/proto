@@ -9,8 +9,9 @@ void f_radialInit_F(
     int a_nradius)
 {
   // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
+  T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+  T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+  T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
   T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
@@ -47,11 +48,13 @@ void f_nonradialInit_F(
     int a_nradius)
 {
   // Compute spherical initial data.
-  T p0 = 1.0;
-  T rho0 = 1.0;
+  T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+  T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+  T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
   T eps = 0.1;
   T amplitude;
   T arg = sqrt((a_X_cart(2)+0.7) * (a_X_cart(2)+0.7) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  // T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
   if (abs(arg) < .25)
   {
     amplitude = eps * pow(cos(2 * M_PI * arg), 6);
@@ -64,7 +67,7 @@ void f_nonradialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(iRHO) = rho;
-  a_W(iVX) = 0.;//ur;
+  a_W(iVX) = 0.0; //ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;

@@ -84,13 +84,14 @@ template <
     typename T,
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
-void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
-    LevelStateData& a_state, 
-    T&              a_dt_next,
-    LevelScalarData& a_dVolrLev, 
-    T&         a_dt,
-    T          a_time,
-    int             a_order)
+void MBLevelRK4<OPType, MAP, T, BCType, MEM>
+::advance(
+          LevelStateData& a_state, 
+          T& a_dt_next,
+          LevelScalarData& a_dVolrLev, 
+          T& a_dt,
+          T a_time,
+          int a_order)
 {
   PR_TIMERS("MBLevelRK4::advance");
     double sixth = 1, third=1, half = 1;
@@ -116,6 +117,8 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         kstage = 0;
         double weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, a_time, a_dt, weight, kstage);
+        //if (a_dt > 0)
+      
         m_delta.increment(m_k, 1.0);
         OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time, a_dt, weight, kstage);
         m_delta.increment(m_k, weight);
@@ -147,8 +150,24 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
         m_delta.increment(m_k, weight);
     }
     // m_delta fixup for conservation at block boundaries.
-    m_blockreg.reflux(m_delta);
+    // DEBUG
+    // m_U0.setVal(0.);
+    // m_blockreg.reflux(m_U0);
+    // T mass = a_state.sum(0);
+    // T dmassPre = m_delta.sum(0);
+    
+    // T dmassPost = m_delta.sum(2);
+    // T dmassReflux = m_U0.sum(2);
+    // if (procID() == 0)
+    //   {
+    //     cout << "mass, dmassPre, dmassPost, dmassReflux "
+    //          << mass << ", "
+    //          << dmassPre/mass  << ", "
+    //          << dmassPost/mass << ", "
+    //          << dmassReflux/mass << endl;
+    //   }
     // Update State.
+    // m_blockreg.reflux(m_delta);
     a_state.increment(m_delta, 1.0);
 }
 
