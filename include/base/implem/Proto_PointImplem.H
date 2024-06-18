@@ -404,6 +404,26 @@ std::array<Point, DIM> Point::parallelUnit() const
     return basis;
 }
 
+std::vector<int> Point::coords() const
+{
+    std::vector<int> v;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if ((*this)[ii] != 0) { v.push_back(ii); }
+    }
+    return v;
+}
+
+std::vector<int> Point::perpCoords() const
+{
+    std::vector<int> v;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if ((*this)[ii] == 0) { v.push_back(ii); }
+    }
+    return v;
+}
+
 std::array<Point, DIM> Point::perpUnit() const
 {
     std::array<Point, DIM> basis;

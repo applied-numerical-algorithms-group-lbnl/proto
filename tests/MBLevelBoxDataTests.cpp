@@ -208,6 +208,47 @@ TEST(MBLevelBoxData, SetBoundary) {
 }
 #endif
 #if 1
+TEST(MBLevelBoxData, Reduce) {
+    HDF5Handler h5;
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    std::vector<Point> boxSizes(numBlocks, boxSizeVect);
+#if 0
+    std::vector<MBPatchID_t> patches;
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        patches.push_back(MBPatchID_t(Point::Ones(), bi));
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+#else
+    MBDisjointBoxLayout layout(domain, boxSizes);
+#endif
+    Point ghost = Point::Ones(ghostSize);
+    ghost += Point::X();
+    MBLevelBoxData<double, 1, HOST> hostData(layout, ghost);
+    hostData.setVal(-1.0);
+    double abs = hostData.absMax();
+    double sum = hostData.sum();
+    double max = hostData.max();
+    double min = hostData.min();
+
+    std::cout << "abs: " << abs << " | sum: " << sum << " | max: " << max << " | min: " << min << std::endl;
+    EXPECT_NEAR(abs, 1, 1e-12);
+    double trueSum = 1;
+    for (int d = 0; d < DIM; d++) { trueSum *= domainSize; }
+    trueSum *= layout.numBlocks();
+    trueSum *= -1;
+    EXPECT_NEAR(sum, trueSum, 1e-12);
+    EXPECT_NEAR(max, 0, 1e-12);
+    EXPECT_NEAR(min, -1, 1e-12);
+}
+#endif
+
+#if 1
 TEST(MBLevelBoxData, FillBoundaries) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -556,7 +597,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 }
 #endif
 #if DIM == 2
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
@@ -639,7 +680,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 #endif
 #endif
 #if DIM == 3
-#if 0
+#if 1
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
