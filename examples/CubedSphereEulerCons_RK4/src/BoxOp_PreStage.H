@@ -296,9 +296,4 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
   }
-  if (a_kstage == 0)
-  {
-    HDF5Handler h5;
-    h5.writeMBLevel({}, map, a_UStage, "a_UStage");
-  }
 }
