@@ -149,23 +149,6 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, a_time+a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, weight);
     }
-    // m_delta fixup for conservation at block boundaries.
-    // DEBUG
-    // m_U0.setVal(0.);
-    // m_blockreg.reflux(m_U0);
-    // T mass = a_state.sum(0);
-    // T dmassPre = m_delta.sum(0);
-    
-    // T dmassPost = m_delta.sum(2);
-    // T dmassReflux = m_U0.sum(2);
-    // if (procID() == 0)
-    //   {
-    //     cout << "mass, dmassPre, dmassPost, dmassReflux "
-    //          << mass << ", "
-    //          << dmassPre/mass  << ", "
-    //          << dmassPost/mass << ", "
-    //          << dmassReflux/mass << endl;
-    //   }
     // Update State.
     // m_blockreg.reflux(m_delta);
     a_state.increment(m_delta, 1.0);

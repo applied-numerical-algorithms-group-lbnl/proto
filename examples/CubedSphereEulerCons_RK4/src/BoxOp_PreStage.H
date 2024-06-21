@@ -165,7 +165,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   {
     Point high = bxGhosted.high();
     high[0] = a_blockBox.low()[0] - 1;
-    Box bdryBoxLow(bxGhosted.low(), high);
+    Box bdryBoxLow(bxGhosted.low(), high);    
     if (init_condition_type == 0 || init_condition_type == 1){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }

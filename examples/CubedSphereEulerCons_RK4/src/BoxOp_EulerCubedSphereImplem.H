@@ -537,7 +537,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   T dt_min = 1.0e20;
   T wgtxdt = a_weight*a_dt;
-  
+  T dt_next_local;
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhs[dit];
@@ -550,12 +550,19 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     fluxes[1].setToZero();
     fluxes[2].setToZero();
     
-    eulerOp[dit](rhs_i, fluxes, a_dt_next, USph_i, a_dt);
+    eulerOp[dit](rhs_i, fluxes, dt_next_local, USph_i, a_dt);
     //auto mbdata = a_blockreg.bounds(dit);
     // a_blockreg.increment(fluxes,dit,wgtxdt);
-    if (a_dt_next < dt_min && a_kstage == 0) dt_min = a_dt_next;
+    if (dt_next_local < dt_min && a_kstage == 0)
+      {
+        //cout << "a_dt_next = " << a_dt_next << ", dt_min = " << dt_min <<  endl;
+        dt_min = dt_next_local;
+      }
   }
-  if (a_kstage == 0) a_dt_next = dt_min;
+  if (a_kstage == 0)
+    {
+      a_dt_next = dt_min;
+    }
 }
 #if 0
 template<

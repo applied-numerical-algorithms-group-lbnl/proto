@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
   int max_iter = ParseInputs::get_max_iter();
   int temporal_order = ParseInputs::get_temporal_order();
   double gamma = ParseInputs::get_gamma();
-  double dt = ParseInputs::get_CFL();
+  double dt = .1*ParseInputs::get_CFL();
   double dt_next = 0.0;
   double time = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
@@ -126,8 +126,8 @@ int main(int argc, char *argv[])
             auto &USph_i = JUTemp[dit];
             eulerOp[dit].PreStagePatch(USph_i,JU[dit],dVolrLev[dit],blockBox,0.,0.,0);
           }
-        auto map = CubedSphereShell::Map(JUTemp);
-        h5.writeMBLevel({}, map, JUTemp, "USphere");
+        //auto map = CubedSphereShell::Map(JUTemp);
+        //h5.writeMBLevel({}, map, JUTemp, "USphere");
       }
     
   //#if 0 // Begin debug comment.
@@ -137,14 +137,19 @@ int main(int argc, char *argv[])
     double mass = JU.sum(0);
     double energy = JU.sum(4);
     double momentum = sqrt(energy*mass);
-
+    if (procID() == 0)
+      {
+        cout << "mass = " << mass << ", energy = " << energy << ", momentum scale = " << momentum << endl;
+      }
     for (int iter = 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
+      double dt_save;
       if (ParseInputs::get_convTestType() == 0){
         #ifdef PR_MPI
           MPI_Reduce(&dt_next, &dt, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
           MPI_Bcast(&dt, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+          dt_save = dt;
         #else
           dt = dt_next;
         #endif

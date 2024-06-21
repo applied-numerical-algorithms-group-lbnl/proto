@@ -40,13 +40,13 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   // CubedSphereShell::consToSphInterpEuler(a_JU, a_iop, dVolrLev, 4);
   // BUG:: consToSphInterpEuler updates in place!!
   CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop, dVolrLev, 4);
-
   for (auto dit : JUTemp.layout())
   {
     State W;
     // State WBar;
     // eulerOp[dit].sphToPrim(W, WBar, JUTemp[dit], layout.block(dit));
     // Second order for output purposes. This then doesn't need BCs.
+
     eulerOp[dit].sphToPrim_2O(W, JUTemp[dit], layout.block(dit));
     forallInPlace([ ] PROTO_LAMBDA
     (Var<double,NUMCOMPS,HOST>& a_Wout,

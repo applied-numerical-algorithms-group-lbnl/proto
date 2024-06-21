@@ -11,7 +11,7 @@ void f_radialInit_F(
   // Compute spherical initial data.
   T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
   T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
-  T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
+  //T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
   T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
