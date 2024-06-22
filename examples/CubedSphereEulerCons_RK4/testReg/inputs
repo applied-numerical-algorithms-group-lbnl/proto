@@ -1,0 +1,22 @@
+## See Inputs_Parsing.H file for supported input values
+-convTestType                    0
+-init_condition_type             0
+-domainSize                      32
+-thickness                       32
+-boxSize_nonrad                  16
+-boxSize_rad                     16
+-max_iter                        4
+-CFL                             0.5
+-write_cadence                   1
+-data_file_prefix                data32_1_1
+-gamma                           1.6666666666666666666667
+-temporal_order                  4
+-divergence_cleaning             1
+-linear_viscosity                0
+-BC_file                         DATA.h5
+#-BC_file                         POT3D360x180_2020010120_2020022020_fixeddtheta.h5
+-Probe_trajectory_file           trajEarth2020.dat
+-Probe_data_file                 probed_data_no_interp.dat 
+-Probe_cadence                   3600
+-BC_start_time                   2020.08993624772313296903460837887067
+-BC_cadence                      24.0
