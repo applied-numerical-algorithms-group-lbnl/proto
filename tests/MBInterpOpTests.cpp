@@ -189,8 +189,18 @@ TEST(MBInterpOp, XPointTest)
         err[nn] = 0;
         auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
+#if 0
+        std::vector<MBPatchID_t> patches;
+        std::vector<Point> boxSizes;
+        for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
+        {
+            patches.push_back(MBPatchID_t(Point::Ones(domainSize / boxSize - 1), bi));
+            boxSizes.push_back(boxSizeVect);
+        }
+        MBDisjointBoxLayout layout(domain, patches, boxSizes);
+#else
         MBDisjointBoxLayout layout(domain, boxSizeVect);
-
+#endif
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));

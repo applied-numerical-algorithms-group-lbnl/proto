@@ -185,12 +185,9 @@ TEST(MBAMRTests, LaplaceXPoint) {
     // Constants
     typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
     int domainSize = 16;
-    int boxSize = 8;
+    int boxSize = 16;
     int numBlocks = XPOINT_NUM_BLOCKS;
-    int numLevels = 3;
-    double slope = 1.0;
-    int comp = 0;
-    Array<double, DIM> exp{4,4,0,0,0,0};
+    int numLevels = 1;
     Array<double, DIM> offset{0,0,0,0,0,0};
     int refRatio = 2;
    

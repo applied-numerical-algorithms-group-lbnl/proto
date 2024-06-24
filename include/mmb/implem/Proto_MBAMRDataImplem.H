@@ -47,7 +47,30 @@ void MBAMRData<T,C,MEM,CTR>::define(
         m_levelData.push_back(levelData);
     }
     defineAMRData();
+    PROTO_ASSERT(validate(),
+        "MBAMRData::define | Error: Validation failed");
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+bool MBAMRData<T,C,MEM,CTR>::validate() const
+{
+    bool valid = true;
+    valid &= (numLevels() == m_levelData.size()); 
+    valid &= (numBlocks() == m_amrData.size());
+    if (!valid) { std::cout << "failed on initial sizing: " << std::endl;} 
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
+    {
+        for (int lvl = 0; lvl < numLevels(); lvl++)
+        {
+            auto p1 = &(*m_amrData[bi])[lvl];
+            auto p2 = &m_levelData[lvl]->getBlock(bi);
+            valid &= (p1 == p2);
+            if (!valid) { std::cout << "failed on lvl: " << lvl << " | block: " << bi << std::endl;}
+        }
+    }
+    return valid; 
+}
+
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::define(

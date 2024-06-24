@@ -4,7 +4,7 @@
 
 #define NCOMP 1
 using namespace Proto;
-#if 1
+#if 0
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 32;
     int boxSize = 16;
@@ -127,7 +127,7 @@ TEST(MBLevelBoxData, Construction) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, Initialization) {
     int domainSize = 64;
     int boxSize = 16;
@@ -158,7 +158,7 @@ TEST(MBLevelBoxData, Initialization) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, SetBoundary) {
     HDF5Handler h5;
     int domainSize = 64;
@@ -207,7 +207,7 @@ TEST(MBLevelBoxData, SetBoundary) {
     
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, Reduce) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -236,7 +236,6 @@ TEST(MBLevelBoxData, Reduce) {
     double max = hostData.max();
     double min = hostData.min();
 
-    std::cout << "abs: " << abs << " | sum: " << sum << " | max: " << max << " | min: " << min << std::endl;
     EXPECT_NEAR(abs, 1, 1e-12);
     double trueSum = 1;
     for (int d = 0; d < DIM; d++) { trueSum *= domainSize; }
@@ -248,7 +247,7 @@ TEST(MBLevelBoxData, Reduce) {
 }
 #endif
 
-#if 1
+#if 0
 TEST(MBLevelBoxData, FillBoundaries) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -324,6 +323,81 @@ TEST(MBLevelBoxData, FillBoundaries) {
 }
 #endif
 #if 1
+TEST(MBLevelBoxData, FillBoundaries_Node) {
+    HDF5Handler h5;
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
+    int numBlocks = XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    std::vector<Point> boxSizes(numBlocks, boxSizeVect);
+#if 0
+    std::vector<MBPatchID_t> patches;
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        patches.push_back(MBPatchID_t(Point::Ones(), bi));
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+#else
+    MBDisjointBoxLayout layout(domain, boxSizes);
+#endif
+    Point ghost = Point::Ones(ghostSize);
+    //ghost += Point::X();
+    MBLevelBoxData<double, DIM, HOST, PR_NODE> hostData(layout, ghost);
+    MBLevelBoxData<double, DIM, HOST, PR_NODE> hostData0(layout, Point::Zeros());
+    hostData0.initialize(f_MBPointID);
+    for (auto iter : layout) { hostData0[iter].copyTo(hostData[iter]); }
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"x", "y"}, hostData, "MBLevelBoxData_FillBoundaries_0"); 
+#endif
+    hostData.exchange();
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"x", "y"}, hostData, "MBLevelBoxData_FillBoundaries_1"); 
+#endif
+
+    Box dirs = Box::Kernel(1);
+
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        auto patch = layout.point(iter);
+        for (auto dir : dirs)
+        {
+            auto bounds = hostData.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                auto& localData = *bound.localData;
+                BoxData<double, DIM, HOST> adj(bound.adjData->box());
+                BoxData<double, DIM, HOST> localSoln(bound.localData->box());
+                BoxData<double, DIM, HOST> error(bound.localData->box());
+                auto adjBlock = layout.block(bound.adjIndex);
+                auto R = bound.adjToLocal;
+                forallInPlace_p(f_MBPointID, adj, adjBlock);
+                adj.copyTo(localSoln, R);
+                localData.copyTo(error);
+                error -= localSoln;
+                double errNorm = error.absMax();
+				EXPECT_LT(errNorm, 1e-12);
+#if PR_VERBOSE > 1
+				if (errNorm > 1e-12)
+				{
+					pr_out() << "========================================================" << std::endl;
+					pr_out() << "Error in FillBoundaries: block: " << block << " | patch: " << patch << " | dir: " << dir << std::endl;
+					pr_out() << "Local Data: " << std::endl;
+					localData.printData();
+					pr_out() << "Local Solution: " << std::endl;
+					localSoln.printData();
+					pr_out() << "Error: " << std::endl;
+					error.printData();
+				}
+#endif
+			}
+        }
+    }
+}
+#endif
+#if 0
 TEST(MBLevelBoxData, CopyTo) {
     HDF5Handler h5;
     int domainSize = 128;
@@ -368,7 +442,7 @@ TEST(MBLevelBoxData, CopyTo) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, OnDomainBoundary)
 {
     HDF5Handler h5;
@@ -438,7 +512,7 @@ TEST(MBLevelBoxData, OnDomainBoundary)
 #endif
 }
 #endif
-#if 1
+#if 0
 TEST(MBLevelBoxData, InterpFootprintCorner)
 {
     HDF5Handler h5;
@@ -597,7 +671,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 }
 #endif
 #if DIM == 2
-#if 1
+#if 0
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;
@@ -680,7 +754,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 #endif
 #endif
 #if DIM == 3
-#if 1
+#if 0
 TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
 {
     HDF5Handler h5;

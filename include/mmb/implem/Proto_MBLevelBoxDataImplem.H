@@ -136,6 +136,27 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
+    for (auto iter : a_layout)
+    {
+        for (Point dir : Box::Kernel(1))
+        {
+            for (auto bound : bounds(iter, dir))
+            {
+                auto localIndex = bound.localIndex;
+                auto adjIndex = bound.adjIndex;
+                Point localPatch = a_layout.point(localIndex);
+                Point adjPatch = a_layout.point(adjIndex);
+                BlockIndex localBlock = a_layout.block(localIndex);
+                BlockIndex adjBlock = a_layout.block(adjIndex);
+                Box localBox = bound.localData->box();
+                Box adjBox = bound.adjData->box();
+                
+                std::cout << "block: " << localBlock << " patch: " << localPatch << " box: " << localBox;
+                std::cout << " => block: " << adjBlock << " patch: " << adjPatch << " box: " << adjBox << std::endl;
+            }
+            
+        }
+    }
     if (a_ghost[0] != Point::Zeros())
     {
         m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
@@ -968,6 +989,10 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
                     auto &dst = *bi.localData;
                     auto &R = bi.adjToLocal;
                     PROTO_ASSERT(src.box().contains(tmp.box()),
+                                 "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
+                    PROTO_ASSERT(tmp.box() == domain,
+                                 "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
+                    PROTO_ASSERT(dst.box() == range,
                                  "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
                     // TODO: Write more clever code that can do this in a single copy
                     src.copyTo(tmp);

@@ -36,6 +36,8 @@ namespace Proto
                 const MBAMRGrid& a_grid,
                 std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
 
+        inline bool validate() const;
+
         inline void setVal(T a_value);
         inline void setRandom(T a_low, T a_high);
         inline void exchange();
