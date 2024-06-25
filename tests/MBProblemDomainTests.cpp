@@ -17,6 +17,7 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
+    domain.close();
     return domain;
 }
 
@@ -63,10 +64,12 @@ TEST(MBProblemDomain, Convert) {
     Box yAdj = domainBox.adjacent(y, 1);
     Box xEdge = domainBox.edge(x, 1);
     Box yEdge = domainBox.edge(y, 1);
-    for (unsigned int bi = 0; bi < domain.size(); bi++)
+    Box xyAdj = domainBox.adjacent(x+y,2);
+    Box xyEdge = domainBox.edge(x+y,2);
+    for (BlockIndex bi = 0; bi < domain.size(); bi++)
     {
-        unsigned int bx = (bi + 1) % XPOINT_SIZE;
-        unsigned int by = (bi + XPOINT_SIZE - 1) % XPOINT_SIZE;
+        BlockIndex bx = (bi + 1) % XPOINT_SIZE;
+        BlockIndex by = (bi + XPOINT_SIZE - 1) % XPOINT_SIZE;
         Point sx = x*domainSize*2;
         Point sy = y*domainSize*2;
 
@@ -75,6 +78,14 @@ TEST(MBProblemDomain, Convert) {
     
         EXPECT_EQ(domain.convert(xAdj, bi, bx), yEdge);
         EXPECT_EQ(domain.convert(yAdj, bi, by), xEdge);
+        
+        if (XPOINT_SIZE > 3)
+        {
+            BlockIndex bxy = (bi + 2) % XPOINT_SIZE;
+            EXPECT_EQ(domain.convert(xyAdj, bi, bxy), xyEdge);
+            EXPECT_EQ(domain.convert(xyEdge, bi, bxy), xyAdj);
+
+        }
     }
 }
 #if DIM == 3

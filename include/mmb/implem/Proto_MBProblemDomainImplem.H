@@ -111,7 +111,6 @@ share a codimension 1 boundary.");
     }
     // find the corresponding codimension-DIM boundary in src
     d10 = m_graph->reverseArc(a_srcBlock, a_dstBlock, d01);
-    //std::cout << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
     
     // construct position vectors to the common corner defined
     // by d01 and d10
@@ -126,7 +125,13 @@ share a codimension 1 boundary.");
 
     // convert the input point to dst coordinates and add to the origin
     // displacement
-    //std::cout << "v10: " << v10 << " | v01: " << v01 << " | R(v01): " << R01(v01) << " | s10: " << s10 << std::endl;
+    if (n01.codim() > 1)
+    {
+        pr_out() << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
+        pr_out() << "R01: " << std::endl;
+        R01.printMatrix();
+        pr_out() << "v10: " << v10 << " | v01: " << v01 << " | R(v01): " << R01(v01) << " | s10: " << s10 << std::endl;
+    }
     return s10 + R01(a_point);
 }
 
@@ -238,7 +243,7 @@ bool MBProblemDomain::coarsenable(BlockIndex a_block, Point a_refRatio) const
     return m_domains[a_block].coarsenable(a_refRatio);
 }
 
-bool MBProblemDomain::defined()
+bool MBProblemDomain::defined() const
 {
     for (auto def : m_domainsDefined)
     {
@@ -258,7 +263,7 @@ bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
     return equal;
 }
 
-void MBProblemDomain::close()
+void MBProblemDomain::close() const
 {
     if (m_closed) { return; }
     m_graph->close();

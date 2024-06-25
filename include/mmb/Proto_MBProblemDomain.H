@@ -86,9 +86,9 @@ namespace Proto
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(BlockIndex a_block, Point a_refRatio) const;
-        inline bool defined();
+        inline bool defined() const;
         inline bool operator==(const MBProblemDomain& a_rhs) const;
-        inline void close();
+        inline void close() const;
         
         inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;

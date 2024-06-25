@@ -126,6 +126,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == a_layout.end()) { continue; } //patch was not found
+                           
                             MBBoundaryData<T, C, MEM> boundData(a_layout,
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
@@ -136,6 +137,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
+#if 0
     for (auto iter : a_layout)
     {
         for (Point dir : Box::Kernel(1))
@@ -157,6 +159,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             
         }
     }
+#endif
     if (a_ghost[0] != Point::Zeros())
     {
         m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
