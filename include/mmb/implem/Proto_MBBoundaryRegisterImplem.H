@@ -388,6 +388,13 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             auto adjblock = mb.adjIndex.local();          
             Point signflipPoint = Rinv(Point::Basis(dir));
             int signflip = signflipPoint.dot(Point::Ones());
+            Array<int,C> signflipArray;
+            signflipArray.fill(1);
+#ifdef PR_CFD
+            signflipArray.fill(signflip);
+            signflipArray[0] = 1;
+            signflipArray[4] = 1;
+#endif
             PROTO_ASSERT(signflip*signflip == 1,"signflip from Coordinate transform != +-1");
             adjNormal *= -1;
             Point adjBasis = adjNormal*adjNormal;
@@ -405,19 +412,21 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             {
                 mb.adjData -> copyTo(adjCopy);
             }
-
-            BoxData<T,C,MEM> fluxCorr =
-                forall<T,C,MEM>([ ] PROTO_LAMBDA
-                        (Var<T,C,MEM>& a_corr,
-                         Var<T,C,MEM>& a_local,
-                         Var<T,C,MEM>& a_adj,
-                         int a_signflip)
-                        {
-                        for (int comp = 0; comp < C; comp++)
-                        {
-                        a_corr(comp) = .5*(a_local(comp) - a_signflip*a_adj(comp));
-                        }
-                        },*mb.localData,adjCopy,signflip);         
+            signflip = 1;
+            BoxData<T,C,MEM> fluxCorr = forall<T,C,MEM>
+              ([ ] PROTO_LAMBDA
+               (Var<T,C,MEM>& a_corr,
+                Var<T,C,MEM>& a_local,
+                Var<T,C,MEM>& a_adj,
+                Array<int,C> a_signfliparray)
+               {
+                 for (int comp = 0; comp < C; comp++)
+                   { 
+                     a_corr(comp) =
+                     .5*(a_local(comp) - a_signfliparray[comp]*a_adj(comp));
+                   }                       
+               },*mb.localData,adjCopy,signflipArray);
+            
             Stencil<T> faceStencil;
             if (side == Side::LoHiSide::Lo)
             {
@@ -427,7 +436,7 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             { 
                 faceStencil = (-1.0)*Shift(Point::Basis(dir));
             }          
-            T wgt = -1.0/dx; 
+            T wgt = -1.0/dx;
             BoxData<T,C,MEM> tmp = faceStencil(fluxCorr,wgt);
             a_rhsTotal_i += tmp;
         }

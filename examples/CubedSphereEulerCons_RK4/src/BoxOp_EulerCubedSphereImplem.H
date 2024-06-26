@@ -552,7 +552,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     
     eulerOp[dit](rhs_i, fluxes, dt_next_local, USph_i, a_dt);
     //auto mbdata = a_blockreg.bounds(dit);
-    // a_blockreg.increment(fluxes,dit,wgtxdt);
+    a_blockreg.increment(fluxes,dit,wgtxdt);
     if (dt_next_local < dt_min && a_kstage == 0)
       {
         //cout << "a_dt_next = " << a_dt_next << ", dt_min = " << dt_min <<  endl;

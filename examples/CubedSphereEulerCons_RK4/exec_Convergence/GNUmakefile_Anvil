@@ -20,6 +20,7 @@ CXXOPTFLAGS+= -DPR_HDF5=TRUE
 HDF5_LIB=/apps/spack/anvil/apps/hdf5/1.10.7-gcc-11.2.0-axhcpbs/lib
 HDF5_INC=/apps/spack/anvil/apps/hdf5/1.10.7-gcc-11.2.0-axhcpbs/include
 CXXOPTFLAGS+= -DPR_MPI=TRUE
+CXXOPTFLAGS+=-DPR_CFD
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=cubedSphereTest.exe
 

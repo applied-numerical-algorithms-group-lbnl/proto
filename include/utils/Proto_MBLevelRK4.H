@@ -4,6 +4,7 @@
 
 #include "Proto.H"
 #include "Proto_CubedSphereShell.H"
+#include "Inputs_Parsing.H"
 
 namespace Proto {
 
@@ -54,6 +55,7 @@ protected:
     LevelStateData      m_U0;
     MBInterpOp&   m_interp;
   MBBoundaryRegister<T,OP::numState(),MEM> m_blockreg;
+  int m_counter;
 };
 template <
   template<typename, template<MemType> typename, MemType> class OPType,
@@ -77,6 +79,7 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_U0.define(a_map.layout(), ghost);
     m_bc = std::make_shared<BC>(a_map);
     m_blockreg.define(layout,1,Point::Zeros());
+    m_counter = 0;
 }
 template <
     template<typename, template<MemType> typename, MemType> class OPType,
@@ -150,7 +153,11 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         m_delta.increment(m_k, weight);
     }
     // Update State.
-    // m_blockreg.reflux(m_delta);
+    int boundary_reflux = ParseInputs::get_boundary_reflux();
+    if (boundary_reflux == 1)
+      {
+        m_blockreg.reflux(m_delta);
+      }
     a_state.increment(m_delta, 1.0);
 }
 
