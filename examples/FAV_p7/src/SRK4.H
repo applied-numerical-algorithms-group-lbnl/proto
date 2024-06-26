@@ -33,17 +33,17 @@ public:
   double sumUg, sumUg1, sumUgm;
   vector<double> corrVort_error;
   vector<double> corrRelVort;
-  vector<double> vortpgp, vortpgp_error;
+  vector<double> vortpgp, vortpgp_error, lambdapgp,lambdapgp_error;
   vector<double> vortpgpdt, vortpgpdt_error;
   double sumVort, sumVort1, sumVortm;
-  double sumVortpgpdt, sumVortpgp;
+  double sumVortpgpdt, sumVortpgp, sumLambdapgp;
   double diffVort,diffUg,diffVg, diffV, diffVdt,diffVortdt;
   double diffV1, diffV2;
   vector<particle> X;
   BoxData<double> Vort_error;
   void increment(const DX& a_DX);
   void remap();
-  void getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np,int step, State& a_State );
+  void getVelocity(BoxData<double>& Lambda, BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np,int step, State& a_State );
   void rate(State& second_state, int step);
 
 };

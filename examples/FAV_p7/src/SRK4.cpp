@@ -88,7 +88,7 @@ DX::operator*=(const double& a_weight)
 
 };
 
-void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np, int step, State& a_State ){
+void State::getVelocity(BoxData<double>& Lambda, BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np, int step, State& a_State ){
 
      int n = a_State.L/a_State.m_dx; //number of grid points - 1
      Box B(Point::Zeros(), Point(n,n) );
@@ -107,12 +107,25 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
      double c = 0.75 ;
      long double sumpsi = 0;
      double sumUg = 0, sumUg1 = 0;
-     vector<double> vortpgp;
+     vector<double> vortpgp, lambdapgp;
+     particle lam;
+     vector<particle> lambda_p;
+
      //Interpolate from grid to particles
      interpol.W44(vort, a_State.X, a_State.m_dx, a_State.hp, Np);
      double h2 = pow(a_State.m_dx, 2.0); 
      int px, py;
 
+     for(unsigned int i = 0; i < a_State.X.size(); i++){
+
+
+          lam.x[0] = a_State.X.at(i).x[0];
+          lam.x[1] = a_State.X.at(i).x[1];
+          lam.strength = 1;
+          lambda_p.push_back(lam);
+
+     }
+     interpol.W44(Lambda, lambda_p, a_State.m_dx, a_State.hp, Np);
      Point i_closest;
      psi.setToZero();
      a_State.radi.clear();
@@ -122,7 +135,8 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
      a_State.vortpgpdt.clear();
      a_State.vortpgp_error.clear();
      a_State.vortpgpdt_error.clear();
-
+     a_State.lambdapgp.clear();
+     a_State.lambdapgp_error.clear(); 
 
      //Calculate relative and exact error in vorticity
      for(int i = 0; i < Np; i++){
@@ -158,22 +172,24 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
      interpol.W44p( Ug, u, a_State.X, a_State.hp, a_State.m_dx, Np);
      interpol.W44p( Vg, v, a_State.X, a_State.hp, a_State.m_dx, Np);
      interpol.W44p( vort, vortpgp, a_State.X, a_State.hp, a_State.m_dx, Np); 
-
+     interpol.W44p( Lambda, lambdapgp,a_State.X, a_State.hp, a_State.m_dx, Np);
      a_State.sumVortpgp = 0;
      a_State.sumVortpgpdt = 0;
+     a_State.sumLambdapgp = 0;
      for(int i = 0; i < Np; i++){
 
-
+         a_State.lambdapgp_error.push_back(abs(lambdapgp.at(i) - 1));
+	 a_State.lambdapgp.push_back(lambdapgp.at(i));
          a_State.vortpgp_error.push_back( abs(vortpgp.at(i) - a_State.X.at(i).strength ) );
 	 a_State.vortpgpdt_error.push_back( 0 );
          a_State.vortpgpdt.push_back(0);
 	 a_State.vortpgp.push_back(vortpgp.at(i));
-
+         a_State.sumLambdapgp += pow(abs(lambdapgp.at(i) - 1 ), 2.0)*pow(a_State.hp,2.0);
 	 a_State.sumVortpgp += pow( vortpgp.at(i) - a_State.X.at(i).strength, 2.0)*pow(a_State.hp, 2.0);
-
      }
 
          a_State.sumVortpgp = pow(a_State.sumVortpgp, 0.5);
+	 a_State.sumLambdapgp = pow(a_State.sumLambdapgp, 0.5);
 
 
 }
@@ -184,7 +200,7 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      particle p;
      particle lam;
      vector<particle> Y, vel;
-     vector<double> u,v, vortpgp;
+     vector<double> u,v, vortpgp, lambda_pgp;
      vector<particle> Pg;
      vector<array<double, DIM>> corr;
      vector<particle> lambda_p;
@@ -278,7 +294,7 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
        wg += *psi.data(r)*pow(a_State.m_dx, 2.0);
 
-       lamb_g(r) = (*psi.data(r))*(*lambda_g.data(r));
+       //lamb_g(r) = (*psi.data(r))*(*lambda_g.data(r));
        lambda_error(r) += abs(abs(*lambda_g.data(r) -1)*(*psi.data(r)));
 
      }
@@ -301,8 +317,33 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
       h4.writePatch(a_State.m_dx,psi, "vortg%i.hdf5", t_pt/step);
       h4.writePatch(a_State.m_dx, lambda_error, "LambdaVort_error%i.hdf5", t_pt/step);
      #endif
+
+      string Vortfile = "Vort_" + to_string(t_pt/step) + ".txt";
+      ofstream f3(Vortfile);
+
+
+      if( f3.is_open() ) {
+
+         //format in scientific notation
+         f3.setf(std::ios::scientific, std::ios::floatfield);
+         f3.precision(8);
+
+
+         for( auto it = Bg.begin(); it != Bg.end(); it++){
+             r = *it;
+
+
+             f3 << *psi.data(r) << endl;
+
+
+         }
+
+
+      }
+
     }
-  
+
+       
      hockney.convolve(psi);
 
      //Determine velocity on the grid
@@ -390,13 +431,15 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
      interpol.W44p( Vg, v, Y, a_State.hp, a_State.m_dx, Np);
      interpol.W44p( vort, vortpgp, a_State.X, a_State.hp, a_State.m_dx, Np);
-
+     interpol.W44p( lambda_g, lambda_pgp, a_State.X, a_State.hp, a_State.m_dx, Np);
      }
 
      a_State.sumVortpgp = 0;
      a_State.vortpgp_error.clear();
      a_State.vortpgp = vortpgp;
-
+     a_State.lambdapgp_error.clear();
+     a_State.lambdapgp = lambda_pgp; 
+     a_State.sumLambdapgp = 0;
      if( Np > a_State.vortpgpdt_error.size() ){
          
         a_State.vortpgpdt.clear();
@@ -407,8 +450,9 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
 
          a_State.vortpgp_error.push_back( abs(vortpgp.at(i) - a_State.X.at(i).strength ) );
+	 a_State.lambdapgp_error.push_back( abs(lambda_pgp.at(i) - 1 ) );
          a_State.sumVortpgp += pow( vortpgp.at(i) - a_State.X.at(i).strength, 2.0)*pow(a_State.hp, 2.0);
-
+         a_State.sumLambdapgp += a_State.X.at(i).strength*pow(abs(lambda_pgp.at(i) - 1 ), 2.0)*pow(a_State.hp,2.0);
 	 if( Np > a_State.vortpgpdt.size()){
   
              a_State.vortpgpdt_error.push_back( a_State.vortpgp_error.at(i)*a_dt);
@@ -428,7 +472,7 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
      a_State.sumVortpgp = pow(a_State.sumVortpgp, 0.5);
      a_State.sumVortpgpdt = a_State.sumVortpgpdt + a_dt*a_State.sumVortpgp;
-
+     a_State.sumLambdapgp = pow( a_State.sumLambdapgp, 0.5);
 
      //generate updated info for k
      for( int i = 0;  i < Np; i++){
@@ -476,7 +520,7 @@ void State::remap(){
 
       strength = *strength_remap.data(r);
   
-      if( abs(strength) > pow(10, -7.0)){
+      if( abs(strength) > pow(10, -9.0)){
 	      
         p.x[0] = r[0]*hp-c; p.x[1] = r[1]*hp-c;
 	p.strength = strength;

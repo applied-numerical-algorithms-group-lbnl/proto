@@ -40,8 +40,8 @@ int main(int argc, char* argv[])
   double z,z1,z2, dudx, dvdx, dvdy, dudy;
   double c = 0.75;
   double sumU = 0, sumVort = 0, sumVortm = 0, sumUg = 0;
-  double tstop = 15;
-  double maxStep;
+  double tstop = 15; //15
+  double maxStep,L1_eigen, L2_eigen;
   double R = 0.1125;
   double offset = 0.15;
   double h,hp,h_second,hp_second,x, y, x1,x2, ux, uy, ux0, uy0;
@@ -52,16 +52,16 @@ int main(int argc, char* argv[])
   vector<int> num_p;
   vector<double>  initial_radi;
   vector<double> v_theta,alpha, v_theta0;
-  vector<array<double,DIM+7> > particles;
+  vector<array<double,DIM+12> > particles;
   vector<array<double, DIM+2>> corr;
   vector<array<double, DIM+9>> angle;
   vector<array<double, DIM>> corr2;
   vector<particle> Yp;
-  vector<double> u,v, angleQ, eigenR, u2,v2;
-  vector<deform> Q, R2, vecFerror;
-  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort,errorVortm, errorpsi;
+  vector<double> u,v, angleQ, eigenR, u2,v2, angleQ2, eigenR2,detF;
+  vector<deform> Q, R2, vecFerror,Q2, R22, vecFerror2;
+  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort,errorVortm, errorpsi, errorLambda;
   vector<double> errorVortdt, errorVortpgp, errorDiffVg, errorDiffUg, errorDiffVort, errorDiffVortdt;  
-  vector<double> errorpsi2,errorVg2, errorDiffV, errorDiffVdt, errorDiffV1, errorDiffV2;
+  vector<double> errorpsi2,errorVg2, errorDiffV, errorDiffVdt, errorDiffV1, errorDiffV2,errorL2eigen, errorL1eigen;
   Point r;
   particle p, py;
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   BoxData<double> Vg(Bg);
   BoxData<double> Ui(Bg);
   BoxData<double> Vi(Bg);
-  BoxData<double> vort(Bg);
+  BoxData<double> vort(Bg); BoxData<double> Lambda(Bg); BoxData<double> Lambda2(Bg2);
   BoxData<double> Vortg(Bg); BoxData<double> Vortg2(Bg2);
   BoxData<double> psi(Bg);
   Box Bp(Point::Zeros(), Point({4*(nx-1), 4*(nx-1)}));
@@ -92,7 +92,8 @@ int main(int argc, char* argv[])
   const char *const varnames[] = {"x_1", "x_2", 
                                   "vorticity", 
 				  "absvorterror", "relvorterror", 
-				  "vortpgp", "vortpgp_error", "vortpgpdt", "vortpgpdt_error"}; 
+				  "vortpgp", "vortpgp_error", "vortpgpdt", "vortpgpdt_error", "angleQ", "eigenR",
+				   "detF", "lambdapgp", "lambdapgp_error"}; 
 
   h = L/(nx-1);
   hp = L/( 4*(nx-1) );
@@ -104,7 +105,7 @@ int main(int argc, char* argv[])
   Ug.setToZero(); Vg.setToZero();
   Vortg.setToZero(); vort.setToZero();
   psi.setToZero(); Vortg2.setToZero();
-
+  Lambda.setToZero();
 
   //Initialize Position and Vorticity
   for( auto it = Bp.begin(); it != Bp.end(); it++){
@@ -210,15 +211,15 @@ int main(int argc, char* argv[])
   Vortg.setToZero();
 
   {
-  state.getVelocity(Vortg,errorVg, errorpsi,u,v,Np,0,state);
-  state_second.getVelocity(Vortg2,errorVg2, errorpsi2,u2,v2,Np2,0,state_second);
+  state.getVelocity(Lambda,Vortg,errorVg, errorpsi,u,v,Np,0,state);
+  state_second.getVelocity(Lambda2,Vortg2,errorVg2, errorpsi2,u2,v2,Np2,0,state_second);
 
   }
 
 
 
   t_remap.push_back(0.0);
-  array<double, DIM+7> temp;
+  array<double, DIM+12> temp;
 
 
   //Main time loop
@@ -227,15 +228,15 @@ int main(int argc, char* argv[])
 
 
 	 {
-         //QR of deformation
-//         f.QR(Q,R2, angleQ, eigenR);
 
+         //QR of deformation
+         f.QR(Q,R2, angleQ, eigenR,detF);
+        // f_second.QR(Q2,R22, angleQ2, eigenR2);
 	 }
          vecFerror.clear(); angleError.clear(); particles.clear(); corr.clear();
          angle.clear(); corr2.clear();
-
-
-
+         L1_eigen = 0; L2_eigen = 0;
+        
 	 //Calculate quantities to be written to particle reader
 	 for( int i = 0; i <  state.X.size(); i++){
 
@@ -250,29 +251,37 @@ int main(int argc, char* argv[])
 	    temp[6] = state.vortpgp_error.at(i);
 	    temp[7] = state.vortpgpdt.at(i);
 	    temp[8] = state.vortpgpdt_error.at(i);
-
+            temp[9] = angleQ.at(i);
+	    temp[10] = eigenR.at(i);
+	    temp[11] = detF.at(i);
+	    temp[12] = state.lambdapgp.at(i);
+            temp[13] = state.lambdapgp_error.at(i);
 	    particles.push_back(temp);
-
+            L1_eigen += state.X.at(i).strength/Amp*abs(eigenR.at(i) - 1)*hp;
+	    L2_eigen += pow( state.X.at(i).strength/Amp*abs(eigenR.at(i) - 1)*hp, 2.0  );
  
 
            }
 
-
+	   L2_eigen = pow(L2_eigen, 0.5);
+           
          {
 
-         PWrite<DIM+7>(particles,varnames,testname,k);
+         PWrite<DIM+12>(particles,varnames,testname,k);
          }  
 
-/*      if( (k+1)%80 == 0){
+        if(  L1_eigen > 0.1){     //(k+1)%10 == 0){
           state.remap();
-	  state_second.remap();
+//	  state_second.remap();
           num_p.push_back(state.X.size() );
           t_remap.push_back(time);
+	  f.remap(state);
         }
-*/
-      state.rate(state_second, time/dt);
 
+//CURRENTLY NOT CALCULATING RATE
+//         state.rate(state_second, time/dt);
 	 {
+
 	  errorVortpgp.push_back(state.sumVortpgp);
 	  errorVortdt.push_back(state.sumVortpgpdt);
           errorDiffVort.push_back(state.diffVort);
@@ -283,6 +292,9 @@ int main(int argc, char* argv[])
           errorDiffVortdt.push_back(state.diffVortdt);
 	  errorDiffV1.push_back(state.diffV1);
 	  errorDiffV2.push_back(state.diffV2);
+	  errorLambda.push_back(state.sumLambdapgp);
+	  errorL2eigen.push_back(L2_eigen);
+	  errorL1eigen.push_back(L1_eigen);
          }
 
           t.push_back(time);
@@ -295,30 +307,28 @@ int main(int argc, char* argv[])
           {
           PR_TIMERS("main::RK4");
 
-       for(int i=0; i < 2;i++){
-	     time2 += dt/2;
-             rk4.advance(time2,dt2,state_second);
-	  }
+	  //NOT CALCULATING 2ND RATE
+          //for(int i=0; i < 2;i++){
+	  //   time2 += dt/2;
+          //   rk4.advance(time2,dt2,state_second);
+	  //   rk4_f.advance(time2,dt2,f_second); 
+	  //}
 
+	  
           rk4.advance(time,dt,state);
-
 	  }
           
 
 	  {
           PR_TIMERS("main::update_f");
-//	  f_second.update_X(state_second);
-//	  f.update_X(state);
-	  }
+	  //f_second.update_X(state_second);
+	  f.update_X(state);
 
-	  {
-	   PR_TIMERS("main::RK4_f");
-//	   rk4_f.advance(time,dt,f_second);
-//	   rk4_f.advance(time, dt, f);
 	  }
 
 
-	  
+
+          rk4_f.advance(time,dt,f);
 
           
     }
@@ -346,7 +356,9 @@ int main(int argc, char* argv[])
   string  eDiffVortdt  = "errorDiffVortdt.curve";
   string  eDiffV1      = "errorDiffV1.curve";
   string  eDiffV2      = "errorDiffV2.curve";
-
+  string  lambdaerror      = "lambdaerror.curve";
+  string  L2EigenError = "L2EigenError";
+  string  L1EigenError = "L1EigenError";
   ofstream f12(eDiffVort);
   ofstream f13(eDiffVg);
   ofstream f14(eDiffUg);
@@ -355,6 +367,9 @@ int main(int argc, char* argv[])
   ofstream f17(eDiffVortdt);
   ofstream f18(eDiffV1);
   ofstream f19(eDiffV2);
+  ofstream f20(lambdaerror);
+  ofstream f21(L2EigenError);
+  ofstream f22(L1EigenError);
 
   q = "# TIME";
   e = "# Vorticitypgp";
@@ -415,6 +430,12 @@ int main(int argc, char* argv[])
 
 
       f9 << e << endl;
+
+      for(unsigned int i = 0; i < t_remap.size(); i++){
+
+          f9 << t_remap.at(i) << " " << num_p.at(i)  <<  endl;
+      }
+
    }
 
   
@@ -605,9 +626,72 @@ int main(int argc, char* argv[])
 
    }
 
+   e = "# LambdaError";
+
+   if( f20.is_open() ) {
+
+      //format in scientific notation
+       f20.setf(std::ios::scientific, std::ios::floatfield);
+       f20.precision(4);
 
 
+      f20 << q << endl;
 
+
+      f20 << e << endl;
+
+
+      for(unsigned int i = 0; i < t.size(); i++){
+
+          f20 << t.at(i) << " " << errorLambda.at(i)  <<  endl;
+      }
+
+   }
+
+
+     e = "# L2EigenError";
+
+   if( f21.is_open() ) {
+
+      //format in scientific notation
+       f21.setf(std::ios::scientific, std::ios::floatfield);
+       f21.precision(4);
+
+
+      f21 << q << endl;
+
+
+      f21 << e << endl;
+
+
+      for(unsigned int i = 0; i < t.size(); i++){
+
+          f21 << t.at(i) << " " << errorL2eigen.at(i)  <<  endl;
+      }
+
+   }
+
+    e = "# L1EigenError";
+
+   if( f22.is_open() ) {
+
+      //format in scientific notation
+       f22.setf(std::ios::scientific, std::ios::floatfield);
+       f22.precision(4);
+
+
+      f22 << q << endl;
+
+
+      f22 << e << endl;
+
+
+      for(unsigned int i = 0; i < t.size(); i++){
+
+          f22 << t.at(i) << " " << errorL1eigen.at(i)  <<  endl;
+      }
+
+   }
 
 
 
