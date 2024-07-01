@@ -161,9 +161,9 @@ int main(int argc, char *argv[])
       if (iter % write_cadence == 0)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
-          // Check conservation. Non-MPI for now.
-          
+          // Check conservation.
 
+          Array<double,8> consRadial = rk4.getCons<8>();
           Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
           {
             for (int comp = 0; comp < 8; comp++)
@@ -178,24 +178,22 @@ int main(int argc, char *argv[])
                   if (comp == 0)
                     {
                       cout << "component:" << comp <<
-                        ", (conservation ratio) - 1 = " << consSum[comp] / mass - 1.0 << endl;
+                        ", (scaled conserved mass) - 1 = " <<
+                        (consSum[comp] - consRadial[comp]) / mass - 1.0  <<
+                        endl;
                     }
                   else if (comp == 4)
                     {
                       cout << "component:" << comp <<
-                        ", (conservation ratio) - 1 = " << consSum[comp] / energy - 1.0 << endl;
-                    }
-                  else if (comp > 4)
-                    {
-                      double norm = sqrt(energy/mass)*mass;
-                      cout << "component:" << comp <<
-                        ", scaled conservation sum = " << consSum[comp] / norm  << endl;
+                        ", (scaled conserved energy) - 1 = " <<
+                        (consSum[comp] - consRadial[comp]) / energy - 1.0 <<
+                        endl;
                     }
                   else
                     {
                       double norm = sqrt(energy/mass)*mass;
                       cout << "component:" << comp <<
-                        ", scaled conservation sum = " << consSum[comp] / norm << endl;
+                        ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm <<  endl;
                     }
                 }
             }

@@ -109,7 +109,14 @@ namespace Proto {
                                  int a_block,                 
                                  unsigned int a_order = 4);
 #endif
-    
+    template<typename T, unsigned int C, MemType MEM>
+    static void radialCons(
+                           BoxData<T,C,MEM>& a_flux,
+                           Array<Reduction<T,Operation::Sum,MEM>, C>& a_rxn,
+                           T a_dxi0,
+                           Box a_validBox,
+                           T a_weight
+                           );  
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
      static void consToSphInterpEuler(
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,

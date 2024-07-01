@@ -247,6 +247,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
                   const double a_dy,
                   const double a_dz) const
 {
+  PR_TIMERS("limiters_4O");
   static Stencil<double> m_copy;
   m_copy = 1.0*Shift(Point::Zeros());
   //Limiter Starts here
@@ -258,6 +259,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
   int limiter_apply = 1;
   int slope_flattening_apply = 1;
   if (limiter_apply == 1) {
+    PR_TIMERS("limiter_apply==1");
     State W_ave_ahead = alias(a_W_ave,Point::Basis(a_d)*(-1));
     State W_ave_ahead2 = alias(a_W_ave,Point::Basis(a_d)*(-2));
     State W_ave_behind = alias(a_W_ave,Point::Basis(a_d)*(1));
@@ -281,6 +283,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
   //forallInPlace_p(compare_calc, W_diff, W_ave_R_limited, a_W_ave_R);
   // Slope flattening starts here
   if (slope_flattening_apply == 1) {
+    PR_TIMERS("flattening");
     Scalar eta;
     Scalar eta_old;
     for (int d = 0; d < DIM; d++)

@@ -226,6 +226,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               MBLevelBoxData<T,1,MEM>& a_dVolrLev,
               MBInterpOp& a_iop,
               MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
+              Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,
               T a_time,
               T a_dt,
               T a_weight,
@@ -234,7 +235,6 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // Transform JU -> USph.
   auto layout = a_UStage.layout();
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
- 
  
   int init_condition_type = ParseInputs::get_init_condition_type();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
@@ -265,7 +265,9 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     auto &rhs_i = a_rhsTotal[dit];
     rhs_i.setVal(0.0);
     auto &USph_i =a_UStage[dit];
+    
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
+    auto dx = eulerOp[dit].dx();
     // {
     //   HDF5Handler h5;
     //   MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
@@ -281,6 +283,8 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)
       {
+        unsigned int block = layout.block(dit);
+        Box blockBox = layout.getBlock(block).domain().box();
         auto mbdata = a_blockreg.bounds(dit);
         Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
         fluxes[0].define(rhs_i.box().extrude(0));
@@ -293,6 +297,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         T one = 1.0;
         // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
         a_blockreg.increment(fluxes, dit, a_dt);
+        CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
   }
