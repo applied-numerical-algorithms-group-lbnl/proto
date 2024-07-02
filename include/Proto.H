@@ -20,6 +20,7 @@
 #include "base/Proto_Box.H"
 #include "base/Proto_CoordPermutation.H"
 #include "base/Proto_PowerItoI.H"
+#include "base/Proto_Taylor.H"
 #include "base/Proto_BoxData.H"
 #ifdef PR_HDF5
 #include "base/Proto_HDF5.H"
