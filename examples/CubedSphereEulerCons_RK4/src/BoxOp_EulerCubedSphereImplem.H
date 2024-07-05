@@ -528,12 +528,14 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
            T& a_dt_next,
            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
            MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
+           Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,
            T a_time, 
            T a_dt,
            T a_weight,
            int a_kstage)
 {
-  auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
+  auto layout = a_UStage.layout();
+  auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   T dt_min = 1.0e20;
   T wgtxdt = a_weight*a_dt;
@@ -551,8 +553,13 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     fluxes[2].setToZero();
     
     eulerOp[dit](rhs_i, fluxes, dt_next_local, USph_i, a_dt);
+    auto dx = eulerOp[dit].dx();
+    unsigned int block = layout.block(dit);
+    Box blockBox = layout.getBlock(block).domain().box();
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
+    CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,wgtxdt);
+    // radialCons 
     if (dt_next_local < dt_min && a_kstage == 0)
       {
         //cout << "a_dt_next = " << a_dt_next << ", dt_min = " << dt_min <<  endl;

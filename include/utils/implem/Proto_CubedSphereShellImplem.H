@@ -507,6 +507,47 @@ CubedSphereShell::consToSemiSphVecNG(
 }
 template<typename T, unsigned int C, MemType MEM>
 void CubedSphereShell::
+radialCons(
+           BoxData<T,C,MEM>& a_flux,
+           Array<Reduction<T,Operation::Sum,MEM>, C>& a_rxn,
+           T a_dxi0,
+           Box a_validBox,
+           T a_weight
+           )
+{
+  Box lowBox =
+    a_validBox.face(0,Side::Lo)&a_flux.box();
+  if (!lowBox.empty())
+    {
+      BoxData<T,C,MEM> dfluxInner(lowBox);
+      a_flux.copyTo(dfluxInner);
+      dfluxInner *= a_weight/a_dxi0;
+      
+      for (int c = 0; c < C; c++)
+        {
+          auto dfdrSlice = slice(dfluxInner,c);
+          dfdrSlice.reduce(a_rxn[c]);
+        }
+    }
+  Box highBox =
+    a_validBox.face(0,Side::Hi)&(a_flux.box().shift(Point::Basis(0,-1)));
+  if (!highBox.empty())
+    {
+      BoxData<T,C,MEM> dfluxInner(highBox);
+      BoxData<T,C,MEM> fluxShift = alias(a_flux,Point::Basis(0,-1));
+      fluxShift.copyTo(dfluxInner);
+      
+      dfluxInner *= -a_weight/a_dxi0;
+  
+      for (int c = 0; c < C; c++)
+        {
+          auto dfdrSlice = slice(dfluxInner,c);
+          dfdrSlice.reduce(a_rxn[c]);
+        }
+    }
+}
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::
 consToSemiSphNGEuler(                    
                      BoxData<T,C+2,MEM>& a_USemiSph,
                      const BoxData<T,C,MEM>& a_JU,
