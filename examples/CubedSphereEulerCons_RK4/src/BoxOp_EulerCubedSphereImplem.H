@@ -43,8 +43,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   BoxData<T,1,MEM> deta0(bx);
   BoxData<T,DIM,MEM> ntrow0(bx);
   BoxData<T,DIM,MEM,DIM> A_matrix0(bx);
-  BoxData<T,1,MEM> dt_min(this->box());
-  dt_min.setVal(1.0e20);
+  BoxData<T,1,MEM>speedMax(this->box());
+  speedMax.setVal(0.0);
   for (int dir = 0; dir < DIM; dir++)
     {
       PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
@@ -148,10 +148,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
-
-      // Compute dt_min.
+      
       forallInPlace([ ] PROTO_LAMBDA
-        ( Var<T,1,MEM>& a_dt_min,
+        ( Var<T,1,MEM>& a_speedmax,
           const Var<T,NUMCOMPS,MEM>& a_W,
           const Var<T,DIM,MEM,DIM>& a_amat,
           const Var<T,DIM,MEM>& a_adjA,
@@ -194,6 +193,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           T half = .5;
           T one = 1.0;
           T v2 = 0.;
+          T v1 = 0.;
           T b2 = 0.;
           for (int dir0 = 0; dir0 < DIM; dir0++)
           {
@@ -203,6 +203,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
               bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
             }
             v2 += velCart[dir0]*velCart[dir0];
+            v1 += abs(velCart[dir0]);
             b2 += bCart[dir0]*bCart[dir0];
           }
           T rho = a_W(iRHO);
@@ -210,11 +211,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           T p = a_W(iP);
           if (p < 0.0) p = 0.0;
           T af = sqrt(a_gamma*p/rho + b2/4.0/M_PI/rho);  
-          a_dt_min(0) = min(a_dt_min(0),dx_d/(af + sqrt(v2)));
-        },dt_min,W,A_matrix0,ntrow0,adjDrDir,deta0,dVolr,Dr,dxiPerp,dxiR,dir,m_gamma);
-      
+          a_speedmax(0) += (af + sqrt(v2))/dx_d;
+        },speedMax,W,A_matrix0,ntrow0,adjDrDir,deta0,dVolr,Dr,dxiPerp,dxiR,dir,m_gamma);
     }
-  a_dt_next = dt_min.min();
+  a_dt_next = 1.0/speedMax.absMax();
   if (a_block == BLOCKTEST)
     {
       HDF5Handler h5;
@@ -539,7 +539,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   T dt_min = 1.0e20;
   T wgtxdt = a_weight*a_dt;
-  T dt_next_local;
+  T dt_next_local = 1.e20;
   for (auto dit : a_UStage.layout())
   {
     auto &rhs_i = a_rhs[dit];
