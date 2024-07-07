@@ -51,10 +51,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       // State WFace = Stencil<T>::CellToFace(dir)(W);
       // State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);      
 
-      State WFace_L = Stencil<T>::CellToFace(dir)(W);
+      State WFace_L = Stencil<T>::CellToFace(dir,Side::Lo,5)(W);
       State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);    
 
-      State WFace_R = Stencil<T>::CellToFace(dir)(W);
+      State WFace_R = ((1.0*Shift(Point::Basis(dir,-1)))*Stencil<T>::CellToFace(dir,Side::Hi,5))(W);
       State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
 
       //Required mapping variables.
