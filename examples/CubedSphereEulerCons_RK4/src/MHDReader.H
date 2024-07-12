@@ -85,6 +85,10 @@ public:
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
 			// Carrington rotation time (27.2753 days) is from Earth's prespective.
 			double angle_to_rotate = fmod(360 * a_time / carr_rot_time, 360);
+
+			// Can use this if no rotation is needed
+			angle_to_rotate = 0;
+
 			int cells_to_rotate = angle_to_rotate / (360 / domainSizez);
 			double needed_fraction = angle_to_rotate / (360 / domainSizez) - cells_to_rotate;
 			cells_to_rotate = cells_to_rotate % domainSizez;
