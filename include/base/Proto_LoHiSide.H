@@ -122,7 +122,8 @@ namespace Proto
 	struct Face
 	{
 		public:
-		Face(int a_dir, Side::LoHiSide a_side) : dir(a_dir), side(a_side) {}
+		Face(const Face& a_face) : dir(a_face.dir), side(a_face.side) {}
+        Face(int a_dir, Side::LoHiSide a_side) : dir(a_dir), side(a_side) {}
         Face operator-() const
 		{
 			return Face(dir, (side == Side::Lo) ? Side::Hi : Side::Lo);
