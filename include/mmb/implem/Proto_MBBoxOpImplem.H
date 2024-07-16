@@ -19,6 +19,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::MBBoxOp(
     init(); //user initialization
 }
 
+#if 0 //CURRENTLY UNUSED
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
@@ -35,6 +36,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     }
     (*this)(a_output, fluxes, a_state, a_aux, a_scale);
 }
+#endif
 
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
@@ -52,6 +54,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     (*this)(a_output, fluxes, a_state, a_scale);
 }
 
+#if 0
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
@@ -65,6 +68,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     //TODO: this can be modified later if the base class operation is not sufficient
     BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_aux, a_scale);
 }
+#endif
 
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
@@ -78,7 +82,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     //TODO: this can be modified later if the base class operation is not sufficient
     BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_scale);
 }
-
+#if 0 // CURRENTLY UNUSED
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 typename MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::StateData
@@ -92,6 +96,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     this->operator()(out, a_state, a_aux, a_scale);
     return out; 
 }
+#endif
 
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
@@ -105,6 +110,32 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     this->operator()(out, a_state, a_scale);
     return out; 
 }
+
+template <typename T, template<MemType> typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+void MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::applyBC(
+        Array<StateData, DIM>&  a_fluxes,
+        const StateData&        a_state) const
+{
+    //TODO: Periodicity is assumed to never come up in MMB at the time of writing
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        //TODO: to implement periodic, check if periodic along dd. If so, skip
+        Point lo = Point::Basis(dd,Side::Lo);
+        Point hi = Point::Basis(dd,Side::Hi);
+        if (this->layout().isDomainBoundary(this->index(), lo))
+        {
+            // apply high side
+            this->applyBC(a_fluxes, a_state, Face(dd,Side::Lo));
+        }
+        if (this->layout().isDomainBoundary(this->index(), hi)) 
+        {
+            // apply low side
+            this->applyBC(a_fluxes, a_state, Face(dd,Side::Hi));
+        }
+    }
+}
+
 #if 0
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>

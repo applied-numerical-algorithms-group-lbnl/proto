@@ -11,57 +11,38 @@ namespace Proto {
         T coef;
     };
 
-    /// Abstract Boundary Condition Interface 
-    template<class T, unsigned int C=1, MemType MEM=HOST, unsigned int D=1, unsigned int E=1>
     class BoundaryCondition {
         public:
-        typedef BoxData<T,C,MEM,D,E> StateData;
 
         /// Query Boundary Box
-        static inline Box Boundary(const LevelIndex& a_index, Face a_face);
+        static inline Box Boundary(Box a_domainBox, Face a_face);
         
         /// Compute Dirichlet Stencil
-        static inline BCStencil<T> DirichletStencil(T a_dx, Face a_face);
+        template<class T>
+        static inline BCStencil<T> DirichletStencil(T a_dx, Face a_face, int a_dir);
         
         /// Apply Constant Dirichlet BC to all values
+        template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
         static inline void Dirichlet(
-                BoxData<T,C,MEM,D,E>& a_flux,
-                const BoxData<T,C,MEM,D,E>& a_state,
-                Box a_domainBox,
+                Array<BoxData<T,C,MEM,D,E>,DIM>& a_fluxes,
+                const BoxData<T,C,MEM,D,E>&      a_state,
                 T a_value,
-                T a_dx,
-                Face a_face);
+                Face a_face,
+                Box a_domainBox,
+                Array<T,DIM> a_dx);
         
         /// Apply Variable Dirichlet BC
+        template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
         static inline void Dirichlet(
-                BoxData<T,C,MEM,D,E>& a_flux,
-                const BoxData<T,C,MEM,D,E>& a_state,
-                Box a_domainBox,
+                Array<BoxData<T,C,MEM,D,E>,DIM>& a_flux,
+                const BoxData<T,C,MEM,D,E>&      a_state,
                 const BoxData<T,C,MEM,D,E>& a_values,
-                T a_dx,
-                Face a_face);
+                Face a_face,
+                Box a_domainBox,
+                Array<T,DIM> a_dx);
 
-        /// Base Constructor
-        BoundaryCondition(DisjointBoxLayout a_layout, Face a_face)
-            : m_layout(a_layout), m_face(a_face) {}
-
-        /// Apply BC Interface
-        inline virtual void apply(
-                StateData& a_flux,
-                const StateData& a_state,
-                const LevelIndex& a_index,
-                Array<T,DIM> a_dx) const = 0;
-
-        /// Query Face
-        inline Face face() const { return m_face; }
-        
-        /// Query Layout
-        inline const DisjointBoxLayout& layout() { return m_layout; }
-        protected:
-        DisjointBoxLayout m_layout;
-        Face m_face;
     };
-
+#if 0
     template<class T, unsigned int C=1, MemType MEM=HOST, unsigned int D=1, unsigned int E=1>
     class BC_ConstDirichlet : public BoundaryCondition<T,C,MEM,D,E> {
         public: 
@@ -107,7 +88,7 @@ namespace Proto {
         BoxData<T,C,MEM,D,E>& m_values;
         const T m_dx;
     };
-
+    #endif
     #include "implem/Proto_BoundaryConditionImplem.H"
 } // end namespace Proto
 #endif //end include guard

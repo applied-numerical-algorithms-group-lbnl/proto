@@ -84,8 +84,6 @@ class BoxOp
     */
     inline void define(const Box& a_box, Array<T, DIM> a_dx);
 
-
-
     /// Initialize
     /**
         User defined function that is called inside of define.
@@ -261,7 +259,25 @@ class BoxOp
     inline virtual void diag(
         StateData&       a_diag,
         const StateData& a_state) const;
-    
+   
+    ///TODO: not implemented (see MMB version which has this implemented)
+#if 0
+    /// Apply All BCs relevant to a Box
+    /** Automates the logic for determining if the patch
+     *  is on a domain boundary and calls the user defined
+     *  applyBC function with the correct Face argument
+     */
+    inline void applyBC(
+        Array<StateData,DIM>& a_fluxes,
+        const StateData&      a_state) const;
+
+    /// Apply Specific BC (User Defined)
+    inline virtual void applyBC(
+            Array<StateData,DIM>& a_fluxes,
+            const StateData&      a_state,
+            Face                  a_face);
+
+#endif
     /// Set Diagonal Term Scaling
     /**
         Sets the value of d
@@ -304,8 +320,9 @@ class BoxOp
     /// Get Box
     inline const Box& box() const {return m_box; }
     
+    /// DEPRECATED
     /// Mapped Multiblock Utilities
-#ifdef PR_MMB
+#if 0
 
     /// Map Constructor
     /** a_x is node centered, a_J is cell averaged */
