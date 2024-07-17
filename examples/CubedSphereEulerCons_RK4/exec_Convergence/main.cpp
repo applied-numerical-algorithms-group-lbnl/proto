@@ -222,6 +222,8 @@ int main(int argc, char *argv[])
       
       domainSize *= 2;
       thickness *= 2;
+      boxSize_rad *= 2;
+      boxSize_nonrad *= 2;
       if (convTestType == 2){
         dt /= 2;
         max_iter *= 2;
@@ -253,6 +255,7 @@ int main(int argc, char *argv[])
         std::cout << "order of accuracy for var " << varr << " = " << rate << std::endl;
       }
     }
+    
   }
 //#endif // end debug comment.
   PR_TIMER_REPORT();

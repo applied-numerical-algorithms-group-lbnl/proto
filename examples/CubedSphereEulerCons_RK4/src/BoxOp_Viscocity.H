@@ -47,7 +47,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearVisc(
        + 1.0*Shift(-Point::Basis(dir));
       Stencil<double> D1 = 1.0*Shift(Point::Zeros()) + (-1.0)*Shift(-Point::Basis(dir));
       Stencil<double> D5 = (-1.0) * D1 * D2  * D2;
-      State physFlux = D5(a_USph, 1.0/64);
+      State physFlux = D5(a_USph, 1.0/128);
 
       //Required mapping variables.
       Box bxface = physFlux.box();

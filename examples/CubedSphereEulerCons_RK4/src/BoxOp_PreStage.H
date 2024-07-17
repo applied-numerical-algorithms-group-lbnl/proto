@@ -281,24 +281,24 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     // Compute viscous operators here, and increment a_rhsTotal.
     int linear_visc = ParseInputs::get_linear_viscosity();
     int divBcleaning = ParseInputs::get_divergence_cleaning();
-    // if (linear_visc == 1 && a_kstage == 0)
-    //   {
-    //     unsigned int block = layout.block(dit);
-    //     Box blockBox = layout.getBlock(block).domain().box();
-    //     auto mbdata = a_blockreg.bounds(dit);
-    //     Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
-    //     fluxes[0].define(rhs_i.box().extrude(0));
-    //     fluxes[0].setToZero();
-    //     fluxes[1].define(rhs_i.box().extrude(1));
-    //     fluxes[1].setToZero();
-    //     fluxes[2].define(rhs_i.box().extrude(2));
-    //     fluxes[2].setToZero();
-    //     eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
-    //     T one = 1.0;
-    //     // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
-    //     a_blockreg.increment(fluxes, dit, a_dt);
-    //     CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
-    //   }
+    if (linear_visc == 1 && a_kstage == 0)
+      {
+        unsigned int block = layout.block(dit);
+        Box blockBox = layout.getBlock(block).domain().box();
+        auto mbdata = a_blockreg.bounds(dit);
+        Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
+        fluxes[0].define(rhs_i.box().extrude(0));
+        fluxes[0].setToZero();
+        fluxes[1].define(rhs_i.box().extrude(1));
+        fluxes[1].setToZero();
+        fluxes[2].define(rhs_i.box().extrude(2));
+        fluxes[2].setToZero();
+        eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
+        T one = 1.0;
+        // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+        a_blockreg.increment(fluxes, dit, a_dt);
+        CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
+      }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
   }
 }
