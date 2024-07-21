@@ -412,7 +412,7 @@ public:
                 MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg);
   
   /// Apply operator. Usede for convergence testing.
-  static inline void
+  static inline Array<T,NUMCOMPS>
   applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
           MBInterpOp& a_iop,
           MBLevelBoxData<T,1,MEM>& a_dVolrLev);

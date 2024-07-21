@@ -27,6 +27,8 @@ private:
     int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
     int linear_viscosity; // 0: No linear viscosity, 1: Linear viscosity
     int boundary_reflux; // 0: don't reflux at block boundaries, 1: reflux
+    int radial_refinement; // 0: refine in all directions by 2 for convergence studies;
+                           // 1 refine only in radial direction.
     string BC_file;
     string Probe_trajectory_file;
     string Probe_data_file;
@@ -64,6 +66,7 @@ public:
     static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
     static int get_linear_viscosity() {return getInstance().linear_viscosity;}
     static int get_boundary_reflux() {return getInstance().boundary_reflux;}
+    static int get_radial_refinement() {return getInstance().radial_refinement;}
     static string get_BC_file() {return getInstance().BC_file;}
     static string get_Probe_trajectory_file() {return getInstance().Probe_trajectory_file;}
     static string get_Probe_data_file() {return getInstance().Probe_data_file;}
@@ -89,6 +92,7 @@ public:
         args.add("divergence_cleaning", divergence_cleaning);
         args.add("linear_viscosity", linear_viscosity);
         args.add("boundary_reflux", boundary_reflux);
+        args.add("radial_refinement", radial_refinement);
         args.add("BC_file", BC_file);
         args.add("Probe_trajectory_file", Probe_trajectory_file);
         args.add("Probe_data_file", Probe_data_file);
@@ -116,6 +120,7 @@ public:
             cout << "divergence_cleaning: " << divergence_cleaning << endl;
             cout << "linear_viscosity: " << linear_viscosity << endl;
             cout << "boundary_reflux: " << boundary_reflux << endl;
+            cout << "radial_refinement: " << radial_refinement << endl;
             cout << "BC_file: " << BC_file << endl;
             cout << "Probe_trajectory_file: " << Probe_trajectory_file << endl;
             cout << "Probe_data_file: " << Probe_data_file << endl;

@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
   int write_cadence = ParseInputs::get_write_cadence();
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
+  int radial_refinement = ParseInputs::get_radial_refinement();
   string BC_file = ParseInputs::get_BC_file();
   BC_global.file_to_BoxData_vec(BC_file);
   
@@ -146,9 +147,9 @@ int main(int argc, char *argv[])
     if (lev == 0)
       {
         dt = 1.0/dtinv.fetch();
-        if (procID() == 0) cout << "max possible dt = " << dt;
+        if (procID() == 0) cout << "dt_{CFL=1} = " << dt;
         dt *= ParseInputs::get_CFL();
-        if (procID() == 0) cout << " ,CFl dt = " << dt << endl;
+        if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
       }
     if (convTestType == 3) max_iter = 1;
     for (int iter = 1; iter <= max_iter; iter++)
@@ -173,46 +174,75 @@ int main(int argc, char *argv[])
           else
             {
              PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
-             OP::applyOp(JU,iop,dVolrLev);
+             Array<double,8> opConsSums = OP::applyOp(JU,iop,dVolrLev);
+             if (procID() == 0)
+               {
+                 for (int comp = 0; comp < 8 ; comp++)
+                   {
+                     //opConsSums[comp] *= dt;
+                     if (comp == 0)
+                       {
+                         cout << "component:" << comp <<
+                           ", scaled conserved mass = " <<
+                           opConsSums[comp]/ mass  <<
+                           endl;
+                       }
+                     else if (comp == 4)
+                       {
+                         cout << "component:" << comp <<
+                           ", scaled conserved energy = " <<
+                           opConsSums[comp] / energy <<
+                           endl;
+                       }
+                     else
+                       {
+                         double norm = sqrt(energy/mass)*mass;
+                         cout << "component:" << comp <<
+                           ", scaled conserved quantity = " << opConsSums[comp] / norm <<  endl;
+                       }
+                   }
+               }
             }
       if (iter % write_cadence == 0)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
           // Check conservation.
-
-          Array<double,8> consRadial = rk4.getCons<8>();
-          Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
-          {
-            for (int comp = 0; comp < 8; comp++)
-              {
-                consSum[comp] += JU.sum(comp);           
-              }
-          }
-          if (procID() == 0)
+          if (convTestType != 3)
             {
-              double one = 1.0;
-              if (convTestType == 3) one = 0.;
-              for (int comp = 0; comp < 8; comp++)
+              Array<double,8> consRadial = rk4.getCons<8>();
+              Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
+              {
+                for (int comp = 0; comp < 8; comp++)
+                  {
+                    consSum[comp] += JU.sum(comp);           
+                  }
+              }
+              if (procID() == 0)
                 {
-                  if (comp == 0)
+                  double one = 1.0;
+                  if (convTestType == 3) one = 0.;
+                  for (int comp = 0; comp < 8; comp++)
                     {
-                      cout << "component:" << comp <<
-                        ", (scaled conserved mass) - 1 = " <<
-                        (consSum[comp] - consRadial[comp])/ mass - one  <<
-                        endl;
-                    }
-                  else if (comp == 4)
-                    {
-                      cout << "component:" << comp <<
-                        ", (scaled conserved energy) - 1 = " <<
-                        (consSum[comp] - consRadial[comp]) / energy - one <<
-                        endl;
-                    }
-                  else
-                    {
-                      double norm = sqrt(energy/mass)*mass;
-                      cout << "component:" << comp <<
-                        ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm <<  endl;
+                      if (comp == 0)
+                        {
+                          cout << "component:" << comp <<
+                            ", (scaled conserved mass) - 1 = " <<
+                            (consSum[comp] - consRadial[comp])/ mass - one  <<
+                            endl;
+                        }
+                      else if (comp == 4)
+                        {
+                          cout << "component:" << comp <<
+                            ", (scaled conserved energy) - 1 = " <<
+                            (consSum[comp] - consRadial[comp]) / energy - one <<
+                            endl;
+                        }
+                      else
+                        {
+                          double norm = sqrt(energy/mass)*mass;
+                          cout << "component:" << comp <<
+                            ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm <<  endl;
+                        }
                     }
                 }
             }
@@ -238,19 +268,23 @@ int main(int argc, char *argv[])
         JU[dit].copyTo(U_conv_test[lev][dit]);
       }
       h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
-      // Point refRatio = 2*Point::Ones();
-      Point refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
+      int maxRadSize = 64;
+      Point refRatio = 2*Point::Ones();
+      if (radial_refinement)
+        {
+          refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
+          maxRadSize = 1024;
+        }
       domainSize *= refRatio[1];
+      boxSize_nonrad *= refRatio[1];
       thickness *= 2;
       boxSize_rad *= 2;
       time = 0.;
-      boxSize_nonrad *= refRatio[1];
-      
-      domain = domain.refine(refRatio);
-      if (boxSize_nonrad > 64)
+      domain = domain.refine(refRatio); 
+      if (boxSize_nonrad > maxRadSize)
         {
-          //boxSize_nonrad = 64;
-          //if (procID() == 0) cout << boxSize_nonrad << endl;
+          boxSize_nonrad = maxRadSize;
+          if (procID() == 0) cout << "radial Box Size = " << boxSize_nonrad << endl;
         }
       if (convTestType == 2){
         dt /= 2;

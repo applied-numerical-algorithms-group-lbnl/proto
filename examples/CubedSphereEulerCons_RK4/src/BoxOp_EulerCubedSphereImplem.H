@@ -572,7 +572,7 @@ template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
-static inline void
+static inline Array<T,NUMCOMPS> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
   applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
           MBInterpOp& a_iop,
@@ -583,7 +583,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   MBBoundaryRegister<T,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState(),MEM>
     blockreg(layout,1,Point::Zeros());
   blockreg.clear();
-  Array<Reduction<T,Operation::Sum,MEM>,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState()> consSum;
+  Array<Reduction<T,Operation::Sum,MEM>,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState()> consSum, consRhs;
   MBLevelBoxData<T,NUMCOMPS,MEM> JUTemp(layout,a_JU.ghost());
   MBLevelBoxData<T,NUMCOMPS,MEM> rhs(layout,Point::Zeros());
   T time = 0.;
@@ -598,8 +598,26 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
     StageLevel(rhs, dt_next, JUTemp, blockreg, consSum,
                  time, dt, weight, kstage);
-  blockreg.reflux(rhs);  
+  blockreg.reflux(rhs);
+  
+  for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+      consRhs[comp].reset();
+      for (auto dit : layout)
+        {
+          auto rhscomp = slice(rhs[dit],comp);
+          rhscomp.reduce(consRhs[comp]);        
+        }
+    }
+  Array<T,NUMCOMPS> outcons;
+  for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+      outcons[comp] = 0.;
+      outcons[comp] += consRhs[comp].fetch();
+      outcons[comp] -= consSum[comp].fetch();
+    }
   rhs.copyTo(a_JU);
+  return outcons;
 }
 template<
     typename T,
