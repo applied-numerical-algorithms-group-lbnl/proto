@@ -120,8 +120,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         Limiters_minmod(WFaceBar_L,WFaceBar_R,WBar,dx,dir);
       }
 
-
-
       // Fluxes on dir face.
       // Average of advective fluxes in spherical variables at the
       // face center, given point values of W.
@@ -569,6 +567,89 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
     {
       a_dt_next = dt_min;
     }
+}
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+static inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+  applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+          MBInterpOp& a_iop,
+          MBLevelBoxData<T,1,MEM>& a_dVolrLev) 
+{
+  T weight = 1.0;
+  auto layout = a_JU.layout();
+  MBBoundaryRegister<T,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState(),MEM>
+    blockreg(layout,1,Point::Zeros());
+  blockreg.clear();
+  Array<Reduction<T,Operation::Sum,MEM>,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState()> consSum;
+  MBLevelBoxData<T,NUMCOMPS,MEM> JUTemp(layout,a_JU.ghost());
+  MBLevelBoxData<T,NUMCOMPS,MEM> rhs(layout,Point::Zeros());
+  T time = 0.;
+  T dt = 1.0;
+  T dt_next;
+  int kstage = 0;
+  a_JU.copyTo(JUTemp);
+  kstage = 0;
+  BoxOp_EulerCubedSphere<T,MAP,MEM>::
+    preStageLevel(JUTemp, rhs, a_dVolrLev, a_iop, blockreg, consSum,
+                         time,dt, weight, 0);
+  BoxOp_EulerCubedSphere<T,MAP,MEM>::
+    StageLevel(rhs, dt_next, JUTemp, blockreg, consSum,
+                 time, dt, weight, kstage);
+  blockreg.reflux(rhs);  
+  rhs.copyTo(a_JU);
+}
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,
+                                         const State& a_W) const
+{
+  Box bx= this->box();  
+  T dxiR = this->dx()[0];
+  T dxiPerp = this->dx()[1];
+  int block = this->block();
+  Box bxRadius = bx;
+  BoxData<T,DIM,MEM> Dr(bxRadius);
+  BoxData<T,1,MEM> radius(bxRadius);
+  BoxData<T,DIM,MEM> adjDr(bxRadius);
+  BoxData<T,1,MEM> dVolr(bxRadius);
+  BoxData<T,1,MEM> speedMax(bxRadius);
+  speedMax.setToZero();
+  radialMetrics(radius,Dr,adjDr,dVolr,bxRadius);
+  T half = .5;
+  for (int dir = 0 ; dir < DIM; dir++)
+    {
+      Box bxface = bx;
+      BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir); 
+      BoxData<T,1,MEM> deta =
+        CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir);
+      BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bxface,dxiPerp,block,dir);
+      Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+      Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+      Point high = bxface.high();
+      Point low = bxface.low();
+      high[0] = low[0];
+      Box bx0(low,high);
+      BoxData<T,DIM,MEM,DIM> A_matrix(bx);
+      T offseta = half;
+      T offsetb = half;
+      if (dir == 1) offseta = 0.0;
+      if (dir == 2) offsetb = 0.0;
+      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[block],sign[block],
+                      dxiPerp,offseta,offsetb);
+      spreadSlice(A_matrix);
+      forallInPlace(f_speedmax,
+                    speedMax,a_W,A_matrix,
+                    ntrow,adjDrDir,deta,
+                    dVolr,Dr,dxiPerp,
+                    dxiR,dir,m_gamma);
+    }
+  speedMax.reduce(a_dtInv);
 }
 #if 0
 template<

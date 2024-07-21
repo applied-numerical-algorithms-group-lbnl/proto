@@ -35,7 +35,7 @@ class MBLevelRK4
 public:
     typedef OPType<T, MAP, MEM> OP; 
     typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
-    typedef MBLevelOp<OPType, MAP, double, BCType, MEM> LOP;
+    typedef MBLevelOp<OPType, MAP, T, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     typedef MBLevelBoxData<T, 1, MEM, PR_CELL> LevelScalarData;
     
@@ -110,7 +110,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
           int a_order)
 {
   PR_TIMERS("MBLevelRK4::advance");
-    double sixth = 1, third=1, half = 1;
+    T sixth = 1, third=1, half = 1;
     sixth/=6; third/=3; half/=2;
     int kstage;
     m_delta.setVal(0.);
@@ -133,7 +133,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
     {
         a_state.copyTo(m_U0);
         kstage = 0;
-        double weight = sixth;
+        T weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage);
         //if (a_dt > 0)

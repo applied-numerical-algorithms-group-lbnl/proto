@@ -267,18 +267,9 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     auto &USph_i =a_UStage[dit];
     
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
-    auto dx = eulerOp[dit].dx();
-    // {
-    //   HDF5Handler h5;
-    //   MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-    //   MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
-    //   JU.copyTo(JUTemp);
-    //   CubedSphereShell::consToSphInterpEuler(JUTemp,iop,dVolrLev,4);
-    //   auto map = CubedSphereShell::Map(JUTemp);
-    //   h5.writeMBLevel({}, map, JUTemp, "main_JUTempPre");
-    //   abort();
-    // }
+    auto dx = eulerOp[dit].dx();    
     // Compute viscous operators here, and increment a_rhsTotal.
+    
     int linear_visc = ParseInputs::get_linear_viscosity();
     int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)

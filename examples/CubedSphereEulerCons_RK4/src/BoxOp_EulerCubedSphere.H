@@ -61,8 +61,8 @@ typedef BoxData<double, DIM> Vector;
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
 //template<typename T, MemType MEM>
-template<typename T,MemType MEM>
 PROTO_KERNEL_START
+template<typename T,MemType MEM>
 void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_wpoint,
                    Var<T,NUMCOMPS,MEM>& a_upoint)                           
@@ -93,8 +93,73 @@ f_thresholdF(
   else {a_tags(0) = 0;};
 }
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
+PROTO_KERNEL_START
+template<typename T,MemType MEM>
+void f_speedmax_F
+(
+ Var<T,1,MEM>& a_speedmax,
+ const Var<T,NUMCOMPS,MEM>& a_W,
+ const Var<T,DIM,MEM,DIM>& a_amat,
+ const Var<T,DIM,MEM>& a_adjA,
+ const Var<T,1,MEM>& a_adjDrDir,
+ const Var<T,1,MEM>& a_detA,
+ const Var<T,1,MEM>& a_dVolr,
+ const Var<T,DIM,MEM>& a_Dr,
+ const T a_dxiPerp,
+ const T a_dxiR,
+ const int a_d,
+ const T a_gamma)
+{ 
+  double dx_d, dt_d;
+  if (a_d > 0){
+    T adjA_mag = sqrt(a_adjA(0)*a_adjA(0) + a_adjA(1)*a_adjA(1) + a_adjA(2)*a_adjA(2));
+    dx_d = a_dVolr(0) * a_detA(0) * a_dxiPerp / a_adjDrDir(0) / adjA_mag;
+  } 
+  if (a_d == 0){
+    dx_d = a_Dr(0) * a_dxiR;
+  }   
+  vecType velSph;
+  vecType velCart;
+  vecType bSph;
+  vecType bCart;
 
-
+  velSph[0] = a_W(iVX);       
+  velSph[1] = a_W(iVY);
+  velSph[2] = a_W(iVZ);
+  velCart[0] = 0.;       
+  velCart[1] = 0.;
+  velCart[2] = 0.;
+      
+  bSph[0] = a_W(iBX);       
+  bSph[1] = a_W(iBY);
+  bSph[2] = a_W(iBZ);
+  bCart[0] = 0.;       
+  bCart[1] = 0.;
+  bCart[2] = 0.;
+  T half = .5;
+  T one = 1.0;
+  T v2 = 0.;
+  T v1 = 0.;
+  T b2 = 0.;
+  for (int dir0 = 0; dir0 < DIM; dir0++)
+    {
+      for (int dir1 = 0; dir1 < DIM; dir1++)
+        {
+          velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
+          bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
+        }
+      v2 += velCart[dir0]*velCart[dir0];
+      v1 += abs(velCart[dir0]);
+      b2 += bCart[dir0]*bCart[dir0];
+    }
+  T rho = a_W(iRHO);
+  T B_mag = sqrt(b2);
+  T p = a_W(iP);
+  if (p < 0.0) p = 0.0;
+  T af = sqrt(a_gamma*p/rho + b2/4.0/M_PI/rho);  
+  a_speedmax(0) += (af + sqrt(v2))/dx_d;
+}
+PROTO_KERNEL_END(f_speedmax_F, f_speedmax);
 template<
     typename T,
     template<MemType> typename MAP,
@@ -190,6 +255,8 @@ public:
                         const BoxData<T,1,MEM>& a_dVolr,
                         uint a_block) const;
 
+  inline void dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,const State& a_W) const;
+  
   inline BoxData<T,1,MEM> kineticEnergyW(
                                          const State& a_WPoint,
                                          uint a_block,
@@ -329,7 +396,6 @@ public:
              T a_weight,
              int a_kstage);
 
-  /// Fill boundary registers. Need to add boundary register argument.
   // Implemented.
   inline void
   PostStagePatch(
@@ -344,7 +410,12 @@ public:
   static inline void
   postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
                 MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg);
-
+  
+  /// Apply operator. Usede for convergence testing.
+  static inline void
+  applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+          MBInterpOp& a_iop,
+          MBLevelBoxData<T,1,MEM>& a_dVolrLev);
   inline BoxData<T,NUMCOMPS,MEM> checkRadial(
                                              State& a_inputs,
                                              T a_h,

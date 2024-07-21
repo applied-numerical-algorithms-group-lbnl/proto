@@ -1032,17 +1032,16 @@ cellQuotientValAndInvRadial(
 {
   a_quot.setToZero();
   BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
-  a_quot += quotBar;
-  // DEBUG
-  // T twelveth = -1.0/12.0;
-  // BoxData<T,1,MEM> Dquotbar =
-  //   CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,0);
-  // BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,0)(a_denominator);
-  // BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
-  // corr *= twelveth;
-  // corr *= a_denomInv;
-  // quotBar.copyTo(a_quot);
-  // a_quot += corr;
+  a_quot += quotBar; 
+  T twelveth = -1.0/12.0;
+  BoxData<T,1,MEM> Dquotbar =
+    CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,0);
+  BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,0)(a_denominator);
+  BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
+  corr *= twelveth;
+  corr *= a_denomInv;
+  quotBar.copyTo(a_quot);
+  a_quot += corr;
 }
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>

@@ -281,6 +281,30 @@ void MBLevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     }
 }
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template <MemType DST_MEM>
+void MBLevelBoxData<T, C, MEM, CTR>::
+coarsenTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_dest,
+          Point                               a_refRatio) const
+{
+    if (CTR == PR_CELL)
+    {
+        auto AVG = Stencil<T>::AvgDown(a_refRatio);
+        MBDisjointBoxLayout cfLayout = m_layout.coarsen(a_refRatio);
+        
+        MBLevelBoxData<T, C, MEM, CTR> cfLevel(cfLayout, Point::Zeros());
+        for (auto iter : m_layout)
+        {
+            auto& fine = (*this)[iter]; 
+            auto& crse = cfLevel[iter];
+            
+            crse |= AVG(fine);
+        }
+        cfLevel.copyTo(a_dest);
+    } else {
+        MayDay<void>::Warning("LevelBoxData::coarsenTo | Warning: Non-Cell centered implementation not yet implemented");
+    }
+}
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
 {
