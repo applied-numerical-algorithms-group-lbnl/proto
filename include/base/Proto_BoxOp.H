@@ -184,6 +184,21 @@ class BoxOp
         Box              a_range,
         T                a_scale = 1.0) const;
 
+    /// Apply All Boundary Conditions
+    inline void
+    applyBC(
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state) const;
+
+    /// Apply User Specified Boundary Condition
+    /**
+    */
+    inline virtual void
+    applyBC(
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state,
+        Face             a_face) const {}
+
     /// User Defined Flux
     /**
         Compute F(phi, rho) in the direction dir

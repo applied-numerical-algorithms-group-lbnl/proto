@@ -252,6 +252,17 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     return out; 
 }
 
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::applyBC(
+    Array<StateData, DIM>& a_fluxes,
+    const StateData& a_state) const
+{
+}
+
+
 /// User Defined Flux
 template <typename T,
     unsigned int C_STATE,
