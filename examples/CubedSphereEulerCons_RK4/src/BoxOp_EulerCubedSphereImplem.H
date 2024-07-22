@@ -33,7 +33,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   
   sphToPrim(W,WBar,a_USph,a_block);
   // Compute Fluxes, rhs.
-  a_Rhs.setVal(0.0);
+  // a_Rhs.setVal(0.0);
   Box outputbox = bx;
   // Loop over directions.
   T one = 1.0;
@@ -141,7 +141,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       // Save fluxes, update RHS.
       fluxdir.copyTo(a_fluxes[dir]);
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
-      T dxInv = -1.0/(this->dx()[dir]);
+      T dxInv = -a_scale/(this->dx()[dir]);
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
@@ -218,7 +218,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(a_Rhs,dxiPerp,a_block);
       h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
     }
-  a_Rhs *= (a_scale);
   // if (procID() == 0)cout << "output box = " << outputbox << endl;
 }
 
@@ -521,7 +520,7 @@ template<
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
-StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
+StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k, 
            T& a_dt_next,
            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
            MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
@@ -535,28 +534,27 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   T dt_min = 1.0e20;
-  T wgtxdt = a_weight*a_dt;
   T dt_next_local = 1.e20;
+  T wgtxdt = a_weight*a_dt;
   for (auto dit : a_UStage.layout())
   {
-    auto &rhs_i = a_rhs[dit];
+    auto &k_i = a_k[dit];
     auto &USph_i = a_UStage[dit];
     Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
-    fluxes[0].define(rhs_i.box().extrude(0));
-    fluxes[1].define(rhs_i.box().extrude(1));
-    fluxes[2].define(rhs_i.box().extrude(2));    
+    fluxes[0].define(k_i.box().extrude(0));
+    fluxes[1].define(k_i.box().extrude(1));
+    fluxes[2].define(k_i.box().extrude(2));    
     fluxes[0].setToZero();
     fluxes[1].setToZero();
     fluxes[2].setToZero();
     
-    eulerOp[dit](rhs_i, fluxes, dt_next_local, USph_i, a_dt);
+    eulerOp[dit](k_i, fluxes, dt_next_local, USph_i, 1.0);
     auto dx = eulerOp[dit].dx();
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
     CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,wgtxdt);
-    // radialCons 
     if (dt_next_local < dt_min && a_kstage == 0)
       {
         //cout << "a_dt_next = " << a_dt_next << ", dt_min = " << dt_min <<  endl;
@@ -596,8 +594,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
     preStageLevel(JUTemp, rhs, a_dVolrLev, a_iop, blockreg, consSum,
                          time,dt, weight, 0);
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
-    StageLevel(rhs, dt_next, JUTemp, blockreg, consSum,
-                 time, dt, weight, kstage);
+  StageLevel(rhs, dt_next, JUTemp, blockreg, consSum,
+    time, dt, weight, kstage);
   blockreg.reflux(rhs);
   
   for (int comp = 0; comp < NUMCOMPS; comp++)

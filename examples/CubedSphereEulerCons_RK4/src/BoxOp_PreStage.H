@@ -222,7 +222,7 @@ template<
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
-              MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,
+              MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
               MBLevelBoxData<T,1,MEM>& a_dVolrLev,
               MBInterpOp& a_iop,
               MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
@@ -241,29 +241,19 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
 
+  // initialize a_k to zero. This
+  a_k.setVal(0.);
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
   int thetaCoord = (rCoord + 1) % 3;
   int phiCoord = (rCoord + 2) % 3;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
   if (init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
 
-  // // Move from ghosted to non-ghosted data to easily see in VisIt
-  // MBLevelBoxData<double, 8, HOST> dstData2(a_UStage.layout(), Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
-  // dstData2.setVal(0);
-  // for (auto dit : dstData.layout())
-  // {
-  //   Point source_lo = Point(dstData[dit].box().low()[0],dstData[dit].box().low()[1],dstData[dit].box().low()[2]);
-  //   Point source_hi = Point(dstData[dit].box().low()[0],dstData[dit].box().high()[1],dstData[dit].box().high()[2]);
-  //   Box sourceBox(source_lo,source_hi);
-  //   dstData[dit].copyTo(dstData2[dit],sourceBox,Point::Basis(0)*(1));
-  // }
-  // h5.writeMBLevel(map, dstData2, "DST_DATA2");
   for (auto dit : a_UStage.layout())
   {
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
-    auto &rhs_i = a_rhsTotal[dit];
-    rhs_i.setVal(0.0);
+    auto &rhs_i = a_k[dit];
     auto &USph_i =a_UStage[dit];
     
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
@@ -284,12 +274,12 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[1].setToZero();
         fluxes[2].define(rhs_i.box().extrude(2));
         fluxes[2].setToZero();
-        eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, a_dt);
+        eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, 1.0);
         T one = 1.0;
         // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
         a_blockreg.increment(fluxes, dit, a_dt);
         CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
       }
-    if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, a_dt);
+    if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, 1.0);
   }
 }

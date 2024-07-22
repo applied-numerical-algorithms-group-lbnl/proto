@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
               Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
               {
                 for (int comp = 0; comp < 8; comp++)
-                  {
+                  { 
                     consSum[comp] += JU.sum(comp);           
                   }
               }
@@ -228,6 +228,7 @@ int main(int argc, char *argv[])
                           cout << "component:" << comp <<
                             ", (scaled conserved mass) - 1 = " <<
                             (consSum[comp] - consRadial[comp])/ mass - one  <<
+                            //consSum[comp]/ mass - one  <<
                             endl;
                         }
                       else if (comp == 4)
@@ -235,13 +236,16 @@ int main(int argc, char *argv[])
                           cout << "component:" << comp <<
                             ", (scaled conserved energy) - 1 = " <<
                             (consSum[comp] - consRadial[comp]) / energy - one <<
+                            //consSum[comp]/ energy - one <<
                             endl;
                         }
                       else
                         {
                           double norm = sqrt(energy/mass)*mass;
                           cout << "component:" << comp <<
-                            ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm <<  endl;
+                             ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm 
+                            // ", scaled conserved quantity = " << consSum[comp] / norm
+                               <<  endl;
                         }
                     }
                 }
@@ -308,9 +312,15 @@ int main(int argc, char *argv[])
               }
             auto layout = U_conv_test[lev].layout();
             MBLevelBoxData<double,8,HOST> err(layout,Point::Zeros());
-            // Point refRatio = 2*Point::Ones();
-            Point refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
-            
+            Point refRatio;
+            if (radial_refinement)
+              {
+                refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
+              }
+            else
+              {
+                refRatio = 2*Point::Ones();
+              }          
             U_conv_test[lev + 1].coarsenTo(err,refRatio);
             for (auto dit : layout)
               {

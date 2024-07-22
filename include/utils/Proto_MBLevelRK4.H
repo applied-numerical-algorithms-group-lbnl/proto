@@ -35,7 +35,7 @@ class MBLevelRK4
 public:
     typedef OPType<T, MAP, MEM> OP; 
     typedef BCType<T,OP::numState(), MAP, MEM, PR_CELL> BC;
-    typedef MBLevelOp<OPType, MAP, T, BCType, MEM> LOP;
+    typedef MBLevelOp<OPType, MAP, T , BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     typedef MBLevelBoxData<T, 1, MEM, PR_CELL> LevelScalarData;
     
@@ -122,7 +122,7 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
       kstage = 0;
       OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                         a_time, a_dt, weight, kstage);
-      m_delta.increment(m_k, weight);
+      // m_delta.increment(m_k, weight);
       // What is this (^) ? Doesn't appear in 4th order.
       OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
                      a_time, a_dt, weight, kstage);
@@ -136,16 +136,14 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         T weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage);
-        //if (a_dt > 0)
-      
         m_delta.increment(m_k, 1.0);
         OP::StageLevel
           (m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
            a_time, a_dt, weight, kstage);
-        m_delta.increment(m_k, weight);
+        m_delta.increment(m_k, a_dt*weight);
 
         a_state.copyTo(m_U0);
-        m_U0.increment(m_k, half);
+        m_U0.increment(m_k, half*a_dt);
         kstage = 1;
         weight = third;
         OP::preStageLevel
@@ -154,27 +152,27 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         OP::StageLevel
           (m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
            a_time+0.5*a_dt, a_dt,weight, kstage);
-        m_delta.increment(m_k, third);
+        m_delta.increment(m_k, a_dt*weight);
 
         a_state.copyTo(m_U0);
-        m_U0.increment(m_k, half);
+        m_U0.increment(m_k, half*a_dt);
         kstage = 2;
         weight = third;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp,m_blockreg, m_consSum,
                           a_time+0.5*a_dt,a_dt, weight, kstage);
         OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
                        a_time+0.5*a_dt, a_dt, weight, kstage);
-        m_delta.increment(m_k, third);
+        m_delta.increment(m_k, a_dt*weight);
 
         a_state.copyTo(m_U0);
-        m_U0.increment(m_k);
+        m_U0.increment(m_k,a_dt);
         kstage = 3;
         weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time+a_dt,a_dt, weight, kstage);
         OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
                        a_time+a_dt, a_dt, weight, kstage);
-        m_delta.increment(m_k, weight);
+        m_delta.increment(m_k, a_dt*weight);
     }
     // Update State.
     int boundary_reflux = ParseInputs::get_boundary_reflux();
