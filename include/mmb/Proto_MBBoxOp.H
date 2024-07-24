@@ -92,7 +92,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param output   Evaluated operator (output)
         \param state    State variables
     */
-    inline virtual void
+    inline void
     operator()(
         StateData& a_output,
         const StateData& a_state,
@@ -122,12 +122,19 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param output   Evaluated operator (output)
         \param state    State variables
     */
-    inline virtual void
+    inline void
     operator()(
         StateData& a_output,
         Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale = 1.0) const ;
+    
+    inline virtual void
+    apply(
+        StateData& a_output,
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state,
+        T                a_scale = 1.0) const {}
     
 #if 0 //CURRENTLY UNUSED
 
@@ -154,7 +161,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param state    State variables
         \param range    Range of the output data
     */
-    inline virtual StateData
+    inline StateData
     operator()(
         const StateData& a_state,
         Box              a_range,
@@ -166,10 +173,15 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
      *  Calls the user defined boundary condition function as needed
      */
     inline void
-    applyBC(
+    boundaryConditions(
             Array<StateData, DIM>& a_fluxes,
             const StateData& a_state) const;
 
+
+    inline void
+    divergence(
+            StateData&             a_divergence, 
+            const Array<StateData, DIM>& a_fluxes) const;
 
     /// Apply Boundary Condition (User Specified)
     /** 
@@ -181,7 +193,6 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
             Array<StateData, DIM>& a_fluxes,
             const StateData& a_state,
             Face             a_face) const {}
-
 #if 0
     /// User Defined Flux
     /**
@@ -306,7 +317,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
 
     private:
     
-    MBIndex m_index;
+    MBIndex m_mbIndex;
     const MBLevelMap<MAP, MEM>& m_map;
 
 };

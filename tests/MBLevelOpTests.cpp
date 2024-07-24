@@ -8,8 +8,6 @@
 
 using namespace Proto;
 
-
-
 #if DIM==2
 #if 1
 TEST(MBLevelOp, Iteration) {
@@ -106,6 +104,7 @@ TEST(MBLevelOp, ShearLaplace) {
        
         MBLevelOp<BoxOp_MBLaplace, MBMap_Shear, double> op;
         op.define(map);
+        for (auto iter : layout) { op[iter].toggleBC(false); }
         op(hostDst, hostSrc);
         hostDst.exchange();
         for (auto iter : layout)
