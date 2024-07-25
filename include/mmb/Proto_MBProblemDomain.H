@@ -21,7 +21,9 @@ namespace Proto
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
-       
+
+        inline MBProblemDomain(std::shared_ptr<MBGraph> a_graph);
+
         // Set Size of Specified Block
         inline void defineDomain(BlockIndex a_blockID, Point a_domainSize);
         
@@ -48,7 +50,7 @@ namespace Proto
         
         // Get Graph Reference
         inline MBGraph& graph() const { return *m_graph; }
-        
+       
         // Get Graph Reference
         inline std::shared_ptr<MBGraph> graphPtr() const { return m_graph; }
         

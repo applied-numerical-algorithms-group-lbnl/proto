@@ -7,60 +7,58 @@
 
 using namespace Proto;
 
-DisjointBoxLayout testLayout(int domainSize, Point boxSize)
-{
-    Box domainBox = Box::Cube(domainSize); 
-    Box patchBox = domainBox.coarsen(boxSize);
-    std::vector<Point> patches;
-    for (auto patch : patchBox)
+namespace {
+    DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
-        patches.push_back(patch);
-        //if (patch != Point::Zeros()) { patches.push_back(patch); }
+        Box domainBox = Box::Cube(domainSize); 
+        Box patchBox = domainBox.coarsen(boxSize);
+        std::vector<Point> patches;
+        for (auto patch : patchBox)
+        {
+            patches.push_back(patch);
+            //if (patch != Point::Zeros()) { patches.push_back(patch); }
+        }
+        std::array<bool, DIM> periodicity;
+        periodicity.fill(true);
+        ProblemDomain domain(domainBox, periodicity);
+        return DisjointBoxLayout(domain, patches, boxSize);
     }
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
-    ProblemDomain domain(domainBox, periodicity);
-    return DisjointBoxLayout(domain, patches, boxSize);
-}
 
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
-{
-    
-    double x = a_pt[0];
-    double y = a_pt[1] + x;
-    a_X(0) = x;
-    a_X(1) = y;
-    a_X(2) = 0;
+    template<MemType MEM>
+        PROTO_KERNEL_START
+        void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
+        {
+
+            double x = a_pt[0];
+            double y = a_pt[1] + x;
+            a_X(0) = x;
+            a_X(1) = y;
+            a_X(2) = 0;
 #if DIM > 2
-    a_X(2) = a_pt[2];
+            a_X(2) = a_pt[2];
 #endif
 
+        }
+    PROTO_KERNEL_END(f_testMapF, f_testMap);
 }
-PROTO_KERNEL_END(f_testMapF, f_testMap);
-
-TEST(HDF5, ReadMBLevel)
+TEST(HDF5, ReadMBLayout)
 {
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 4;
+    int boxSize = 2;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
     data.setVal(7);
     h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
-    
-    ProblemDomain readDomain(Box(Point(64,64)), false);
-    DisjointBoxLayout readLayout(readDomain, Point::Ones(16));
-
-    LevelBoxData<double, 3, HOST> readData(readLayout, Point::Ones());
-    readData.setVal(-7);
-    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_1");
-    h5.readLevel(readData, "DATA_0");
-
-    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_2");
+    MBDisjointBoxLayout newLayout;
+    h5.readMBLayout(newLayout, domain.graphPtr(), "DATA_0");
+    EXPECT_TRUE(newLayout.compatible(layout));
+    for (auto iter : layout)
+    {
+        EXPECT_EQ(layout[iter], newLayout[iter]);
+    }
 }
 
 /*

@@ -437,9 +437,7 @@ bool MBGraph::isDomainBoundary(
 
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
-    // TODO: Most applications won't need more than one graph
-    //  We can change this in the future if need be. -CLG
-    return (this == &a_rhs);
+    return (m_blocks == a_rhs.m_blocks);
 }
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
