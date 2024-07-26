@@ -654,7 +654,7 @@ void HDF5Handler::readMBLayout(
         std::string a_filename,
         Args... a_params)
 {
-    PR_TIME("HDF5Handler::readMBLevel");
+    PR_TIME("HDF5Handler::readMBLayout");
     // PARSE THE FILE NAME
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -731,7 +731,8 @@ void HDF5Handler::readMBLayout(
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
-void HDF5Handler::readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::readMBLevel(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -764,31 +765,24 @@ void HDF5Handler::readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
     
-    auto ds_offsets = H5Dopen2(file, "/level_0/data:offsets=0", H5P_DEFAULT);
-    
     auto ds_blocks = H5Dopen2(file, "/level_0/blocks", H5P_DEFAULT);
     auto ds_boxes = H5Dopen2(file, "/level_0/boxes", H5P_DEFAULT);
     auto ds_data = H5Dopen2(file, "/level_0/data:datatype=0", H5P_DEFAULT);
 
-    auto s_offsets = H5Dget_space(ds_offsets);
     auto s_blocks = H5Dget_space(ds_blocks);
     auto s_boxes = H5Dget_space(ds_boxes);
     auto s_data = H5Dget_space(ds_data);
 
-    hsize_t n_offsets, n_blocks, n_boxes, n_data;
-    H5Sget_simple_extent_dims(s_offsets, &n_offsets, nullptr);
+    hsize_t n_blocks, n_boxes, n_data;
     H5Sget_simple_extent_dims(s_blocks, &n_blocks, nullptr);
     H5Sget_simple_extent_dims(s_boxes, &n_boxes, nullptr);
     H5Sget_simple_extent_dims(s_data, &n_data, nullptr);
     
     PROTO_ASSERT(n_blocks == a_data.layout().numBlocks(),
             "HDF5Handler::readMBLevel | Error: Mismatched number of blocks");
-    PROTO_ASSERT(n_offsets == n_boxes+1,
-            "HDF5Handler::readMBLevel | Error: Data corruption");
     PROTO_ASSERT(n_boxes == a_data.layout().numBoxes(),
             "HDF5Handler::readMBLevel | Error: Mismatchned number of patches");
     
-    unsigned int n_boxes_local = a_data.layout().localSize();
     unsigned int n_data_local = 0;
     unsigned int n_data_input = 0;
     for (auto iter : a_data.layout())
@@ -804,11 +798,36 @@ void HDF5Handler::readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,
     PROTO_ASSERT(n_data == n_data_input,
             "HDF5Handler::readMBLevel | Error: Mismatchned number of data");
 
+    T* rawData = (T*)malloc(n_data_local*sizeof(T));
 #ifdef PR_MPI
-    hsize_t boxStart[] = {a_data.layout().offset(procID())};
     hsize_t dataStart[] = {a_data.offset(procID())};
+    hsize_t stride[] = {1};
+    hsize_t dataCount[] = {n_data_local};
+
+    auto slab_data = H5Dget_space(ds_data);
+    assert(H5Sselect_hyperslab(slab_data, H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
+    auto s_data_local = H5Screate_simple(1,dataCount, NULL);
+
+    assert(H5Dread(ds_data, H5T_T, s_data_local, slab_data, H5P_DEFAULT, rawData) >= 0);
+
+    assert(H5Sclose(slab_data) >= 0);
+    assert(H5Sclose(s_data_local) >= 0);
 #else
+    assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
 #endif
+
+    assert(H5Sclose(s_blocks) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_data) >= 0);
+
+    assert(H5Dclose(ds_blocks) >= 0);
+    assert(H5Dclose(ds_boxes) >= 0);
+    assert(H5Dclose(ds_data) >= 0);
+
+    a_data.linearIn(rawData);
+    free(rawData);
+    barrier();
+    assert(H5Fclose(file) >= 0);
 }
 
 #endif

@@ -16,7 +16,7 @@ namespace {
         for (auto patch : patchBox)
         {
             patches.push_back(patch);
-            //if (patch != Point::Zeros()) { patches.push_back(patch); }
+            if (patch != Point::Zeros()) { patches.push_back(patch); }
         }
         std::array<bool, DIM> periodicity;
         periodicity.fill(true);
@@ -41,17 +41,30 @@ namespace {
         }
     PROTO_KERNEL_END(f_testMapF, f_testMap);
 }
-TEST(HDF5, ReadMBLayout)
+TEST(HDF5, ReadMBLevel)
 {
     HDF5Handler h5;
     int domainSize = 4;
     int boxSize = 2;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
-    data.setVal(7);
-    h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
+    std::vector<MBPatchID_t> patches;
+    std::vector<Point> boxSizes;
+    for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
+    {
+        boxSizes.push_back(Point::Ones(boxSize));
+        for (Point pi : Box::Cube(domainSize / boxSize))
+        {
+            if (pi == Point::Zeros()) { continue; }
+            patches.push_back(std::make_pair(pi, bi));
+        }
+    }
+
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+    MBLevelBoxData<double, DIM, HOST> data(layout, Point::Ones());
+    data.initialize(f_MBPointID);
+    h5.writeMBLevel(data, "DATA_0");
+    
     MBDisjointBoxLayout newLayout;
     h5.readMBLayout(newLayout, domain.graphPtr(), "DATA_0");
     EXPECT_TRUE(newLayout.compatible(layout));
@@ -59,69 +72,23 @@ TEST(HDF5, ReadMBLayout)
     {
         EXPECT_EQ(layout[iter], newLayout[iter]);
     }
-}
 
-/*
-TEST(HDF5, MMBOffsets)
-{
-    HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
-    auto domain = buildXPoint(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_XPointMap, XPOINT_SIZE, domainSize);
+    MBLevelBoxData<double, DIM, HOST> newData(newLayout, Point::Ones());
+    newData.setVal(7);
+    h5.readMBLevel(newData, "DATA_0");
 
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    for (auto iter : layout)
     {
-        data.blockData(bi).setVal(bi,0);
-        if (NCOMP > 1)
-        {
-            data.blockData(bi).setVal(bi+10,1);
-        }
-   //     h5.writeLevel(1.0, data.blockData(bi), "DATA_%i", bi);
-    }
-    
-    unsigned int numBoxes = pow(domainSize / boxSize, DIM)*XPOINT_SIZE;
-    std::vector<unsigned int> boxesPerProc(numProc(), numBoxes / numProc());
-    for (int ii = 0; ii < numBoxes % numProc(); ii++) { boxesPerProc[ii]++; }
-    
-    size_t layoutOffset = 0;
-    size_t dataOffset = 0;
-    for (int ii = 0; ii < numProc(); ii++)
-    {
-        EXPECT_EQ(layoutOffset, layout.offset(ii));
-        EXPECT_EQ(dataOffset, data.offset(ii));
-        layoutOffset += boxesPerProc[ii];
-        dataOffset += boxesPerProc[ii]*data.blockData(0).patchSize();
-    }
-    h5.writeMBLevel({"var1", "var2"}, data, "DATA");
-    h5.writeMBLevel({"x", "y", "z"}, map, "DATA.map");
-}
-TEST(HDF5, CubeSphere)
-{
+        auto& old_i = data[iter];
+        auto& new_i = newData[iter];
 
-    HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
-    auto domain = buildCubeSphere(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
-    h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
-    h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
+        EXPECT_EQ(old_i.box(), new_i.box());
+        BoxData<double, DIM, HOST> error(new_i.box());
+        new_i.copyTo(error);
+        error -= old_i;
+        EXPECT_NEAR(error.absMax(), 0, 1e-12);
+    }
 }
-*/
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

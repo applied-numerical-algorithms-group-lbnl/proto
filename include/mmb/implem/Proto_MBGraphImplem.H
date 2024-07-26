@@ -437,7 +437,9 @@ bool MBGraph::isDomainBoundary(
 
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
-    return (m_blocks == a_rhs.m_blocks);
+    return (this == &a_rhs);
+    // TODO: Fix equality by value
+    //return (m_blocks == a_rhs.m_blocks);
 }
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
