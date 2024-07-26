@@ -479,6 +479,39 @@ void MBLevelBoxData<T, C, MEM, CTR>::linearOut(void *a_buffer) const
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::linearIn(void *a_buffer)
+{
+    char* readPoint = (char*)a_buffer;
+    for (auto iter : m_layout)
+    {
+        linearIn(readPoint, iter);
+        readPoint += linearSize(iter); 
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::linearIn(
+        void *a_buffer,
+        const MBIndex& a_index)
+{
+    Box b = (*this)[a_index].box();
+    linearIn(a_buffer, b, a_index);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::linearIn(
+        void *a_buffer,
+        const Box& a_box,
+        const MBIndex& a_index)
+{
+    auto& patch = (*this)[a_index];
+    CInterval comps(0, C-1);
+    patch.linearIn(a_buffer, a_box, comps);
+}
+
+
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
 MBLevelBoxData<T, C, MEM, CTR>::offset(unsigned int a_proc) const
 {
