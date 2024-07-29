@@ -4,6 +4,19 @@
 
 using namespace Proto;
 
+TEST(StencilLib, ExtrapCoefs)
+{
+    std::vector<double> f1 = {0.5, 1, 2, 3};
+    std::vector<double> f2 = {1, 1.5, 2, 3};
+    std::vector<double> f3 = {1, 2, 2.5, 3};
+
+    auto c1 = Stencil<double>::ExtrapCoefs(f1);
+    auto c2 = Stencil<double>::ExtrapCoefs(f2);
+    auto c3 = Stencil<double>::ExtrapCoefs(f3);
+
+
+}
+
 TEST(StencilLib, CornersToCells) {
 #ifdef PR_HDF5
     HDF5Handler h5;

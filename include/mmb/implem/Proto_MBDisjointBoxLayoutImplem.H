@@ -71,6 +71,7 @@ void MBDisjointBoxLayout::define(
         std::shared_ptr<MBBoxPartition> a_partition,
         std::vector<Point>              a_boxSizes)
 {
+    a_partition->domain().close();
     m_partition = a_partition;
     m_domain = a_partition->domain().refine(a_boxSizes);
     m_layouts.clear();

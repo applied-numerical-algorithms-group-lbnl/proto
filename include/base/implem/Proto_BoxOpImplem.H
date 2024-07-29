@@ -10,18 +10,22 @@ template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
-BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(const Box& a_box, T a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(
+        const DisjointBoxLayout& a_layout,
+        const LevelIndex& a_index, T a_dx)
 {
-    define(a_box, a_dx);
+    define(a_layout, a_index, a_dx);
 }
 
 template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
-BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(const Box& a_box, Array<T, DIM> a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(
+        const DisjointBoxLayout& a_layout,
+        const LevelIndex& a_index, Array<T,DIM> a_dx)
 {
-    define(a_box, a_dx);
+    define(a_layout, a_index, a_dx);
 }
 
 
@@ -30,11 +34,13 @@ template <typename T,
         unsigned int C_AUX,
         MemType MEM>
 void
-BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, T a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::define(
+        const DisjointBoxLayout& a_layout, 
+        const LevelIndex& a_index, T a_dx)
 {
     Array<T, DIM> dx;
     dx.fill(a_dx);
-    define(a_box, dx);
+    define(a_layout, a_index, dx);
 }
 
 template <typename T,
@@ -42,13 +48,15 @@ template <typename T,
         unsigned int C_AUX,
         MemType MEM>
 void
-BoxOp<T, C_STATE, C_AUX, MEM>::define(const Box& a_box, Array<T, DIM> a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::define(
+        const DisjointBoxLayout& a_layout,
+        const LevelIndex& a_index, Array<T, DIM> a_dx)
 {
-    m_isMapped = false;
     m_scaleDiag = 0;
     m_scaleFlux = 1;
     m_dx = a_dx;
-    m_box = a_box;
+    m_layout = a_layout;
+    m_index = a_index;
     m_time = 0;
         
     m_definedFlux = true;
@@ -81,21 +89,9 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
             if (!m_definedFlux) {break; }
             if (dir == 0)
             {
-                if (m_isMapped)
-                {
-                    //divFlux |= DIV(flux_d);
-                    divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
-                } else {
-                    divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
-                }
+                divFlux |= DIV(flux_d, 1.0/m_dx[dir]);
             } else {
-                if (m_isMapped)
-                {
-                    //divFlux += DIV(flux_d);
-                    divFlux += DIV(flux_d, 1.0/m_dx[dir]);
-                } else {
-                    divFlux += DIV(flux_d, 1.0/m_dx[dir]);
-                }
+                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
             }
         }
         if (m_definedFlux)
@@ -149,12 +145,7 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
             auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, dir);
             if (!m_definedFlux) {break; }
-            if (m_isMapped) {
-                //divFlux += DIV(flux_d);
-                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
-            } else {
-                divFlux += DIV(flux_d, 1.0/m_dx[dir]);
-            }
+            divFlux += DIV(flux_d, 1.0/m_dx[dir]);
         }
         if (m_definedFlux)
         {
@@ -251,6 +242,23 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     this->operator()(out, a_state, a_aux, a_scale);
     return out; 
 }
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::applyBC(
+    Array<StateData, DIM>& a_fluxes,
+    const StateData& a_state) const
+{
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (this->layout().domain().isPeriodic(dd)) { continue; }
+        this->applyBC(a_fluxes, a_state, Face(dd,Side::Lo));
+        this->applyBC(a_fluxes, a_state, Face(dd,Side::Hi));
+    }
+}
+
 
 /// User Defined Flux
 template <typename T,
@@ -418,6 +426,7 @@ T BoxOp<T, C_STATE, C_AUX, MEM>::dxMax() const
     return maxValue;
 }
 
+#if 0  // MOVED TO MBBoxOp
 #ifdef PR_MMB
 template <typename T, unsigned int C_STATE,
     unsigned int C_AUX, MemType MEM>
@@ -502,5 +511,5 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::matchFluxAverage(
         a_rhs += tmp;
     }
 }
-
+#endif
 #endif

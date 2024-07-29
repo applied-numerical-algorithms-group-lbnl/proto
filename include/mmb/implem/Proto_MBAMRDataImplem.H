@@ -37,7 +37,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
         Point a_boundGhost)
 {
     m_ghost = a_ghost;
-    m_grid =  &a_grid;
+    m_grid =  a_grid;
     m_levelData.clear();
     for (int li = 0; li < a_grid.numLevels(); li++)
     {
@@ -47,7 +47,30 @@ void MBAMRData<T,C,MEM,CTR>::define(
         m_levelData.push_back(levelData);
     }
     defineAMRData();
+    PROTO_ASSERT(validate(),
+        "MBAMRData::define | Error: Validation failed");
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+bool MBAMRData<T,C,MEM,CTR>::validate() const
+{
+    bool valid = true;
+    valid &= (numLevels() == m_levelData.size()); 
+    valid &= (numBlocks() == m_amrData.size());
+    if (!valid) { std::cout << "failed on initial sizing: " << std::endl;} 
+    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
+    {
+        for (int lvl = 0; lvl < numLevels(); lvl++)
+        {
+            auto p1 = &(*m_amrData[bi])[lvl];
+            auto p2 = &m_levelData[lvl]->getBlock(bi);
+            valid &= (p1 == p2);
+            if (!valid) { std::cout << "failed on lvl: " << lvl << " | block: " << bi << std::endl;}
+        }
+    }
+    return valid; 
+}
+
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::define(
@@ -59,7 +82,7 @@ void MBAMRData<T,C,MEM,CTR>::define(
     PROTO_ASSERT(a_levelData.size() == a_grid.numLevels(),
             "MBAMRData::define (alias) | Error: incorrect number of levels");
     m_ghost = a_levelData[0]->ghost();
-    m_grid = &a_grid;
+    m_grid = a_grid;
     m_levelData = a_levelData;
     defineAMRData();
 }

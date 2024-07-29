@@ -21,7 +21,9 @@ namespace Proto
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
-       
+
+        inline MBProblemDomain(std::shared_ptr<MBGraph> a_graph);
+
         // Set Size of Specified Block
         inline void defineDomain(BlockIndex a_blockID, Point a_domainSize);
         
@@ -48,7 +50,7 @@ namespace Proto
         
         // Get Graph Reference
         inline MBGraph& graph() const { return *m_graph; }
-        
+       
         // Get Graph Reference
         inline std::shared_ptr<MBGraph> graphPtr() const { return m_graph; }
         
@@ -86,9 +88,9 @@ namespace Proto
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(BlockIndex a_block, Point a_refRatio) const;
-        inline bool defined();
+        inline bool defined() const;
         inline bool operator==(const MBProblemDomain& a_rhs) const;
-        inline void close();
+        inline void close() const;
         
         inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
         inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;

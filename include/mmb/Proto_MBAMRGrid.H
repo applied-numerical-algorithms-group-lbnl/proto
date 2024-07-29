@@ -13,6 +13,8 @@ namespace Proto
     {
         public:
 
+        inline MBAMRGrid(){}
+
         inline MBAMRGrid(
             const MBProblemDomain&          a_coarseDomain,
             const std::vector<MBPatchID_t>& a_coarsePatches,

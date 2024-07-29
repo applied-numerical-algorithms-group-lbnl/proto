@@ -16,6 +16,16 @@ MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
     m_domainsDefined.resize(a_numBlocks, false);
 }
 
+MBProblemDomain::MBProblemDomain(std::shared_ptr<MBGraph> a_graph)
+{
+    m_closed = false;
+    m_domains.clear();
+    m_domains.resize(a_graph->size());
+    m_graph = a_graph;
+    m_domainsDefined.clear();
+    m_domainsDefined.resize(a_graph->size(), false);
+}
+
 void MBProblemDomain::defineDomain(BlockIndex a_blockID, Point a_domainSize)
 {
     PROTO_ASSERT(!m_closed,
@@ -111,7 +121,6 @@ share a codimension 1 boundary.");
     }
     // find the corresponding codimension-DIM boundary in src
     d10 = m_graph->reverseArc(a_srcBlock, a_dstBlock, d01);
-    //std::cout << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
     
     // construct position vectors to the common corner defined
     // by d01 and d10
@@ -126,7 +135,6 @@ share a codimension 1 boundary.");
 
     // convert the input point to dst coordinates and add to the origin
     // displacement
-    //std::cout << "v10: " << v10 << " | v01: " << v01 << " | R(v01): " << R01(v01) << " | s10: " << s10 << std::endl;
     return s10 + R01(a_point);
 }
 
@@ -238,7 +246,7 @@ bool MBProblemDomain::coarsenable(BlockIndex a_block, Point a_refRatio) const
     return m_domains[a_block].coarsenable(a_refRatio);
 }
 
-bool MBProblemDomain::defined()
+bool MBProblemDomain::defined() const
 {
     for (auto def : m_domainsDefined)
     {
@@ -250,7 +258,7 @@ bool MBProblemDomain::defined()
 bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
 {
     bool equal = true;
-    equal &= (m_graph == a_rhs.m_graph);
+    equal &= ((*m_graph) == (*a_rhs.m_graph));
     for (int bi = 0; bi < numBlocks(); bi++)
     {
         equal &= (m_domains[bi] == a_rhs.m_domains[bi]);
@@ -258,7 +266,7 @@ bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
     return equal;
 }
 
-void MBProblemDomain::close()
+void MBProblemDomain::close() const
 {
     if (m_closed) { return; }
     m_graph->close();

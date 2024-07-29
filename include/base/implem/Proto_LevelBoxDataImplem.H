@@ -177,6 +177,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs&... a_srcs)
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::initialize | Error: Object not defined");
     auto srcs = std::tuple<Srcs&...>(a_srcs...);
     for (auto iter : m_layout)
     {
@@ -189,6 +190,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 Box
 LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::patchBox | Error: Object not defined");
     PROTO_ASSERT(DIM <= 6, "LevelBoxData::patchBox | Error: This function will fail for DIM > 6");
     Box B;
     if (CTR == PR_CELL)
@@ -208,6 +210,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::patchSize | Error: Object not defined");
     int size = 1;
     Point boxSize = layout().boxSize() + 2*ghost();
     switch (CTR)
@@ -248,6 +251,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp)
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::setVal | Error: Object not defined");
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
             "LevelBoxData::setVal | Error: %i is not a valid component specification.", a_comp);
     for (auto iter : m_layout)
@@ -267,6 +271,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::setBoundary | Error: Object not defined");
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
             "LevelBoxData::setBoundary | Error: \
             %i is not a valid component specification.", a_comp);
@@ -309,6 +314,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::exchange()
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::exchange | Error: Object not defined");
     if (m_ghost == Point::Zeros()) { return; }
     PR_TIME("LevelBoxData::exchange");
 #ifdef PR_MPI
@@ -517,6 +523,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) 
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::operator[] | Error: Object not defined");
     return (*(m_data[a_di][0]));
 }
 
@@ -524,6 +531,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) const
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::operator[] | Error: Object not defined");
     return (*(m_data[a_di][0]));
 }
 
@@ -531,6 +539,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) 
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::operator() | Error: Object not defined");
     return (*(m_data[a_di][a_dir]));
 }
 
@@ -538,6 +547,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) const
 {
+    PROTO_ASSERT(m_isDefined, "LevelBoxData::operator() | Error: Object not defined");
     return (*(m_data[a_di][a_dir]));
 }
 

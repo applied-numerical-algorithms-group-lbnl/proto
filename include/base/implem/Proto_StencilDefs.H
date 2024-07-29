@@ -1,6 +1,56 @@
 #ifndef PRroto_stencildefs
 #define PRroto_stencildefs
 
+
+//========================================================================
+// Utililties
+//======================
+#ifdef PR_OPS
+template<typename T>
+std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage)
+{
+    int N = a_footprint.size();
+    if (a_cellAverage)
+    {
+        PROTO_ASSERT(N <= 4,
+            "Stencil::ExtrapCoefs | Error: Higher order version not implemented");
+    }
+    Matrix<double> A(N,N);
+    Matrix<double> b(N,1);
+    b.setVal(0);
+    b(0,0) = 1;
+
+    std::vector<double> taylorCoefs;
+    for (int ii = 0; ii < N; ii++)
+    {
+    
+        double t = taylor<double>(ii);
+        if (a_cellAverage && (ii == 2))
+        {
+            t += (taylor<double>(1)/24.0);
+        }
+        taylorCoefs.push_back(t);
+    }
+
+    for (int ii = 0; ii < N; ii++)
+    {
+        for (int jj = 0; jj < N; jj++)
+        {
+            A(ii,jj) = taylorCoefs[ii]*pow(a_footprint[jj], ii);
+        }
+    }
+    b.print();
+    A.print();
+    auto a = A.inverse()*b;
+    std::vector<double> ret;
+    for (int ii = 0; ii < N; ii++)
+    {
+        ret.push_back(a(ii,0));
+    }
+    return ret;
+}
+#endif
+
 //========================================================================
 // Stencil Definitions
 //======================

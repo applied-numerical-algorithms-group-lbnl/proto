@@ -18,6 +18,10 @@ blt_add_executable(NAME BoxDataTests SOURCES BoxDataTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME BoxDataTests COMMAND BoxDataTests)
+blt_add_executable(NAME BoundaryConditionTests SOURCES BoundaryConditionTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME BoundaryConditionTests COMMAND BoundaryConditionTests)
 blt_add_executable(NAME ForallTests SOURCES ForallTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

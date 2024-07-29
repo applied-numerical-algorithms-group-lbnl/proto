@@ -25,18 +25,56 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
     inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
-   
-    inline void flux(
+#if 0
+    inline void
+    operator()(
+            BoxData<T,1>& a_output,
+            const BoxData<T,1>& a_state,
+            T                a_scale = 1.0) const
+    {
+        Array<BoxData<T,1>, DIM> fluxes;
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            fluxes[dir].define(a_output.box().grow(dir, Side::Hi, 1));
+        }
+        (*this)(a_output, fluxes, a_state, a_scale);
+    }
+#endif
+    inline void
+    apply(
+            BoxData<T,1>& a_output,
+            Array<BoxData<T,1>, DIM>& a_fluxes,
+            const BoxData<T,1>& a_state,
+            T                a_scale = 1.0) const override
+    {
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            flux(a_fluxes[dd], a_state, dd);
+        }
+        this->boundaryConditions(a_fluxes, a_state);
+        this->divergence(a_output, a_fluxes);
+    }
+
+    inline void applyBC (
+            Array<BoxData<T,1>, DIM>& a_fluxes,
+            const BoxData<T,1>& a_state,
+            Face a_face) const override
+    {
+        if (!m_useBC) { return; }
+        auto _dx = this->dx();
+        Box domainBox = this->layout().getBlock(this->block()).domain().box();
+        BoundaryCondition::Dirichlet(a_fluxes, a_state, 0.0, a_face, domainBox, _dx);
+    }
+
+    inline void
+    flux(
             BoxData<T, 1>& a_flux,
             const BoxData<T, 1>& a_state,
             int a_dir) const
     {
-        // Lphi = (1/<J>)*div(<NT>_d*<grad(phi)>_d)
-        // faceGrad = <grad(phi)>_d
         auto faceGrad =  Operator::_faceGradxPhi(
                 a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
                 m_Jf[a_dir], m_Jf[a_dir], a_dir);
-        // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
         auto tmp = Operator::_faceMatrixProductAB(
                 faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
         tmp.copyTo(a_flux);
@@ -69,10 +107,13 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
             //NT should have (conservative) 2 layers of ghost cells
             m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
+        m_useBC = false;
     }
 
-    private:
+    inline void toggleBC(bool flag) { m_useBC = flag; }
 
+    private:
+    bool m_useBC;
     FluxBoxData<T,DIM> m_NT;
     std::vector<BoxData<T,DIM,MEM,DIM>> m_NTMatrix;
     std::vector<BoxData<T,1,MEM>> m_Jf;
