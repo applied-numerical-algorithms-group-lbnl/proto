@@ -3,8 +3,7 @@
 #define _PROTO_MB_LEVEL_RK4_H_
 
 #include "Proto.H"
-#include "Proto_CubedSphereShell.H"
-#include "Inputs_Parsing.H"
+//#include "Inputs_Parsing.H"
 
 namespace Proto {
 
@@ -174,13 +173,16 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
                        a_time+a_dt, a_dt, weight, kstage);
         m_delta.increment(m_k, a_dt*weight);
     }
+
     // Update State.
+    /* Temporarily commented out. Please put back in if needed. -CLG
     int boundary_reflux = ParseInputs::get_boundary_reflux();
     if (boundary_reflux == 1)
       {
         m_blockreg.reflux(m_delta);
       }
     a_state.increment(m_delta, 1.0);
+    */
 }
 } //end Proto namespace
 
