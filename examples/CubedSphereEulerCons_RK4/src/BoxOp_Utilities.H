@@ -34,7 +34,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
 
                     T R_t = (a_r1 - a_r0) / (exp(a_C_rad) - 1.0);
                     T etalow = a_pt[a_rdir]*a_dxi0;
-				            T rlow = a_r0 + R_t * (exp(a_C_rad * etalow) - 1.0);
+                    T rlow = a_r0 + R_t * (exp(a_C_rad * etalow) - 1.0);
                     T etahigh = (a_pt[a_rdir] + 1.0)*a_dxi0;
                     T rhigh = a_r0 + R_t * (exp(a_C_rad * etahigh) - 1.0);
 
@@ -45,8 +45,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                     a_diagr(1) = (rhigh + rlow)/2.0;
                     a_diagr(2) = (rhigh + rlow)/2.0;
                     a_adjdiagr(0) = rlow*rlow;
-                    a_adjdiagr(1) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
-                    a_adjdiagr(2) = .5*(rhigh*rhigh - rlow*rlow)/a_dxi0;
+                    a_adjdiagr(1) = (rhigh*rhigh - rlow*rlow)/a_dxi0/2.0;
+                    a_adjdiagr(2) = (rhigh*rhigh - rlow*rlow)/a_dxi0/2.0;
                   },a_bx,a_radius,a_Diagr,a_adjDr,a_dVolr,r0,r1,C_rad,dr,dxi0,r_dir);
 }
 template<

@@ -160,6 +160,56 @@ void f_speedmax_F
   a_speedmax(0) += (af + sqrt(v2))/dx_d;
 }
 PROTO_KERNEL_END(f_speedmax_F, f_speedmax);
+PROTO_KERNEL_START
+template<typename T,MemType MEM>
+void f_csq_F
+(
+ Var<T,1,MEM>& a_csq,
+ const Var<T,NUMCOMPS,MEM>& a_W,
+ const Var<T,DIM,MEM,DIM>& a_amat,
+ const T a_gamma)
+{ 
+  vecType velSph;
+  vecType velCart;
+  vecType bSph;
+  vecType bCart;
+
+  velSph[0] = a_W(iVX);       
+  velSph[1] = a_W(iVY);
+  velSph[2] = a_W(iVZ);
+  velCart[0] = 0.;       
+  velCart[1] = 0.;
+  velCart[2] = 0.;
+      
+  bSph[0] = a_W(iBX);       
+  bSph[1] = a_W(iBY);
+  bSph[2] = a_W(iBZ);
+  bCart[0] = 0.;       
+  bCart[1] = 0.;
+  bCart[2] = 0.;
+  T half = .5;
+  T one = 1.0;
+  T v2 = 0.;
+  T v1 = 0.;
+  T b2 = 0.;
+  for (int dir0 = 0; dir0 < DIM; dir0++)
+    {
+      for (int dir1 = 0; dir1 < DIM; dir1++)
+        {
+          velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
+          bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
+        }
+      v2 += velCart[dir0]*velCart[dir0];
+      v1 += abs(velCart[dir0]);
+      b2 += bCart[dir0]*bCart[dir0];
+    }
+  T rho = a_W(iRHO);
+  T B_mag = sqrt(b2);
+  T p = a_W(iP);
+  if (p < 0.0) p = 0.0;
+  a_csq(0) = a_gamma*p/rho + b2/4.0/M_PI/rho;  
+}
+PROTO_KERNEL_END(f_csq_F, f_csq);
 template<
     typename T,
     template<MemType> typename MAP,
@@ -191,17 +241,14 @@ public:
 
   // New factorization of the operator starts here.
   // New operator() - calls RadialMetrics from inside the operator.
-  
-   
-  
+
   inline void operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
-   T&                              a_dt_next,
    const State&                    a_USph,
+   T                               a_dt,
    T                               a_scale = 1.0) const;
-  
   inline void primToFlux(
                          State& a_physFlux,
                          const State& a_WFace,
@@ -246,7 +293,7 @@ public:
   // Implemented.
   inline BoxData<T,NUMCOMPS,MEM> sphToCart(State& a_input,
                                            Box a_bx,
-                                         unsigned int a_block) const;
+                                           unsigned int a_block) const;
 
   //Implemented.
   inline void cartToSph(
@@ -256,6 +303,11 @@ public:
                         uint a_block) const;
 
   inline void dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,const State& a_W) const;
+   
+   inline static T dtCFL(
+                         MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+                         MBInterpOp& a_iop,
+                         MBLevelBoxData<T,1,MEM>& a_dVolr);
   
   inline BoxData<T,1,MEM> kineticEnergyW(
                                          const State& a_WPoint,
@@ -306,30 +358,56 @@ public:
                               uint a_dir) const;
 
   // End new factorization of operator().
-  // Linear Viscocity starts here.
+  // Viscosity starts here.
 
+  inline void
+  viscFlux(
+           State& a_Rhs,
+           Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
+           const State& a_USph,
+           T a_scale) const;
   inline void LinearVisc(
                         State& a_Rhs,
                         Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
                         const State& a_USph,
                         T a_scale = 1.0) const;
-  
 
-  inline void primToMappedViscFlux(
-                                  State& a_fluxdir,
-                                  const State& a_physFlux,
-                                  const State& a_WFace,
-                                  const State& a_WFaceBar,
-                                  const BoxData<T,1,MEM>& a_adjDdir,
-                                  const BoxData<T,DIM,MEM,DIM>& a_deta_a,
-                                  const BoxData<T,1,MEM>& a_deta,
-                                  const BoxData<T,DIM,MEM,DIM>& a_A,
-                                  const BoxData<T,DIM,MEM>& a_ntrow,
-                                  uint a_block,
-                                  uint a_dir) const;
+  inline void
+  LinearViscCoef(
+                 BoxData<T,1,MEM>& a_LNViscCoef,
+                 const State& a_WFace,
+                 const BoxData<T,1,MEM>& a_deta,
+                 const BoxData<T,DIM,MEM,DIM>& a_A,
+                 const BoxData<T,DIM,MEM>& a_ntrow,
+                 uint a_block,
+                 uint a_dir) const;
+  inline void
+  NonLinearViscCoef(
+                    BoxData<T,1,MEM>& a_NLViscCoef,
+                    const State& a_W,
+                    const BoxData<T,DIM,MEM>& a_adjDr,
+                    const BoxData<T,DIM,MEM,DIM>& a_A,
+                    const BoxData<T,DIM,MEM>& a_ntrow,
+                    const BoxData<T,1,MEM>& a_dVolr,
+                    const BoxData<T,1,MEM>& a_deta,
+                    Array<T,DIM> a_dxi,
+                    uint a_block,
+                    uint a_dir) const;
 
-  // End Linear Viscosity.
+  inline void
+  primToMappedViscFlux(
+                       State& a_fluxdir,
+                       const State& a_physFlux,
+                       const State& a_WFace,
+                       const BoxData<T,1,MEM>& a_adjDdir,
+                       const BoxData<T,DIM,MEM,DIM>& a_deta_a,
+                       const BoxData<T,1,MEM>& a_deta,
+                       const BoxData<T,DIM,MEM,DIM>& a_A,
+                       const BoxData<T,DIM,MEM>& a_ntrow,
+                       uint a_block,
+                       uint a_dir) const;
 
+  // End Viscosity.
 
   // DivB cleaning starts here.
 
@@ -386,8 +464,7 @@ public:
 
   /// Compute fluxes, and RHS.
   static inline void
-  StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs, 
-             T& a_dt_next,
+  StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
              MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
              MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
              Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,

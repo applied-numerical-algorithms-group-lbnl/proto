@@ -41,11 +41,15 @@ public:
     
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
-            MBInterpOp&           a_interp);
+            MBInterpOp&                 a_interp);
 
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
-    inline void advance(LevelStateData& a_state,T& a_dt_next,LevelScalarData& a_dVolrLev, T& a_dt, T a_time = 0., int a_order = 4);
-
+  inline void advance(LevelStateData& a_state,
+                      LevelScalarData& a_dVolrLev, 
+                      T a_dt,
+                      T a_time,
+                      int a_order);
+  
     inline LOP& op() { return m_f; }
     inline BC& bc() {return *m_bc; }
      template<unsigned int C>
@@ -77,7 +81,7 @@ protected:
   MBLevelRK4<OPType, MAP, T, BCType, MEM>::
   MBLevelRK4(
              const MBLevelMap<MAP>&      a_map,
-             MBInterpOp&           a_interp) : m_interp(a_interp)
+             MBInterpOp&                 a_interp) : m_interp(a_interp)
   {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
@@ -100,14 +104,13 @@ template <
     typename T,
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
-void MBLevelRK4<OPType, MAP, T, BCType, MEM>
-::advance(
-          LevelStateData& a_state, 
-          T& a_dt_next,
-          LevelScalarData& a_dVolrLev, 
-          T& a_dt,
-          T a_time,
-          int a_order)
+void MBLevelRK4<OPType, MAP, T, BCType, MEM>::
+advance(
+        LevelStateData& a_state,
+        LevelScalarData& a_dVolrLev, 
+        T a_dt,
+        T a_time,
+        int a_order)
 {
   PR_TIMERS("MBLevelRK4::advance");
     T sixth = 1, third=1, half = 1;
@@ -115,18 +118,27 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
     int kstage;
     m_delta.setVal(0.);
     m_blockreg.clear();
+    int opswitchiv = ParseInputs::get_operator_switchiv();
+    bool flagi = (opswitchiv%4 != 1);
+    //if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;
+    
     if (a_order == 1)
     {
       T weight = 1.0;
       a_state.copyTo(m_U0);
       kstage = 0;
-      OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
+        {
+          OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                         a_time, a_dt, weight, kstage);
       // m_delta.increment(m_k, weight);
       // What is this (^) ? Doesn't appear in 4th order.
-      OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
-                     a_time, a_dt, weight, kstage);
-      m_delta.increment(m_k, weight);
+          if (flagi)
+            {
+              OP::StageLevel(m_k, m_U0, m_blockreg, m_consSum,
+                             a_time, a_dt, weight, kstage);
+              m_delta.increment(m_k, weight);
+            }
+        }
     }
 
     if (a_order == 4)    
@@ -134,13 +146,17 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         a_state.copyTo(m_U0);
         kstage = 0;
         T weight = sixth;
+        
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage);
         m_delta.increment(m_k, 1.0);
-        OP::StageLevel
-          (m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
-           a_time, a_dt, weight, kstage);
-        m_delta.increment(m_k, a_dt*weight);
+        if (flagi)
+          {
+            OP::StageLevel
+              (m_k, m_U0, m_blockreg, m_consSum,
+               a_time, a_dt, weight, kstage);
+            m_delta.increment(m_k, a_dt*weight);
+          }
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k, half*a_dt);
@@ -149,10 +165,13 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         OP::preStageLevel
           (m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
            a_time+0.5*a_dt, a_dt, weight, kstage);
-        OP::StageLevel
-          (m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
-           a_time+0.5*a_dt, a_dt,weight, kstage);
-        m_delta.increment(m_k, a_dt*weight);
+        if (flagi)
+          {
+            OP::StageLevel
+              (m_k, m_U0, m_blockreg, m_consSum,
+               a_time, a_dt, weight, kstage);
+            m_delta.increment(m_k, a_dt*weight);
+          }
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k, half*a_dt);
@@ -160,9 +179,13 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         weight = third;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp,m_blockreg, m_consSum,
                           a_time+0.5*a_dt,a_dt, weight, kstage);
-        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
-                       a_time+0.5*a_dt, a_dt, weight, kstage);
-        m_delta.increment(m_k, a_dt*weight);
+        if (flagi)
+          {
+            OP::StageLevel
+              (m_k, m_U0, m_blockreg, m_consSum,
+               a_time, a_dt, weight, kstage);
+            m_delta.increment(m_k, a_dt*weight);
+          }
 
         a_state.copyTo(m_U0);
         m_U0.increment(m_k,a_dt);
@@ -170,8 +193,12 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
         weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time+a_dt,a_dt, weight, kstage);
-        OP::StageLevel(m_k, a_dt_next, m_U0, m_blockreg, m_consSum,
-                       a_time+a_dt, a_dt, weight, kstage);
+        if (flagi)
+          {
+            OP::StageLevel
+              (m_k, m_U0, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
+            m_delta.increment(m_k, a_dt*weight);
+          }
         m_delta.increment(m_k, a_dt*weight);
     }
     // Update State.
@@ -180,7 +207,30 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>
       {
         m_blockreg.reflux(m_delta);
       }
+
+    auto layout = m_delta.layout();
+    HDF5Handler h5;
+    auto map = CubedSphereShell::Map(layout, Point::Zeros());
+    int nrad = layout.getBlock(0).domain().box().high()[0];
+    //if (procID() == 0) cout << "RK4 advance: a_dt = " << a_dt << endl;
+    //h5.writeMBLevel({},map,m_delta,"delta_"+to_string(nrad) + "_" + to_string(m_counter));
+    m_counter++;
+#if 0
+    for (int comp = 0; comp < 8; comp++)
+      {
+        T consdelta = m_delta.sum(comp);
+        consState[comp] = a_state.sum(comp);
+        T maxdelta = m_delta.max(comp);
+        T maxState = a_state.max(comp);
+        if (procID() == 0) cout << "component " << comp <<
+                             ": delta sum  = " << consdelta <<
+                             ": state sum  = " << consState[comp] <<
+                             ": delta max  = " << maxdelta <<
+                             ": state max  = " << maxState << endl;
+      }
+#endif
     a_state.increment(m_delta, 1.0);
+    //cout << procID() << ": delta max " << m_delta.absMax(0) << endl;
 }
 } //end Proto namespace
 

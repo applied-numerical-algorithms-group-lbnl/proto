@@ -237,6 +237,8 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
  
   int init_condition_type = ParseInputs::get_init_condition_type();
+  int opswitchiv = ParseInputs::get_operator_switchiv();
+  int opswitchln = ParseInputs::get_operator_switchln();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
@@ -244,8 +246,8 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // initialize a_k to zero. This
   a_k.setVal(0.);
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
-  int thetaCoord = (rCoord + 1) % 3;
-  int phiCoord = (rCoord + 2) % 3;
+  int thetaCoord = (rCoord + 1) % DIM;
+  int phiCoord = (rCoord + 2) % DIM;
   MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
   if (init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
 
@@ -259,7 +261,8 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
     auto dx = eulerOp[dit].dx();    
     // Compute viscous operators here, and increment a_rhsTotal.
-    
+    bool flagv = (opswitchiv % 4) != 2;
+    //if (procID() == 0) cout << opswitchiv << ": flagv = " << flagv  << endl;
     int linear_visc = ParseInputs::get_linear_viscosity();
     int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)
@@ -274,11 +277,14 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[1].setToZero();
         fluxes[2].define(rhs_i.box().extrude(2));
         fluxes[2].setToZero();
-        eulerOp[dit].LinearVisc(rhs_i, fluxes, USph_i, 1.0);
-        T one = 1.0;
-        // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
-        a_blockreg.increment(fluxes, dit, a_dt);
-        CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
+        if (flagv)
+          {
+            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0);
+            T one = 1.0;
+            // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+            a_blockreg.increment(fluxes, dit, a_dt);
+            CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
+          }
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, 1.0);
   }

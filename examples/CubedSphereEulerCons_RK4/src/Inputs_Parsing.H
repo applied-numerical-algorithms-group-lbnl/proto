@@ -20,6 +20,7 @@ private:
     int boxSize_rad; // Size of the box for domain decomposition
     int max_iter; 
     double CFL;
+  double strength; // Strength of perturbation for test problems.
     int write_cadence; 
     string data_file_prefix;
     double gamma; // Ratio of specific heats
@@ -29,6 +30,8 @@ private:
     int boundary_reflux; // 0: don't reflux at block boundaries, 1: reflux
     int radial_refinement; // 0: refine in all directions by 2 for convergence studies;
                            // 1 refine only in radial direction.
+    int operator_switchiv;   // no inviscid (1) no viscous (2) both on (0).
+    int operator_switchln;   // no linear (1) no nonlinear (2) both on (0)
     string BC_file;
     string Probe_trajectory_file;
     string Probe_data_file;
@@ -59,6 +62,7 @@ public:
     static int get_boxSize_rad() {return getInstance().boxSize_rad;}
     static int get_max_iter() {return getInstance().max_iter;}
     static double get_CFL() {return getInstance().CFL;}
+    static double get_strength() {return getInstance().strength;}
     static int get_write_cadence() {return getInstance().write_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static double get_gamma() {return getInstance().gamma;}
@@ -67,6 +71,8 @@ public:
     static int get_linear_viscosity() {return getInstance().linear_viscosity;}
     static int get_boundary_reflux() {return getInstance().boundary_reflux;}
     static int get_radial_refinement() {return getInstance().radial_refinement;}
+    static int get_operator_switchiv() {return getInstance().operator_switchiv;}
+    static int get_operator_switchln() {return getInstance().operator_switchln;}
     static string get_BC_file() {return getInstance().BC_file;}
     static string get_Probe_trajectory_file() {return getInstance().Probe_trajectory_file;}
     static string get_Probe_data_file() {return getInstance().Probe_data_file;}
@@ -85,6 +91,7 @@ public:
         args.add("boxSize_rad", boxSize_rad);
         args.add("max_iter", max_iter);
         args.add("CFL", CFL);
+        args.add("strength", strength);
         args.add("write_cadence", write_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("gamma", gamma);
@@ -93,6 +100,8 @@ public:
         args.add("linear_viscosity", linear_viscosity);
         args.add("boundary_reflux", boundary_reflux);
         args.add("radial_refinement", radial_refinement);
+        args.add("operator_switchiv", operator_switchiv);
+        args.add("operator_switchln", operator_switchln);
         args.add("BC_file", BC_file);
         args.add("Probe_trajectory_file", Probe_trajectory_file);
         args.add("Probe_data_file", Probe_data_file);
@@ -113,6 +122,7 @@ public:
             cout << "boxSize_rad: " << boxSize_rad << endl;
             cout << "max_iter: " << max_iter << endl;
             cout << "CFL: " << CFL << endl;
+            cout << "strength: " << strength << endl;
             cout << "write_cadence: " << write_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "gamma: " << gamma << endl;
@@ -121,6 +131,8 @@ public:
             cout << "linear_viscosity: " << linear_viscosity << endl;
             cout << "boundary_reflux: " << boundary_reflux << endl;
             cout << "radial_refinement: " << radial_refinement << endl;
+            cout << "operator_switchiv: " << operator_switchiv << endl;
+            cout << "operator_switchln: " << operator_switchln << endl;
             cout << "BC_file: " << BC_file << endl;
             cout << "Probe_trajectory_file: " << Probe_trajectory_file << endl;
             cout << "Probe_data_file: " << Probe_data_file << endl;

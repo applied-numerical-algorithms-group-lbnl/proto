@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     CubedSphereShell::Domain(domainSize, thickness, radialDir);
   // #if 0 //short test
   if (convTestType == 0) levmax = 1;
+  if (convTestType == 4) levmax = 1;
   for (int lev=0; lev<levmax; lev++)
     {
       typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
           JU_i.setVal(0.);
           JUTemp.copyTo(JU_i, layout[dit]);
         }
-    
+     
       // Point ghostForInterp = OP::ghost() + Point::Ones();
       //MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),
       //                                                  ghostForInterp,4);
@@ -135,9 +136,14 @@ int main(int argc, char *argv[])
   //#if 0 // Begin debug comment.
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
-    
-    double mass = JU.sum(0);
-    double energy = JU.sum(4);
+    auto initialCons = CubedSphereShell::conservationSum(JU);
+    for (int comp = 0; comp< 8; comp++)
+      {
+        if (procID()==0)
+          cout << "initial conserved quantity, component " << comp << " = " << initialCons[comp] << endl;
+      }
+    double mass = initialCons[0];
+    double energy =  initialCons[4];
     double momentum = sqrt(energy*mass);
     int discreteVol = domainSize*domainSize*thickness*6;
     if (procID() == 0)
@@ -146,106 +152,102 @@ int main(int argc, char *argv[])
       }
     if (lev == 0)
       {
-        dt = 1.0/dtinv.fetch();
-        if (procID() == 0) cout << "dt_{CFL=1} = " << dt;
-        dt *= ParseInputs::get_CFL();
+        double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
+        if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
+        dt = dtcfl1*ParseInputs::get_CFL();
         if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
       }
-    if (convTestType == 3) max_iter = 1;
+    if (convTestType > 2) max_iter = 1;
+    
     for (int iter = 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
-      double dt_save;
-#if 0
-      if (ParseInputs::get_convTestType() == 0){
-        #ifdef PR_MPI
-          MPI_Reduce(&dt_next, &dt, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
-          MPI_Bcast(&dt, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-          dt_save = dt;
-        #else
-          dt = dt_next;
-        #endif
-#endif
-          if (convTestType < 3)
+      if (convTestType == 0)
+        {
+          double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
+          if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
+          dt = dtcfl1*ParseInputs::get_CFL();
+          if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
+        }
+      if (convTestType < 3)
+        {
+          rk4.advance(JU, dVolrLev, dt, time, temporal_order);
+          time += dt;
+        }
+      else
+        {
+          PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
+          Array<double,8> opConsSums = OP::applyOp(JU,iop,dVolrLev);
+          if (procID() == 0)
             {
-              rk4.advance(JU, dt_next, dVolrLev, dt, time, temporal_order);
-              time += dt;
+              for (int comp = 0; comp < 8 ; comp++)
+                {
+                  //opConsSums[comp] *= dt;
+                  if (comp == 0)
+                    {
+                      cout << "component:" << comp <<
+                        ", scaled conserved mass = " <<
+                        opConsSums[comp]/ mass  <<
+                        endl;
+                    }
+                  else if (comp == 4)
+                    {
+                      cout << "component:" << comp <<
+                        ", scaled conserved energy = " <<
+                        opConsSums[comp] / energy <<
+                        endl;
+                    }
+                  else
+                    {
+                      double norm = sqrt(energy/mass)*mass;
+                      cout << "component:" << comp <<
+                        ", scaled conserved quantity = " << opConsSums[comp] / norm <<  endl;
+                    }
+                }
             }
-          else
-            {
-             PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
-             Array<double,8> opConsSums = OP::applyOp(JU,iop,dVolrLev);
-             if (procID() == 0)
-               {
-                 for (int comp = 0; comp < 8 ; comp++)
-                   {
-                     //opConsSums[comp] *= dt;
-                     if (comp == 0)
-                       {
-                         cout << "component:" << comp <<
-                           ", scaled conserved mass = " <<
-                           opConsSums[comp]/ mass  <<
-                           endl;
-                       }
-                     else if (comp == 4)
-                       {
-                         cout << "component:" << comp <<
-                           ", scaled conserved energy = " <<
-                           opConsSums[comp] / energy <<
-                           endl;
-                       }
-                     else
-                       {
-                         double norm = sqrt(energy/mass)*mass;
-                         cout << "component:" << comp <<
-                           ", scaled conserved quantity = " << opConsSums[comp] / norm <<  endl;
-                       }
-                   }
-               }
-            }
+        }
       if (iter % write_cadence == 0)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
           // Check conservation.
-          if (convTestType != 3)
+          if (convTestType < 3)
             {
               Array<double,8> consRadial = rk4.getCons<8>();
-              Array<double,8> consSum = {0.,0.,0.,0.,0.,0.,0.,0.};        
-              {
+              Array<double,8> consSum =
+                CubedSphereShell::conservationSum(JU);        
+              { 
                 for (int comp = 0; comp < 8; comp++)
                   { 
-                    consSum[comp] += JU.sum(comp);           
+                    consSum[comp] -= initialCons[comp];           
                   }
               }
               if (procID() == 0)
                 {
                   double one = 1.0;
-                  if (convTestType == 3) one = 0.;
+                  if (convTestType > 2) one = 0.;
                   for (int comp = 0; comp < 8; comp++)
                     {
                       if (comp == 0)
                         {
                           cout << "component:" << comp <<
-                            ", (scaled conserved mass) - 1 = " <<
-                            (consSum[comp] - consRadial[comp])/ mass - one  <<
-                            //consSum[comp]/ mass - one  <<
+                            ", change in scaled conserved mass = " <<
+                            (consSum[comp] - consRadial[comp])/mass  <<
                             endl;
                         }
                       else if (comp == 4)
                         {
                           cout << "component:" << comp <<
-                            ", (scaled conserved energy) - 1 = " <<
-                            (consSum[comp] - consRadial[comp]) / energy - one <<
-                            //consSum[comp]/ energy - one <<
+                            ", change in scaled conserved energy = " <<
+                            (consSum[comp] - consRadial[comp]) /energy <<
                             endl;
                         }
                       else
                         {
                           double norm = sqrt(energy/mass)*mass;
                           cout << "component:" << comp <<
-                             ", scaled conserved quantity = " << (consSum[comp] - consRadial[comp])/ norm 
-                            // ", scaled conserved quantity = " << consSum[comp] / norm
-                               <<  endl;
+                            ", change in scaled conserved quantity = " <<
+                            (consSum[comp] - consRadial[comp]) / norm <<
+                            endl;
                         }
                     }
                 }
@@ -265,7 +267,7 @@ int main(int argc, char *argv[])
       if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time  << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms" << endl;
     }
 
-    if (convTestType > 0){
+      if ((convTestType > 0) && (convTestType != 4)) {
       U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
       for (auto dit : layout)
       {
@@ -298,7 +300,7 @@ int main(int argc, char *argv[])
     }
   }
 
-    if (convTestType > 0)
+    if((convTestType > 0) && (convTestType != 4))
       {
         //Here, we perform the error calculations on a single patch.
         // if(procID() == 0)

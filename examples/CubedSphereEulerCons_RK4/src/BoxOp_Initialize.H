@@ -6,26 +6,27 @@ void f_radialInit_F(
     Var<T, NUMCOMPS, MEM> &a_W,
     Var<T> &a_radius,
     T a_gamma,
+    T a_strength,
     int a_nradius)
 {
   // Compute spherical initial data.
   T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
   T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
   //T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
-  T eps = 0.1;
   T amplitude;
   T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
-  if (abs(arg) < .25)
+  if (arg < 0)
   {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+    amplitude = a_strength * pow(cos(2 * M_PI * arg), 6);
   }
   else
   {
     amplitude = 0.;
   }
-  T rho = rho0 + amplitude * rho0;
-  T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0);
+  T p = p0 + amplitude * p0;
+  T W = sqrt(a_gamma*p0*rho0*(1.0 + ((a_gamma + 1.0)/(2.0*a_gamma))*(p-p0)/p0));
+  T rho = 1.0/(1./rho0 - (p - p0)/(W*W));
+  T ur = (p-p0)/W;
   a_W(iRHO) = rho;
   a_W(iVX) = ur;
   a_W(iVY) = 0.0;
@@ -35,9 +36,7 @@ void f_radialInit_F(
   a_W(iBY) = 0.0;
   a_W(iBZ) = 0.0;
 }
-
 PROTO_KERNEL_END(f_radialInit_F, f_radialInit)
-
 template <typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_nonradialInit_F(
@@ -120,7 +119,8 @@ initialize(State& a_W,
           int a_nradius) const
 {
   int init_condition_type = ParseInputs::get_init_condition_type();
-  if (init_condition_type == 0) forallInPlace_p(f_radialInit, a_W, a_radius, a_gamma, a_nradius);
+  T strength = ParseInputs::get_strength();
+  if (init_condition_type == 0) forallInPlace_p(f_radialInit, a_W, a_radius, a_gamma, strength, a_nradius);
   if (init_condition_type == 1) forallInPlace_p(f_nonradialInit, a_W, a_Xcart, a_gamma, a_nradius);
   if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
   // if (init_condition_type == 3) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);

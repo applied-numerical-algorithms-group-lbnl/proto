@@ -123,6 +123,9 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static Array<T,C> conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU);
+                                      
 #if 0
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void consToSphInterpEuler( 

@@ -453,7 +453,20 @@ CubedSphereShell::BCNearestOp(
     }
     return op;
 }
-
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Array<T,C>
+CubedSphereShell::conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU)
+{
+  auto layout = a_JU.layout();
+  MBLevelBoxData<T,C,MEM,CTR> temp(layout,Point::Zeros());
+  a_JU.copyTo(temp);
+  Array<T,C> retval;
+  for (int comp = 0; comp < C; comp++)
+      {
+        retval[comp] = a_JU.sum(comp);
+      }
+  return retval;
+}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
