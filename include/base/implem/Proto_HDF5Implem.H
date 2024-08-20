@@ -646,7 +646,6 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     free(rawData);
     free(blockData);
 }
-#if 0
 template<typename... Args>
 void HDF5Handler::readMBLayout(
         MBDisjointBoxLayout& a_layout,
@@ -729,7 +728,6 @@ void HDF5Handler::readMBLayout(
     free(boxData);
     free(blockData);
 }
-#endif
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::readMBLevel(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,

@@ -7,6 +7,7 @@
 #ifdef PR_MMB
 #include "../mmb/Proto_MBGraph.H"
 #include "../mmb/Proto_MBProblemDomain.H"
+#include "../mmb/Proto_MBDisjointBoxLayout.H"
 #endif
 #endif
 
@@ -24,7 +25,7 @@ namespace Proto
 #ifdef PR_MMB
     class MBGraph;
     class MBProblemDomain;
-    class MBDisjointBoxLayout;
+  //class MBDisjointBoxLayout;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
