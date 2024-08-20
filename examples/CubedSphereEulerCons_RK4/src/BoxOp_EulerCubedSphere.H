@@ -365,7 +365,8 @@ public:
            State& a_Rhs,
            Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
            const State& a_USph,
-           T a_scale) const;
+           T a_scale,
+           T a_dt) const;
   inline void LinearVisc(
                         State& a_Rhs,
                         Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
@@ -514,6 +515,7 @@ public:
                  MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg,
                  const MBLevelBoxData<T,NUMCOMPS,MEM>& a_dVolrLev);
 private:
+  int m_count = 0;
   
 };
 #include "BoxOp_Utilities.H"

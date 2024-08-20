@@ -232,6 +232,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               T a_weight,
               int a_kstage)
 {
+  //
   // Transform JU -> USph.
   auto layout = a_UStage.layout();
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
@@ -279,7 +280,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[2].setToZero();
         if (flagv)
           {
-            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0);
+            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0,a_dt);
             T one = 1.0;
             // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
             a_blockreg.increment(fluxes, dit, a_dt);

@@ -8,7 +8,8 @@ viscFlux(
          State& a_Rhs,
          Array<BoxData<double, NUMCOMPS>, DIM>& a_fluxes,
          const State& a_USph,
-         T a_scale) const
+         T a_scale,
+         T a_dt) const
 {
   int block = this->block();
   State rhs(a_Rhs.box());
@@ -53,8 +54,8 @@ viscFlux(
       State WFace = Stencil<T>::CellToFace(dir)(W);
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
       Stencil<double> D2 = 1.0*Shift(Point::Basis(dir)) + (-2.0)*Shift(Point::Zeros())
-        + 1.0*Shift(-Point::Basis(dir));
-      Stencil<double> D1 = (-1.0)*Shift(Point::Zeros()) + 1.0*Shift(-Point::Basis(dir));
+        + 1.0*Shift(Point::Basis(dir,-1));
+      Stencil<double> D1 = (1.0)*Shift(Point::Zeros()) + (-1.0)*Shift(Point::Basis(dir,-1));
       Stencil<double> D5 =  D1 * D2 * D2;
       Box bxface = a_Rhs.box().extrude(Point::Basis(dir));
       State physFlux(bxface);
@@ -69,6 +70,7 @@ viscFlux(
       Box bxdir = bx.extrude(Point::Basis(dir));
       BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,dxiPerp,block,dir);
 #if 0
+      // Debugging diagnostics, #if'ed out for now.
       if (dir == 0)
         {
           auto vr = slice(W,iVX);
@@ -81,7 +83,7 @@ viscFlux(
           BoxData<T,1,MEM> dvdr =
             ((-1.0)*Shift(Point::Basis(0,-1)) + 1.0*Shift(Point::Basis(0)))
             (temp,bxface,0.5/dxi[0]);
-          cout << procID() << ", dAvrdxi = " << dvdr.absMax() << endl;
+          // cout << procID() << ", dAvrdxi = " << dvdr.absMax() << endl;
           forallInPlace([ ] PROTO_LAMBDA(
                                          Var<T,1,MEM>& a_numer,
                                          const Var<T,1,MEM>& a_denom1,
@@ -90,9 +92,9 @@ viscFlux(
                           a_numer(0) = a_numer(0)/(a_denom1(0));
                         },dvdr,dVolr,deta);
   
-          cout << procID() << ", dAvrdVolr = " << dvdr.absMax() << endl;
+          // cout << procID() << ", dAvrdVolr = " << dvdr.absMax() << endl;
         }
-#endif
+#endif // endif for #if 0.
       Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
       Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
       Point high = bx.high();
@@ -110,9 +112,9 @@ viscFlux(
       BoxData<T,NUMCOMPS,MEM> linearViscFlux;
       BoxData<T,NUMCOMPS,MEM> NLViscFlux;
       BoxData<T,NUMCOMPS,MEM> rhsIncr(bxface);
-      
       if (viscl)
         {
+          // cout << "viscl = " << viscl << endl;
           State fluxtemp(bxface);
           fluxtemp.setToZero();
           linearViscFlux = D5(a_USph, 1.0/128);
@@ -131,6 +133,7 @@ viscFlux(
         }
       if (viscnl) 
         {
+          // cout << "viscnl = " << viscnl << endl;
           State fluxtemp(bxface);
           fluxtemp.setToZero();
           NLViscFlux = D1(a_USph);
@@ -138,7 +141,7 @@ viscFlux(
                                deta_a,deta,A_matrix,ntrow,block,dir);
           BoxData<T,1,MEM> nlvisccoef(bxface);
           NonLinearViscCoef(nlvisccoef,W,adjDr,A_matrix,ntrow,dVolr,deta,dxi,block,dir);
-          //cout << procID() << ": max nl visc coef = " << nlvisccoef.absMax() << endl;
+          // if (procID() == 0) cout << "dir =" << dir << ", max nlvisc coef = " << nlvisccoef.absMax() << endl;
           for (int comp = 0 ; comp < NUMCOMPS; comp++)
             {
               auto fluxtempcomp = slice(fluxtemp,comp);
@@ -172,14 +175,36 @@ viscFlux(
       T dxInv = 1.0/dxi[dir];
       rhsIncr = Stencil<T>::FluxDivergence(dir)(a_fluxes[dir],dxInv);
       rhs += rhsIncr;
+      
       outputbox &= rhsIncr.box();
+#if 0
       // << procID() << ", " << outputbox << ", " << rhsIncr.absMax(0) <<  endl;
-    }
-  if (block == BLOCKTEST)
-    {
-      HDF5Handler h5;
-      BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(rhs,dxiPerp,block);
-      h5.writePatch(dxiPerp,rhsRadial,"rhsViscRadial");
+      if (procID() == 0)
+        {
+           T c_MP = 67262192e-24;
+           Array<T,NUMCOMPS> scalevars =
+             {c_MP,1.e5*c_MP,1.e5*c_MP,1.e5*c_MP,1.e12,1.e6,1.e6,1.e6};
+          auto J = dVolr*deta;
+          rhsIncr *= a_dt;  
+          for (int comp; comp < NUMCOMPS; comp++)
+            {
+              auto rhsincrcomp = slice(rhsIncr,comp);
+              forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& a_rhs,
+                                             const Var<T,1,MEM>& a_j,
+                                             T a_scalevar)
+                            {
+                              a_rhs(0) /= (a_j(0)*a_scalevar);
+                            },rhsincrcomp,J,scalevars[comp]);
+              
+            }
+          if (procID() == 0)
+            {
+              cout << "dt = " << a_dt << ", rhsViscmax = " << rhsIncr.absMax(0) << endl;
+            }
+          HDF5Handler h5;
+          h5.writePatch(dxiPerp,rhsIncr,"rhsVisc"+to_string(dir));
+        }
+#endif
     }
   rhs *= (a_scale);
   a_Rhs += rhs;
@@ -353,12 +378,12 @@ NonLinearViscCoef(
                     },dvoldn[a_dir],dvft1dtan1,dvft1dtan2,deta0,a_dVolr);
   
   int nrad = int (1.0/a_dxi[0]);
-#if 0
+  //#if 0
   if (procID() == 0)
     {
-      h5.writePatch(a_dxi[0],divu,
-                    "divu_"+to_string(a_dir) + to_string(nrad) +
-                    "patch_"+to_string(procID()));
+      //h5.writePatch(a_dxi[0],divu,
+      //             "divu_"+to_string(a_dir) + to_string(nrad) +
+      //             "patch_"+to_string(procID()));
       Box bxface = a_NLViscCoef.box();
       auto adjDrdir = slice(a_adjDr,a_dir);
       BoxData<T,1,MEM> dummy(bxface),dummy0(bxface),dummy1(bxface),
@@ -373,15 +398,16 @@ NonLinearViscCoef(
       deta0.copyTo(dummy4);
       adjDrdir.copyTo(dummy5);
       
-      cout << procID() << ", Maxvals: divu = " << dummy.absMax() <<
-        ", dvolfdn = " << dummy0.absMax() <<
-        ", dvolf1dtan1 = " << dummy1.absMax() <<
-        ", dvolf1dtan2 = " << dummy2.absMax() <<
-        ", a_dVolr = " << dummy3.absMax() <<
-        ", deta0 = " << dummy4.absMax() <<
-        ", adjDrdir = " << dummy5.absMax() <<endl;
+      // cout << procID() << ",max divu = " << dummy.absMax() <<
+      //", dxi[dir] = " << a_dxi[a_dir] <<
+        // ", dvolf1dtan1 = " << dummy1.absMax() <<
+        //", dvolf1dtan2 = " << dummy2.absMax() <<
+        // ", a_dVolr = " << dummy3.absMax() <<
+        //", deta0 = " << dummy4.absMax() <<
+        //", adjDrdir = " << dummy5.absMax() <<
+        //endl;
     }
-#endif
+  //#endif
   {
     PR_TIMERS("BoxOp_EulerCubedSphere::NL Viscosity coefficient - final");
     divu *= a_dxi[a_dir];
@@ -391,19 +417,36 @@ NonLinearViscCoef(
 
     //cout << procID() << ", lambda max = "
     //    << divu.absMax() << ", csq max = " << csq.absMax() << endl;
-    BoxData<T,1,MEM> csqshift = alias(csq,Point::Basis(a_dir));
+    BoxData<T,1,MEM> csqshiftr = alias(csq,Point::Basis(a_dir));
+    BoxData<T,1,MEM> csqshiftr2 = alias(csq,Point::Basis(a_dir,2));
+    BoxData<T,1,MEM> csqshiftl = alias(csq,Point::Basis(a_dir,-1));
     forallInPlace([] PROTO_LAMBDA(
                                   Var<T,1,MEM>&            a_coef,
                                   const Var<T,1,MEM>&      a_divu,
                                   const Var<T,1,MEM>&      a_csql,
                                   const Var<T,1,MEM>&      a_csqr,
+                                  const Var<T,1,MEM>&      a_csql2,
+                                  const Var<T,1,MEM>&      a_csqr2,
                                   T                        a_dx,
                                   T                        a_alpha,
                                   T                        a_beta)
                   {
                     T lambda = abs(a_divu(0));
-                    a_coef(0) = a_alpha*lambda*
-                      min(1.,lambda*lambda/(min(a_csql(0),a_csqr(0))*a_beta));
-                  },a_NLViscCoef,divu,csq,csqshift,a_dxi[a_dir],alpha,beta);
+                    a_coef(0) = a_alpha*lambda;
+                    // min(1.,lambda*lambda/
+                    //     (min(a_csql(0),min(a_csqr(0),
+                    //                       min(a_csql2(0),a_csqr(0))))
+                    //     *a_beta));
+                  },a_NLViscCoef,divu,
+                  csq,csqshiftr,csqshiftl,csqshiftr2,
+                  a_dxi[a_dir],alpha,beta);
+#if 0    
+    if (procID() == 0)
+    {
+      h5.writePatch(a_dxi[0],a_NLViscCoef,
+                   "divu_"+to_string(a_dir) + to_string(nrad) +
+                   "patch_"+to_string(procID()));
+    }
+#endif
   }
 }

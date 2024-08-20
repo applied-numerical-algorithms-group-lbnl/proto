@@ -119,7 +119,7 @@ advance(
     m_delta.setVal(0.);
     m_blockreg.clear();
     int opswitchiv = ParseInputs::get_operator_switchiv();
-    bool flagi = (opswitchiv%4 != 1);
+    bool flagi = (opswitchiv != 1);
     //if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;
     
     if (a_order == 1)
@@ -130,13 +130,12 @@ advance(
         {
           OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                         a_time, a_dt, weight, kstage);
-      // m_delta.increment(m_k, weight);
-      // What is this (^) ? Doesn't appear in 4th order.
+          m_delta.increment(m_k, weight*a_dt);
           if (flagi)
             {
               OP::StageLevel(m_k, m_U0, m_blockreg, m_consSum,
                              a_time, a_dt, weight, kstage);
-              m_delta.increment(m_k, weight);
+              m_delta.increment(m_k, weight*a_dt);
             }
         }
     }
@@ -149,7 +148,7 @@ advance(
         
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage);
-        m_delta.increment(m_k, 1.0);
+        m_delta.increment(m_k, a_dt);
         if (flagi)
           {
             OP::StageLevel
@@ -199,7 +198,6 @@ advance(
               (m_k, m_U0, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
             m_delta.increment(m_k, a_dt*weight);
           }
-        m_delta.increment(m_k, a_dt*weight);
     }
     // Update State.
     int boundary_reflux = ParseInputs::get_boundary_reflux();
@@ -212,7 +210,7 @@ advance(
     HDF5Handler h5;
     auto map = CubedSphereShell::Map(layout, Point::Zeros());
     int nrad = layout.getBlock(0).domain().box().high()[0];
-    //if (procID() == 0) cout << "RK4 advance: a_dt = " << a_dt << endl;
+    // if (procID() == 0) cout << "RK4 advance: a_dt = " << a_dt << endl;
     //h5.writeMBLevel({},map,m_delta,"delta_"+to_string(nrad) + "_" + to_string(m_counter));
     m_counter++;
 #if 0

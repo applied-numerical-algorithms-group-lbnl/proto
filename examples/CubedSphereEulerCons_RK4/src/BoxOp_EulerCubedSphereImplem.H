@@ -10,8 +10,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
    Array<State, DIM>&              a_fluxes,
-   T&                              a_dt_next,
    const State&                    a_USph,
+   T                               a_dt,
    T                               a_scale) const
 {
   PR_TIMERS("BoxOp_Euler::operator()");
@@ -145,73 +145,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
-      
-      forallInPlace([ ] PROTO_LAMBDA
-        ( Var<T,1,MEM>& a_speedmax,
-          const Var<T,NUMCOMPS,MEM>& a_W,
-          const Var<T,DIM,MEM,DIM>& a_amat,
-          const Var<T,DIM,MEM>& a_adjA,
-          const Var<T,1,MEM>& a_adjDrDir,
-          const Var<T,1,MEM>& a_detA,
-          const Var<T,1,MEM>& a_dVolr,
-          const Var<T,DIM,MEM>& a_Dr,
-          const T a_dxiPerp,
-          const T a_dxiR,
-          const int a_d,
-          const T a_gamma)
-        { 
-          double dx_d, dt_d;
-          if (a_d > 0){
-            T adjA_mag = sqrt(a_adjA(0)*a_adjA(0) + a_adjA(1)*a_adjA(1) + a_adjA(2)*a_adjA(2));
-            dx_d = a_dVolr(0) * a_detA(0) * a_dxiPerp / a_adjDrDir(0) / adjA_mag;
-          } 
-          if (a_d == 0){
-            dx_d = a_Dr(0) * a_dxiR;
-          }   
-
-          vecType velSph;
-          vecType velCart;
-          vecType bSph;
-          vecType bCart;
-
-          velSph[0] = a_W(iVX);       
-          velSph[1] = a_W(iVY);
-          velSph[2] = a_W(iVZ);
-          velCart[0] = 0.;       
-          velCart[1] = 0.;
-          velCart[2] = 0.;
-      
-          bSph[0] = a_W(iBX);       
-          bSph[1] = a_W(iBY);
-          bSph[2] = a_W(iBZ);
-          bCart[0] = 0.;       
-          bCart[1] = 0.;
-          bCart[2] = 0.;
-          T half = .5;
-          T one = 1.0;
-          T v2 = 0.;
-          T v1 = 0.;
-          T b2 = 0.;
-          for (int dir0 = 0; dir0 < DIM; dir0++)
-          {
-            for (int dir1 = 0; dir1 < DIM; dir1++)
-            {
-              velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
-              bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
-            }
-            v2 += velCart[dir0]*velCart[dir0];
-            v1 += abs(velCart[dir0]);
-            b2 += bCart[dir0]*bCart[dir0];
-          }
-          T rho = a_W(iRHO);
-          T B_mag = sqrt(b2);
-          T p = a_W(iP);
-          if (p < 0.0) p = 0.0;
-          T af = sqrt(a_gamma*p/rho + b2/4.0/M_PI/rho);  
-          a_speedmax(0) += (af + sqrt(v2))/dx_d;
-        },speedMax,W,A_matrix0,ntrow0,adjDrDir,deta0,dVolr,Dr,dxiPerp,dxiR,dir,m_gamma);
     }
-  a_dt_next = 1.0/speedMax.absMax();
+  // a_dt_next = 1.0/speedMax.absMax();
   if (a_block == BLOCKTEST)
     {
       HDF5Handler h5;
@@ -220,7 +155,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
     }
   // if (procID() == 0)cout << "output box = " << outputbox << endl;
 }
-
 template<
     typename T,
     template<MemType> typename MAP,
@@ -511,17 +445,41 @@ primToFlux(
 // ====================================================================================
 // Pre and Post implems start here.
 // ====================================================================================
-
-
-
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline T BoxOp_EulerCubedSphere<T,MAP,MEM>::
+dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+      MBInterpOp& a_iop,
+      MBLevelBoxData<T,1,MEM>& a_dVolr)
+{
+  auto layout = a_JU.layout();
+  auto map = CubedSphereShell::Map(layout, ghost());
+  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  MBLevelBoxData<T,NUMCOMPS,MEM> JUTemp(layout,a_JU.ghost());
+  a_JU.copyTo(JUTemp);
+  Reduction<T,Operation::Max,MEM> dtinv;
+  dtinv.reset();
+  CubedSphereShell::consToSphInterpEuler(JUTemp,a_iop,a_dVolr,4);
+  for (auto dit : layout)
+    {
+      int block = layout.block(dit);
+      BoxData<T,NUMCOMPS,MEM> W(JUTemp[dit].box().grow(Point::Ones(-1)));
+      BoxData<T,NUMCOMPS,MEM> WBar(JUTemp[dit].box());                        
+       BoxData<T,NUMCOMPS,MEM>& sph_i = JUTemp[dit];
+      eulerOp[dit].sphToPrim(W,WBar,sph_i,block);
+      eulerOp[dit].dtInv(dtinv,W);
+    }
+  return 1.0/dtinv.fetch(); 
+}
 template<
     typename T,
     template<MemType> typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
-StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k, 
-           T& a_dt_next,
+StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
            MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
            Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,
@@ -548,28 +506,19 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
     fluxes[1].setToZero();
     fluxes[2].setToZero();
     
-    eulerOp[dit](k_i, fluxes, dt_next_local, USph_i, 1.0);
+    eulerOp[dit](k_i, fluxes, USph_i, 1.0);
     auto dx = eulerOp[dit].dx();
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
     CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,wgtxdt);
-    if (dt_next_local < dt_min && a_kstage == 0)
-      {
-        //cout << "a_dt_next = " << a_dt_next << ", dt_min = " << dt_min <<  endl;
-        dt_min = dt_next_local;
-      }
   }
-  if (a_kstage == 0)
-    {
-      a_dt_next = dt_min;
-    }
 }
 template<
-    typename T,
-    template<MemType> typename MAP,
-    MemType MEM>
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
 static inline Array<T,NUMCOMPS> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
   applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
@@ -586,16 +535,19 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   MBLevelBoxData<T,NUMCOMPS,MEM> rhs(layout,Point::Zeros());
   T time = 0.;
   T dt = 1.0;
-  T dt_next;
   int kstage = 0;
   a_JU.copyTo(JUTemp);
   kstage = 0;
+  int opswitchiv = ParseInputs::get_operator_switchiv();
+  bool flagi = (opswitchiv%4) != 1;
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
     preStageLevel(JUTemp, rhs, a_dVolrLev, a_iop, blockreg, consSum,
-                         time,dt, weight, 0);
+                  time,dt, weight, 0);
+  if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;  
+  if (flagi) 
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
-  StageLevel(rhs, dt_next, JUTemp, blockreg, consSum,
-    time, dt, weight, kstage);
+    StageLevel(rhs, JUTemp, blockreg, consSum,
+               time, dt, weight, kstage);
   blockreg.reflux(rhs);
   
   for (int comp = 0; comp < NUMCOMPS; comp++)

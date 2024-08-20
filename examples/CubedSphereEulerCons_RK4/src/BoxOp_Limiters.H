@@ -171,13 +171,13 @@ void eta_tilde_d_calcF(Var<double,1>& a_eta_tilde_d,
   if (arg > z1) {si = 0.0;}
   if (arg < z0) {si = 1.0;}
   if ((arg<=z1) && (arg>=z0)) {si = 1.0 - (arg-z0)/(z1-z0);}
-
+  
   double lhs1 = a_W_ave_behind(1+a_d)-a_W_ave_ahead(1+a_d);
   double lhs2 = std::abs(p_ahead-p_behind)/std::min({p_ahead,p_behind});
   if ((lhs1 > 0.0) && (lhs2 > delta)) {
     a_eta_tilde_d(0) = si;
   } else {
-    a_eta_tilde_d(0) = 0.0;
+    a_eta_tilde_d(0) = 1.0;
   }
 }
 PROTO_KERNEL_END(eta_tilde_d_calcF, eta_tilde_d_calc)
@@ -212,7 +212,9 @@ void Flat_calcF(Var<T,NUMCOMPS,MEM>& a_flattened,
                 int a_dir)
 {
   for (int i=0; i< NUMCOMPS; i++) {
-    a_flattened(i) = (1.0-a_eta(0))*a_not_flattened(i) + a_eta(0)*a_W_ave(i);       //This works
+    a_flattened(i) = a_eta(0)*a_not_flattened(i) + (1. - a_eta(0))*a_W_ave(i);
+    // a_flattened(i) = (1. - a_eta(0))*a_not_flattened(i) + a_eta(0)*a_W_ave(i);
+    // This was a bug ?
   }
 }
 PROTO_KERNEL_END(Flat_calcF, Flat_calc)
@@ -294,17 +296,33 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
       State W_bar_behind2 = alias(a_W_bar,Point::Basis(d)*(2));
       Scalar eta_tilde_d = forall<double,1,MEM>( eta_tilde_d_calc, a_W_bar, W_bar_ahead, W_bar_ahead2,
                                             W_bar_behind, W_bar_behind2, d);
+      
       Scalar eta_tilde_d_ahead = alias(eta_tilde_d,Point::Basis(d)*(-1));
       Scalar eta_tilde_d_behind = alias(eta_tilde_d,Point::Basis(d)*(1));
       Scalar eta_d = forall<double,1,MEM>( eta_d_calc, eta_tilde_d, eta_tilde_d_ahead, eta_tilde_d_behind);
+     
       if (d>0) {
         eta = forall<double,1,MEM>(eta_calc, eta_d, eta_old);
+        
       } else {
         eta = alias(eta_d);
       }
       eta_old = alias(eta);
     }
+     // if (procID() == 0)
+     //  {
+     //    //DEBUG
+     //    HDF5Handler h5;
+     //    auto domainBox = this->layout().domain().getBlock(0).box();
+     //    BoxData<T,1,MEM> dummy(domainBox);
+     //    eta.copyTo(dummy);
+     //    int nrad = domainBox.high()[0]+1;
+     //    double dxirad = 1.0/nrad;
+     //    //cout << nrad << ", " << eta_tilde_d.box() << ", " << eta_tilde_d.absMax() << ", " << eta_tilde_d.min() << endl;
+     //    h5.writePatch(dxirad,eta,"eta_"+to_string(nrad));
+     //  }
     State W_ave_L_ahead_lim_flat = forall<double,NUMCOMPS,MEM>(Flat_calc, W_ave_L_ahead_limited, a_W_ave, eta, a_d);
+    
     a_W_ave_R_lim_flat = forall<double,NUMCOMPS,MEM>(Flat_calc, W_ave_R_limited, a_W_ave, eta, a_d);
     a_W_ave_L_lim_flat = alias(W_ave_L_ahead_lim_flat,Point::Basis(a_d)*(1));
     //Slope flattening ends here
