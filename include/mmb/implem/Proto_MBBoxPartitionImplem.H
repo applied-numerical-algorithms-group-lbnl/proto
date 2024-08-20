@@ -17,6 +17,7 @@ void MBBoxPartition::define(
         const MBProblemDomain& a_patchDomain,
         const std::vector<MBPatchID_t>& a_patches)
 {
+    a_patchDomain.close();
     m_patchDomain = a_patchDomain;
     if (m_blockPartitions.size() != a_patchDomain.size())
     {

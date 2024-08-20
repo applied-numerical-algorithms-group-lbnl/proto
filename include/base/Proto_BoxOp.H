@@ -62,13 +62,13 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(const Box& a_box, T a_dx);
+    inline BoxOp(const DisjointBoxLayout& a_layout, const LevelIndex& a_index, T a_dx);
     
     /// Non-Trivial Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(const Box& a_box, Array<T, DIM> a_dx);
+    inline BoxOp(const DisjointBoxLayout& a_layout, const LevelIndex& a_index, Array<T, DIM> a_dx);
 
     inline BoxOp(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
     inline BoxOp<T,C_STATE,C_AUX,MEM>& operator=(BoxOp<T,C_STATE,C_AUX,MEM>&& a_bop) = default;
@@ -76,15 +76,14 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline void define(const Box& a_box, T a_dx);
+    inline void define(const DisjointBoxLayout& a_layout, const LevelIndex& a_index, T a_dx);
     
     /// Lazy Anisotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(const Box& a_box, Array<T, DIM> a_dx);
-
-
+    inline void define(
+            const DisjointBoxLayout& a_layout, const LevelIndex& a_index, Array<T, DIM> a_dx);
 
     /// Initialize
     /**
@@ -186,6 +185,21 @@ class BoxOp
         Box              a_range,
         T                a_scale = 1.0) const;
 
+    /// Apply All Boundary Conditions
+    inline void
+    applyBC(
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state) const;
+
+    /// Apply User Specified Boundary Condition
+    /**
+    */
+    inline virtual void
+    applyBC(
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state,
+        Face             a_face) const {}
+
     /// User Defined Flux
     /**
         Compute F(phi, rho) in the direction dir
@@ -261,7 +275,25 @@ class BoxOp
     inline virtual void diag(
         StateData&       a_diag,
         const StateData& a_state) const;
-    
+   
+    ///TODO: not implemented (see MMB version which has this implemented)
+#if 0
+    /// Apply All BCs relevant to a Box
+    /** Automates the logic for determining if the patch
+     *  is on a domain boundary and calls the user defined
+     *  applyBC function with the correct Face argument
+     */
+    inline void applyBC(
+        Array<StateData,DIM>& a_fluxes,
+        const StateData&      a_state) const;
+
+    /// Apply Specific BC (User Defined)
+    inline virtual void applyBC(
+            Array<StateData,DIM>& a_fluxes,
+            const StateData&      a_state,
+            Face                  a_face);
+
+#endif
     /// Set Diagonal Term Scaling
     /**
         Sets the value of d
@@ -301,11 +333,18 @@ class BoxOp
     /// Get Max Grid Spacing
     inline T dxMax() const;
     
+    /// Get Index
+    inline const LevelIndex& index() const { return m_index; }
+
+    /// Get Layout
+    inline const DisjointBoxLayout& layout() const { return m_layout; }
+
     /// Get Box
-    inline const Box& box() const {return m_box; }
+    inline const Box& box() const {return m_layout[m_index]; }
     
+    /// DEPRECATED
     /// Mapped Multiblock Utilities
-#ifdef PR_MMB
+#if 0
 
     /// Map Constructor
     /** a_x is node centered, a_J is cell averaged */
@@ -348,12 +387,12 @@ class BoxOp
 #endif
 
     protected:
-    bool m_isMapped;
     T m_scaleDiag;
     T m_scaleFlux;
     T m_time;
     unsigned int m_RKStage;
-    Box m_box;
+    LevelIndex m_index;
+    DisjointBoxLayout m_layout;
 
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;
@@ -362,10 +401,6 @@ class BoxOp
 
     private:
 
-#ifdef PR_MMB
-    const BoxData<double, DIM, MEM>* m_x;
-    const BoxData<double, 1, MEM>* m_J;
-#endif
 };
 
 #include "implem/Proto_BoxOpImplem.H"

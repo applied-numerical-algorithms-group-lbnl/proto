@@ -3,8 +3,7 @@
 #define _PROTO_MB_LEVEL_RK4_H_
 
 #include "Proto.H"
-#include "Proto_CubedSphereShell.H"
-#include "Inputs_Parsing.H"
+//#include "Inputs_Parsing.H"
 
 namespace Proto {
 
@@ -199,36 +198,15 @@ advance(
             m_delta.increment(m_k, a_dt*weight);
           }
     }
+
     // Update State.
+    
     int boundary_reflux = ParseInputs::get_boundary_reflux();
     if (boundary_reflux == 1)
       {
         m_blockreg.reflux(m_delta);
       }
-
-    auto layout = m_delta.layout();
-    HDF5Handler h5;
-    auto map = CubedSphereShell::Map(layout, Point::Zeros());
-    int nrad = layout.getBlock(0).domain().box().high()[0];
-    // if (procID() == 0) cout << "RK4 advance: a_dt = " << a_dt << endl;
-    //h5.writeMBLevel({},map,m_delta,"delta_"+to_string(nrad) + "_" + to_string(m_counter));
-    m_counter++;
-#if 0
-    for (int comp = 0; comp < 8; comp++)
-      {
-        T consdelta = m_delta.sum(comp);
-        consState[comp] = a_state.sum(comp);
-        T maxdelta = m_delta.max(comp);
-        T maxState = a_state.max(comp);
-        if (procID() == 0) cout << "component " << comp <<
-                             ": delta sum  = " << consdelta <<
-                             ": state sum  = " << consState[comp] <<
-                             ": delta max  = " << maxdelta <<
-                             ": state max  = " << maxState << endl;
-      }
-#endif
     a_state.increment(m_delta, 1.0);
-    //cout << procID() << ": delta max " << m_delta.absMax(0) << endl;
 }
 } //end Proto namespace
 

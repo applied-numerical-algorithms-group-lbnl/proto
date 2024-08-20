@@ -7,124 +7,88 @@
 
 using namespace Proto;
 
-DisjointBoxLayout testLayout(int domainSize, Point boxSize)
-{
-    Box domainBox = Box::Cube(domainSize); 
-    Box patchBox = domainBox.coarsen(boxSize);
-    std::vector<Point> patches;
-    for (auto patch : patchBox)
+namespace {
+    DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
-        patches.push_back(patch);
-        //if (patch != Point::Zeros()) { patches.push_back(patch); }
+        Box domainBox = Box::Cube(domainSize); 
+        Box patchBox = domainBox.coarsen(boxSize);
+        std::vector<Point> patches;
+        for (auto patch : patchBox)
+        {
+            patches.push_back(patch);
+            if (patch != Point::Zeros()) { patches.push_back(patch); }
+        }
+        std::array<bool, DIM> periodicity;
+        periodicity.fill(true);
+        ProblemDomain domain(domainBox, periodicity);
+        return DisjointBoxLayout(domain, patches, boxSize);
     }
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
-    ProblemDomain domain(domainBox, periodicity);
-    return DisjointBoxLayout(domain, patches, boxSize);
-}
 
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
-{
-    
-    double x = a_pt[0];
-    double y = a_pt[1] + x;
-    a_X(0) = x;
-    a_X(1) = y;
-    a_X(2) = 0;
+    template<MemType MEM>
+        PROTO_KERNEL_START
+        void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
+        {
+
+            double x = a_pt[0];
+            double y = a_pt[1] + x;
+            a_X(0) = x;
+            a_X(1) = y;
+            a_X(2) = 0;
 #if DIM > 2
-    a_X(2) = a_pt[2];
+            a_X(2) = a_pt[2];
 #endif
 
+        }
+    PROTO_KERNEL_END(f_testMapF, f_testMap);
 }
-PROTO_KERNEL_END(f_testMapF, f_testMap);
-
-#if 0
 TEST(HDF5, ReadMBLevel)
 {
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 4;
+    int boxSize = 2;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    MBLevelBoxData<double, 3, HOST> data(layout, Point::Ones());
-    data.setVal(7);
-    h5.writeMBLevel({"var1", "var2","var3"}, data, "DATA_0");
-    
-    ProblemDomain readDomain(Box(Point(64,64)), false);
-    DisjointBoxLayout readLayout(readDomain, Point::Ones(16));
-
-    LevelBoxData<double, 3, HOST> readData(readLayout, Point::Ones());
-    readData.setVal(-7);
-    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_1");
-    h5.readLevel(readData, "DATA_0");
-
-    h5.writeLevel({"var1", "var2","var3"}, readData, "DATA_2");
-}
-#endif
-/*
-TEST(HDF5, MMBOffsets)
-{
-    HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
-    auto domain = buildXPoint(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_XPointMap, XPOINT_SIZE, domainSize);
-
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    std::vector<MBPatchID_t> patches;
+    std::vector<Point> boxSizes;
+    for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
     {
-        data.blockData(bi).setVal(bi,0);
-        if (NCOMP > 1)
+        boxSizes.push_back(Point::Ones(boxSize));
+        for (Point pi : Box::Cube(domainSize / boxSize))
         {
-            data.blockData(bi).setVal(bi+10,1);
+            if (pi == Point::Zeros()) { continue; }
+            patches.push_back(std::make_pair(pi, bi));
         }
-   //     h5.writeLevel(1.0, data.blockData(bi), "DATA_%i", bi);
     }
-    
-    unsigned int numBoxes = pow(domainSize / boxSize, DIM)*XPOINT_SIZE;
-    std::vector<unsigned int> boxesPerProc(numProc(), numBoxes / numProc());
-    for (int ii = 0; ii < numBoxes % numProc(); ii++) { boxesPerProc[ii]++; }
-    
-    size_t layoutOffset = 0;
-    size_t dataOffset = 0;
-    for (int ii = 0; ii < numProc(); ii++)
-    {
-        EXPECT_EQ(layoutOffset, layout.offset(ii));
-        EXPECT_EQ(dataOffset, data.offset(ii));
-        layoutOffset += boxesPerProc[ii];
-        dataOffset += boxesPerProc[ii]*data.blockData(0).patchSize();
-    }
-    h5.writeMBLevel({"var1", "var2"}, data, "DATA");
-    h5.writeMBLevel({"x", "y", "z"}, map, "DATA.map");
-}
-TEST(HDF5, CubeSphere)
-{
 
-    HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
-    auto domain = buildCubeSphere(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+    MBLevelBoxData<double, DIM, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
-    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
-    h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
-    h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
+    h5.writeMBLevel(data, "DATA_0");
+    
+    MBDisjointBoxLayout newLayout;
+    h5.readMBLayout(newLayout, domain.graphPtr(), "DATA_0");
+    EXPECT_TRUE(newLayout.compatible(layout));
+    for (auto iter : layout)
+    {
+        EXPECT_EQ(layout[iter], newLayout[iter]);
+    }
+
+    MBLevelBoxData<double, DIM, HOST> newData(newLayout, Point::Ones());
+    newData.setVal(7);
+    h5.readMBLevel(newData, "DATA_0");
+
+    for (auto iter : layout)
+    {
+        auto& old_i = data[iter];
+        auto& new_i = newData[iter];
+
+        EXPECT_EQ(old_i.box(), new_i.box());
+        BoxData<double, DIM, HOST> error(new_i.box());
+        new_i.copyTo(error);
+        error -= old_i;
+        EXPECT_NEAR(error.absMax(), 0, 1e-12);
+    }
 }
-*/
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

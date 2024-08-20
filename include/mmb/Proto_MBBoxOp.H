@@ -51,7 +51,8 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
     /// Non-Trivial Constructor
     inline MBBoxOp(const MBLevelMap<MAP, MEM>& a_map, const MBIndex& a_index);
     inline MBBoxOp(MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&& a_bop) = default;
-    inline MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>& operator=(MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&& a_bop)=default;
+    inline MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&
+        operator=(MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>&& a_bop)=default;
     
     /// Initialize
     /**
@@ -67,6 +68,8 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
     */
     inline virtual T spectralRadius() const  { return 1; }
 
+#if 0 //CURRENTLY UNUSED
+
     /// Apply (In Place)
     /**
         Compute L(phi, rho)
@@ -81,7 +84,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         const StateData& a_state,
         const AuxData&   a_aux,
         T                a_scale = 1.0) const ;
-    
+#endif
     /// Apply (In Place)
     /**
         Compute L(phi)
@@ -89,12 +92,13 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param output   Evaluated operator (output)
         \param state    State variables
     */
-    inline virtual void
+    inline void
     operator()(
         StateData& a_output,
         const StateData& a_state,
         T                a_scale = 1.0) const ;
-    
+#if 0 // CURRENTLY UNUSED
+      
     /// Apply (In Place, Flux Output)
     /**
         Compute L(phi, rho)
@@ -110,7 +114,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         const StateData& a_state,
         const AuxData&   a_aux,
         T                a_scale = 1.0) const ;
-    
+#endif
     /// Apply (In Place, Flux Output)
     /**
         Compute L(phi)
@@ -118,13 +122,22 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param output   Evaluated operator (output)
         \param state    State variables
     */
-    inline virtual void
+    inline void
     operator()(
         StateData& a_output,
         Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale = 1.0) const ;
     
+    inline virtual void
+    apply(
+        StateData& a_output,
+        Array<StateData, DIM>& a_fluxes,
+        const StateData& a_state,
+        T                a_scale = 1.0) const {}
+    
+#if 0 //CURRENTLY UNUSED
+
     /// Apply (Out of Place)
     /**
         Compute L(phi, rho).
@@ -139,7 +152,8 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         const AuxData&   a_aux,
         Box              a_range,
         T                a_scale = 1.0) const ;
-    
+#endif
+
     /// Apply (Out of Place)
     /**
         Compute L(phi)
@@ -147,12 +161,38 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
         \param state    State variables
         \param range    Range of the output data
     */
-    inline virtual StateData
+    inline StateData
     operator()(
         const StateData& a_state,
         Box              a_range,
         T                a_scale = 1.0) const ;
 
+    /// Apply All Boundary Conditions
+    /** 
+     *  Executes logic for determining which Face of a patch is on a domain boundary.
+     *  Calls the user defined boundary condition function as needed
+     */
+    inline void
+    boundaryConditions(
+            Array<StateData, DIM>& a_fluxes,
+            const StateData& a_state) const;
+
+
+    inline void
+    divergence(
+            StateData&             a_divergence, 
+            const Array<StateData, DIM>& a_fluxes) const;
+
+    /// Apply Boundary Condition (User Specified)
+    /** 
+     *  Use this function to specify problem domain boundary conditions.
+     *  The default behavior is a null-op, leaving the flux argument unchanged.
+     */
+    inline virtual void
+    applyBC(
+            Array<StateData, DIM>& a_fluxes,
+            const StateData& a_state,
+            Face             a_face) const {}
 #if 0
     /// User Defined Flux
     /**
@@ -277,7 +317,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
 
     private:
     
-    MBIndex m_index;
+    MBIndex m_mbIndex;
     const MBLevelMap<MAP, MEM>& m_map;
 
 };

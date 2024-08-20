@@ -250,6 +250,10 @@ namespace Proto
         inline void linearOut(void* a_buffer) const;
         
         /// Linear In
+        inline void linearIn(void* a_buffer, const Box& a_box, const MBIndex& a_index);
+        /// Linear In
+        inline void linearIn(void* a_buffer, const MBIndex& a_index);
+        /// Linear In
         inline void linearIn(void* a_buffer);
         
         /// Linear Offset

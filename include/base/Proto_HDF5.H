@@ -4,6 +4,10 @@
 #include "Proto_BoxData.H"
 #ifdef PR_HDF5
 #include "hdf5.h"
+#ifdef PR_MMB
+#include "../mmb/Proto_MBGraph.H"
+#include "../mmb/Proto_MBProblemDomain.H"
+#endif
 #endif
 
 namespace Proto
@@ -18,6 +22,9 @@ namespace Proto
     class LevelFluxRegister;
 #endif
 #ifdef PR_MMB
+    class MBGraph;
+    class MBProblemDomain;
+    class MBDisjointBoxLayout;
     template<template<MemType> typename MAP, MemType MEM>
     class MBLevelMap;
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -326,6 +333,13 @@ namespace Proto
                 Array<double, DIM> a_dx,
                 Point a_refRatio,
                 int a_level);
+        
+        template<typename... Args>
+        inline void readMBLayout(
+                MBDisjointBoxLayout& a_layout,
+                std::shared_ptr<MBGraph> a_graph,
+                std::string a_filename,
+                Args... a_params);
         
         template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void readMBLevel(MBLevelBoxData<T, C, MEM, CTR>& a_data,

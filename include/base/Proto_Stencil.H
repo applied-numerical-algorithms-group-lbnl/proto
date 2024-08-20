@@ -1,6 +1,11 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
 #include "Proto_Timer.H"
+
+#ifdef PR_OPS
+#include "Proto_Matrix.H"
+#endif
+
 #include "Proto_BoxData.H"
 #include "Proto_DisjointBoxLayout.H"
 
@@ -639,6 +644,10 @@ namespace Proto {
           \param a_order  (Optional) Order of accuracy (default: 2 | supported: 2)
           */
         static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
+
+#ifdef PR_OPS
+        static std::vector<double> ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage = true);
+#endif
 
         /// Stencil Library: Cell to Face Interpolation
         /**

@@ -291,6 +291,29 @@ TEST(MBGraph, TriplePoint) {
 #endif
 }
 
+#if 0
+TEST(MBGraph, Equality) {
+    
+    auto CCW = CoordPermutation::ccw();
+    auto CW = CoordPermutation::cw();
+    auto I = CoordPermutation::identity();
+    auto X = Point::X();
+    auto Y = Point::Y();
+    
+    MBGraph G1(3), G2(3);
+
+    G1.defineBoundary(0,1,X, CCW);
+    G1.defineBoundary(0,2,Y, CCW);
+
+    G2.defineBoundary(0,1,X, CCW);
+    G2.defineBoundary(0,2,Y, CCW);
+
+    bool equal = (G1 == G2);
+
+    EXPECT_TRUE(G1 == G2);
+}
+#endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
