@@ -22,7 +22,10 @@ private:
     double CFL;
   double strength; // Strength of perturbation for test problems.
     int write_cadence; 
+    int checkpoint_cadence;
     string data_file_prefix;
+    string checkpoint_file_prefix;
+    string restart_file;
     double gamma; // Ratio of specific heats
     int temporal_order; // Temporal order of accuracy
     int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
@@ -64,7 +67,10 @@ public:
     static double get_CFL() {return getInstance().CFL;}
     static double get_strength() {return getInstance().strength;}
     static int get_write_cadence() {return getInstance().write_cadence;}
+    static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
+    static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
+    static string get_restart_file() {return getInstance().restart_file;}
     static double get_gamma() {return getInstance().gamma;}
     static int get_temporal_order() {return getInstance().temporal_order;}
     static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
@@ -93,7 +99,10 @@ public:
         args.add("CFL", CFL);
         args.add("strength", strength);
         args.add("write_cadence", write_cadence);
+        args.add("checkpoint_cadence", checkpoint_cadence);
         args.add("data_file_prefix", data_file_prefix);
+        args.add("checkpoint_file_prefix", checkpoint_file_prefix);
+        args.add("restart_file", restart_file);
         args.add("gamma", gamma);
         args.add("temporal_order", temporal_order);
         args.add("divergence_cleaning", divergence_cleaning);
@@ -124,7 +133,10 @@ public:
             cout << "CFL: " << CFL << endl;
             cout << "strength: " << strength << endl;
             cout << "write_cadence: " << write_cadence << endl;
+            cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
+            cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+            cout << "restart_file: " << restart_file << endl;
             cout << "gamma: " << gamma << endl;
             cout << "temporal_order: " << temporal_order << endl;
             cout << "divergence_cleaning: " << divergence_cleaning << endl;

@@ -119,7 +119,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point low = bxGhosted.low();
     low[0] = a_blockBox.high()[0] + 1;
     Box bdryBoxHigh(low, bxGhosted.high());
-    if (init_condition_type == 0 || init_condition_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
     if (init_condition_type == 2 || init_condition_type == 3)
@@ -166,7 +166,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point high = bxGhosted.high();
     high[0] = a_blockBox.low()[0] - 1;
     Box bdryBoxLow(bxGhosted.low(), high);    
-    if (init_condition_type == 0 || init_condition_type == 1){
+    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
     if (init_condition_type == 2){

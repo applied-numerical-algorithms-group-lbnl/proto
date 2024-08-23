@@ -116,7 +116,9 @@ initialize(State& a_W,
           const Scalar& a_radius,
           const Vector& a_Xcart,
           T a_gamma,
-          int a_nradius) const
+          int a_nradius,
+          T a_h,
+          uint a_block) const
 {
   int init_condition_type = ParseInputs::get_init_condition_type();
   T strength = ParseInputs::get_strength();
@@ -126,7 +128,7 @@ initialize(State& a_W,
   // if (init_condition_type == 3) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
 
 
-  // The follwoing breaks if decompostion is there in radial direction. That's because BCs are available at -1.
+  // The following breaks if decompostion is there in radial direction. That's because BCs are available at -1.
   if (init_condition_type == 3) {
     Point source_lo = Point(a_BC.box().low()[0],a_BC.box().low()[1],a_BC.box().low()[2]);
     Point source_hi = Point(a_BC.box().low()[0],a_BC.box().high()[1],a_BC.box().high()[2]);
@@ -162,4 +164,70 @@ initialize(State& a_W,
       a_WSph(7) = Bz; //Bz
     },a_W,a_radius,a_gamma);
   }
+
+  if (init_condition_type == 4){
+    forallInPlace_p(f_radialInit, a_W, a_radius, a_gamma, strength, a_nradius);
+
+    // Calculate A_matrix
+    Box bx = a_W.box();
+    double half = 0.5;
+    double dxiPerp = a_h;
+    Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+    Point high = bx.high();
+    Point low = bx.low();
+    high[0] = low[0];
+    Box bx0(low,high);
+    BoxData<T,DIM,MEM,DIM> A_matrix(bx);
+    T offseta = half;
+    T offsetb = half;
+    forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                    dxiPerp,offseta,offsetb);
+    spreadSlice(A_matrix);
+
+    BoxData<T,DIM,MEM,DIM> A_matrix_inv(bx);
+    A_matrix_inv.setToZero();
+    forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+    // A constant U_cart
+    BoxData<double, DIM> U_cart(bx);
+    BoxData<double, DIM> W_sph(bx);
+    forallInPlace_p([ ] PROTO_LAMBDA
+    (Point a_pt,
+     Var<double, DIM, HOST> &a_U_cart,
+     double a_a_gamma,
+     int a_a_nradius)
+    {  
+      double eps = 0.1;
+      double amplitude;
+      double arg = (1.0 * a_pt[0] + .5 - 1.0 * a_a_nradius / 2) / a_a_nradius / 2.;
+      if (abs(arg) < .25)
+      {
+        amplitude = eps * pow(cos(2 * M_PI * arg), 6);
+      }
+      else
+      {
+        amplitude = 0.;
+      }
+      double p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
+      double rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
+      a_U_cart(0) = 0.1*amplitude *sqrt(a_a_gamma * p0 / rho0);
+      a_U_cart(1) = 0.0;
+      a_U_cart(2) = 0.0;
+    },U_cart, a_gamma, a_nradius);
+
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,W_sph,A_matrix_inv,U_cart,one);
+
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_a_W,
+     Var<double, DIM, HOST> &a_W_sph)
+    {  
+      a_a_W(iVX) += a_W_sph(0);
+      a_a_W(iVY) += a_W_sph(1);
+      a_a_W(iVZ) += a_W_sph(2);
+    },a_W, W_sph);
+  }
+
+  
 }

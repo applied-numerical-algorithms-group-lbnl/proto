@@ -25,10 +25,12 @@ int main(int argc, char *argv[])
   double dt_next = 0.0;
   double time = 0.0;
   int write_cadence = ParseInputs::get_write_cadence();
+  int checkpoint_cadence = ParseInputs::get_checkpoint_cadence();
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
   int radial_refinement = ParseInputs::get_radial_refinement();
   string BC_file = ParseInputs::get_BC_file();
+  string restart_file = ParseInputs::get_restart_file();
   BC_global.file_to_BoxData_vec(BC_file);
   
   double probe_cadence = ParseInputs::get_Probe_cadence();
@@ -83,38 +85,57 @@ int main(int argc, char *argv[])
       MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
       if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
-      // Set input solution.
-      Reduction<double,Operation::Max,HOST> dtinv;
-      dtinv.reset();
-      for (auto dit : layout)
-        {
-          dx = eulerOp[dit].dx();
-          BoxData<double> radius(dVolrLev[dit].box());
-          BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-          BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-          eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
-          auto block = layout.block(dit);
-          auto &JU_i = JU[dit];
-          BoxData<double, NUMCOMPS, HOST> JUTemp;
-          BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
-          double half = 0.5;
-          BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-            (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
-          eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness);
-          eulerOp[dit].dtInv(dtinv,WPoint_i);
-          eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
-          JU_i.setVal(0.);
-          JUTemp.copyTo(JU_i, layout[dit]);
-        }
-     
       // Point ghostForInterp = OP::ghost() + Point::Ones();
       //MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),
       //                                                  ghostForInterp,4);
       MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+
+      // Set input solution.
+      int restart_step = 0;
+      if (restart_file.empty())
+        {
+        Reduction<double,Operation::Max,HOST> dtinv;
+        dtinv.reset();
+        for (auto dit : layout)
+          {
+            dx = eulerOp[dit].dx();
+            BoxData<double> radius(dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+            eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
+            auto block = layout.block(dit);
+            auto &JU_i = JU[dit];
+            BoxData<double, NUMCOMPS, HOST> JUTemp;
+            BoxData<double, NUMCOMPS, HOST> WPoint_i(JU_i.box());
+            double half = 0.5;
+            BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+              (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+            eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness, dx[2], block);
+            eulerOp[dit].dtInv(dtinv,WPoint_i);
+            eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
+            JU_i.setVal(0.);
+            JUTemp.copyTo(JU_i, layout[dit]);
+          }
+        } else {
+          // TODO: Can iteration be saved in the restart file?
+          // Find the position of the last underscore
+          size_t lastUnderscorePos = restart_file.rfind('_');
+          // Find the position of the last period
+          size_t lastPeriodPos = restart_file.rfind('.');
+          if (lastUnderscorePos != std::string::npos && lastPeriodPos != std::string::npos && lastUnderscorePos < lastPeriodPos) {
+              // Extract the substring between the last underscore and the last period
+              std::string numberStr = restart_file.substr(lastUnderscorePos + 1, lastPeriodPos - lastUnderscorePos - 1);
+              int number = std::stoi(numberStr);
+              restart_step = number;
+          }
+          h5.readMBLevel(JU, restart_file);
+        }
+     
+      
     
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     
-      Write_W(JU, eulerOp, iop, 0, time, dt_next);      
+      Write_W(JU, eulerOp, iop, restart_step, time, dt_next);      
       {
         HDF5Handler h5;
         MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
@@ -159,7 +180,7 @@ int main(int argc, char *argv[])
       }
     if (convTestType > 2) max_iter = 1;
     
-    for (int iter = 1; iter <= max_iter; iter++)
+    for (int iter = restart_step + 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
       if (convTestType == 0)
@@ -252,6 +273,13 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+        }
+      // Checkpointing.
+      if (iter % checkpoint_cadence == 0)
+        {
+          std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
+          h5.writeMBLevel(JU, check_file_name);
+          if (procID() == 0) cout << "Checkpointed at iter " << iter << endl;
         }
       auto end = chrono::steady_clock::now();
       

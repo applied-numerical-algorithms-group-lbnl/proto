@@ -237,7 +237,9 @@ public:
                         const Scalar& a_radius,
                         const Vector& a_Xcart,
                         T a_gamma,
-                        int a_nradius) const;
+                        int a_nradius,
+                        T a_h,
+                        uint a_block) const;
 
   // New factorization of the operator starts here.
   // New operator() - calls RadialMetrics from inside the operator.
