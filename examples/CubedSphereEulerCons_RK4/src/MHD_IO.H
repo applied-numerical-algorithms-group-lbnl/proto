@@ -65,7 +65,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
   h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
-  // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, a_JU, "JU_" + to_string(iter));
+  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
 
 // Returns interpolated value at x from parallel arrays ( xData, yData )

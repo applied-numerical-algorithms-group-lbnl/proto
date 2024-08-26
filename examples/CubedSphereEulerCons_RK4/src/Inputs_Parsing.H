@@ -13,7 +13,13 @@ using namespace std;
 class ParseInputs {
 private:
     int convTestType; // 0: No convergence test, 1: Space Convergence test, 2: Space and Time Convergence test
-    int init_condition_type; // 0 for radial pulse, 1 for nonradial pulse, 2 for radial outflow
+    int init_condition_type; 
+    // 0 for radial shell, 
+    // 1 for nonradial pulse, 
+    // 2 for radial outflow
+    // 3 for H5 BCs
+    // 4 for radial shell with small constant cartesian velocity
+    // 5 for radial Shock
     int domainSize; // Number of cells in non radial direction
     int thickness; // Number of cells in radial direction
     int boxSize_nonrad; // Size of the box for domain decomposition

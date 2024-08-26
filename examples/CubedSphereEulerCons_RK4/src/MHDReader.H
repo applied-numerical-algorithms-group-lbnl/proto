@@ -58,8 +58,8 @@ public:
 
 	template <typename T, MemType MEM>
 	inline void BoxData_to_BC(MBLevelBoxData<T, 8, MEM> &a_dstData,
-														const MBLevelMap<MBMap_CubedSphereShell, MEM> &a_map,
-														T a_time)
+							const MBLevelMap<MBMap_CubedSphereShell, MEM> &a_map,
+							T a_time)
 	{
 		HDF5Handler h5;
 		int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -144,14 +144,15 @@ public:
 			BC_data_temp2 = m_right_shift2(data_b);
 
 			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data_interpolated,
-																		Var<T, NUMCOMPS, MEM> & a_BC_data_lo,
-																		Var<T, NUMCOMPS, MEM> & a_BC_data_hi,
-																		double a_fraction)
-										{                    
+										Var<T, NUMCOMPS, MEM> & a_BC_data_lo,
+										Var<T, NUMCOMPS, MEM> & a_BC_data_hi,
+										double a_fraction)
+			{                    
                 for (int i=0; i<NUMCOMPS; i++){
-                a_BC_data_interpolated(i) = a_fraction*a_BC_data_hi(i) + (1.0-a_fraction)*a_BC_data_lo(i);
-                } },
-										data_0, BC_data_temp1, BC_data_temp2, needed_fraction);
+                	a_BC_data_interpolated(i) = a_fraction*a_BC_data_hi(i) + (1.0-a_fraction)*a_BC_data_lo(i);
+                } 
+			},
+				data_0, BC_data_temp1, BC_data_temp2, needed_fraction);
 		}
 
 		// Create a single block, single patch MBLevelBoxData
@@ -173,6 +174,19 @@ public:
 
 		// Interpolate data
 		BCOp.apply(a_dstData, data);
+
+		// Set magnetic field to zero
+		for (auto dit : a_dstData.layout())
+          {
+			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data)
+			{                    
+				a_BC_data(iBX) = 0.0;
+				a_BC_data(iBY) = 0.0;
+				a_BC_data(iBZ) = 0.0;
+
+			},
+			a_dstData[dit]);
+		  }
 	}
 
 	template <typename... Args>
