@@ -14,24 +14,7 @@ void f_radialBCs_F(
   // Compute spherical BCs.
   T p0 = 1.0e-7; // p near 21.5 c_SR is about 1e-7 dyne/cm2
   T rho0 = 700*c_MP; // rho at 21.5 c_SR is about 700/cm3
-  // T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
-  //T rho = rho0;
-  //T p0 = 1.0;
-  //T rho0 = 1.0;
-  T eps = 0.1;
-  T amplitude;
-  T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) * a_dxradius / 2.;
-  if (abs(arg) < .25)
-  {
-    amplitude = eps * pow(cos(2 * M_PI * arg), 6);
-  }
-  else
-  {
-    amplitude = 0.;
-  }
-  //T rho = rho0 + amplitude * rho0;
-  //T p = p0 * pow(rho / rho0, a_gamma);
-  //T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+
   T rho = rho0;
   T p = p0;
   a_USph(iRHO) = rho0;
@@ -119,7 +102,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point low = bxGhosted.low();
     low[0] = a_blockBox.high()[0] + 1;
     Box bdryBoxHigh(low, bxGhosted.high());
-    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4){
+    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4 || init_condition_type == 5){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
     if (init_condition_type == 2 || init_condition_type == 3)
@@ -166,7 +149,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
     Point high = bxGhosted.high();
     high[0] = a_blockBox.low()[0] - 1;
     Box bdryBoxLow(bxGhosted.low(), high);    
-    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4){
+    if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4 || init_condition_type == 5){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
     if (init_condition_type == 2){
