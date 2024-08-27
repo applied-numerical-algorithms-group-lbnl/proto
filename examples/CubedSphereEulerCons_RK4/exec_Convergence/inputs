@@ -1,6 +1,6 @@
 ## See Inputs_Parsing.H file for supported input values
--convTestType                    1
--init_condition_type             1
+-convTestType                    0
+-init_condition_type             4
 -domainSize                      16
 -thickness                       32
 -boxSize_nonrad                  16
