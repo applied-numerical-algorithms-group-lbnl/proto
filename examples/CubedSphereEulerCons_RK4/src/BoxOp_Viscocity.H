@@ -433,10 +433,10 @@ NonLinearViscCoef(
                   {
                     T lambda = abs(a_divu(0));
                     a_coef(0) = a_alpha*lambda;
-                    // min(1.,lambda*lambda/
-                    //     (min(a_csql(0),min(a_csqr(0),
-                    //                       min(a_csql2(0),a_csqr(0))))
-                    //     *a_beta));
+                    min(1.,lambda*lambda/
+                        (min(a_csql(0),min(a_csqr(0),
+                                           min(a_csql2(0),a_csqr2(0))))
+                         *a_beta));
                   },a_NLViscCoef,divu,
                   csq,csqshiftr,csqshiftl,csqshiftr2,
                   a_dxi[a_dir],alpha,beta);
