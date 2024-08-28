@@ -3,6 +3,7 @@
 #define _PROTO_MB_LEVEL_RK4_H_
 
 #include "Proto.H"
+#include "Proto_CubedSphereShell.H"
 #include "Inputs_Parsing.H"
 
 namespace Proto {
@@ -70,7 +71,7 @@ protected:
     MBInterpOp&         m_interp;
   MBBoundaryRegister<T,OP::numState(),MEM> m_blockreg;
   Array<Reduction<T,Operation::Sum,MEM>,OP::numState()> m_consSum;
-  int m_counter;
+  int m_counter = 0;
 };
   template <
     template<typename, template<MemType> typename, MemType> class OPType,
@@ -207,6 +208,15 @@ advance(
         m_blockreg.reflux(m_delta);
       }
     a_state.increment(m_delta, 1.0);
+    m_counter++;
+    // auto layout = m_delta.layout();
+    // LevelStateData bregtest(layout,Point::Zeros());
+    // bregtest.setVal(0.);
+    // m_blockreg.reflux(bregtest);
+    // auto map = CubedSphereShell::Map(layout, OP::ghost());
+    //  HDF5Handler h5;
+    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta, "delta"+to_string(m_counter));
+    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map,bregtest, "bregtest"+to_string(m_counter));
 }
 } //end Proto namespace
 

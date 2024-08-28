@@ -390,11 +390,11 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             int signflip = signflipPoint.dot(Point::Ones());
             Array<int,C> signflipArray;
             signflipArray.fill(1);
-#ifdef PR_CFD
+            //#ifdef PR_CFD
             signflipArray.fill(signflip);
-            signflipArray[0] = 1;
-            signflipArray[4] = 1;
-#endif
+            //signflipArray[0] = 1;
+            //signflipArray[4] = 1;
+            //#endif
             PROTO_ASSERT(signflip*signflip == 1,"signflip from Coordinate transform != +-1");
             adjNormal *= -1;
             Point adjBasis = adjNormal*adjNormal;

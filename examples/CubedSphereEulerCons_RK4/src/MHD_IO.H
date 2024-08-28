@@ -23,47 +23,65 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
-
-  MBLevelBoxData<double, NUMCOMPS, HOST> USph(layout, OP::ghost());
-  MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(layout, OP::ghost());
-  MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, OP::ghost());
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
-  for (auto dit : a_JU.layout())
+  for (auto dit : layout)
   {
     BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
     BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
     eulerOp[dit].radialMetrics(radiusLev[dit], Dr, adjDr, dVolrLev[dit], Dr.box());
-    a_JU[dit].copyTo(JUTemp[dit]);
   }
-
-  // CubedSphereShell::consToSphInterpEuler(a_JU, a_iop, dVolrLev, 4);
-  // BUG:: consToSphInterpEuler updates in place!!
-  CubedSphereShell::consToSphInterpEuler(JUTemp, a_iop, dVolrLev, 4);
-  for (auto dit : JUTemp.layout())
+  Point size = layout.domain().getBlock(0).sizes();
+  double dxiPerp = 1.0/size[1];
+  for (auto dit : layout)
   {
-    State W;
-    // State WBar;
-    // eulerOp[dit].sphToPrim(W, WBar, JUTemp[dit], layout.block(dit));
-    // Second order for output purposes. This then doesn't need BCs.
-
-    eulerOp[dit].sphToPrim_2O(W, JUTemp[dit], layout.block(dit));
+    auto& JU_i = a_JU[dit];
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
+    auto& Wout_i = Wout[dit];
+    USemiSph.setToZero();
+    unsigned int block = layout.block(dit);
+    Box blockBox = layout.getBlock(block).domain().box();
+    auto& dVolr_i = dVolrLev[dit];
+    Box bx_i = layout[dit];
+    CubedSphereShell::
+      consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
+                           blockBox,dxiPerp,block,4);
     forallInPlace([ ] PROTO_LAMBDA
-    (Var<double,NUMCOMPS,HOST>& a_Wout,
-    const Var<double,NUMCOMPS,HOST>& a_W)
+    (Var<double,NUMCOMPS+2,HOST>& a_Wout,
+     const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
+     double a_gamma)
     {
-      a_Wout(0) = a_W(0)/c_MP; // /cm^3;
-      a_Wout(1) = a_W(1)/1e5; // km/s;
-      a_Wout(2) = a_W(2)/1e5; // km/s;
-      a_Wout(3) = a_W(3)/1e5; // km/s;
-      a_Wout(4) = a_W(4)*1e12; // picodyne/cm*2
-      a_Wout(5) = a_W(5)*1e6; // microGauss
-      a_Wout(6) = a_W(6)*1e6; // microGauss
-      a_Wout(7) = a_W(7)*1e6; // microGauss
-    }, Wout[dit], W);
+      a_Wout(0) = a_USemiSph(0);
+      a_Wout(1) = a_USemiSph(1) / a_Wout(0);
+      a_Wout(2) = a_USemiSph(2) / a_Wout(0);
+      a_Wout(3) = a_USemiSph(3) / a_Wout(0);
+      a_Wout(5) = a_USemiSph(5);
+      a_Wout(6) = a_USemiSph(6);
+      a_Wout(7) = a_USemiSph(7);
+      a_Wout(8) = a_USemiSph(8) / a_Wout(0);
+      a_Wout(9) = a_USemiSph(9);
+      double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
+                         + a_Wout(2)*a_Wout(2)
+                         + a_Wout(3)*a_Wout(3) + a_Wout(8)*a_Wout(8))*.5;
+      double me = (a_Wout(5)*a_Wout(5)
+              + a_Wout(6)*a_Wout(6)
+              + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
+      a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
+      a_Wout(0) = a_Wout(0)/c_MP; // /cm^3;
+      a_Wout(1) = a_Wout(1)/1e5; // km/s;
+      a_Wout(2) = a_Wout(2)/1e5; // km/s;
+      a_Wout(3) = a_Wout(3)/1e5; // km/s;
+      a_Wout(4) = a_Wout(4)*1e12; // picodyne/cm*2
+      a_Wout(5) = a_Wout(5)*1e6; // microGauss
+      a_Wout(6) = a_Wout(6)*1e6; // microGauss
+      a_Wout(7) = a_Wout(7)*1e6; // microGauss
+      a_Wout(8) = a_Wout(8)/1e5; // km/s;
+      a_Wout(9) = a_Wout(9)*1e6; // microGauss
+    }, Wout[dit], USemiSph, gamma);
   }
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
-  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, Wout, output_file);
+  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
   h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
