@@ -174,9 +174,9 @@ int main(int argc, char *argv[])
     if (lev == 0)
       {
         double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
-        if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
+        // if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
         dt = dtcfl1*ParseInputs::get_CFL();
-        if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
+        // if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
       }
     if (convTestType > 2) max_iter = 1;
     
@@ -186,9 +186,9 @@ int main(int argc, char *argv[])
       if (convTestType == 0)
         {
           double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
-          if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
+          // if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
           dt = dtcfl1*ParseInputs::get_CFL();
-          if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
+          // if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
         }
       if (convTestType < 3)
         {

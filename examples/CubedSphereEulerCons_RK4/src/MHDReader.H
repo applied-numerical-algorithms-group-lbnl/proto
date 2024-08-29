@@ -87,7 +87,7 @@ public:
 			double angle_to_rotate = fmod(360 * a_time / carr_rot_time, 360);
 
 			// Can use this if no rotation is needed
-			angle_to_rotate = 0;
+			// angle_to_rotate = 0;
 
 			int cells_to_rotate = angle_to_rotate / (360 / domainSizez);
 			double needed_fraction = angle_to_rotate / (360 / domainSizez) - cells_to_rotate;
@@ -117,14 +117,30 @@ public:
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
 			// Carrington rotation time (27.2753 days) is from Earth's prespective.
-			double effective_time1 = 360 * (time_temp + low_frame * h5_cadence * 3600) / carr_rot_time;
-			double effective_time2 = 360 * (time_temp + next_frame * h5_cadence * 3600) / carr_rot_time; // Should effective time be the same for both? No, frames rotate as well.
-			double angle_to_rotate1 = fmod(effective_time1, 360);
-			double angle_to_rotate2 = fmod(effective_time2, 360);
-			int cells_to_rotate1 = angle_to_rotate1 / (360 / domainSizez);
-			int cells_to_rotate2 = angle_to_rotate2 / (360 / domainSizez);
-			double needed_fraction1 = angle_to_rotate1 / (360 / domainSizez) - cells_to_rotate1;
-			double needed_fraction2 = angle_to_rotate2 / (360 / domainSizez) - cells_to_rotate2;
+			
+			int frames_rotate = ParseInputs::get_BC_frame_rotate();
+
+			double effective_time1, effective_time2, angle_to_rotate1, angle_to_rotate2, needed_fraction1, needed_fraction2;
+			int cells_to_rotate1, cells_to_rotate2;
+
+			if (frames_rotate = 1){
+				// Use this when frames rotate. Tae's WSA BCs have rotating frames.
+				effective_time1 = 360 * (time_temp + low_frame * h5_cadence * 3600) / carr_rot_time;
+				effective_time2 = 360 * (time_temp + next_frame * h5_cadence * 3600) / carr_rot_time; // Should effective time be the same for both? No, if frames rotate as well, Yes, if frames are fixed.
+				angle_to_rotate1 = fmod(effective_time1, 360);
+				angle_to_rotate2 = fmod(effective_time2, 360);
+			}
+
+			if (frames_rotate = 0){
+				//In SWiG, frames are fixed. In that case, use this
+				angle_to_rotate1 = fmod(360 * a_time / carr_rot_time, 360);
+				angle_to_rotate2 = fmod(360 * a_time / carr_rot_time, 360);
+			}
+
+			cells_to_rotate1 = angle_to_rotate1 / (360 / domainSizez);
+			cells_to_rotate2 = angle_to_rotate2 / (360 / domainSizez);
+			needed_fraction1 = angle_to_rotate1 / (360 / domainSizez) - cells_to_rotate1;
+			needed_fraction2 = angle_to_rotate2 / (360 / domainSizez) - cells_to_rotate2;
 			cells_to_rotate1 = cells_to_rotate1 % domainSizez;
 			cells_to_rotate2 = cells_to_rotate2 % domainSizez;
 			cells_to_rotate1 = domainSizez - cells_to_rotate1;
@@ -176,17 +192,17 @@ public:
 		BCOp.apply(a_dstData, data);
 
 		// Set magnetic field to zero
-		for (auto dit : a_dstData.layout())
-          {
-			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data)
-			{                    
-				a_BC_data(iBX) = 0.0;
-				a_BC_data(iBY) = 0.0;
-				a_BC_data(iBZ) = 0.0;
+		// for (auto dit : a_dstData.layout())
+        //   {
+		// 	forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data)
+		// 	{                    
+		// 		a_BC_data(iBX) = 0.0;
+		// 		a_BC_data(iBY) = 0.0;
+		// 		a_BC_data(iBZ) = 0.0;
 
-			},
-			a_dstData[dit]);
-		  }
+		// 	},
+		// 	a_dstData[dit]);
+		//   }
 	}
 
 	template <typename... Args>

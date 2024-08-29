@@ -47,6 +47,7 @@ private:
     double Probe_cadence; // In seconds
     double BC_start_time;
     double BC_cadence; // In hours
+    int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
 
     // Private Constructor
     ParseInputs() {}
@@ -91,6 +92,7 @@ public:
     static double get_Probe_cadence() {return getInstance().Probe_cadence;}
     static double get_BC_start_time() {return getInstance().BC_start_time;}
     static double get_BC_cadence() {return getInstance().BC_cadence;}
+    static int get_BC_frame_rotate() {return getInstance().BC_frame_rotate;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -123,6 +125,7 @@ public:
         args.add("Probe_cadence", Probe_cadence);
         args.add("BC_start_time", BC_start_time);
         args.add("BC_cadence", BC_cadence);
+        args.add("BC_frame_rotate", BC_frame_rotate);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -157,6 +160,7 @@ public:
             cout << "Probe_cadence: " << Probe_cadence << endl;
             cout << "BC_start_time: " << BC_start_time << endl;
             cout << "BC_cadence: " << BC_cadence << endl;
+            cout << "BC_frame_rotate: " << BC_frame_rotate << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }
