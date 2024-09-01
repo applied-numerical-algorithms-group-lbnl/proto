@@ -20,6 +20,9 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
+  h5.setTime(time);
+	h5.setTimestep(dt);
+  h5.setIter(iter);
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
@@ -84,7 +87,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
   h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
-  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
+  // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
 
 // Returns interpolated value at x from parallel arrays ( xData, yData )

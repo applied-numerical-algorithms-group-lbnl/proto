@@ -31,6 +31,7 @@ private:
     int checkpoint_cadence;
     string data_file_prefix;
     string checkpoint_file_prefix;
+    int max_checkpoint_files;
     string restart_file;
     double gamma; // Ratio of specific heats
     int temporal_order; // Temporal order of accuracy
@@ -47,6 +48,7 @@ private:
     double Probe_cadence; // In seconds
     double BC_start_time;
     double BC_cadence; // In hours
+    int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
 
     // Private Constructor
     ParseInputs() {}
@@ -76,6 +78,7 @@ public:
     static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
+    static int get_max_checkpoint_files() {return getInstance().max_checkpoint_files;}
     static string get_restart_file() {return getInstance().restart_file;}
     static double get_gamma() {return getInstance().gamma;}
     static int get_temporal_order() {return getInstance().temporal_order;}
@@ -91,6 +94,7 @@ public:
     static double get_Probe_cadence() {return getInstance().Probe_cadence;}
     static double get_BC_start_time() {return getInstance().BC_start_time;}
     static double get_BC_cadence() {return getInstance().BC_cadence;}
+    static int get_BC_frame_rotate() {return getInstance().BC_frame_rotate;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -108,6 +112,7 @@ public:
         args.add("checkpoint_cadence", checkpoint_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("checkpoint_file_prefix", checkpoint_file_prefix);
+        args.add("max_checkpoint_files", max_checkpoint_files);
         args.add("restart_file", restart_file);
         args.add("gamma", gamma);
         args.add("temporal_order", temporal_order);
@@ -123,6 +128,7 @@ public:
         args.add("Probe_cadence", Probe_cadence);
         args.add("BC_start_time", BC_start_time);
         args.add("BC_cadence", BC_cadence);
+        args.add("BC_frame_rotate", BC_frame_rotate);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -142,6 +148,7 @@ public:
             cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+            cout << "max_checkpoint_files: " << max_checkpoint_files << endl;
             cout << "restart_file: " << restart_file << endl;
             cout << "gamma: " << gamma << endl;
             cout << "temporal_order: " << temporal_order << endl;
@@ -157,6 +164,7 @@ public:
             cout << "Probe_cadence: " << Probe_cadence << endl;
             cout << "BC_start_time: " << BC_start_time << endl;
             cout << "BC_cadence: " << BC_cadence << endl;
+            cout << "BC_frame_rotate: " << BC_frame_rotate << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }
