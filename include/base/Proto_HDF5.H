@@ -368,8 +368,10 @@ namespace Proto
 #endif
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }
+        inline void setIter(int a_iter) { m_iter = a_iter; }
         inline double& time() { return m_time; }
         inline double& dt() { return m_dt; }
+        inline int& iter() { return m_iter; }
         
         template<typename T>
         inline static void getH5DataType(hid_t* a_type) {}
@@ -382,6 +384,7 @@ namespace Proto
 
         double m_time = 0.0;
         double m_dt = 1.0;
+        int m_iter = 0;
 
         template<typename T, unsigned int C, Centering CTR>
         inline void addLevel(hid_t* a_file,

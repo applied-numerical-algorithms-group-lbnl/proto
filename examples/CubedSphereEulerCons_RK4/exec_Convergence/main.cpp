@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
   double dt = 0.0;
   double dt_next = 0.0;
   double time = 0.0;
+  int restart_step = 0;
   int write_cadence = ParseInputs::get_write_cadence();
   int checkpoint_cadence = ParseInputs::get_checkpoint_cadence();
   int convTestType = ParseInputs::get_convTestType();
@@ -91,7 +92,6 @@ int main(int argc, char *argv[])
       MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
 
       // Set input solution.
-      int restart_step = 0;
       if (restart_file.empty())
         {
         Reduction<double,Operation::Max,HOST> dtinv;
@@ -117,25 +117,18 @@ int main(int argc, char *argv[])
             JUTemp.copyTo(JU_i, layout[dit]);
           }
         } else {
-          // TODO: Can iteration be saved in the restart file?
-          // Find the position of the last underscore
-          size_t lastUnderscorePos = restart_file.rfind('_');
-          // Find the position of the last period
-          size_t lastPeriodPos = restart_file.rfind('.');
-          if (lastUnderscorePos != std::string::npos && lastPeriodPos != std::string::npos && lastUnderscorePos < lastPeriodPos) {
-              // Extract the substring between the last underscore and the last period
-              std::string numberStr = restart_file.substr(lastUnderscorePos + 1, lastPeriodPos - lastUnderscorePos - 1);
-              int number = std::stoi(numberStr);
-              restart_step = number;
-          }
           h5.readMBLevel(JU, restart_file);
+          time = h5.time();
+		      dt = h5.dt();   
+          restart_step = h5.iter();
+          if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
         }
      
       
     
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     
-      Write_W(JU, eulerOp, iop, restart_step, time, dt_next);      
+      Write_W(JU, eulerOp, iop, restart_step, time, dt);      
       {
         HDF5Handler h5;
         MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
@@ -278,8 +271,18 @@ int main(int argc, char *argv[])
       if (iter % checkpoint_cadence == 0)
         {
           std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
+          h5.setTime(time);
+		      h5.setTimestep(dt);
+          h5.setIter(iter);
           h5.writeMBLevel(JU, check_file_name);
           if (procID() == 0) cout << "Checkpointed at iter " << iter << endl;
+          int iter_to_delete = iter - (checkpoint_cadence*ParseInputs::get_max_checkpoint_files());
+          if (iter_to_delete > restart_step)
+          {
+            std::string filename_to_delete=ParseInputs::get_checkpoint_file_prefix()+"_"+std::to_string(iter_to_delete)+".hdf5";
+            const char* str = filename_to_delete.c_str();
+            if (procID() == 0) std::remove(str);
+          }
         }
       auto end = chrono::steady_clock::now();
       

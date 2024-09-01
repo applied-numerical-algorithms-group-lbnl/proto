@@ -31,6 +31,7 @@ private:
     int checkpoint_cadence;
     string data_file_prefix;
     string checkpoint_file_prefix;
+    int max_checkpoint_files;
     string restart_file;
     double gamma; // Ratio of specific heats
     int temporal_order; // Temporal order of accuracy
@@ -77,6 +78,7 @@ public:
     static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
+    static int get_max_checkpoint_files() {return getInstance().max_checkpoint_files;}
     static string get_restart_file() {return getInstance().restart_file;}
     static double get_gamma() {return getInstance().gamma;}
     static int get_temporal_order() {return getInstance().temporal_order;}
@@ -110,6 +112,7 @@ public:
         args.add("checkpoint_cadence", checkpoint_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("checkpoint_file_prefix", checkpoint_file_prefix);
+        args.add("max_checkpoint_files", max_checkpoint_files);
         args.add("restart_file", restart_file);
         args.add("gamma", gamma);
         args.add("temporal_order", temporal_order);
@@ -145,6 +148,7 @@ public:
             cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+            cout << "max_checkpoint_files: " << max_checkpoint_files << endl;
             cout << "restart_file: " << restart_file << endl;
             cout << "gamma: " << gamma << endl;
             cout << "temporal_order: " << temporal_order << endl;

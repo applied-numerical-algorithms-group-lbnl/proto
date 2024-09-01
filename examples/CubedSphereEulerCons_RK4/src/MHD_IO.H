@@ -20,6 +20,9 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
+  h5.setTime(time);
+	h5.setTimestep(dt);
+  h5.setIter(iter);
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
