@@ -378,7 +378,7 @@ NonLinearViscCoef(
                     },dvoldn[a_dir],dvft1dtan1,dvft1dtan2,deta0,a_dVolr);
   
   int nrad = int (1.0/a_dxi[0]);
-  //#if 0
+  #if 0
   if (procID() == 0)
     {
       //h5.writePatch(a_dxi[0],divu,
@@ -407,7 +407,7 @@ NonLinearViscCoef(
         //", adjDrdir = " << dummy5.absMax() <<
         //endl;
     }
-  //#endif
+#endif
   {
     PR_TIMERS("BoxOp_EulerCubedSphere::NL Viscosity coefficient - final");
     divu *= a_dxi[a_dir];

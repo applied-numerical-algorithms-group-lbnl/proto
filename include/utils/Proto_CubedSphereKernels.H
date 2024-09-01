@@ -28,6 +28,7 @@ void f_matMatProd_F(
 }
 PROTO_KERNEL_END(f_matMatProd_F,f_matMatProd)
 
+
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_matVecProd_F(
@@ -39,10 +40,10 @@ void f_matVecProd_F(
   for (int ind0 = 0; ind0 < DIM; ind0++)
     {      
       a_prod(ind0) = 0.;
-      for (int ind = 0; ind < DIM; ind++)
+      for (int ind1 = 0; ind1 < DIM; ind1++)
         {
           a_prod(ind0) +=
-            a_left(ind0,ind)*a_right(ind);
+            a_left(ind0,ind1)*a_right(ind1);
         }
       a_prod(ind0) *= a_scale;
     }

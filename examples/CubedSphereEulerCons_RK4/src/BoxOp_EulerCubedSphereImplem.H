@@ -34,17 +34,30 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   sphToPrim(W,WBar,a_USph,a_block);
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
+  T dxiPerp = this->dx()[1];
+#if 0
+  if (procID() == 0)
+    {
+      HDF5Handler h5;
+      //Box bx0 = a_Rhs.box();
+      //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
+      h5.writePatch(dxiPerp,a_USp,"USph_"+to_string(procID()));
+      h5.writePatch(dxiPerp,W,"W_"+to_string(procID()));
+      h5.writePatch(dxiPerp,WBar,"WBar_"+to_string(procID()));
+    }
+#endif
   Box outputbox = bx;
   // Loop over directions.
   T one = 1.0;
   T half = 0.5;
   T dxiR = this->dx()[0];
-  T dxiPerp = this->dx()[1];  
+  
   BoxData<T,1,MEM> deta0(bx);
   BoxData<T,DIM,MEM> ntrow0(bx);
   BoxData<T,DIM,MEM,DIM> A_matrix0(bx);
   BoxData<T,1,MEM>speedMax(this->box());
   speedMax.setVal(0.0);
+  
   for (int dir = 0; dir < DIM; dir++)
     {
       PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
@@ -123,10 +136,20 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       // Fluxes on dir face.
       // Average of advective fluxes in spherical variables at the
       // face center, given point values of W.
+      
       BoxData<T,NUMCOMPS> physFlux_L,physFlux_R;
       primToFlux(physFlux_L,WFace_L,WFaceBar_L,adjDrDir,a_block,dir);
       primToFlux(physFlux_R,WFace_R,WFaceBar_R,adjDrDir,a_block,dir);
-
+#if 0
+      if (procID() == 0)
+        {
+          HDF5Handler h5;
+          //Box bx0 = a_Rhs.box();
+          //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
+          h5.writePatch(dxiPerp,physFlux_L,"physFlux_L_"+to_string(dir) + "_"+to_string(procID()));
+          h5.writePatch(dxiPerp,physFlux_R,",physFlux_R_"+to_string(dir) + "_"+to_string(procID()));
+        }
+#endif
       State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface),fluxdir_Rus(bxface);
       primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
       primToMappedFlux(fluxdir_R,physFlux_R,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,ntrow,a_block,dir);
@@ -145,14 +168,27 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
+#if 0
+      {
+        HDF5Handler h5;
+        Box bx0 = a_Rhs.box();
+        bxface = bx0.extrude(dir);
+        BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
+        a_fluxes[dir].copyTo(dummyface);
+        rhsIncr.copyTo(dummy);
+        h5.writePatch(dxiPerp,dummyface,"fluxes_"+to_string(dir)+"_"+to_string(procID()));
+        h5.writePatch(dxiPerp,dummy,"rhsIncr_"+to_string(dir)+"_"+to_string(procID()));
+      }
+#endif
     }
   // a_dt_next = 1.0/speedMax.absMax();
-  if (a_block == BLOCKTEST)
-    {
-      HDF5Handler h5;
-      BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(a_Rhs,dxiPerp,a_block);
-      h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
-    }
+  // if (a_block == BLOCKTEST)
+  //   {
+  //     HDF5Handler h5;
+      
+  //     BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(a_Rhs,dxiPerp,a_block);
+  //     h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
+  //   }
   // if (procID() == 0)cout << "output box = " << outputbox << endl;
 }
 template<
@@ -424,13 +460,6 @@ primToFlux(
        a_flux(iBY) = velnorm*a_wface(iBY) - a_wface(iVY)*bnorm;
        a_flux(iBZ) = velnorm*a_wface(iBZ) - a_wface(iVZ)*bnorm;
      },WFacePoint,kePoint,mePoint,vbPoint,adjDdirPoint,m_gamma,a_block,a_centering);
-   if ((a_block == BLOCKTEST) && a_centering == 0)
-    {
-      HDF5Handler h5;
-      h5.writePatch(this->dx(),kePoint,"kePoint" + to_string(a_centering));
-      h5.writePatch(this->dx(),mePoint,"mePoint" + to_string(a_centering));
-      h5.writePatch(this->dx(),WFacePoint,"WPointPF" + to_string(a_centering));          
-    }
   // Compute Average fluxes from pointwise values.
   a_physFlux = (1.0*Shift(Point::Zeros()) +
                 (1.0/24.0)*Stencil<T>::LaplacianFace(a_centering))(fluxPoint);
@@ -496,6 +525,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
   T wgtxdt = a_weight*a_dt;
   for (auto dit : a_UStage.layout())
   {
+    PROTO_ASSERT(a_k[dit].box() == a_k.layout()[dit],"k_i isn't exactly the size of a rhs");
     auto &k_i = a_k[dit];
     auto &USph_i = a_UStage[dit];
     Array<BoxData<double, NUMCOMPS>, DIM> fluxes;

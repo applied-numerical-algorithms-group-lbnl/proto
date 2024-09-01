@@ -123,6 +123,7 @@ namespace Proto {
                                       MBInterpOp& a_iop,
                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+    
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static Array<T,C> conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU);
                                       
@@ -238,7 +239,8 @@ namespace Proto {
                                      BoxData<T,DIM,MEM,1>& a_quotBar,
                                      const BoxData<T,DIM,MEM,DIM>& a_denominator,
                                      const BoxData<T,DIM,MEM,DIM>& a_denomInv,
-                                     const BoxData<T,DIM,MEM,1>& a_numerator);
+                                     const BoxData<T,DIM,MEM,1>& a_numerator,
+                                     bool a_debug = false);
     template <typename T, MemType MEM>
     inline
     static void cellMatrixQuotientMatAndInv(
@@ -302,6 +304,7 @@ namespace Proto {
                        const BoxData<T,DIM,MEM>& a_JUVec,
                        const BoxData<T,DIM,MEM,DIM>& a_AdetA,
                        const BoxData<T,DIM,MEM,DIM>& a_invAdetA,
+                       const BoxData<T,DIM,MEM,DIM>& a_Amat,
                        const BoxData<T,1,MEM>& a_detA,
                        const BoxData<T,1,MEM>& a_invDetA,
                        Box a_bx,
@@ -309,14 +312,13 @@ namespace Proto {
                        bool a_debug = false);
  
   template<typename T, unsigned int C, MemType MEM>
-  static void semiSphToSphNG(
+  static void semiSphToSph(
                              BoxData<T,C,MEM>& a_VSph,
                              const BoxData<T,C+2,MEM>& a_VSemiSph,
                              const BoxData<T,DIM,MEM,DIM>& a_ADetA,
                              const BoxData<T,DIM,MEM,DIM>& a_invADetA,
                              const BoxData<T,1,MEM>& a_detA,
                              const BoxData<T,1,MEM>& a_invDetA,
-                             Box a_blockBox,
                              int a_compvec,
                              int a_compradial);
     template <typename T, MemType MEM>

@@ -208,7 +208,7 @@ advance(
         m_blockreg.reflux(m_delta);
       }
     a_state.increment(m_delta, 1.0);
-    m_counter++;
+    // m_counter++;
     // auto layout = m_delta.layout();
     // LevelStateData bregtest(layout,Point::Zeros());
     // bregtest.setVal(0.);

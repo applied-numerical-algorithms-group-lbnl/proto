@@ -199,6 +199,8 @@ int main(int argc, char *argv[])
         {
           PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
           Array<double,8> opConsSums = OP::applyOp(JU,iop,dVolrLev);
+          HDF5Handler h5;
+          h5.writeMBLevel({}, map, JU, "applyOpTest" + to_string(lev));
           if (procID() == 0)
             {
               for (int comp = 0; comp < 8 ; comp++)
@@ -352,12 +354,27 @@ int main(int argc, char *argv[])
                 refRatio = 2*Point::Ones();
               }          
             U_conv_test[lev + 1].coarsenTo(err,refRatio);
+            
             for (auto dit : layout)
               {
+                unsigned int block = layout.block(dit);
+                Box blockBox = layout.getBlock(block).domain().box();
+                Box radialBlockFaceHi = blockBox.face(0,Side::Hi,3);
+                Box radialPatchFaceHi = radialBlockFaceHi&err[dit].box();
+                Box radialBlockFaceLo = blockBox.face(0,Side::Lo,3);
+                Box radialPatchFaceLo = radialBlockFaceLo&err[dit].box();
                 err[dit] -= U_conv_test[lev][dit];
                 for (int comp = 0; comp < 8; comp++)
                   {
                     auto errslice = slice(err[dit],comp);
+                    if (!radialPatchFaceHi.empty())
+                      {
+                        errslice.setVal(0.,radialPatchFaceHi);
+                      }
+                    if (!radialPatchFaceLo.empty())
+                      {
+                        errslice.setVal(0.,radialPatchFaceLo);
+                      }
                     double errPatch = errslice.absMax();
                     errmax[comp].reduce(&errPatch,1);
                   }

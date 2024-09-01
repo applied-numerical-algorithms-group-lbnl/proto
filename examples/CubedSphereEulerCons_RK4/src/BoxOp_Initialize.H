@@ -108,7 +108,7 @@ void f_nonradialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(iRHO) = rho;
-  a_W(iVX) = 0.0; //ur;
+  a_W(iVX) = ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -165,7 +165,10 @@ initialize(State& a_W,
   int init_condition_type = ParseInputs::get_init_condition_type();
   T strength = ParseInputs::get_strength();
   if (init_condition_type == 0) forallInPlace_p(f_radialShellInit, a_W, a_radius, a_gamma, a_nradius);
-  if (init_condition_type == 1) forallInPlace_p(f_nonradialInit, a_W, a_Xcart, a_gamma, a_nradius);
+  if (init_condition_type == 1)
+    {
+      forallInPlace_p(f_nonradialInit, a_W, a_Xcart, a_gamma, a_nradius);
+    }
   if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
   // if (init_condition_type == 3) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
 

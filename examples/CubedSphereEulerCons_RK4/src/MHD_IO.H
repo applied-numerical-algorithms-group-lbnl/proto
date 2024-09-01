@@ -77,7 +77,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(6) = a_Wout(6)*1e6; // microGauss
       a_Wout(7) = a_Wout(7)*1e6; // microGauss
       a_Wout(8) = a_Wout(8)/1e5; // km/s;
-      a_Wout(9) = a_Wout(9)*1e6; // microGauss
+      //a_Wout(9) = a_Wout(9)*1e6; // microGauss
+      a_Wout(9) = procID();
     }, Wout[dit], USemiSph, gamma);
   }
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
