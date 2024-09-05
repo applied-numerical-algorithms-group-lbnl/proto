@@ -81,7 +81,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(6) = a_Wout(6)*1e6; // microGauss
       a_Wout(7) = a_Wout(7)*1e6; // microGauss
       a_Wout(8) = a_Wout(8)/1e5; // km/s;
-      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/CUBED_SPHERE_SHELL_R0/CUBED_SPHERE_SHELL_R0)*1e6; // microGauss
+      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
     }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
   }
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
