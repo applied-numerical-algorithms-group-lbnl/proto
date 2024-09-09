@@ -54,7 +54,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     forallInPlace([ ] PROTO_LAMBDA
     (Var<double,NUMCOMPS+2,HOST>& a_Wout,
      const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
-     double a_gamma)
+     double a_gamma,
+     const Var<double,1,HOST>& a_radius)
     {
       a_Wout(0) = a_USemiSph(0);
       a_Wout(1) = a_USemiSph(1) / a_Wout(0);
@@ -81,10 +82,9 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(6) = a_Wout(6)*1e6; // microGauss
       a_Wout(7) = a_Wout(7)*1e6; // microGauss
       a_Wout(8) = a_Wout(8)/1e5; // km/s;
-      //a_Wout(9) = a_Wout(9)*1e6; // microGauss
-      a_Wout(9) = procID();
-    }, Wout[dit], USemiSph, gamma);
-    Array<std::string,NUMCOMPS+3> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br","e^entropy"};
+      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
+    }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
+    Array<std::string,NUMCOMPS+3> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2","e^entropy"};
 #if 0
     if (procID() == 0)
     {
@@ -125,7 +125,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
-  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
+  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
   // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
