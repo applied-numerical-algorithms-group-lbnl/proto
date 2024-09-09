@@ -20,6 +20,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
+  a_JU.exchange();
   h5.setTime(time);
 	h5.setTimestep(dt);
   h5.setIter(iter);
@@ -40,7 +41,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
-    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Ones(2)));
     auto& Wout_i = Wout[dit];
     USemiSph.setToZero();
     unsigned int block = layout.block(dit);
@@ -83,7 +84,46 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       //a_Wout(9) = a_Wout(9)*1e6; // microGauss
       a_Wout(9) = procID();
     }, Wout[dit], USemiSph, gamma);
+    Array<std::string,NUMCOMPS+3> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br","e^entropy"};
+#if 0
+    if (procID() == 0)
+    {
+      Box bx = layout[dit];
+      std::string output1D_file = ParseInputs::get_data_file_prefix()+"index" + "1D_" + std::to_string(iter)+".curve";
+      std::ofstream ofs (output1D_file, std::ofstream::out);
+      Point ptcen = bx.high()/2;
+      int highxi0 = bx.high()[0];
+      ptcen[0] = 0;
+      
+      for (int comp = 0; comp < NUMCOMPS+3; comp++)
+        {
+          ofs << "#" + names[comp] << endl;
+          for (int ind = 0; ind < highxi0; ind++)
+            {
+              Point ptindex = ptcen;
+              ptindex[0] = ind;
+              Point ptindex_p = ptcen;
+              ptindex_p[0] = ind+1;
+              double r = (radiusLev[dit](ptindex,0) + radiusLev[dit](ptindex_p,0))*.5;
+              if (comp < NUMCOMPS+2)
+                {
+                  double val = Wout[dit](ptindex,comp);
+                  ofs << r << " " << val << endl;
+                }
+              else if (comp == NUMCOMPS+2)
+                {
+                  double p = Wout[dit](ptindex,4);
+                  double rho = Wout[dit](ptindex,0);
+                  double val = p/pow(rho,gamma);
+                  ofs << r << " " << val << endl;
+                }
+            }
+          ofs << endl;
+        }
+    }
+#endif
   }
+  
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
   h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));

@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
   int radial_refinement = ParseInputs::get_radial_refinement();
   string BC_file = ParseInputs::get_BC_file();
   string restart_file = ParseInputs::get_restart_file();
-  BC_global.file_to_BoxData_vec(BC_file);
+  if (init_condition_type == 3) BC_global.file_to_BoxData_vec(BC_file);
   
   double probe_cadence = ParseInputs::get_Probe_cadence();
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;

@@ -249,7 +249,8 @@ namespace Proto {
                                      const BoxData<T,DIM,MEM,DIM>& a_denomInv,
                                      const BoxData<T,DIM,MEM,1>& a_numerator,
                                      Box a_quotBox,
-                                     Box a_blockBox);
+                                     Box a_blockBox,
+                                     bool a_debug = false);
     template <typename T, MemType MEM>
     inline
     static void cellQuotientValAndInv(
@@ -338,5 +339,5 @@ namespace Proto {
        unsigned int a_centering);
 #endif
 #include "implem/Proto_CubedSphereShellImplem.H"
-} // end namespace Proto
+}// end namespace Proto
 #endif // end include guard
