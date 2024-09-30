@@ -61,8 +61,8 @@ typedef BoxData<double, DIM> Vector;
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
 //template<typename T, MemType MEM>
-PROTO_KERNEL_START
 template<typename T,MemType MEM>
+PROTO_KERNEL_START
 void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_wpoint,
                    Var<T,NUMCOMPS,MEM>& a_upoint)                           
@@ -93,8 +93,8 @@ f_thresholdF(
   else {a_tags(0) = 0;};
 }
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
-PROTO_KERNEL_START
 template<typename T,MemType MEM>
+PROTO_KERNEL_START
 void f_speedmax_F
 (
  Var<T,1,MEM>& a_speedmax,
@@ -160,8 +160,8 @@ void f_speedmax_F
   a_speedmax(0) += (af + sqrt(v2))/dx_d;
 }
 PROTO_KERNEL_END(f_speedmax_F, f_speedmax);
-PROTO_KERNEL_START
 template<typename T,MemType MEM>
+PROTO_KERNEL_START
 void f_csq_F
 (
  Var<T,1,MEM>& a_csq,
@@ -492,7 +492,7 @@ public:
                 MBBoundaryRegister<T,NUMREG,MEM,PR_CELL>& a_blockReg);
   
   /// Apply operator. Usede for convergence testing.
-  static inline Array<T,NUMCOMPS>
+  static Array<T,NUMCOMPS>
   applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
           MBInterpOp& a_iop,
           MBLevelBoxData<T,1,MEM>& a_dVolrLev);

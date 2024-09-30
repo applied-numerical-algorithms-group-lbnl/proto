@@ -549,7 +549,7 @@ template<
   typename T,
   template<MemType> typename MAP,
   MemType MEM>
-static inline Array<T,NUMCOMPS> 
+Array<T,NUMCOMPS> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
   applyOp(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
           MBInterpOp& a_iop,
