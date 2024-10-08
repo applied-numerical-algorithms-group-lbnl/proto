@@ -84,6 +84,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
               T a_dt,
               int a_kstage)
 {
+  PR_TIMERS("BoxOp_Euler::PreStagePatch");
   int a_block = this->block();
   Box bxGhosted = a_USphStage.box();
   BoxData<double> radius(a_dVolr.box());
@@ -217,6 +218,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
 {
   //
   // Transform JU -> USph.
+  PR_TIMERS("BoxOp_Euler::PreStageLevel");
   auto layout = a_UStage.layout();
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
  
@@ -251,6 +253,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)
       {
+        PR_TIMERS("artificial viscosity");
         unsigned int block = layout.block(dit);
         Box blockBox = layout.getBlock(block).domain().box();
         auto mbdata = a_blockreg.bounds(dit);

@@ -517,6 +517,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
            T a_weight,
            int a_kstage)
 {
+  PR_TIMERS("BoxOp_Euler::StageLevel");
   auto layout = a_UStage.layout();
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);

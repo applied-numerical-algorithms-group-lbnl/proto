@@ -154,7 +154,10 @@ advance(
             OP::StageLevel
               (m_k, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
-            m_delta.increment(m_k, a_dt*weight);
+            {
+              PR_TIMERS("block_increment_0");
+              m_delta.increment(m_k, a_dt*weight);
+            }
           }
 
         a_state.copyTo(m_U0);
@@ -169,7 +172,10 @@ advance(
             OP::StageLevel
               (m_k, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
-            m_delta.increment(m_k, a_dt*weight);
+            {
+              PR_TIMERS("block_increment_1");
+              m_delta.increment(m_k, a_dt*weight);
+            }
           }
 
         a_state.copyTo(m_U0);
@@ -183,7 +189,10 @@ advance(
             OP::StageLevel
               (m_k, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
-            m_delta.increment(m_k, a_dt*weight);
+           {
+              PR_TIMERS("block_increment_2");
+              m_delta.increment(m_k, a_dt*weight);
+            }
           }
 
         a_state.copyTo(m_U0);
@@ -196,17 +205,22 @@ advance(
           {
             OP::StageLevel
               (m_k, m_U0, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
-            m_delta.increment(m_k, a_dt*weight);
+            {
+              PR_TIMERS("block_increment_3");
+              m_delta.increment(m_k, a_dt*weight);
+            }
           }
     }
 
     // Update State.
     
     int boundary_reflux = ParseInputs::get_boundary_reflux();
-    if (boundary_reflux == 1)
+    if (boundary_reflux == 1){
       {
+        PR_TIMERS("block_reflux");
         m_blockreg.reflux(m_delta);
       }
+    }
     a_state.increment(m_delta, 1.0);
     // m_counter++;
     // auto layout = m_delta.layout();
