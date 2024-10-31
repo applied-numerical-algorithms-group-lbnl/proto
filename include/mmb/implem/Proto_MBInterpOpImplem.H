@@ -378,223 +378,55 @@ void MBInterpOp::define(
     for (auto iter : layout)
     {
         auto block = layout.block(iter);
-        Point patch_i = layout.point(iter);
+        // Point patch_i = layout.point(iter);
         if ((a_block >= 0) && (block != a_block)) {continue; }
-        Box blockDomainBox = layout.domain().getBlock(block).box(); 
-        Box patchBox = layout[iter];
-#if PR_VERBOSE > 1
-        pr_out() << "\tPatch: " << patch_i << " | Block: " << block << std::endl;
-        pr_out() << "\tPatch Box: " << patchBox << " | Block Box: " << blockDomainBox << std::endl;
-#endif
-        for (auto dir : Box::Kernel(1))
-        {
-            Point patch_j = patch_i + dir; 
-#if PR_VERBOSE > 1
-            pr_out() << "\t\tDir: " << dir << " | Neighbor: " << patch_j << std::endl;
-            if (patchDomain.inInterior(patch_j, block))
-            {
-                pr_out() << "\t\t\tNeighbor is in the interior -> skipping" << std::endl;
-            }
-            if (patchDomain.inDomainBoundary(patch_j, block))
-            {
-                pr_out() << "\t\t\tNeighbor is in the domain boundary -> skipping" << std::endl;
-            }
-#endif
-            if (patchDomain.inInterior(patch_j, block)) { continue; }
-            if (patchDomain.inDomainBoundary(patch_j, block)) { continue; }
-            Box boundBox = patchBox.adjacent(m_ghost*dir);
-            if (patchDomain.inTriplePoint(patch_j, block))
-            {
-#if PR_VERBOSE > 1
-                pr_out() << "\t\t\tNeighbor is inside a triple point region: " << boundBox << std::endl;
-#endif
-                for (auto bi : boundBox)
-                {
-#if PR_VERBOSE > 1
-                    pr_out() << "\t\t\tChecking point: " << bi << std::endl;
-#endif
-                    PR_TIME("add_triple_point");
-                    MBPointID key(bi, iter.global());
-#if PR_VERBOSE > 1
-                    if (m_points.count(key))
-                    {
-                        pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
-                    }
-#endif
-                    if (m_points.count(key)) { continue; }
-                    Point corner = patchBox.edge(dir,1).low();
-                    std::set<Point> fset;
-                    for (int ii = 0; ii < DIM; ii++)
-                    {
-                        if (dir[ii] == 0) { continue; }
-                        Point s = Point::Basis(ii,-1)*(bi-corner)*footprintDims;
-                        for (auto fi : a_footprint)
-                        {
-                            fset.insert(fi + s);
-                        }
-                    }
-                    std::vector<Point> extFootprint(fset.begin(), fset.end());
-#if PR_VERBOSE > 1
-                    pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
-                    for (auto fi : extFootprint)
-                    {
-                        pr_out() << "\t\t\t\t" << fi;
-                        if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
-                        {
-                            pr_out() << " <- added";
-                        }
-                        pr_out() << std::endl;
-                    }
-#endif
-                    MBDataPoint dstDataPoint(iter, bi, layout);
-                    auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
-                    m_points.insert(key);
-                    
-                    for (int dd = 0; dd < DIM; dd++)
-                    {
-                        PR_TIME("copy_along_axis");
-                        if (m_copyAxes[dd])
-                        {
-                            int colHeight = boundBox.sizes()[dd];
-                            Box boundColumn = Box(bi,bi).grow(Point::Basis(dd,colHeight-1));
-                            boundColumn &= boundBox;
-                            for (auto bj : boundColumn)
-                            {
-                                if (bi == bj) {continue; }
-                                MBPointID key_j(bj, iter.global());
-                                if (m_points.count(key_j)) {continue; }
-                                Point shift = bj - bi;
-                                MBDataPoint dst_j = dstDataPoint.shift(shift);
-                                std::vector<MBDataPoint> srcs_j;
-                                for (auto si : op->sources())
-                                {
-                                    srcs_j.push_back(si.shift(shift));
-                                }
-                                auto coefs = op->coefs();
-                                auto op_j = std::make_shared<MBPointInterpOp>(dst_j, srcs_j, coefs);
-                                m_ops.push_back(op_j);
-                                m_points.insert(key_j);    
-                            }
-                        }
-                    }
-                }
-                continue;
-            }
-            PROTO_ASSERT(patchDomain.inBlockBoundary(patch_j, block),
-                    "MBInterpOp::define | Data corruption.");
-            auto bounds = a_map.map().bounds(iter, dir);
-#if PR_VERBOSE > 1
-            pr_out() << "\t\t\tNeighbor is inside a normal boundary region: " << boundBox << " | number of boundaries: " << bounds.size() << std::endl;
-#endif
-            std::set<Point> fset;
-            for (auto fi : a_footprint)
-            {
-                fset.insert(fi);
-            }
-            for (auto bound : bounds)
-            {
-
-                //handle points adjacent to triple points
-                for (auto bi : boundBox)
-                {
-#if PR_VERBOSE > 1
-                    pr_out() << "\t\t\tChecking point: " << bi << std::endl;
-#endif
-                    PR_TIME("add_non_triple_point");
-                    MBPointID key(bi, iter.global());
-#if PR_VERBOSE > 1
-                    if (m_points.count(key))
-                    {
-                        pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
-                    }
-#endif
-                    if (m_points.count(key)) { continue; }
-                    for (int ii = 0; ii < DIM; ii++)
-                    {
-                        PR_TIME("adjacent_triple_point_logic");
-                        Point d2 = Point::Basis(ii);
-                        bool onLoEdge = boundBox.edge(-d2).contains(bi);
-                        bool onHiEdge = boundBox.edge( d2).contains(bi);
-                        bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
-                        bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
-                        if (onLoEdge && hasLoTriplePoint)
-                        {
-#if PR_VERBOSE > 1
-                            if (m_points.count(key))
-                            {
-                                pr_out() << "\t\t\t\tDetected adjacent triple point patch (lo): " << patch_j - d2 << std::endl;
-                            }
-#endif
-                            for (auto fi : a_footprint)
-                            {
-                                fset.insert((fi + d2)*footprintDims);
-                            }
-                        }
-                        if (onHiEdge && hasHiTriplePoint)
-                        {
-#if PR_VERBOSE > 1
-                            if (m_points.count(key))
-                            {
-                                pr_out() << "\t\t\t\tDetected adjacent triple point patch (hi): " << patch_j + d2 << std::endl;
-                            }
-#endif
-                            for (auto fi : a_footprint)
-                            {
-                                fset.insert((fi - d2)*footprintDims);
-                            }
-                        }
-                    }
-                    std::vector<Point> extFootprint(fset.begin(), fset.end());
-#if PR_VERBOSE > 1
-                    pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
-                    for (auto fi : extFootprint)
-                    {
-                        pr_out() << "\t\t\t\t" << fi;
-                        if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
-                        {
-                            pr_out() << " <- added";
-                        }
-                        pr_out() << std::endl;
-                    }
-#endif
-                    MBDataPoint dstDataPoint(iter, bi, layout);
-                    auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
-                    m_ops.push_back(op);
-                    m_points.insert(key);
-                    for (int dd = 0; dd < DIM; dd++)
-                    {
-                        PR_TIME("copy_along_axis");
-                        if (m_copyAxes[dd])
-                        {
-                            int colHeight = boundBox.sizes()[dd];
-                            Box boundColumn = Box(bi,bi).grow(Point::Basis(dd,colHeight-1));
-                            boundColumn &= boundBox;
-                            for (auto bj : boundColumn)
-                            {
-                                if (bi == bj) {continue; }
-                                MBPointID key_j(bj, iter.global());
-                                if (m_points.count(key_j)) {continue; }
-                                Point shift = bj - bi;
-                                MBDataPoint dst_j = dstDataPoint.shift(shift);
-                                std::vector<MBDataPoint> srcs_j;
-                                for (auto si : op->sources())
-                                {
-                                    srcs_j.push_back(si.shift(shift));
-                                }
-                                
-                                auto op_j = std::make_shared<MBPointInterpOp>(dst_j, srcs_j, op->coefs());
-                                m_ops.push_back(op_j);
-                                m_points.insert(key_j);    
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        defineInternals(a_map,a_footprint,footprintDims,iter,a_order,block);
     }
 }
 
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+                        const Array<shared_ptr<MBLevelMap<MAP,MEM>>,6>&  a_polarmaps,
+                        const std::vector<Point>&   a_footprint,
+                        int                         a_order)
+{
+    Box spanBox;
+    for (auto& fi : a_footprint)
+    {
+        spanBox &= fi;
+    }
+    Point footprintDims = Point::Zeros();
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (spanBox.sizes()[dd] > 1)
+        {
+            footprintDims[dd] = 1;
+        }
+    }
+#if PR_VERBOSE > 1
+    pr_out() << "MBInterpOp New define Constructor" << std::endl;
+    pr_out() << "Order: " << a_order <<  std::endl;
+    pr_out() << "Base Footprint: " << std::endl;
+    for (auto fi : a_footprint)
+    {
+        pr_out() << fi << ", ";
+    }
+    pr_out() << std::endl;
+#endif
+    PR_TIME("MBInterpOp::define (new)");
+    m_ghost = a_polarmaps[0]->ghost()[0];
+    
+    const auto& layout = a_polarmaps[0]->map().layout();
+    const auto& patchDomain = layout.partition().domain();
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // Point patch_i = layout.point(iter);
+        //if ((a_block >= 0) && (block != a_block)) {continue; }
+        auto map = *(a_polarmaps[block]);
+        defineInternals(map,a_footprint,footprintDims,iter,a_order,block);
+    }
+}
 void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 {
     Point dst = a_op->target().point();
@@ -679,8 +511,232 @@ void interpBoundaries(
     op.apply(a_data, a_data);
 }
 
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::defineInternals(
+                                 const MBLevelMap<MAP,MEM>&  a_map,
+                                 const std::vector<Point>&   a_footprint,
+                                 Point                       a_footprintDims,
+                                 Proto::DataIndex<Proto::MBBoxPartition>  a_iter,
+                                 int                         a_order,
+                                 int                         a_block)
+{
+  PR_TIMERS("MBInterpOp::define patch");
+  const auto& layout = a_map.map().layout();
+  const auto& patchDomain = layout.partition().domain();
+  Point footprintDims = a_footprintDims;
+ Proto::DataIndex<Proto::MBBoxPartition> iter = a_iter;
+  auto block = layout.block(iter);
+  Point patch_i = layout.point(iter);
+  Box blockDomainBox = layout.domain().getBlock(block).box(); 
+  Box patchBox = layout[a_iter];
+#if PR_VERBOSE > 1
+  pr_out() << "\tPatch: " << patch_i << " | Block: " << block << std::endl;
+  pr_out() << "\tPatch Box: " << a_patchBox << " | Block Box: " << blockDomainBox << std::endl;
+#endif
+  for (auto dir : Box::Kernel(1))
+    {
+      Point patch_j = patch_i + dir; 
+#if PR_VERBOSE > 1
+      pr_out() << "\t\tDir: " << dir << " | Neighbor: " << patch_j << std::endl;
+      if (patchDomain.inInterior(patch_j, block))
+        {
+          pr_out() << "\t\t\tNeighbor is in the interior -> skipping" << std::endl;
+        }
+      if (patchDomain.inDomainBoundary(patch_j, block))
+        {
+          pr_out() << "\t\t\tNeighbor is in the domain boundary -> skipping" << std::endl;
+        }
+#endif
+      if (patchDomain.inInterior(patch_j, block)) { continue; }
+      if (patchDomain.inDomainBoundary(patch_j, block)) { continue; }
+      Box boundBox = patchBox.adjacent(m_ghost*dir);
+      if (patchDomain.inTriplePoint(patch_j, block))
+        {
+#if PR_VERBOSE > 1
+          pr_out() << "\t\t\tNeighbor is inside a triple point region: " << boundBox << std::endl;
+#endif
+          for (auto bi : boundBox)
+            {
+#if PR_VERBOSE > 1
+              pr_out() << "\t\t\tChecking point: " << bi << std::endl;
+#endif
+              PR_TIME("add_triple_point");
+              MBPointID key(bi, a_iter.global());
+#if PR_VERBOSE > 1
+              if (m_points.count(key))
+                {
+                  pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
+                }
+#endif
+              if (m_points.count(key)) { continue; }
+              Point corner = patchBox.edge(dir,1).low();
+              std::set<Point> fset;
+              for (int ii = 0; ii < DIM; ii++)
+                {
+                  if (dir[ii] == 0) { continue; }
+                  Point s = Point::Basis(ii,-1)*(bi-corner)*footprintDims;
+                  for (auto fi : a_footprint)
+                    {
+                      fset.insert(fi + s);
+                    }
+                }
+              std::vector<Point> extFootprint(fset.begin(), fset.end());
+#if PR_VERBOSE > 1
+              pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
+              for (auto fi : extFootprint)
+                {
+                  pr_out() << "\t\t\t\t" << fi;
+                  if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
+                    {
+                      pr_out() << " <- added";
+                    }
+                  pr_out() << std::endl;
+                }
+#endif
+              MBDataPoint dstDataPoint(a_iter, bi, layout);
+              auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
+              m_ops.push_back(op);
+              m_points.insert(key);
+                    
+              for (int dd = 0; dd < DIM; dd++)
+                {
+                  PR_TIME("copy_along_axis");
+                  if (m_copyAxes[dd])
+                    {
+                      int colHeight = boundBox.sizes()[dd];
+                      Box boundColumn = Box(bi,bi).grow(Point::Basis(dd,colHeight-1));
+                      boundColumn &= boundBox;
+                      for (auto bj : boundColumn)
+                        {
+                          if (bi == bj) {continue; }
+                          MBPointID key_j(bj, a_iter.global());
+                          if (m_points.count(key_j)) {continue; }
+                          Point shift = bj - bi;
+                          MBDataPoint dst_j = dstDataPoint.shift(shift);
+                          std::vector<MBDataPoint> srcs_j;
+                          for (auto si : op->sources())
+                            {
+                              srcs_j.push_back(si.shift(shift));
+                            }
+                          auto coefs = op->coefs();
+                          auto op_j = std::make_shared<MBPointInterpOp>(dst_j, srcs_j, coefs);
+                          m_ops.push_back(op_j);
+                          m_points.insert(key_j);    
+                        }
+                    }
+                }
+            }
+          continue;
+        }
+      PROTO_ASSERT(patchDomain.inBlockBoundary(patch_j, block),
+                   "MBInterpOp::define | Data corruption.");
+      auto bounds = a_map.map().bounds(a_iter, dir);
+#if PR_VERBOSE > 1
+      pr_out() << "\t\t\tNeighbor is inside a normal boundary region: " << boundBox << " | number of boundaries: " << bounds.size() << std::endl;
+#endif
+      std::set<Point> fset;
+      for (auto fi : a_footprint)
+        {
+          fset.insert(fi);
+        }
+      for (auto bound : bounds)
+        {
 
-
-
-
-
+          //handle points adjacent to triple points
+          for (auto bi : boundBox)
+            {
+#if PR_VERBOSE > 1
+              pr_out() << "\t\t\tChecking point: " << bi << std::endl;
+#endif
+              PR_TIME("add_non_triple_point");
+              MBPointID key(bi, a_iter.global());
+#if PR_VERBOSE > 1
+              if (m_points.count(key))
+                {
+                  pr_out() << "\t\t\t\tOperator already exists -> skipping" << std::endl;
+                }
+#endif
+              if (m_points.count(key)) { continue; }
+              for (int ii = 0; ii < DIM; ii++)
+                {
+                  PR_TIME("adjacent_triple_point_logic");
+                  Point d2 = Point::Basis(ii);
+                  bool onLoEdge = boundBox.edge(-d2).contains(bi);
+                  bool onHiEdge = boundBox.edge( d2).contains(bi);
+                  bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
+                  bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
+                  if (onLoEdge && hasLoTriplePoint)
+                    {
+#if PR_VERBOSE > 1
+                      if (m_points.count(key))
+                        {
+                          pr_out() << "\t\t\t\tDetected adjacent triple point patch (lo): " << patch_j - d2 << std::endl;
+                        }
+#endif
+                      for (auto fi : a_footprint)
+                        {
+                          fset.insert((fi + d2)*footprintDims);
+                        }
+                    }
+                  if (onHiEdge && hasHiTriplePoint)
+                    {
+#if PR_VERBOSE > 1
+                      if (m_points.count(key))
+                        {
+                          pr_out() << "\t\t\t\tDetected adjacent triple point patch (hi): " << patch_j + d2 << std::endl;
+                        }
+#endif
+                      for (auto fi : a_footprint)
+                        {
+                          fset.insert((fi - d2)*footprintDims);
+                        }
+                    }
+                }
+              std::vector<Point> extFootprint(fset.begin(), fset.end());
+#if PR_VERBOSE > 1
+              pr_out() << "\t\t\t\tExtended Footprint: " << std::endl;
+              for (auto fi : extFootprint)
+                {
+                  pr_out() << "\t\t\t\t" << fi;
+                  if (std::find(a_footprint.begin(), a_footprint.end(), fi) == a_footprint.end())
+                    {
+                      pr_out() << " <- added";
+                    }
+                  pr_out() << std::endl;
+                }
+#endif
+              MBDataPoint dstDataPoint(a_iter, bi, layout);
+              auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, a_map, extFootprint, a_order);
+              m_ops.push_back(op);
+              m_points.insert(key);
+              for (int dd = 0; dd < DIM; dd++)
+                {
+                  PR_TIME("copy_along_axis");
+                  if (m_copyAxes[dd])
+                    {
+                      int colHeight = boundBox.sizes()[dd];
+                      Box boundColumn = Box(bi,bi).grow(Point::Basis(dd,colHeight-1));
+                      boundColumn &= boundBox;
+                      for (auto bj : boundColumn)
+                        {
+                          if (bi == bj) {continue; }
+                          MBPointID key_j(bj, a_iter.global());
+                          if (m_points.count(key_j)) {continue; }
+                          Point shift = bj - bi;
+                          MBDataPoint dst_j = dstDataPoint.shift(shift);
+                          std::vector<MBDataPoint> srcs_j;
+                          for (auto si : op->sources())
+                            {
+                              srcs_j.push_back(si.shift(shift));
+                            }
+                                
+                          auto op_j = std::make_shared<MBPointInterpOp>(dst_j, srcs_j, op->coefs());
+                          m_ops.push_back(op_j);
+                          m_points.insert(key_j);    
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

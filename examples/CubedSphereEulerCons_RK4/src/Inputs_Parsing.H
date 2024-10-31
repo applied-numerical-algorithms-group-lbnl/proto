@@ -42,6 +42,7 @@ private:
                            // 1 refine only in radial direction.
     int operator_switchiv;   // no inviscid (1) no viscous (2) both on (0).
     int operator_switchln;   // no linear (1) no nonlinear (2) both on (0)
+    int MBInterp_define;   // old define (0) new define (1)
     string BC_file;
     string Probe_trajectory_file;
     string Probe_data_file;
@@ -88,6 +89,7 @@ public:
     static int get_radial_refinement() {return getInstance().radial_refinement;}
     static int get_operator_switchiv() {return getInstance().operator_switchiv;}
     static int get_operator_switchln() {return getInstance().operator_switchln;}
+    static int get_MBInterp_define() {return getInstance().MBInterp_define;}
     static string get_BC_file() {return getInstance().BC_file;}
     static string get_Probe_trajectory_file() {return getInstance().Probe_trajectory_file;}
     static string get_Probe_data_file() {return getInstance().Probe_data_file;}
@@ -122,6 +124,7 @@ public:
         args.add("radial_refinement", radial_refinement);
         args.add("operator_switchiv", operator_switchiv);
         args.add("operator_switchln", operator_switchln);
+        args.add("MBInterp_define", MBInterp_define);
         args.add("BC_file", BC_file);
         args.add("Probe_trajectory_file", Probe_trajectory_file);
         args.add("Probe_data_file", Probe_data_file);
@@ -158,6 +161,7 @@ public:
             cout << "radial_refinement: " << radial_refinement << endl;
             cout << "operator_switchiv: " << operator_switchiv << endl;
             cout << "operator_switchln: " << operator_switchln << endl;
+            cout << "MBInterp_define: " << MBInterp_define << endl;
             cout << "BC_file: " << BC_file << endl;
             cout << "Probe_trajectory_file: " << Probe_trajectory_file << endl;
             cout << "Probe_data_file: " << Probe_data_file << endl;

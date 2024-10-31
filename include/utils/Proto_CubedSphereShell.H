@@ -63,7 +63,12 @@ namespace Proto {
                                const MBDisjointBoxLayout& a_layout,
                                Point a_ghost,
                                int a_order = 4);
-    
+    /// New operator construction.
+    template<MemType MEM>
+    static MBInterpOp InterpOpNew(
+                                  const MBDisjointBoxLayout& a_layout,
+                                  Point a_ghost,
+                                  int a_order = 4); 
     /// Get MB Interpolation Operator
     /** 
      */

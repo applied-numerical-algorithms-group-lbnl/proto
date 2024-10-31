@@ -22,6 +22,7 @@
 -radial_refinement               1
 -operator_switchiv               0
 -operator_switchln               0
+-MBInterp_define                 1
 #-BC_file                         DATA.h5
 #-BC_file                         POT3D360x180_2020010120_2020022020_fixeddtheta.h5
 #-BC_file                         SWQU_Tutorial_SWiG_domsize32_1frame.h5

@@ -168,7 +168,14 @@ namespace Proto
                 const std::vector<Point>&    a_footprint,
                 int                         a_order = 4,
                 int block = -1);
-        
+
+        /// Define MBInterpOp. Does this for all the blocks at once.
+      template<template<MemType> typename MAP, MemType MEM>
+      inline void define(
+                         const Array<shared_ptr<MBLevelMap<MAP, MEM>>,6>& a_polarmaps,
+                         const std::vector<Point>&    a_footprint,
+                         int                         a_order = 4);
+      
         /// Manual Operator Insertion
         /** Allows a user to build an MBInterpOp by manually constructing the point ops
          */
@@ -221,7 +228,16 @@ namespace Proto
         int m_order;
         std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
         std::unordered_set<MBPointID, MBPointID::Hash> m_points;
-    };
+      
+        template<template<MemType> typename MAP, MemType MEM>
+        void defineInternals(
+                             const MBLevelMap<MAP,MEM>&  a_map,
+                             const std::vector<Point>&   a_footprint,
+                             Point                       a_footprintDims,
+                             Proto::DataIndex<Proto::MBBoxPartition> a_iter,
+                             int                         a_order,
+                             int                         a_block); 
+        };
 
     // Interpolate Block Boundaries
     template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>

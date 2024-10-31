@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
   int radial_refinement = ParseInputs::get_radial_refinement();
+  int MBInterp_define = ParseInputs::get_MBInterp_define();
   string BC_file = ParseInputs::get_BC_file();
   string restart_file = ParseInputs::get_restart_file();
   if (init_condition_type == 3) BC_global.file_to_BoxData_vec(BC_file);
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
-  PR_TIMER_SETFILE(to_string(thickness) + "_DIM" + to_string(DIM) //+ "_NProc" + to_string(numProc())
+  PR_TIMER_SETFILE(to_string(thickness) + "_DIM" + to_string(DIM) +"_"+to_string(boxSize_nonrad) + "_" + to_string(boxSize_rad)//+ "_NProc" + to_string(numProc())
                    + "_CubeSphereTest.time.table");
   PR_TIMERS("MMBEuler");
   int levmax = 3;
@@ -89,8 +90,15 @@ int main(int argc, char *argv[])
       // Point ghostForInterp = OP::ghost() + Point::Ones();
       //MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),
       //                                                  ghostForInterp,4);
-      MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-
+      MBInterpOp iop;
+      if (MBInterp_define == 0)
+        {
+          iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+        }
+      else
+        {
+          iop = CubedSphereShell::InterpOpNew<HOST>(JU.layout(),OP::ghost(),4);
+        }
       // Set input solution.
       if (restart_file.empty())
         {
@@ -123,15 +131,11 @@ int main(int argc, char *argv[])
           restart_step = h5.iter();
           if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
         }
-     
-      
-    
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     
       Write_W(JU, eulerOp, iop, restart_step, time, dt);      
       {
         HDF5Handler h5;
-        MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
         MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
         JU.copyTo(JUTemp);
         CubedSphereShell::consToSphInterpEuler(JUTemp,iop,dVolrLev,4);
@@ -270,7 +274,7 @@ int main(int argc, char *argv[])
             }
         }
       // Checkpointing.
-      if (iter % checkpoint_cadence == 0)
+      if ((iter % checkpoint_cadence == 0) || (iter == max_iter))
         {
           std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
           h5.setTime(time);
