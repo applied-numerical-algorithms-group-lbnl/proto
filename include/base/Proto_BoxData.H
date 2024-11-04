@@ -1372,6 +1372,11 @@ namespace Proto
             friend BoxData<_T,_CC,_MEM,1,1> slice(
                     const BoxData<_T,_C,_MEM,1,1>& a_src,
                     unsigned int a_nstart);
+        
+        template<typename _T, unsigned int _C, unsigned int _D, MemType _MEM>
+            friend BoxData<_T,_C,_MEM,1,1> plane(
+                    const BoxData<_T,_C,_MEM,_D,1>& a_src,
+                    unsigned int a_d);
 
         // TODO: Why?
         size_t size(const Box&      a_box,
@@ -1461,8 +1466,8 @@ namespace Proto
             }
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() {return m_data;}
             const Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() const {return m_data;}
-            Box box() {return m_box0; }
-            Box box(int a_dir) {return m_data[a_dir]->box(); }
+            Box box() const { return m_box0; }
+            Box box(int a_dir) const { return m_data[a_dir]->box(); }
         private:
             Box m_box0;
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
@@ -1538,6 +1543,10 @@ namespace Proto
             const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);
 
+    template<typename T, unsigned int C, unsigned int D, MemType MEM=MEMTYPE_DEFAULT>
+    BoxData<T,C,MEM,1,1> plane(
+            const BoxData<T,C,MEM,D,1>& a_src,
+            unsigned int                a_d);
     
 ///@}
 

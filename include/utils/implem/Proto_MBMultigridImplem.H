@@ -400,6 +400,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
         const LevelStateData&   a_force,
         int                     a_level)
 {
+    HDF5Handler h5;
     m_solveLevel = a_level;
     //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
     if (a_level > 0)

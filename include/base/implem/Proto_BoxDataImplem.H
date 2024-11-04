@@ -1836,3 +1836,17 @@ BoxData<T,CC,MEM> slice(
     BoxData<T,CC,MEM> rtn(a_src.m_data, ptr, b);
     return rtn;
 }
+
+template<typename T, unsigned int C, unsigned int D, MemType MEM>
+BoxData<T,C,MEM,1> plane(
+        const BoxData<T,C,MEM,D>& a_src,
+        unsigned int a_d)
+{
+    PR_TIME("slice(BoxData<T,C,1,1>&, int)");
+    PROTO_ASSERT((a_d < D),
+        "slice(const BoxData&, uint) | Error: Invalid slicing range")
+    const Box& b = a_src.box();
+    T* ptr = (T*)(a_src.data(b.low(),0,a_d));
+    BoxData<T,C,MEM,1> rtn(a_src.m_data, ptr, b);
+    return rtn;
+}
