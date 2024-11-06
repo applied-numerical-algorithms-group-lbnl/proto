@@ -612,6 +612,21 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
     }
 }
 
+Box Box::face(Point a_dir, int a_dist)
+{
+    PROTO_ASSERT(a_dir.codim() == 1,
+            "Box::face | Error: Invalid direction. Must be codimension 1");
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] < 0)
+        {
+            return face(ii, Side::Lo, a_dist);
+        } else if (a_dir[ii] > 0) {
+            return face(ii, Side::Hi, a_dist);
+        }
+    }
+}
+
 Box Box::flatten(const int a_dir, bool a_upper) const
 {
     if (a_upper)

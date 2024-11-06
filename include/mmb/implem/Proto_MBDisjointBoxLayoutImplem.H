@@ -375,6 +375,13 @@ std::vector<Point> MBDisjointBoxLayout::boxSizes() const
     return ret;
 }
 
+Point MBDisjointBoxLayout::boxSize(BlockIndex a_block) const
+{
+    PROTO_ASSERT(a_block >= 0 && a_block < numBlocks(),
+            "MBDisjointBoxLayout::boxSize | Error: invalid block index.");
+    return boxSizes()[a_block];
+}
+
 MBDisjointBoxLayout
 MBDisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {

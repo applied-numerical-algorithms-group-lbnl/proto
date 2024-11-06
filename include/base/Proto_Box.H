@@ -775,6 +775,8 @@ namespace Proto
           @endcode
         */
         inline Box face(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
+        
+        inline Box face(Point a_dir, int a_dist = 1) const;
 
         //TODO: redundant with face, unused
         //Box faceBox(int a_idir, const Side::LoHiSide a_side) const;
