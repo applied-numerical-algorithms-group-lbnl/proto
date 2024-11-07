@@ -31,7 +31,7 @@ namespace Proto
 
         /// Get Serialized Size
         inline int linearSize(const Box& a_bx,
-                const DataIndex<MBBoxPartition>& a_index) const;
+                const MBIndex& a_index) const;
 
         /// Serial Write To Buffer
         inline void linearOut(void* a_buf, const MBMotionItem& a_info) const;
@@ -99,6 +99,8 @@ namespace Proto
                 const std::vector<Point>&   a_refRatios,
                 std::vector<Array<T, DIM>>& a_dxCoarse);
 
+        
+
         /// Increment Coarse
         /**
           Increments all the registers contained in the coarse patch a_di, direction a_dir. 
@@ -106,7 +108,7 @@ namespace Proto
          */
         void incrementCoarse(
                 const BoxData<T,C,MEM>& a_flux,
-                const DataIndex<MBBoxPartition>& a_di,
+                const MBIndex& a_di,
                 const T& a_weight,
                 unsigned int a_dir);
 
@@ -116,7 +118,7 @@ namespace Proto
           Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
         void incrementFine(const BoxData<T,C,MEM>& a_flux,
-                const DataIndex<MBBoxPartition>& a_di,
+                const MBIndex& a_di,
                 const T& a_weight,
                 unsigned int a_dir); 
 
@@ -129,8 +131,8 @@ namespace Proto
         /// Reset
         void reset(T a_val = 0);
         
-        /// compute the hash key for a coarse register.
-        int key(const Box& a_bx,const DataIndex<MBBoxPartition>& a_di);
+        /// compute the hash tileIndex for a coarse register.
+        int tileIndex(const Box& a_bx,const MBIndex& a_di);
 
         void print() const;
       
@@ -138,9 +140,12 @@ namespace Proto
         MBDisjointBoxLayout crseLayout() const {return m_crseLayout;};
         MBDisjointBoxLayout fineLayout() const {return m_fineLayout;};
         protected:
-        
-        BoxData<T,C,MEM>& sourceData(const Box& a_bx,const DataIndex<MBBoxPartition>& di);
-        BoxData<T,C,MEM>& destData(const Box& a_bx,const DataIndex<MBBoxPartition>& di);
+       
+        void defineCoarse(); // helper function for define
+        void defineFine();   // helper function for define
+
+        BoxData<T,C,MEM>& sourceData(const Box& a_bx,const MBIndex& di);
+        BoxData<T,C,MEM>& destData(const Box& a_bx,const MBIndex& di);
 
         MBDisjointBoxLayout  m_crseLayout;
         MBDisjointBoxLayout  m_fineLayout;

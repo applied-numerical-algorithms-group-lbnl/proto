@@ -7,7 +7,7 @@ MBFluxRegisterCopierOp<T,C,MEM>::MBFluxRegisterCopierOp(MBLevelFluxRegister<T, C
 template<typename T, unsigned int C, MemType MEM>
 int MBFluxRegisterCopierOp<T,C,MEM>::linearSize(
                                    const Box& a_bx,
-                                   const DataIndex<MBBoxPartition>& a_index) const
+                                   const MBIndex& a_index) const
 {
     return C*a_bx.size()*sizeof(T);
 }
@@ -45,14 +45,14 @@ void MBFluxRegisterCopierOp<T,C,MEM>::localCopy(const MBMotionItem& a_info) cons
     
 #if noLinearizationTest
 
-    PR_TIMERS("LOP_localCopy_1");
+    PR_TIMERS("MBFluxRegisterCopier_localCopy_1");
     auto& src = m_register->sourceData(domain, srcIndex);
     auto& dst = m_register->destData(  range,  dstIndex);
     Point shift = range.low() - domain.low();
     src.copyTo(dst, domain, shift);
 #else
     // code for testing linearIn / linearOut while running serial.
-    PR_TIMERS("LOP_localCopy_2");
+    PR_TIMERS("MBFluxRegisterCopier_localCopy_2");
     int srcSize = linearSize(domain, srcIndex);
     int dstSize = linearSize(range,  dstIndex);
 
@@ -82,10 +82,9 @@ void MBFluxRegisterCopier<T,C,MEM>::buildMotionPlans (MBFluxRegisterCopierOp<T, 
     auto & fineRegisters = lfr.m_fineRegisters;
     auto & fineIndices = lfr.m_fineIndices;
 
-    //std::cout << "Building Destination Motion Items" << std::endl;
-    for (auto citer = crseLayout.begin(); citer.ok(); ++citer)
+    for (auto citer : crseLayout)
     {
-        auto& localRegisters = crseRegisters[*citer];
+        auto& localRegisters = crseRegisters[citer];
         for (int k = 0; k < localRegisters.size(); k++)
         {
             // Find the index of the fineRegister source.
@@ -94,20 +93,22 @@ void MBFluxRegisterCopier<T,C,MEM>::buildMotionPlans (MBFluxRegisterCopierOp<T, 
             Box   destBox = reg.m_data->box();
             auto  side    = reg.m_side;
             int   dir     = reg.m_dir;
-            Point finePatchPoint = destBox.low()*refRatio/fineLayout.boxSize() + Point::Basis(dir,side);
-            //std::cout << "\tCoarse Box: " << destBox << " | Dir: " << dir << " | Side: " << side << std::endl;
-            //std::cout << "\tAdjacent Fine Patch: " << finePatchPoint << std::endl;
+            Point finePatchPoint = 
+                destBox.low()*refRatio/fineLayout.boxSize() + Point::Basis(dir,side);
             auto fineIndex = fineLayout.find(finePatchPoint);
             
             PROTO_ASSERT(fineIndex != *fineLayout.end(),
-                "MBFluxRegisterCopier::buildMotionPlans | Error: Could not find fine register index.");
+                "MBFluxRegisterCopier::buildMotionPlans | Error:\
+                Could not find fine register index.");
+            
             // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
             Box cfBox  = fineLayout.box(fineIndex).coarsen(refRatio);
             Box srcBox = cfBox.adjacent(dir, flip(side), 1);
+            
             // Boxes for the fine registers are defined relative to the fine patch
             // coordinates, even if the register Boxes are periodic images outside the
-            // ProblemDomain Box - PC.
-            MBMotionItem toMotionItem(fineIndex, *citer, srcBox, destBox);
+            // ProblemDomain Box.
+            MBMotionItem toMotionItem(fineIndex, citer, srcBox, destBox);
             auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
             { 
@@ -123,27 +124,27 @@ void MBFluxRegisterCopier<T,C,MEM>::buildMotionPlans (MBFluxRegisterCopierOp<T, 
 
     // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
     int destProcID = procID();
-    // std::cout << "Building Source Motion Items" << std::endl;
-    for (auto fiter = fineLayout.begin(); fiter.ok(); ++fiter)
+    for (auto fiter : fineLayout.begin())
     {
-      //Box cfBox = fiter.box().coarsen(refRatio);
         for (int dir = 0; dir < DIM; dir++)
         {
             SideIterator siter;
             for (siter.begin(); siter.ok(); ++siter)
             {
-                int k = fineIndices[*fiter][dir][*siter];
+                int k = fineIndices[fiter][dir][siter];
                 if (k >= 0) //otherwise there is no fine register for this (dir, side)
                 {
-                  Box srcBox = fineRegisters[*fiter][k].m_data->box();
+                  Box srcBox = fineRegisters[fiter][k].m_data->box();
                   Point crsePatchPoint = srcBox.low()/crseLayout.boxSize();
-                    // std::cout << "\tCoarse Box: " << srcBox << " | Dir: " << dir << " | Side: " << *siter << std::endl;
                     
                     auto crseIndex  = crseLayout.find(crsePatchPoint);
                     int  crseProcID = crseLayout.procID(crseIndex);
                     //Automatically defines dstBox to be the correct periodic image. NO IT DOESN'T.
-                    Box dstBox = crseLayout.domain() & srcBox;
-                    dstBox = crseLayout.domain().image(dstBox); 
+                    //Box dstBox = crseLayout.domain() & srcBox;
+                    //dstBox = crseLayout.domain().image(dstBox); 
+                    
+                    // TODO: consider periodic
+                    Box dstBox = srcBox;
                     if (crseProcID != procID())
                     {
                         MBMotionItem fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
@@ -188,6 +189,144 @@ void MBLevelFluxRegister<T,C,MEM>::define (
     std::vector<Point> refRatios(a_refRatio, numBlocks);
     std::vector<Array<T, DIM>> dx(a_dxCoarse, numBlocks);
     define(a_fineLayout, a_crseLayout, refRatios, dx);
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::defineCoarse ()
+{
+    auto& crsePatchDomain = m_crseLayout.partition().patchDomain();
+    auto& finePatchDomain = m_fineLayout.partition().patchDomain();
+
+    for (auto citer : m_crseLayout)
+    {
+        BlockIndex block = m_crseLayout.block(citer);
+        Point refRatio = m_refRatio[block];
+        Point fineBoxSize = m_fineLayout.boxSize(block);
+        Point crseBoxSize = m_crseLayout.boxSize(block);
+        Box crseBox = m_crseLayout[citer];
+        m_crseRegisters[citer].clear();
+        m_crseIncrement[citer].clear();
+        m_crseIndices[citer].clear();
+
+        Box finePatchPoints = crseBox.refine(refRatio).coarsen(fineBoxSize);
+        PROTO_ASSERT(finePatchDomain.contains(finePatchPoints),
+                "MBLevelFluxRegister::define | Error: Data corruption.");
+        int k = 0;
+        for (auto finePoint : finePatchPoints)
+        {
+            // check if fine patch is ABSENT from fine layout
+            auto fineIndex = m_fineLayout.find(pt, block);
+            if (fineIndex != *m_fineLayout.end()) { continue; }
+        
+            // check adjacent fine patch that is PRESENT in fine layout
+            Box cfBox = Box(finePoint, finePoint).refine(fineBoxSize).coarsen(refRatio);
+            for (auto dir : Box::Kernel(1))
+            {
+                if (dir.codim() != 1) { continue; } //flux register ignores codim > 1 boundaries
+                Point finePointAdj = finePoint + dir;
+                auto fineIndexAdj = *m_fineLayout.end();
+                if (finePatchDomain.inInterior(finePointAdj, block))
+                {
+                    // INTERIOR case (normal case)
+                    fineIndexAdj = m_fineLayout.find(finePointAdj, block);
+                } else if (finePatchDomain.inBlockBoundary(finePointAdj, block))
+                {
+                    // BLOCK case
+                    BlockIndex blockAdj = finePatchDomain.graph().adjacent(block, dir);
+                    Point finePointAdjLocal = 
+                        finePatchDomain.convert(finePointAdj, block, blockAdj);
+                    fineIndexAdj = m_fineLayout.find(finePointAdjLocal, blockAdj);
+                }
+                else if (finePatchDomain.inDomainBoundary(finePointAdj, block))
+                {
+                    // EXTERIOR case (no CF boundary)
+                    continue;
+                } else {
+                    // INVALID case
+                    PROTO_ASSERT(false,
+                        "MBLevelFluxRegister::define | Error: Data corruption.");
+                }
+                if (fineIndexAdj == *m_fineLayout.end()) { continue; } //adj patch is absent
+
+                // found a valid cf boundary in block interior
+                Box destBox = cfBox.face(dir);
+
+                int thisKey = tileIndex(destBox, citer);
+                shared_ptr<BoxData<T,C,MEM> > temp1(new BoxData<T,C,MEM>(destBox));
+                shared_ptr<BoxData<T,C,MEM> > temp2(new BoxData<T,C,MEM>(destBox));
+                Register<T,C,MEM> reg(temp1, dir);
+                m_crseRegisters[citer].push_back(reg);
+                m_crseIncrement[citer].push_back(temp2);
+                m_crseIndices  [citer][thisKey] = k;
+                k++;
+            } // end dir loop
+        } // end fine patch loop
+    } // end coarse loop
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::defineFine ()
+{
+    auto& crsePatchDomain = m_crseLayout.partition().patchDomain();
+    auto& finePatchDomain = m_fineLayout.partition().patchDomain();
+    
+    // Set up fine data holders.
+    int numFinePatches = m_fineLayout.localSize();
+    m_fineRegisters.resize(numFinePatches);
+    m_fineIndices.resize(numFinePatches);
+    for (auto fiter : m_fineLayout)
+    {
+        BlockIndex block = m_fineLayout.block(fiter);
+        Point finePoint = m_fineLayout.point(fiter);
+        Box fineBox = m_fineLayout[fiter];
+        Box cfBox = fineBox.coarsen(m_refRatio);
+        int k = 0;
+        for (auto dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter())
+            {
+                Point dir = Point::Basis(dd,*siter);
+                Point finePointAdj = finePoint + dir;
+                auto fineIndexAdj = *m_fineLayout.end();
+                if (finePatchDomain.inInterior(finePointAdj, block))
+                {
+                    // INTERIOR case (normal case)
+                    fineIndexAdj = m_fineLayout.find(finePointAdj, block);
+                } else if (finePatchDomain.inBlockBoundary(srcPoint, block))
+                {
+                    // BLOCK case
+                    BlockIndex blockAdj = finePatchDomain.graph().adjacent(block, dir);
+                    Point finePointAdjLocal = 
+                        finePatchDomain.convert(finePointAdj, block, blockAdj);
+                    fineIndexAdj = m_fineLayout.find(finePointAdjLocal, blockAdj);
+                }
+                else if (finePatchDomain.inDomainBoundary(finePointAdj, block))
+                {
+                    // EXTERIOR case (no CF boundary)
+                    // TODO: do I need this? m_fineIndices[fiter][d][(int)(*siter)] = -1;
+                    continue;
+                } else {
+                    // INVALID case
+                    PROTO_ASSERT(false,
+                            "MBLevelFluxRegister::define | Error: Data corruption.");
+                }
+                if (adjIndex == *m_fineLayout.end())
+                {
+                    //found a cf boundary between finePoint and finePointAdj
+                    Box srcBox = cfBox.adjacent(dir);
+
+                    shared_ptr<BoxData<T,C,MEM> > temp(new BoxData<T,C,MEM>(srcBox));
+                    Register<T,C,MEM> reg(temp, d, siter);
+                    m_fineRegisters[fiter].push_back(reg);
+                    m_fineIndices[fiter][d][(int)(siter)] = k;
+                    k++;
+                } else {
+                    m_fineIndices[fiter][d][(int)(siter)] = -1;
+                }
+            }
+        }
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -249,237 +388,8 @@ void MBLevelFluxRegister<T,C,MEM>::define (
     m_crseIncrement.resize(numCrsePatches);
     m_crseIndices.resize(numCrsePatches);
     
-    auto& crsePatchDomain = m_crseLayout.partition().patchDomain();
-    auto& finePatchDomain = m_fineLayout.partition().patchDomain();
-
-    for (auto citer : m_crseLayout)
-    {
-        BlockIndex block = m_crseLayout.block(citer);
-        Point refRatio = m_refRatio[block];
-        Point fineBoxSize = m_fineLayout.boxSize(block);
-        Point crseBoxSize = m_crseLayout.boxSize(block);
-        Box crseBox = m_crseLayout[citer];
-        m_crseRegisters[citer].clear();
-        m_crseIncrement[citer].clear();
-        m_crseIndices[citer].clear();
-
-        Box finePatchPoints = crseBox.refine(refRatio).coarsen(fineBoxSize);
-        PROTO_ASSERT(finePatchDomain.contains(finePatchPoints),
-                "MBLevelFluxRegister::define | Error: Data corruption.");
-        int k = 0;
-        for (auto finePoint : finePatchPoints)
-        {
-            // check if fine patch is ABSENT from fine layout
-            auto fineIndex = m_fineLayout.find(pt, block);
-            if (fineIndex != *m_fineLayout.end()) { continue; }
-        
-            // check adjacent fine patch that is PRESENT in fine layout
-            Box cfBox = Box(finePoint, finePoint).refine(fineBoxSize).coarsen(refRatio);
-            for (auto dir : Box::Kernel(1))
-            {
-                if (dir.codim() != 1) { continue; } //flux register ignores codim > 1 boundaries
-                Point finePointAdj = finePoint + dir;
-                auto fineIndexAdj = *m_fineLayout.end();
-                if (finePatchDomain.inInterior(finePointAdj, block))
-                {
-                    // INTERIOR case (normal case)
-                    fineIndexAdj = m_fineLayout.find(finePointAdj, block);
-                } else if (finePatchDomain.inBlockBoundary(finePointAdj, block))
-                {
-                    // BLOCK case
-                    BlockIndex blockAdj = finePatchDomain.graph().adjacent(block, dir);
-                    Point finePointAdjLocal = 
-                        finePatchDomain.convert(finePointAdj, block, blockAdj);
-                    fineIndexAdj = m_fineLayout.find(finePointAdjLocal, blockAdj);
-                }
-                else if (finePatchDomain.inDomainBoundary(finePointAdj, block))
-                {
-                    // EXTERIOR case (no CF boundary)
-                    continue;
-                } else {
-                    // INVALID case
-                    PROTO_ASSERT(false,
-                        "MBLevelFluxRegister::define | Error: Data corruption.");
-                }
-                if (fineIndexAdj == *m_fineLayout.end()) { continue; } //adj patch is absent
-
-                // found a valid cf boundary in block interior
-                Box destBox = cfBox.face(dir);
-
-                int thisKey = key(destBox, citer);
-                shared_ptr<BoxData<T,C,MEM> > temp1(new BoxData<T,C,MEM>(destBox));
-                shared_ptr<BoxData<T,C,MEM> > temp2(new BoxData<T,C,MEM>(destBox));
-                Register<T,C,MEM> reg(temp1, dir);
-                m_crseRegisters[citer].push_back(reg);
-                m_crseIncrement[citer].push_back(temp2);
-                m_crseIndices  [citer][thisKey] = k;
-                k++;
-            } // end dir loop
-        } // end fine patch loop
-    } // end coarse loop
-
-    // Set up fine data holders.
-    int numFinePatches = m_fineLayout.localSize();
-    m_fineRegisters.resize(numFinePatches);
-    m_fineIndices.resize(numFinePatches);
-    for (auto fiter : m_fineLayout)
-    {
-        BlockIndex block = m_fineLayout.block(fiter);
-        Point finePoint = m_fineLayout.point(fiter);
-        Box fineBox = m_fineLayout[fiter];
-        Box cfBox = fineBox.coarsen(m_refRatio);
-        int k = 0;
-        for (auto dd = 0; dd < DIM; dd++)
-        {
-            SideIterator siter;
-            for (siter.begin(); siter.ok(); ++siter())
-            {
-                Point dir = Point::Basis(dd,*siter);
-                Point finePointAdj = finePoint + dir;
-                auto fineIndexAdj = *m_fineLayout.end();
-                if (finePatchDomain.inInterior(finePointAdj, block))
-                {
-                    // INTERIOR case (normal case)
-                    fineIndexAdj = m_fineLayout.find(finePointAdj, block);
-                } else if (finePatchDomain.inBlockBoundary(srcPoint, block))
-                {
-                    // BLOCK case
-                    BlockIndex blockAdj = finePatchDomain.graph().adjacent(block, dir);
-                    Point finePointAdjLocal = 
-                        finePatchDomain.convert(finePointAdj, block, blockAdj);
-                    fineIndexAdj = m_fineLayout.find(finePointAdjLocal, blockAdj);
-                }
-                else if (finePatchDomain.inDomainBoundary(finePointAdj, block))
-                {
-                    // EXTERIOR case (no CF boundary)
-                    // TODO: do I need this? m_fineIndices[fiter][d][(int)(*siter)] = -1;
-                    continue;
-                } else {
-                    // INVALID case
-                    PROTO_ASSERT(false,
-                            "MBLevelFluxRegister::define | Error: Data corruption.");
-                }
-                if (adjIndex == *m_fineLayout.end())
-                {
-                    //found a cf boundary between finePoint and finePointAdj
-                    Box srcBox = cfBox.adjacent(dir);
-
-                    shared_ptr<BoxData<T,C,MEM> > temp(new BoxData<T,C,MEM>(srcBox));
-                    Register<T,C,MEM> reg(temp, d, *siter);
-                    m_fineRegisters[fiter].push_back(reg);
-                    m_fineIndices[fiter][d][(int)(*siter)] = k;
-                    k++;
-                } else {
-                    m_fineIndices[*fiter][d][(int)(*siter)] = -1;
-                }
-
-            }
-        }
-    }
-#if 0
-    for (auto citer : m_crseLayout)
-    {
-        BlockIndex block = m_crseLayout.block(citer);
-        Point refRatio = m_refRatio[block];
-        Point fineBoxSize = m_fineLayout.boxSize(block);
-        Point crseBoxSize = m_crseLayout.boxSize(block);
-        Box crseBox = m_crseLayout[citer];
-        m_crseRegisters[citer].clear();
-        m_crseIncrement[citer].clear();
-        m_crseIndices[citer].clear();
-        
-
-        //setup: compute box corresponding to possible fine patches covered by coarse patch.
-        Box finePatchPoints = crseBox.refine(refRatio).coarsen(fineBoxSize);
-        // Iterate over the fine patches contained in the coarse box, and see whether patches 
-        // adjacent to them in each direction can contribute to a flux register in the coarse 
-        // patch. 
-        
-        int k = 0;
-        for (auto pt : finePatchPoints)
-        {
-            auto fineIndex = m_fineLayout.find(pt);
-            // only check fine patches NOT in part of the fine layout
-            if (fineIndex != *m_fineLayout.end()) { continue; } 
-            Box cfBox = Box(pt, pt).refine(fineBoxSize).coarsen(refRatio);
-            for (int dir = 0; dir < DIM; dir++)
-            {
-                SideIterator siter;
-                for (siter.begin(); siter.ok(); ++siter)
-                {
-                    Point ptAdj = pt + Point::Basis(dir,*siter);
-                    auto adjIndex = m_fineLayout.find(ptAdj);
-                    if (adjIndex != *m_fineLayout.end())
-                    {
-                        // fineIndex is the index of a fine patch NOT in the fine layout
-                        // adjIndex is the index of a fine patch IN the fine layout
-                        // hence, the interface between the two is a coarse-fine boundary
-                        Box destBox = cfBox.face(dir, *siter);
-                        // Intersect with the Problem domain to shift the Box to its proper 
-                        // periodic image in the coarse patch.
-                        destBox = m_crseLayout.domain() & destBox; 
-#if PR_VERBOSE > 1
-                        pr_out() << "\t\t\t\tCreating Register: destBox = " << destBox << std::endl;
-#endif
-                        //std::cout << "\t\t\tFound Boundary Patch: " << ptAdj << " | Shifted Coarsened Box: " << destBox << std::endl;
-
-                        // Create register and insert it into the coarse register data structure.
-                        // the register is not uniquely determined by it's (dir, side) 
-                        // the key is generated using destBox which incodes (dir, side, tile position)
-                        int thisKey = key(destBox, *citer);
-                        shared_ptr<BoxData<T,C,MEM> > temp1(new BoxData<T,C,MEM>(destBox));
-                        shared_ptr<BoxData<T,C,MEM> > temp2(new BoxData<T,C,MEM>(destBox));
-                        Register<T,C,MEM> reg(temp1, dir, *siter);
-                        m_crseRegisters[*citer].push_back(reg);
-                        m_crseIncrement[*citer].push_back(temp2);
-                        m_crseIndices  [*citer][thisKey] = k;
-                        k++;
-                    }
-                } // end for side
-            } // end for DIM
-        } // end for fine in coarse
-    }  // end for coarse
-    // Set up fine data holders.
-    int numFinePatches = m_fineLayout.localSize();
-    m_fineRegisters.resize(numFinePatches);
-    m_fineIndices.resize(numFinePatches);
-    for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
-    {
-        Point finePatchPoint = m_fineLayout.point(*fiter);
-        Box fineBox = m_fineLayout[*fiter];
-        Box cfBox = fineBox.coarsen(m_refRatio);
-        int k = 0;
-        for (int d = 0; d < DIM; d++)
-        {
-            SideIterator siter;
-            for (siter.begin(); siter.ok(); ++siter)
-            {
-                Point srcPt = finePatchPoint + Point::Basis(d, *siter);
-                auto adjIndex = m_fineLayout.find(srcPt);
-                bool srcPatchMissing = (adjIndex == *m_fineLayout.end());
-                bool srcPatchInDomain = m_fineLayout.domain().contains(srcPt);
-                // look for adjacent patches NOT in the fine layout
-
-                if (srcPatchMissing && srcPatchInDomain)
-                {
-                    // Fine registers are AVERAGED fine fluxes
-                    // hence, domains are coarse
-                    Box srcBox = cfBox.adjacent(d, *siter, 1);
-                    // Deal with possible periodic images
-                    srcBox = m_crseLayout.domain() & srcBox;
-                    shared_ptr<BoxData<T,C,MEM> > temp(new BoxData<T,C,MEM>(srcBox));
-                    Register<T,C,MEM> reg(temp, d, *siter);
-                    m_fineRegisters[*fiter].push_back(reg);
-                    m_fineIndices[*fiter][d][(int)(*siter)] = k;
-                    k++;
-                } else {
-                    m_fineIndices[*fiter][d][(int)(*siter)] = -1;
-                }
-            } // end for side
-        } // end for DIM
-    } // end for fine
-
-#endif
+    defineCoarse();
+    defineFine();
     // We now have enough information to build the motion plans for the copier.
     MBFluxRegisterCopierOp<T,C,MEM> op(*this);
     m_copier.define(op);
@@ -504,35 +414,17 @@ void MBLevelFluxRegister<T,C,MEM>::define (
         }
     }
 
+    // set all register data to zero
     reset();
-    #if 0
-    for (auto iter = m_crseLayout.begin(); iter.ok(); ++iter)
-    {
-        int numRegisters = m_crseRegisters[*iter].size();
-        for (int ii = 0; ii < numRegisters; ii++)
-        {
-            auto& reg = m_crseRegisters[*iter][ii];
-        }
-    }
-    for (auto iter = m_fineLayout.begin(); iter.ok(); ++iter)
-    {
-        int numRegisters = m_fineRegisters[*iter].size();
-        for (int ii = 0; ii < m_fineRegisters[*iter].size(); ii++)
-        {
-            auto& reg = m_fineRegisters[*iter][ii];
-        }
-    }
-#endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::incrementCoarse (
         const BoxData<T,C,MEM>& a_flux,
-        const DataIndex<MBBoxPartition>& a_crseIndex,
+        const MBIndex& a_crseIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
-    //std::cout << "FluxRegister::incrementCoarse | patch index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
     T weight = a_weight / m_dxCrse[a_dir];
     Stencil<T> scaleHigh = weight*Shift::Basis(a_dir, +1);
@@ -558,7 +450,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementCoarse (
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::incrementFine (
         const BoxData<T, C , MEM>& a_flux,
-        const DataIndex<MBBoxPartition>& a_fineIndex,
+        const MBIndex& a_fineIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
@@ -584,10 +476,10 @@ void MBLevelFluxRegister<T,C,MEM>::reflux(
     PROTO_ASSERT(m_crseLayout.compatible(a_coarseData.layout()),
             "MBLevelFluxRegister::reflux | Error: \
             Input data has incompatible layout.");
-    
+   
+    // the copier moves fine register data into the coarse increment. 
     m_copier.execute();
 
-    // fine register data has been copied to m_crseIncrement.
     // We compute the difference between the coarse and fine registers, and increment a_coarseData.
     Stencil<T> increment = (-1.0)*Shift::Zeros();
     for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
@@ -632,7 +524,7 @@ void MBLevelFluxRegister<T,C,MEM>::reset(T a_val)
 
 // a_bx is the coarse box updated by refluxing
 template<typename T, unsigned int C, MemType MEM>
-int MBLevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex<MBBoxPartition>& a_di)
+int MBLevelFluxRegister<T,C,MEM>::tileIndex(const Box& a_bx, const MBIndex& a_di)
 {
     // Find which direction is normal to the register. We use the fact that the register
     // is of size 1 only in the normal direction.
@@ -658,38 +550,10 @@ int MBLevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex<MBBoxPart
     }
     
     return k;
-
-    /* 
-    int dir = -1;
-    int side = -1;
-    Box crseBox = m_crseLayout[a_di];
-    for (int d = 0; d < DIM; d++)
-    {
-        SideIterator siter;
-        for (siter.begin(); siter.ok(); ++siter)
-        {
-            Box faceBox = crseBox.face(d, *siter, 1);
-            if (faceBox.contains(a_bx))
-            {
-                Point tileSize = a_bx.high() - a_bx.low() + Point::Ones() - Point::Basis(d);
-                Point shiftPoint = faceBox.low();
-                Box tile = a_bx.shift(-shiftPoint).coarsen(tileSize);
-                Box tileDomain = faceBox.shift(-shiftPoint).coarsen(tileSize);
-                PROTO_ASSERT(tileDomain.contains(tile), "MBLevelFluxRegister::key | Error: Could not compute tile index");
-                PROTO_ASSERT(tileDomain.contains(tile), "MBLevelFluxRegister::key | Error: Invalid tile box");
-                int numTiles = tileDomain.size();
-                int tileIndex = tileDomain.index(tile.low());
-
-                return tileIndex + numTiles*d + numTiles*DIM*(*siter);
-            }
-        }
-    }
-    MayDay<void>::Abort("MBLevelFluxRegister::key | Error: could not generate key.");
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const DataIndex<MBBoxPartition>& a_fineIndex)
+BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const MBIndex& a_fineIndex)
 {
     std::shared_ptr<BoxData<T,C,MEM>> retval;
     Box fineBox = m_fineLayout.box(a_fineIndex);
@@ -715,9 +579,9 @@ BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, cons
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const DataIndex<MBBoxPartition>& a_crseIndex)
+BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const MBIndex& a_crseIndex)
 {
-    int crseKey       = key(a_bx, a_crseIndex);
+    int crseKey       = tileIndex(a_bx, a_crseIndex);
     int mapIndex      = m_crseIndices[a_crseIndex][crseKey];
     return *(m_crseIncrement[a_crseIndex][mapIndex]);
 }
