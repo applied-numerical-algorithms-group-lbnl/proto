@@ -53,8 +53,7 @@ void f_radialoutflowIBCs_F(
   //T rho = rho0*pow(a_radius(0)/r_BC, -2.0);
   //T p = p0 * pow(rho / rho0, a_gamma);
   T p = p0;
-  //T ur = u0;
-  T ur = 0.;
+  T ur = u0;
   // T ur = u0 - u0/10 * sin(theta);
   a_USph(iRHO) = rho;
   a_USph(iMOMX) = ur * rho;

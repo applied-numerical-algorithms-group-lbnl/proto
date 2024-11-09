@@ -1,19 +1,19 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
 -init_condition_type             3
--domainSize                      60
--thickness                       60
+-domainSize                      15
+-thickness                       30
 -boxSize_nonrad                  15
 -boxSize_rad                     15
--max_iter                        10
+-max_iter                        100
 -CFL                             0.5
 -strength                        100.
--write_cadence                   100
+-write_cadence                   10
 -checkpoint_cadence              200
 -data_file_prefix                data
 -checkpoint_file_prefix          checkpoint
 -max_checkpoint_files            3
-#-restart_file                    checkpoint_10.hdf5
+#-restart_file                    checkpoint_400.hdf5
 -gamma                           1.6666666666666666666667
 -temporal_order                  4
 -divergence_cleaning             1

@@ -448,10 +448,10 @@ CubedSphereShell::BCNearestOp(
         if (a_side == Side::Lo)
         {
             boundDomain = blockDomain.face(rCoord, a_side, 1);
-            boundDomain_i = layout[iter].face(rCoord, a_side, 1) & boundDomain;
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1);// & boundDomain; // Commenting this so ghost layer of not innermost boxes get BCs too
         } else {
             boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
-            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1) & boundDomain;
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1);// & boundDomain;
         }
         if (boundDomain_i.size() <= 0) { continue; }
 
