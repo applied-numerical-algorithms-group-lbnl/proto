@@ -33,3 +33,4 @@
 -BC_start_time                   2022.0
 -BC_cadence                      6.0
 -BC_frame_rotate                 0
+-BC_force_single_frame           1

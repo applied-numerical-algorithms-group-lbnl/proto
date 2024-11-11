@@ -54,6 +54,8 @@ public:
 			BC_data[i].copyTo(BC_data_extended[i]);
 		}
 		Box_BC = BT;
+		int force_single_frame = ParseInputs::get_BC_force_single_frame();
+		if (force_single_frame == 1) BC_data.resize(1);
 	}
 
 	template <typename T, MemType MEM>

@@ -265,7 +265,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[2].setToZero();
         if (flagv)
           {
-            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0,a_dt);
+            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0, a_dt); //dt is not used in viscFlux. dt is multiplied in RK4
             T one = 1.0;
             // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
             a_blockreg.increment(fluxes, dit, a_dt);

@@ -50,6 +50,7 @@ private:
     double BC_start_time;
     double BC_cadence; // In hours
     int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
+    int BC_force_single_frame; // 1: Use only one frame for BCs, 0: Use all frames for BCs (if present)
 
     // Private Constructor
     ParseInputs() {}
@@ -97,6 +98,7 @@ public:
     static double get_BC_start_time() {return getInstance().BC_start_time;}
     static double get_BC_cadence() {return getInstance().BC_cadence;}
     static int get_BC_frame_rotate() {return getInstance().BC_frame_rotate;}
+    static int get_BC_force_single_frame() {return getInstance().BC_force_single_frame;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -132,6 +134,7 @@ public:
         args.add("BC_start_time", BC_start_time);
         args.add("BC_cadence", BC_cadence);
         args.add("BC_frame_rotate", BC_frame_rotate);
+        args.add("BC_force_single_frame", BC_force_single_frame);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -169,6 +172,7 @@ public:
             cout << "BC_start_time: " << BC_start_time << endl;
             cout << "BC_cadence: " << BC_cadence << endl;
             cout << "BC_frame_rotate: " << BC_frame_rotate << endl;
+            cout << "BC_force_single_frame: " << BC_force_single_frame << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }
