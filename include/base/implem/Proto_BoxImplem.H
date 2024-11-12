@@ -612,7 +612,7 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
     }
 }
 
-Box Box::face(Point a_dir, int a_dist)
+Box Box::face(Point a_dir, int a_dist) const
 {
     PROTO_ASSERT(a_dir.codim() == 1,
             "Box::face | Error: Invalid direction. Must be codimension 1");

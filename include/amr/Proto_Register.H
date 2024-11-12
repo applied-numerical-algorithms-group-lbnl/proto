@@ -28,14 +28,17 @@ namespace Proto
         {
             PROTO_ASSERT(a_dir.codim() == 1,
                 "Register constructor | Error: Direction Point must have codimension 1");
+            m_data = a_data;
             for (int dir = 0; dir < DIM; dir++)
             {
                 if (a_dir[dir] > 0)
                 {
-                    return Register(a_data, dir, Side::Hi);
+                    m_dir = dir;
+                    m_side = Side::Hi;
                 } else if (a_dir[dir] < 0)
                 {
-                    return Register(a_data, dir, Side::Lo);
+                    m_dir = dir;
+                    m_side = Side::Lo;
                 } else {
                     PROTO_ASSERT(false,
                             "Register constructor | Error: Data corruption.");

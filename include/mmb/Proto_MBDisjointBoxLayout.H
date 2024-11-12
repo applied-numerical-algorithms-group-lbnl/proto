@@ -62,6 +62,8 @@ namespace Proto
         inline MBIterator end() const;
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
+        inline Array<double, DIM> dx(BlockIndex a_block) const;
+        inline Array<double, DIM> dx(MBIndex a_index) const;
         inline Box blockDomainBox(BlockIndex a_block) const { return getBlock(a_block).domain().box(); }
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
@@ -95,6 +97,7 @@ namespace Proto
         inline unsigned int size() const;
         inline unsigned int localSize() const;
         inline std::vector<Point> boxSizes() const;
+        inline Point boxSize(BlockIndex a_block) const;
         MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
         inline void print() const;

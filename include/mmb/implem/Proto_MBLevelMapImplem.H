@@ -42,8 +42,9 @@ void MBLevelMap<MAP,MEM>::define(
     m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, m_ghost);
     m_X->setVal(0);
     m_J->setVal(0);
-    m_dx.resize(a_layout.numBlocks());
+    //m_dx.resize(a_layout.numBlocks());
     m_ops.resize(a_layout.numBlocks());
+    /*
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().getBlock(bi).box();
@@ -53,6 +54,7 @@ void MBLevelMap<MAP,MEM>::define(
         }
         m_ops[bi].define(m_dx[bi], bi, a_focalBlock);
     }
+    */
 
     for (auto iter : a_layout)
     {
@@ -226,13 +228,14 @@ template<template<MemType> typename MAP, MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }
     
 template<template<MemType> typename MAP, MemType MEM>
-const Array<double, DIM>& MBLevelMap<MAP,MEM>::dx(int a_blockID) const 
+const Array<double, DIM>& MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
 {
-    return m_dx[a_blockID];
+    return layout().dx(a_blockID);
+    //return m_dx[a_blockID];
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-MAP<MEM>& MBLevelMap<MAP,MEM>::op(int a_blockID) const
+MAP<MEM>& MBLevelMap<MAP,MEM>::op(BlockIndex a_blockID) const
 {
     return m_ops[a_blockID];
 }

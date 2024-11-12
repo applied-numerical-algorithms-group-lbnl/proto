@@ -178,6 +178,20 @@ Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
     return Box(patch, patch).refine(boxSize);
 }
 
+Array<double, DIM> MBDisjointBoxLayout::dx(BlockIndex a_block) const
+{
+    Point sizes = blockDomainBox(a_block).sizes();
+    Array<double, DIM> h;
+    h.fill(1.0);
+    for (int dd = 0; dd < DIM; dd++) { h[dd] /= sizes[dd]; }
+    return h;
+}
+
+Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
+{
+    return dx(block(a_index));
+}
+
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
