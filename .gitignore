@@ -1,4 +1,5 @@
 /.vscode
+build
 *.hdf5
 *.vtk
 *.d
