@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 #include "MBMap_XPointRigid.H"
 #include "MBMap_Shear.H"

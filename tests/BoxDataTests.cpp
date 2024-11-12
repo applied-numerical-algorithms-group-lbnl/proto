@@ -2,7 +2,7 @@
 #include <cmath>
 #include <climits>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 using namespace Proto;
 using namespace std;

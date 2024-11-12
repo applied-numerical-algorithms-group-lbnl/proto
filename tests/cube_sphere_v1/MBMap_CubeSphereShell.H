@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 #define CUBED_SPHERE_SHELL_R0 1.0
 #define CUBED_SPHERE_SHELL_R1 1.1

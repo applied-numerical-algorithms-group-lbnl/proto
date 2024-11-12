@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
 #include "MBMap_XPointRigid.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 using namespace Proto;
 
