@@ -41,7 +41,7 @@ void BoxPartition::define(
 {
     for (auto patch : a_patches)
     {
-        PROTO_ASSERT(a_patchDomain.box().contains(patch),
+        PROTO_ASSERT(a_patchDomain.box().containsPoint(patch),
                 "BoxPartion::Constructor | Error: \
                 All patches must be contained in the patchDomain.");
     }
@@ -75,7 +75,7 @@ void BoxPartition::define(
             "BoxPartition::define | Error: domain must be in the positive index space.");
     for (auto iter : a_patches)
     {
-        PROTO_ASSERT(a_patchDomain.box().contains(iter.first),
+        PROTO_ASSERT(a_patchDomain.box().containsPoint(iter.first),
                 "BoxPartition::define | Error: Patch not contained in domain.");
         PROTO_ASSERT(iter.second < numProc(),
                 "BoxPartition::define | Error: invalid process %i.", iter.second);

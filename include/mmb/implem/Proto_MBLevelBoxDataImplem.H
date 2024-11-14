@@ -78,7 +78,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                 {
                     continue;
                 }
-                if (patchDomain.contains(patch + di))
+                if (patchDomain.containsPoint(patch + di))
                 {
                     continue;
                 }
@@ -88,7 +88,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                     shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
                 }
                 Box k = K.grow(shrinkDirs).shift(di);
-                PROTO_ASSERT(k.contains(di),
+                PROTO_ASSERT(k.containsPoint(di),
                              "MBLevelBoxData::define | Error: Data corruption");
                 auto bounds = a_layout.domain().boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
@@ -106,7 +106,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                     {
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
-                        if (boundaryPatches.contains(neighbor))
+                        if (boundaryPatches.containsPoint(neighbor))
                         {
                             auto adjPatch = R.rotateCell(
                                     neighbor, boundaryPatches, adjBoundaryPatches);
@@ -630,7 +630,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
       //PR_TIME("get bulk data");
         // bulk data is requested
         auto &patch = (*this)[a_point.index()];
-        PROTO_ASSERT(patch.box().contains(a_point.point()),
+        PROTO_ASSERT(patch.box().containsPoint(a_point.point()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
         return patch.var(a_point.point());
@@ -643,7 +643,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
                 input is not in an MBBoundaryData");
         auto &boundData = (*this).bound(
             a_point.index(), a_point.boundaryDir(), a_point.srcBlock());
-        PROTO_ASSERT(boundData.localData->box().contains(a_point.point()),
+        PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.point()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
         return boundData.localData->var(a_point.point());
@@ -698,7 +698,7 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
     auto &srcPatch = (*this)[a_index];
     Box patchDomain = srcPatch.box();
 
-    PROTO_ASSERT(patchDomain.contains(a_point),
+    PROTO_ASSERT(patchDomain.containsPoint(a_point),
             "MBLevelBoxData::onDomainBoundary | Error: \
             Point is not contained in the patch or it's ghost region");
     
@@ -723,7 +723,7 @@ MBLevelBoxData<T,C,MEM,CTR>::onDomainBoundary(
         // if there are block boundaries, there is no domain boundary
         if (this->bounds(a_index, dir).size() > 0) { continue; } 
         Box boundBox = validDomain.edge(dir, 1);
-        if (boundBox.contains(a_point)) { domainBoundaryDirs.push_back(dir); }
+        if (boundBox.containsPoint(a_point)) { domainBoundaryDirs.push_back(dir); }
     }
     return domainBoundaryDirs;
 }
@@ -741,7 +741,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     //const auto &srcPatch = (*this)[a_index];
     Box patchDomain = this->layout()[a_index].grow(a_ghost);
 
-    PROTO_ASSERT(patchDomain.contains(a_center),
+    PROTO_ASSERT(patchDomain.containsPoint(a_center),
             "MBLevelBoxData::interpFootprint | Error: \
             Invalid center Point");
     
@@ -781,13 +781,13 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         }
         Point contractDirs = useDirs - absDir;
         Box extendDomain = spanBox.grow(-contractDirs);
-        while (extendDomain.contains(dir))
+        while (extendDomain.containsPoint(dir))
         {
             extendDomain = extendDomain.shift(-dir);
         }
         for (auto fi : a_footprint)
         {
-            if (extendDomain.contains(contractDirs*fi))
+            if (extendDomain.containsPoint(contractDirs*fi))
             {
                 extendedFootprint.insert(fi-dir);
             }
@@ -799,13 +799,13 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
       PR_TIMERS("extendedFootprint loop");
         Point p = a_center + shift;
         //std::cout << "Attempting to add stencil point " << p << std::endl;
-        if (blockDomain.contains(p) && patchDomain.contains(p))
+        if (blockDomain.containsPoint(p) && patchDomain.containsPoint(p))
         {
             //std::cout << "\tPoint is in the patch AND block domains: Adding" << std::endl;
             MBDataPoint data(a_index, p, m_layout);
             footprint.insert(data);
         }
-        else if (!blockDomain.contains(p))
+        else if (!blockDomain.containsPoint(p))
         {
             //std::cout << "\tPoint is NOT in the block domain. checking bounds" << std::endl;
             for (auto dir : Box::Kernel(1))
@@ -817,7 +817,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
                 {
                     //std::cout << "\t\tChecking boundary in direction " << dir << " with box " << bi.localBox() << std::endl;
                     //std::cout << "\t\tbi.localBox().contains(p) ? " << bi.localBox().contains(p) << std::endl;
-                    if (bi.localBox().contains(p))
+                    if (bi.localBox().containsPoint(p))
                     {
                         //std::cout << "\t\t\tPoint is in the boundary: Adding" << std::endl;
                         MBDataPoint data(a_index, p, m_layout, dir, layout().block(bi.adjIndex));
@@ -1024,7 +1024,7 @@ void MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
                     auto &tmp = *bi.adjData;
                     auto &dst = *bi.localData;
                     auto &R = bi.adjToLocal;
-                    PROTO_ASSERT(src.box().contains(tmp.box()),
+                    PROTO_ASSERT(src.box().containsBox(tmp.box()),
                                  "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
                     PROTO_ASSERT(tmp.box() == domain,
                                  "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");

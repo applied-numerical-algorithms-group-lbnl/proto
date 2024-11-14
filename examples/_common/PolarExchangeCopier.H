@@ -73,7 +73,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
     while(liter != localPlan.end())
     {
         const Box& toRegion = (*liter).toRegion;
-        if (domainNorth.contains(toRegion) || domainSouth.contains(toRegion))
+        if (domainNorth.containsBox(toRegion) || domainSouth.containsBox(toRegion))
         {
             liter = localPlan.erase(liter);
         } else {
@@ -85,7 +85,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
     while(fiter != fromPlan.end())
     {
         const Box& toRegion = (*fiter).toRegion;
-        if (domainNorth.contains(toRegion) || domainSouth.contains(toRegion))
+        if (domainNorth.containsBox(toRegion) || domainSouth.containsBox(toRegion))
         {
             fiter = fromPlan.erase(fiter);
         } else {
@@ -97,7 +97,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
     while(titer != toPlan.end())
     {
         const Box& toRegion = (*titer).toRegion;
-        if (domainNorth.contains(toRegion) || domainSouth.contains(toRegion))
+        if (domainNorth.containsBox(toRegion) || domainSouth.containsBox(toRegion))
         {
             titer = toPlan.erase(titer);
         } else {
@@ -112,7 +112,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
         for (auto dir : dirs)
         {
             Point n = toPatch+dir;
-            if (bdryPatchesNorth.contains(n) || bdryPatchesSouth.contains(n))
+            if (bdryPatchesNorth.containsPoint(n) || bdryPatchesSouth.containsPoint(n))
             {
                 Point norm = dir*e_phi;
                 Point fromPatch = n - norm + mirrorPatchShift;

@@ -49,7 +49,7 @@ namespace Proto_Transition
         pr_pt patch = iter.first;
         PROTO_ASSERT(patch.min() >= 0,
                      "DataUtilities::getLayout | Error: Patches must be in the non-negative index space");
-        PROTO_ASSERT(patchDomain.contains(patch),
+        PROTO_ASSERT(patchDomain.containsPoint(patch),
                      "DataUtilities::getLayout | Error: Patch detected outside of the given domain");
       }
 

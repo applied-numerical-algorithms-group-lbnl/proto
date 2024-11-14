@@ -325,7 +325,7 @@ Point MBDisjointBoxLayout::connectivity(
     // patches on same block
     if (b1 == b2)
     {
-        if (Box::Kernel(1).shift(p1).contains(p2))
+        if (Box::Kernel(1).shift(p1).containsPoint(p2))
         {
             return (p2 - p1);
         }
@@ -348,7 +348,7 @@ Point MBDisjointBoxLayout::connectivity(
     for (auto dir : dirs)
     {
         Point n1 = p1 + dir;
-        if (!adjPatch1.contains(n1)){ continue; }
+        if (!adjPatch1.containsPoint(n1)){ continue; }
         Point n2 = R.rotateCell(
                 n1, adjPatch1, adjPatch2);
         if (n2 == p2) {return dir; }

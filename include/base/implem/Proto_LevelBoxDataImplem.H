@@ -919,7 +919,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             // The source box is shifted, the dest box is not.
             
             Box destBx = nit.destBox();
-            if (!destBx.empty() && !bx0.contains(destBx))
+            if (!destBx.empty() && !bx0.containsBox(destBx))
             {
                 Box srcBx = nit.srcBox();
                 LevelMotionItem toMotionItem(*nit, dit, srcBx, destBx);

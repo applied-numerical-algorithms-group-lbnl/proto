@@ -370,7 +370,7 @@ public:
                 ProtoCh::aliasBoxData<Real, NUMCOMPS>(src, (*(m_data[ii]))[iter]);
                 Proto::BoxData<Real, NUMCOMPS> dst;
                 ProtoCh::aliasBoxData<Real, NUMCOMPS>(dst, a_data[ii][iter]);
-                PROTO_ASSERT(L.range(src.box()).contains(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
+                PROTO_ASSERT(L.range(src.box()).containsBox(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
                 dst |= L(src, 1.0/24.0);
                 dst += src;
             }
@@ -498,7 +498,7 @@ public:
                 Proto::Box B = coarseLayout[iter];
                 for (auto biter = B.begin(); biter != B.end(); ++biter)
                 {
-                    if (!invalid.contains(*biter))
+                    if (!invalid.containsPoint(*biter))
                     {
                         maxValue = std::max(patch(*biter), maxValue);
                     }
@@ -556,7 +556,7 @@ public:
                 Proto::Box patchBox(coarseLayout[citer]);
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
-                    if (!coarseFineDomain.contains(*iter))
+                    if (!coarseFineDomain.containsPoint(*iter))
                     {
                         sum += patch(*iter)*pow(dx,DIM);
                     }

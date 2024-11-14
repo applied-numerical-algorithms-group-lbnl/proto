@@ -199,7 +199,7 @@ TEST(DisjointBoxLayout, Contains) {
 
     for (auto p : testPatches)
     {
-        if (validPatches.contains(p))
+        if (validPatches.containsPoint(p))
         {
             EXPECT_TRUE(layout.contains(p));
         } else {

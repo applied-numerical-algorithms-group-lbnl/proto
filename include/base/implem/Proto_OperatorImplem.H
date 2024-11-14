@@ -25,7 +25,7 @@ _convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
-    PROTO_ASSERT(a_ctr.box().contains(a_2nd.box().grow(-1)),
+    PROTO_ASSERT(a_ctr.box().containsBox(a_2nd.box().grow(-1)),
             "error Operator::convolve | centered data defined on too small a box.");
 
     BoxData<T,C,MEM,D,E> a_avg(a_ctr.box() & a_2nd.box().grow(-1));
@@ -127,7 +127,7 @@ _deconvolve(
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
     PR_TIME("Operator::deconvolve");
-    PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1)),
+    PROTO_ASSERT(a_avg.box().containsBox(a_2nd.box().grow(-1)),
             "error Operator::convolve | centered data defined on too small a box.");
 
     a_ctr |= Stencil<T>::Laplacian()(a_2nd, -1.0/24);
@@ -140,7 +140,7 @@ _deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
-    PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1)),
+    PROTO_ASSERT(a_avg.box().containsBox(a_2nd.box().grow(-1)),
             "error Operator::convolve | centered data defined on too small a box.");
 
     BoxData<T,C,MEM,D,E> a_ctr(a_avg.box() & a_2nd.box().grow(-1));
@@ -201,7 +201,7 @@ _convolveFace(
         int a_dir)
 {
     PR_TIME("Operator::convolveFace");
-    PROTO_ASSERT(a_ctr.box().contains(a_2nd.box().grow(-1).grow(a_dir,1)),
+    PROTO_ASSERT(a_ctr.box().containsBox(a_2nd.box().grow(-1).grow(a_dir,1)),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_avg |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, 1.0/24.0);
     a_avg += a_ctr;
@@ -251,8 +251,8 @@ _deconvolveFace(
         int a_dir)
 {
     PR_TIME("Operator::deconvolveFace");
-    PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).contains(a_ctr.box()) &&
-                 a_avg.box().contains(a_ctr.box()),
+    PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).containsBox(a_ctr.box()) &&
+                 a_avg.box().containsBox(a_ctr.box()),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
     a_ctr += a_avg;
@@ -485,9 +485,9 @@ _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_q2nd)
 {
     PR_TIME("Operator::cellQuotient");
-    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)),
+    PROTO_ASSERT(a_pavg.box().containsBox(a_p2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
-    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)),
+    PROTO_ASSERT(a_qavg.box().containsBox(a_q2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
     forallInPlace(
         [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
@@ -579,9 +579,9 @@ _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         int a_dir)
 {
     PR_TIME("Operator::faceQuotient");
-    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)),
+    PROTO_ASSERT(a_pavg.box().containsBox(a_p2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
-    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)),
+    PROTO_ASSERT(a_qavg.box().containsBox(a_q2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
     forallInPlace(
         [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)

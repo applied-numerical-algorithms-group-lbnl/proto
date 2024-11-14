@@ -40,7 +40,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     continue;
                 }
                 // adjacent patch is in the same block
-                if (patchDomain.contains(patch + di))
+                if (patchDomain.containsPoint(patch + di))
                 {
                     continue;
                 }
@@ -51,7 +51,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
                 }
                 Box k = K.grow(shrinkDirs).shift(di);
-                PROTO_ASSERT(k.contains(di),
+                PROTO_ASSERT(k.containsPoint(di),
                              "MBLevelBoxData::define | Error: Data corruption");
                 // all patches that bound this block in the given direction
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
@@ -73,7 +73,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
                         // found a valid potential neighbor (if it exists)
-                        if (boundaryPatches.contains(neighbor))
+                        if (boundaryPatches.containsPoint(neighbor))
                         {
                             auto adjPatch = R.rotateCell(
                                     neighbor, boundaryPatches, adjBoundaryPatches);

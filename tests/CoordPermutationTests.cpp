@@ -267,8 +267,8 @@ TEST(CoordPermutation, RotateCell)
     {
         auto p_cw = CW.rotateCell(pi, B, B_CW);
         auto p_r = R.rotateCell(pi, B, B_R);
-        EXPECT_TRUE(B_CW.contains(p_cw));
-        EXPECT_TRUE(B_R.contains(p_r));
+        EXPECT_TRUE(B_CW.containsPoint(p_cw));
+        EXPECT_TRUE(B_R.containsPoint(p_r));
         EXPECT_EQ(p_cw, CW(pi - B.low()) + s_cw);
         EXPECT_EQ(p_r, R(pi - B.low()) + s_r);
     }

@@ -133,7 +133,7 @@ inline Point Box::sizes() const
 }
 
 ACCEL_DECORATION
-bool Box::contains(const Point& a_pt) const
+bool Box::containsPoint(const Point& a_pt) const
 {
     if (this->empty()){return false;}
     for(int idir = 0; idir < DIM; idir++)
@@ -151,14 +151,14 @@ bool Box::contains(const Point& a_pt) const
 }
   
 ACCEL_DECORATION
-bool Box::contains(const Box& a_rhs) const
+bool Box::containsBox(const Box& a_rhs) const
 {
-    return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));
+    return (this->containsPoint(a_rhs.m_low) && this->containsPoint(a_rhs.m_high));
 }
 
 bool Box::onBoundary(const Point& a_p) const
 {
-    if (!(this->contains(a_p))){return false;}
+    if (!(this->containsPoint(a_p))){return false;}
     for (int ii = 0; ii < DIM; ii++)
     {
         if ((a_p[ii] == m_low[ii]) || (a_p[ii] == m_high[ii]))
@@ -172,7 +172,7 @@ bool Box::onBoundary(const Point& a_p) const
 ACCEL_DECORATION
 inline unsigned int Box::index(const Point& a_pt) const
 {
-    PROTO_ASSERT(contains(a_pt),
+    PROTO_ASSERT(containsPoint(a_pt),
         "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
     return Box::sindex(a_pt, m_low, m_high);
 }
@@ -257,7 +257,7 @@ void Box::operator&=(const Box& a_rhs)
 
 Box Box::operator&(const Point& a_pt) const
 {
-    if (contains(a_pt)){ return *this; }
+    if (containsPoint(a_pt)){ return *this; }
     else if(empty()) {return Box(a_pt, a_pt); }
     else {
         Point L = m_low;
@@ -273,7 +273,7 @@ Box Box::operator&(const Point& a_pt) const
 
 void Box::operator&=(const Point& a_pt)
 {
-    if (this->contains(a_pt)){return;}
+    if (this->containsPoint(a_pt)){return;}
     Box intersect = (*this) & a_pt;
     *this = intersect;
 }

@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         Box finePatchBox = fineDomainBox.coarsen(boxSizeVect);
         for (auto iter = finePatchBox.begin(); iter.ok(); ++iter)
         {
-            if (fineIgnoreBox.contains(*iter)) { continue; }
+            if (fineIgnoreBox.containsPoint(*iter)) { continue; }
             finePatchPoints.push_back(*iter);
         }
         std::vector<DisjointBoxLayout> grids;

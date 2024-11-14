@@ -21,7 +21,7 @@ bool compareBoxData(
         for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++)
         {
-            if (a_cpyBox.contains(pt-a_shift))
+            if (a_cpyBox.containsPoint(pt-a_shift))
             {
                 T diff = a_dst(pt, cc, dd, ee) - a_src(pt - a_shift, cc, dd, ee);
                 if (diff > 1e-12)

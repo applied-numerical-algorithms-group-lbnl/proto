@@ -706,7 +706,7 @@ void HDF5Handler::readMBLayout(
         for (int bj = 0; bj < n_boxes; bj++)
         {
             Box b = boxData[bj];
-            if (domainBox.contains(b))
+            if (domainBox.containsBox(b))
             {
                 if (boxSize == Point::Zeros()) { boxSize = b.sizes(); }
                 else {

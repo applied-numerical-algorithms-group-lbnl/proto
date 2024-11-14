@@ -93,7 +93,7 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
                 q2 = R.rotateCell(p2, edgXY, adjXY); 
             }
 
-            if (Box::Kernel(1).shift(p1).contains(q2))
+            if (Box::Kernel(1).shift(p1).containsPoint(q2))
             {
                 EXPECT_EQ(p, q2 - p1);
             } else {

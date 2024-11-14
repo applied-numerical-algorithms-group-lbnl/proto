@@ -140,10 +140,10 @@ TEST(FluxRegister, RefluxCorner) {
         {
             for (int cc = 0; cc < C; cc++)
             {
-                if (xFluxBox.contains(pi))
+                if (xFluxBox.containsPoint(pi))
                 {
                     EXPECT_NEAR(patch(pi, cc), xUpdate, 1e-12);
-                } else if (yFluxBox.contains(pi)) {
+                } else if (yFluxBox.containsPoint(pi)) {
                     EXPECT_NEAR(patch(pi, cc), yUpdate, 1e-12);
                 } else {
                     EXPECT_NEAR(patch(pi, cc), 0, 1e-12);

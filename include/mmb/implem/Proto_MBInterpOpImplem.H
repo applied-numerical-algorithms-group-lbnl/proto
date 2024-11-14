@@ -514,8 +514,8 @@ void MBInterpOp::define(
                     {
                         PR_TIME("adjacent_triple_point_logic");
                         Point d2 = Point::Basis(ii);
-                        bool onLoEdge = boundBox.edge(-d2).contains(bi);
-                        bool onHiEdge = boundBox.edge( d2).contains(bi);
+                        bool onLoEdge = boundBox.edge(-d2).containsPoint(bi);
+                        bool onHiEdge = boundBox.edge( d2).containsPoint(bi);
                         bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
                         bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
                         if (onLoEdge && hasLoTriplePoint)

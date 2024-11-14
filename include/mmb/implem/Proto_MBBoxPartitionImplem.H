@@ -131,7 +131,7 @@ void MBBoxPartition::findBoundaries()
             if (dir == Point::Zeros()) { continue; }
             if (m_patchDomain.inTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
-            if (m_patchDomain.getBlock(block_i).box().contains(patch_ji))
+            if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {
                 // patch_j is interior to the block
                 continue; 
@@ -151,9 +151,9 @@ void MBBoxPartition::findBoundaries()
 
                 Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
 
-                if (!localBoundPatches.contains(patch_ji)) { continue; }
+                if (!localBoundPatches.containsPoint(patch_ji)) { continue; }
 
-                PROTO_ASSERT(adjBoundPatches.contains(patch_jj),
+                PROTO_ASSERT(adjBoundPatches.containsPoint(patch_jj),
                         "MBBoxPartition::findBoundaries | Error: Data Corruption.");
                 
                 auto ind_j = find(patch_jj, block_j);

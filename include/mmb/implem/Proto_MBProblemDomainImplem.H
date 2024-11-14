@@ -371,5 +371,5 @@ bool MBProblemDomain::inInterior(
         Point       a_point,
         BlockIndex  a_block) const
 {
-    return getBlock(a_block).box().contains(a_point);
+    return getBlock(a_block).box().containsPoint(a_point);
 }

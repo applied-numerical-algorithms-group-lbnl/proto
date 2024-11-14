@@ -234,7 +234,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Point& a_pt) const;
+            inline bool containsPoint(const Point& a_pt) const;
 
         /// Contains Box Query
         /**
@@ -256,7 +256,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Box& a_rhs) const;
+            inline bool containsBox(const Box& a_rhs) const;
 
         /// Point on Boundry Query
         /**

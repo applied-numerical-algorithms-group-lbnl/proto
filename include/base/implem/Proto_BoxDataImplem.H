@@ -506,7 +506,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
             Src interval size %i =/= dst interval size %i on axis %i.",
             a_srcComps.size(ii), a_dstComps.size(ii),ii);
     }
-    PROTO_ASSERT(m_box.contains(a_srcBox),
+    PROTO_ASSERT(m_box.containsBox(a_srcBox),
         "BoxData::copyTo | Error: \
         Source Box input is not a subset of source array domain.");
 
@@ -679,7 +679,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
         unsigned int a_d,
         unsigned int a_e) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
             "BoxData::data | Error: Point argument must be in this->box().");   
     PROTO_ASSERT((a_c < C),
             "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
@@ -792,7 +792,7 @@ template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
     PR_TIME("BoxData::var");
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -812,7 +812,7 @@ Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -1516,7 +1516,7 @@ void BoxData<T,C,MEM,D,E>::linearOut(
 {
 
     PR_TIME("BoxData::linearOut");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearOut | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1559,7 +1559,7 @@ void BoxData<T,C,MEM,D,E>::linearIn(
 {
 
     PR_TIME("BoxData::linearIn");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearIn | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1672,7 +1672,7 @@ void BoxData<T,C,MEM,D,E>::printData(
         return;
     }
 
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
         "BoxData::printData(a_box,...) | Error: \
         Box is not a subset of the domain of *this.");
     
