@@ -1,8 +1,8 @@
 
-blt_add_executable(NAME BCDemo SOURCES BCDemo.cpp
-    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-blt_add_test(NAME BCDemo COMMAND BCDemo)
+# blt_add_executable(NAME BCDemo SOURCES BCDemo.cpp
+#     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+#     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+# blt_add_test(NAME BCDemo COMMAND BCDemo)
 
 blt_add_executable(NAME PointTests SOURCES PointTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
