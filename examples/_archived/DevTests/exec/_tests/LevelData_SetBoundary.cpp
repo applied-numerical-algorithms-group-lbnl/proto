@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     LevelBoxData<double> data(layout, Point::Ones());
     data.setToZero();
     h5.writeLevel(data, "DATA_0");
-    data.setBoundary(1);
+    data.setDomainBoundary(1);
     h5.writeLevel(data, "DATA_1");
 
     #ifdef PR_MPI

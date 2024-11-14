@@ -26,7 +26,7 @@ namespace {
         }
     }
 }
-
+#if PR_MMB
 TEST(MBLevelFluxRegister, Reflux_XPoint) {
 
     int domainSize = 16;
@@ -46,8 +46,8 @@ TEST(MBLevelFluxRegister, Reflux_XPoint) {
     MBAMRData<double, 1, HOST> data(grid, ghost);
     MBLevelFluxRegister(grid[0], grid[1], refRatios, 
     
-
 }
+#endif
 
 #if DIM == 3
 TEST(MBLevelFluxRegister, Reflux_CubedSphere) {
@@ -55,7 +55,6 @@ TEST(MBLevelFluxRegister, Reflux_CubedSphere) {
     int domainSize = 32;
     int boxSize = 16;
     int ghostSize = 2;
-
 
 }
 #endif

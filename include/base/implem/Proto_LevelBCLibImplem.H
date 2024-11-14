@@ -10,11 +10,11 @@ void ConstDirichletBC<T,C,MEM,CTR>::apply(LevelBoxData<T,C,MEM,CTR>& a_data) con
 {
     if (m_compValues.size() == 0)
     {
-        a_data.setBoundary(m_globalValue);
+        a_data.setDomainBoundary(m_globalValue);
     } else {
         for (auto val : m_compValues)
         {
-            a_data.setBoundary(val.second, val.first);
+            a_data.setDomainBoundary(val.second, val.first);
         }
     }
     a_data.exchange(); // overwrite the periodic cells

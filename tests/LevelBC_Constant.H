@@ -22,7 +22,7 @@ class ConstantBC : public LevelBC<T,C,MEM,CTR>
         this->layout(); // DisjointBoxLayout / ProblemDomain
         this->getLevelData(0); //access external level data
 #endif
-        a_data.setBoundary(this->getConstant(0));
+        a_data.setDomainBoundary(this->getConstant(0));
     }
 
     // LevelBoxData<double, 1> m_J;
