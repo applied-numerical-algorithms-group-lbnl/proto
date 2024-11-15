@@ -76,7 +76,7 @@ if(OPS)
       INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
   blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 endif()
-if(ENABLE_ALL_TESTS)
+#if(ENABLE_ALL_TESTS)
     blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
         DEPENDS_ON Headers_Base ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -141,8 +141,6 @@ if(ENABLE_ALL_TESTS)
         blt_add_executable(NAME MBInterpOpTests SOURCES MBInterpOpTests.cpp
             DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        #target_compile_options(MBInterpOpTests PRIVATE -O2 -g)
-        #target_compile_options(MBInterpOpTests PRIVATE -fstack-protector)
         blt_add_test(NAME MBInterpOpTests COMMAND MBInterpOpTests)
         blt_add_executable(NAME MBLevelOpTests SOURCES MBLevelOpTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
@@ -167,4 +165,4 @@ if(ENABLE_ALL_TESTS)
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRTests COMMAND MBAMRTests)
     endif()
-endif()
+#endif()

@@ -112,7 +112,7 @@ os.system(CMAKE_COMMAND)
 if ['ALL', 'TEST'].count(args.TARGET) > 0:
     os.system('cmake --build build/')
     if args.TARGET == 'TEST':
-        os.system('cmake --build build/ --target test')
+        os.system('cmake --build build/ --target test -j 22')
 else:
-	os.system('cmake --build build/ --target ' + args.TARGET)
+	os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
 	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')

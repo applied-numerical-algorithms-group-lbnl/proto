@@ -280,8 +280,8 @@ CubedSphereShell::BCInterpOp(
             Point s0 = dr[thetaCoord] < 0 ? Point::Basis(thetaCoord,-1) : Point::Basis(thetaCoord);
             Point s1 = dr[phiCoord] < 0 ? Point::Basis(phiCoord,-1) : Point::Basis(phiCoord);
             // leaving srcBox is forbidden due to polar singularity
-            if (!srcBox.contains(p_src + s0)) { s0 = -s0; }
-            if (!srcBox.contains(p_src + s1)) { s1 = -s1; }
+            if (!srcBox.containsPoint(p_src + s0)) { s0 = -s0; }
+            if (!srcBox.containsPoint(p_src + s1)) { s1 = -s1; }
             
             // SHIFTS DEFINE 4 POINTS FOR BILINEAR INTERPOLATION
             std::vector<Point> srcPoints;
@@ -1034,11 +1034,11 @@ CubedSphereShell::deriv3case(
   Box loBox = a_outputBox.face(a_dir,Side::Lo,1);
   Box hiBox = a_outputBox.face(a_dir,Side::Hi,1);
   output |= Stencil<T>::Derivative(1,a_dir,2)(a_input);
-  if (!a_validBox.contains(loGhostBox))
+  if (!a_validBox.containsBox(loGhostBox))
     {     
       output |= loStencil(a_input,loBox);
     }
-  if (!a_validBox.contains(hiGhostBox))
+  if (!a_validBox.containsBox(hiGhostBox))
     {      
       output |= hiStencil(a_input,hiBox);
     }

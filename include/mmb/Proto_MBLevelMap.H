@@ -201,7 +201,7 @@ class MBLevelMap
     inline const MBDisjointBoxLayout& layout() const;
     
     /// Get Mapped Grid Spacing
-    inline const Array<double, DIM>& dx(BlockIndex a_block) const;
+    inline const Array<double, DIM> dx(BlockIndex a_block) const;
 
     /// Get Operator
     inline MAP<MEM>& op(BlockIndex a_block) const;

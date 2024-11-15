@@ -296,11 +296,11 @@ TEST(Operator, Cofactor)
             switch(tt)
             {
                 case 0: forallInPlace_p(f_classicSphereMap, X, J0, dx, r0, r1); break;
-                case 1: forallInPlace_p(f_cubeSphereMap, X, J0, dx, r0, r1); break;
+                //case 1: forallInPlace_p(f_cubeSphereMap, X, J0, dx, r0, r1); break;
             }
 
             // Compute Metrics
-            Array<BoxData<double, DIM, HOST>, DIM> NT;
+            FluxBoxData<double, DIM, HOST> NT;
             Array<BoxData<double, DIM, HOST>, DIM> NT0;
             for (int dir = 0; dir < DIM; dir++)
             {

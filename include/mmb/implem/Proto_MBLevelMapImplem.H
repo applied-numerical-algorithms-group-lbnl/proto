@@ -228,7 +228,7 @@ template<template<MemType> typename MAP, MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }
     
 template<template<MemType> typename MAP, MemType MEM>
-const Array<double, DIM>& MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
+const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
 {
     return layout().dx(a_blockID);
     //return m_dx[a_blockID];
