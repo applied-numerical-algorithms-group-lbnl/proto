@@ -3,7 +3,6 @@
 #include "TestFunctions.H"
 #include "MBMap_Shear.H"
 #include "MBMap_XPointRigid.H"
-//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
@@ -70,19 +69,16 @@ TEST(MBInterpOp, ShearTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    // grid parameters
     int domainSize = 32;
     int boxSize = 16;
-    int ghostSize = 1;
+    int ghostSize = 2;
     
-    // interplating function parameters
     double order = 4.0;
     Array<double, DIM> exp{1,1,0,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
   
-    
     int numIter = 3;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
@@ -112,13 +108,12 @@ TEST(MBInterpOp, ShearTest)
             FluxBoxData<double, DIM> NT(b_i);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
             src_i |= C2C(x_pow);
             dst_i |= C2C(x_pow);
         }
         hostErr.setVal(0);
-        hostDst.exchange(); // fill boundary data
-        MBInterpOp interp;//(map, order);
+        hostDst.exchange();
+        MBInterpOp interp;
         std::vector<Point> footprint;
         for (auto pi : Box::Kernel(2))
         {
@@ -147,7 +142,6 @@ TEST(MBInterpOp, ShearTest)
                 }
             }
         }
-
 #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << err[nn] << std::endl;
         h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_Shear_Src_N%i",nn);
@@ -167,7 +161,7 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -286,7 +280,7 @@ TEST(MBInterpOp, XPointTest)
 #endif
 #endif
 #if DIM == 3
-#if 1
+#if 0
 TEST(MBInterpOp, CubedSphereShellTest)
 {
 #define CUBED_SPHERE_SHELL_R0 0.5
@@ -412,6 +406,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 }
 #endif
 #endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

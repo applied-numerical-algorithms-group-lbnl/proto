@@ -2,31 +2,62 @@
 #include "Proto.H"
 #include "TestFunctions.H"
 #include "MBMap_Shear.H"
-//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
 #if DIM == 2
 TEST(MBLevelMapTests, ShearMap) {
-    int domainSize = 8;
+    int domainSize = 16;
     int boxSize = 8;
+    int ghostWidth = 2;
+    double gridSpacing = 1.0/domainSize;
     HDF5Handler h5;
 
     auto domain = buildShear(domainSize);
-    Point boxSizeVect = Point::Ones(boxSize);
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-
-    Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
-    ghost[0] = Point::Ones(1);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
     MBLevelMap<MBMap_Shear, HOST> map;
-    map.define(layout, ghost);
+    map.define(layout, Point::Ones(ghostWidth));
     
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_ShearMap_X");
 #endif
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        const auto& x_i = map.map()[iter];
+        Box box_i = layout[iter].grow(ghostWidth).grow(Centering::PR_NODE);
+        EXPECT_EQ(box_i, x_i.box());
+
+        BoxData<double, DIM> x_exact(box_i);
+        for (auto point_j : box_i)
+        {
+            double x_j = point_j[0]*gridSpacing;
+            double y_j = point_j[1]*gridSpacing;
+            switch(block)
+            {
+                case 0:
+                    x_j = x_j - 1.0;
+                    y_j = y_j - 1.0;
+                    break;
+                case 1:
+                    y_j = y_j - 1.0 + MB_MAP_SHEAR_SLOPE*x_j;
+                    break;
+                case 2:
+                    y_j = y_j + MB_MAP_SHEAR_SLOPE*x_j;
+                    break;
+                case 3:
+                    x_j = x_j - 1.0;
+                    break;
+            }
+            x_exact(point_j, 0) = x_j;
+            x_exact(point_j, 1) = y_j;
+        }
+        auto error_i = x_i - x_exact;
+
+        EXPECT_NEAR(error_i.absMax(), 0, 1e-12);
+    }
 }
 
 TEST(MBLevelMapTests, InterBlockApply_Shear) {
