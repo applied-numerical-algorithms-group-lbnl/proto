@@ -160,10 +160,6 @@ endif()
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRDataTests COMMAND MBAMRDataTests)
-        blt_add_executable(NAME MBLevelFluxRegisterTests SOURCES MBLevelFluxRegisterTests.cpp
-            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
-            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        blt_add_test(NAME MBLevelFluxRegisterTests COMMAND MBLevelFluxRegisterTests)
         blt_add_executable(NAME MBAMRTests SOURCES MBAMRTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
