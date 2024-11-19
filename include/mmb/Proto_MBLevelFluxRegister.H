@@ -6,18 +6,11 @@
 
 namespace Proto
 {
-    // Forward Declarations
     template<typename T, unsigned int C, MemType MEM>
     class MBLevelFluxRegister;
     template<typename T, unsigned int C, MemType MEM>
     class MBFluxRegisterCopier;
 
-    // =======================================================================
-    // FLUX REGISTER COPIER OP
-
-    /// Flux Register Copier Op
-    /**
-     */
     template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT> 
     class MBFluxRegisterCopierOp
     {
@@ -33,41 +26,21 @@ namespace Proto
         inline int linearSize(const Box& a_bx,
                 const MBIndex& a_index) const;
 
-        /// Serial Write To Buffer
         inline void linearOut(void* a_buf, const MBMotionItem& a_info) const;
-
-        /// Serial Read From Buffer
         inline void linearIn(void* a_buf, const MBMotionItem& a_info) const;
-
-        /// Local Copy
         inline void localCopy(const MBMotionItem& a_info) const;
 
-    }; // end class MBFluxRegisterCopierOp
+    }; 
 
-    // =======================================================================
-    // FLUX REGISTER COPIER
-
-    /// Flux Register Copier
-    /**
-     */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
     class MBFluxRegisterCopier
     : public Copier<MBFluxRegisterCopierOp<T, C, MEM>, MBBoxPartition, MBBoxPartition, MEM, MEM>
     {
         public:
-
         inline MBFluxRegisterCopier(){};
-
-        /// Build Copier Motion Plan
         inline void buildMotionPlans(MBFluxRegisterCopierOp<T, C, MEM>& a_op);
-    }; //end class MBFluxRegisterCopier
+    }; 
 
-    // =======================================================================
-    // FLUX REGISTER
-
-    /// Flux Register
-    /**
-     */
     template<typename T, unsigned int C, MemType MEM>
     class MBLevelFluxRegister
     {
@@ -75,9 +48,9 @@ namespace Proto
         friend class MBFluxRegisterCopier<T,C,MEM>;
 
         public:
-        /// Default constructor
+
         MBLevelFluxRegister(){};
-        /// Constructor
+
         MBLevelFluxRegister(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
                 Point&          a_refRatio,
@@ -88,7 +61,6 @@ namespace Proto
                 const std::vector<Point>&   a_refRatios,
                 std::vector<Array<T, DIM>>& a_dxCoarse);
 
-        /// Define function
         void define(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
                 Point&          a_refRatios,
@@ -98,8 +70,6 @@ namespace Proto
                 const MBDisjointBoxLayout&  a_dblFine,
                 const std::vector<Point>&   a_refRatios,
                 std::vector<Array<T, DIM>>& a_dxCoarse);
-
-        
 
         /// Increment Coarse
         /**
@@ -164,7 +134,6 @@ namespace Proto
         // fineIndices are not a map because there is at most one register for each (dir, side)
         std::vector<Array<Array<int,2>, DIM> >                m_fineIndices;
         Array<Array<Stencil<T>,2>,DIM>                   m_avgFlux;
-    }; //end class MBLevelFluxRegister
 #include "implem/Proto_MBLevelFluxRegisterImplem.H"
-} // end namespace Proto
+}; // end namespace Proto
 #endif // end include guard
