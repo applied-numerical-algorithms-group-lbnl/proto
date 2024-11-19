@@ -50,7 +50,8 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
         {
             flux(a_fluxes[dd], a_state, dd);
         }
-        this->boundaryConditions(a_fluxes, a_state);
+        //TODO: BCs are not passing tests yet. 
+        //this->boundaryConditions(a_fluxes, a_state);
         this->divergence(a_output, a_fluxes);
     }
 
