@@ -2,7 +2,7 @@
 
 #include "Proto.H"
 
-#define XPOINT_NUM_BLOCKS 5
+#define MB_MAP_XPOINT_NUM_BLOCKS 5
 
 using namespace Proto;
 
@@ -17,7 +17,6 @@ namespace {
 #endif
         double dtheta_mapped = 2*M_PI/a_N;
         double dtheta_unmapped = M_PI/2.0;
-        double theta_ratio = dtheta_mapped/dtheta_unmapped;
 
         double u = (1-X);
         double v = (1-Y);
@@ -49,7 +48,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
-        int numBlocks = XPOINT_NUM_BLOCKS;
+        int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -67,7 +66,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
     inline Array<double, DIM> apply(const Array<double, DIM>& a_X)
     {
         auto block = this->block();
-        int numBlocks = XPOINT_NUM_BLOCKS;
+        int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
         Array<double, DIM> X;
         f_xpointMap(X,a_X, block, numBlocks);
         return X;

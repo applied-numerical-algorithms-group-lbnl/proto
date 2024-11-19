@@ -328,7 +328,7 @@ TEST(MBLevelBoxData, FillBoundaries_Node) {
     int domainSize = 16;
     int boxSize = 8;
     int ghostSize = 2;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     std::vector<Point> boxSizes(numBlocks, boxSizeVect);

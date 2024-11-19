@@ -123,7 +123,7 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);

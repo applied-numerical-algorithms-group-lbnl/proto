@@ -166,7 +166,7 @@ MBProblemDomain buildIdentity(int a_domainSize)
 
 MBProblemDomain buildXPoint(int a_domainSize)
 {
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
@@ -781,7 +781,7 @@ MBAMRGrid telescopingXPointGrid(
         int refRatio,
         int boxSize)
 {
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));

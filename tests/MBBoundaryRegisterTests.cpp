@@ -8,7 +8,7 @@ using namespace Proto;
 TEST(MBBoundaryRegister, Construction) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
@@ -160,7 +160,7 @@ TEST(MBBoundaryRegister, Construction) {
 TEST(MBBoundaryRegister, Exchange_XPoint) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;

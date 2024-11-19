@@ -31,7 +31,7 @@ TEST(MBLevelFluxRegister, Reflux_XPoint) {
 
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 2;
     int refRatio = 2;
     int numGhost = 2;

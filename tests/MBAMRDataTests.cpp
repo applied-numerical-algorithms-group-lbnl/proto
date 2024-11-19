@@ -10,7 +10,7 @@ TEST(MBAMRData, Construction) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 3;
     int refRatio = 2;
     int numGhost = 1;
