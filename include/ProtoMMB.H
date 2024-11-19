@@ -28,7 +28,6 @@
 #include "mmb/Proto_MBAMRGrid.H"
 #include "mmb/Proto_MBAMRData.H"
 #include "mmb/Proto_MBAMRMap.H"
-#include "mmb/Proto_MBLevelFluxRegister.H"
 #endif
 
 // Maps
