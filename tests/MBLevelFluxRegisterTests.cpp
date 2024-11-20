@@ -5,29 +5,33 @@
 
 using namespace Proto;
 
-namespace {
-    <template template<MemType> typename MAP>
-    void flux_0(
-            FluxBoxData<double, 1>& a_flux,
-            MAP a_map,
-            MBIndex a_index)
-    {
-        auto& layout = a_map.layout();
-        Array<double, DIM> velocity = {1,1,1;};
-        double rho = 1.0;
+// namespace {
+//     <template template<MemType> typename MAP>
+//     void flux_0(
+//             FluxBoxData<double, 1>& a_flux,
+//             MAP a_map,
+//             MBIndex a_index)
+//     {
+//         auto& layout = a_map.layout();
+//         Array<double, DIM> velocity = {1,1,1;};
+//         double rho = 1.0;
 
-        auto block = layout.block(a_index);
+//         auto block = layout.block(a_index);
 
-        // flux = rho*vd
-        for (int dd = 0; dd < DIM; dd++)
-        {
-            a_flux[dd].setVal(rho);
-            a_flux[dd] *= velocity[dd];
-        }
-    }
-}
+//         // flux = rho*vd
+//         for (int dd = 0; dd < DIM; dd++)
+//         {
+//             a_flux[dd].setVal(rho);
+//             a_flux[dd] *= velocity[dd];
+//         }
+//     }
+// }
+
 #if PR_MMB
 TEST(MBLevelFluxRegister, Reflux_XPoint) {
+    #if PR_VERBOSE > 0
+        HDF5Handler h5;
+    #endif
 
     int domainSize = 16;
     int boxSize = 16;
@@ -44,7 +48,15 @@ TEST(MBLevelFluxRegister, Reflux_XPoint) {
     auto grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
-    MBLevelFluxRegister(grid[0], grid[1], refRatios, 
+
+    #if PR_VERBOSE > 0
+        h5.writeMBAMRData({"data"}, map, data, "Reflux_XPoint_Data");
+    #endif
+
+    Array<double, DIM> gridSpacing = Point::Ones();
+    gridSpacing /= domainSize;
+    MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
     
 }
 #endif

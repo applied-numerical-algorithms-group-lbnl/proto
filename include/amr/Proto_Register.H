@@ -40,8 +40,6 @@ namespace Proto
                     m_dir = dir;
                     m_side = Side::Lo;
                 } else {
-                    PROTO_ASSERT(false,
-                            "Register constructor | Error: Data corruption.");
                 }
             }
         }

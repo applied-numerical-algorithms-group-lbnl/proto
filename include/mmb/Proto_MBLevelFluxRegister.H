@@ -6,18 +6,25 @@
 
 namespace Proto
 {
-    // Forward Declarations
+    template<typename T, unsigned int C, MemType MEM>
+    class MBLevelFluxRegisterTester;
     template<typename T, unsigned int C, MemType MEM>
     class MBLevelFluxRegister;
     template<typename T, unsigned int C, MemType MEM>
     class MBFluxRegisterCopier;
 
-    // =======================================================================
-    // FLUX REGISTER COPIER OP
+    template <typename T, unsigned int C, MemType MEM>
+    class MBLevelFluxRegisterTester
+    {
+    public:
+        MBLevelFluxRegisterTester(const MBLevelFluxRegister<T, C, MEM> &a_register) : m_register(a_register) {}
+        inline const std::vector<Register<T, C, MEM>>& getCoarseRegisters(MBIndex a_coarseIndex) const;
+        inline const std::vector<Register<T, C, MEM>>& getFineRegisters(MBIndex a_fineIndex) const;
 
-    /// Flux Register Copier Op
-    /**
-     */
+    private:
+        const MBLevelFluxRegister<T, C, MEM> &m_register;
+    };
+
     template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT> 
     class MBFluxRegisterCopierOp
     {
@@ -62,22 +69,15 @@ namespace Proto
         inline void buildMotionPlans(MBFluxRegisterCopierOp<T, C, MEM>& a_op);
     }; //end class MBFluxRegisterCopier
 
-    // =======================================================================
-    // FLUX REGISTER
-
-    /// Flux Register
-    /**
-     */
     template<typename T, unsigned int C, MemType MEM>
     class MBLevelFluxRegister
     {
+        friend class MBLevelFluxRegisterTester<T,C,MEM>;
         friend class MBFluxRegisterCopierOp<T,C,MEM>;
         friend class MBFluxRegisterCopier<T,C,MEM>;
 
         public:
-        /// Default constructor
         MBLevelFluxRegister(){};
-        /// Constructor
         MBLevelFluxRegister(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
                 Point&          a_refRatio,
@@ -88,7 +88,6 @@ namespace Proto
                 const std::vector<Point>&   a_refRatios,
                 std::vector<Array<T, DIM>>& a_dxCoarse);
 
-        /// Define function
         void define(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
                 Point&          a_refRatios,
@@ -99,7 +98,11 @@ namespace Proto
                 const std::vector<Point>&   a_refRatios,
                 std::vector<Array<T, DIM>>& a_dxCoarse);
 
-        
+        void clearInternalData();
+        void initRegisters(T a_val = 0);
+        void initCoarseRegisters(T a_val = 0);
+        void initFineRegisters(T a_val = 0);
+        void initIncrement(T a_val = 0);
 
         /// Increment Coarse
         /**
@@ -128,8 +131,7 @@ namespace Proto
          */
         void reflux(MBLevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
         
-        /// Reset
-        void reset(T a_val = 0);
+
         
         /// compute the hash tileIndex for a coarse register.
         int tileIndex(const Box& a_bx,const MBIndex& a_di);
@@ -139,31 +141,37 @@ namespace Proto
         /// Access to layouts.
         MBDisjointBoxLayout crseLayout() const {return m_crseLayout;};
         MBDisjointBoxLayout fineLayout() const {return m_fineLayout;};
+        
         protected:
-       
-        void defineCoarse(); // helper function for define
-        void defineFine();   // helper function for define
+        void validateInputs(const MBDisjointBoxLayout &a_dblCoarse,
+                const MBDisjointBoxLayout &a_dblFine,
+                const std::vector<Point> &a_refRatios,
+                std::vector<Array<T, DIM>> &a_dxCoarse) const;
+        void defineCoarse();
+        void defineFine();
+        void defineAverageStencils();
+        
 
-        BoxData<T,C,MEM>& sourceData(const Box& a_bx,const MBIndex& di);
-        BoxData<T,C,MEM>& destData(const Box& a_bx,const MBIndex& di);
+        BoxData<T, C, MEM> &sourceData(const Box &a_bx, const MBIndex &di);
+        BoxData<T, C, MEM> &destData(const Box &a_bx, const MBIndex &di);
 
-        MBDisjointBoxLayout  m_crseLayout;
-        MBDisjointBoxLayout  m_fineLayout;
-        std::vector<Array<T, DIM>>      m_dxCrse;
-        MBFluxRegisterCopier<T,C,MEM>   m_copier;
-        std::vector<Point>              m_refRatios;
+        MBDisjointBoxLayout m_crseLayout;
+        MBDisjointBoxLayout m_fineLayout;
+        std::vector<Array<T, DIM>> m_dxCrse;
+        MBFluxRegisterCopier<T, C, MEM> m_copier;
+        std::vector<Point> m_refRatios;
 
         // Registers for coarse data
-        std::vector<std::vector<Register<T,C,MEM> > >              m_crseRegisters;
+        std::vector<std::vector<Register<T, C, MEM>>> m_crseRegisters;
         // Registers for fine data on coarse layout
-        std::vector<std::vector<shared_ptr<BoxData<T,C,MEM> > > >  m_crseIncrement;
+        std::vector<std::vector<shared_ptr<BoxData<T, C, MEM>>>> m_crseIncrement;
         // Registers for fine data
-        std::vector<std::vector<Register<T,C,MEM> > >              m_fineRegisters; 
+        std::vector<std::vector<Register<T, C, MEM>>> m_fineRegisters;
         // crseIndices is a map because there are in general multiple registers for each (dir, side)
-        std::vector<unordered_map<unsigned int,unsigned int> >m_crseIndices;
+        std::vector<unordered_map<unsigned int, unsigned int>> m_crseIndices;
         // fineIndices are not a map because there is at most one register for each (dir, side)
-        std::vector<Array<Array<int,2>, DIM> >                m_fineIndices;
-        Array<Array<Stencil<T>,2>,DIM>                   m_avgFlux;
+        std::vector<Array<Array<int, 2>, DIM>> m_fineIndices;
+        std::vector<Array<Array<Stencil<T>, 2>, DIM>> m_avgFlux;
     }; //end class MBLevelFluxRegister
 #include "implem/Proto_MBLevelFluxRegisterImplem.H"
 } // end namespace Proto
