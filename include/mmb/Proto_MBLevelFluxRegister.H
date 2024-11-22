@@ -13,19 +13,19 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM>
     class MBFluxRegisterCopier;
 
-    template <typename T, unsigned int C, MemType MEM>
+    template <typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT>
     class MBLevelFluxRegisterTester
     {
     public:
         MBLevelFluxRegisterTester(const MBLevelFluxRegister<T, C, MEM> &a_register) : m_register(a_register) {}
-        inline const std::vector<Register<T, C, MEM>>& getCoarseRegisters(MBIndex a_coarseIndex) const;
-        inline const std::vector<Register<T, C, MEM>>& getFineRegisters(MBIndex a_fineIndex) const;
+        inline const std::vector<Register<T, C, MEM>>& getCoarseRegistersAtIndex(MBIndex a_coarseIndex) const;
+        inline const std::vector<Register<T, C, MEM>>& getFineRegistersAtIndex(MBIndex a_fineIndex) const;
 
     private:
         const MBLevelFluxRegister<T, C, MEM> &m_register;
     };
 
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT> 
+    template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT> 
     class MBFluxRegisterCopierOp
     {
         friend class MBFluxRegisterCopier<T,C,MEM>;
@@ -51,12 +51,6 @@ namespace Proto
 
     }; // end class MBFluxRegisterCopierOp
 
-    // =======================================================================
-    // FLUX REGISTER COPIER
-
-    /// Flux Register Copier
-    /**
-     */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
     class MBFluxRegisterCopier
     : public Copier<MBFluxRegisterCopierOp<T, C, MEM>, MBBoxPartition, MBBoxPartition, MEM, MEM>
@@ -69,7 +63,7 @@ namespace Proto
         inline void buildMotionPlans(MBFluxRegisterCopierOp<T, C, MEM>& a_op);
     }; //end class MBFluxRegisterCopier
 
-    template<typename T, unsigned int C, MemType MEM>
+    template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT>
     class MBLevelFluxRegister
     {
         friend class MBLevelFluxRegisterTester<T,C,MEM>;
@@ -99,7 +93,6 @@ namespace Proto
                 std::vector<Array<T, DIM>>& a_dxCoarse);
 
         void clearInternalData();
-        void initRegisters(T a_val = 0);
         void initCoarseRegisters(T a_val = 0);
         void initFineRegisters(T a_val = 0);
         void initIncrement(T a_val = 0);
@@ -109,7 +102,7 @@ namespace Proto
           Increments all the registers contained in the coarse patch a_di, direction a_dir. 
           Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
-        void incrementCoarse(
+        void incrementCoarseRegister(
                 const BoxData<T,C,MEM>& a_flux,
                 const MBIndex& a_di,
                 const T& a_weight,
@@ -120,7 +113,7 @@ namespace Proto
           Increments all the registers contained in the fine patch a_di, direction a_dir. 
           Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
-        void incrementFine(const BoxData<T,C,MEM>& a_flux,
+        void incrementFineRegister(const BoxData<T,C,MEM>& a_flux,
                 const MBIndex& a_di,
                 const T& a_weight,
                 unsigned int a_dir); 
@@ -129,7 +122,7 @@ namespace Proto
         /**
           Performs the reflux correction on input coarse data. 
          */
-        void reflux(MBLevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
+        void applyRefluxCorrection(MBLevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
         
 
         

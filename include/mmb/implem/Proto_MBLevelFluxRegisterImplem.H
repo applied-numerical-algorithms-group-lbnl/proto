@@ -1,13 +1,13 @@
 template<typename T, unsigned int C, MemType MEM>
 const std::vector<Register<T,C,MEM>>& 
-MBLevelFluxRegisterTester<T,C,MEM>::getCoarseRegisters(MBIndex a_index) const
+MBLevelFluxRegisterTester<T,C,MEM>::getCoarseRegistersAtIndex(MBIndex a_index) const
 {
     return m_register.m_crseRegisters[a_index];
 }
 
 template<typename T, unsigned int C, MemType MEM>
 const std::vector<Register<T,C,MEM>>& 
-MBLevelFluxRegisterTester<T,C,MEM>::getFineRegisters(MBIndex a_index) const
+MBLevelFluxRegisterTester<T,C,MEM>::getFineRegistersAtIndex(MBIndex a_index) const
 {
     return m_register.m_fineRegisters[a_index];
 }
@@ -467,7 +467,7 @@ void MBLevelFluxRegister<T,C,MEM>::defineAverageStencils ()
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void MBLevelFluxRegister<T,C,MEM>::incrementCoarse (
+void MBLevelFluxRegister<T,C,MEM>::incrementCoarseRegister (
         const BoxData<T,C,MEM>& a_flux,
         const MBIndex& a_crseIndex,
         const T& a_weight,
@@ -495,8 +495,9 @@ void MBLevelFluxRegister<T,C,MEM>::incrementCoarse (
         }
     }
 }
+
 template<typename T, unsigned int C, MemType MEM>
-void MBLevelFluxRegister<T,C,MEM>::incrementFine (
+void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
         const BoxData<T, C , MEM>& a_flux,
         const MBIndex& a_fineIndex,
         const T& a_weight,
@@ -517,7 +518,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFine (
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void MBLevelFluxRegister<T,C,MEM>::reflux(
+void MBLevelFluxRegister<T,C,MEM>::applyRefluxCorrection(
         MBLevelBoxData<T,C,MEM>& a_coarseData,
         const T& a_weight)
 {
@@ -549,13 +550,6 @@ void MBLevelFluxRegister<T,C,MEM>::reflux(
     }          
 }
 
-template<typename T, unsigned int C, MemType MEM>
-void MBLevelFluxRegister<T,C,MEM>::initRegisters(T a_val)
-{
-    initCoarseRegisters(a_val);
-    initFineRegisters(a_val);
-}
-
 template <typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T, C, MEM>::initCoarseRegisters(T a_val)
 {
@@ -567,6 +561,7 @@ void MBLevelFluxRegister<T, C, MEM>::initCoarseRegisters(T a_val)
         }
     }
 }
+
 template <typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T, C, MEM>::initFineRegisters(T a_val)
 {
@@ -578,6 +573,7 @@ void MBLevelFluxRegister<T, C, MEM>::initFineRegisters(T a_val)
         }
     }
 }
+
 template <typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T, C, MEM>::initIncrement(T a_val)
 {
