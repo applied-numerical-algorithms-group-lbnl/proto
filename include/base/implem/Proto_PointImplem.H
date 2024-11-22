@@ -67,6 +67,33 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     }
 }
 
+std::set<Point> Point::DirectionsOfCodim(int a_codim)
+{
+    std::set<Point> returnDirs;
+    if (a_codim == 1)
+    {
+        for(int dd = 0; dd < DIM; dd++)
+        {
+            returnDirs.insert(Point::Basis(dd,+1));
+            returnDirs.insert(Point::Basis(dd,-1));
+        }
+    } else {
+        std::set<Point> lowerCodimDirs = DirectionsOfCodim(a_codim-1);
+        for (auto dir : lowerCodimDirs)
+        {
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                if (dir[dd] == 0)
+                {
+                    returnDirs.insert(dir + Point::Basis(dd));
+                    returnDirs.insert(dir - Point::Basis(dd));
+                }
+            }
+        }
+    }
+    return returnDirs;
+}
+
 ACCEL_DECORATION
 const int& Point::operator[](unsigned int a_index) const
 {
