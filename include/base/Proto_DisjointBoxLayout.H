@@ -123,7 +123,7 @@ namespace Proto
           */
         inline void define(
                 const ProblemDomain   & a_problemDomain,
-                const vector<Point>   & a_coarsenedPatches,
+                const vector<PatchID> & a_patchIDs,
                 const Point           & a_boxSize);
 
         ///  Define (Partial Domaini - Simple)

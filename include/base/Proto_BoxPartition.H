@@ -6,7 +6,8 @@
 #include <unordered_map>
 namespace Proto
 {
-    /// Box Partition (Name Pending?)
+    typedef Point PatchID;
+    /// Box Partition
     /**
      * This data structure defines the "layoutness" of a collection of patches. 
      * More concretely, Box Partition encapsulates the information of which tile locations

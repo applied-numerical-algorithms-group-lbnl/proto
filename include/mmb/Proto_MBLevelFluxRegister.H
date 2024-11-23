@@ -124,10 +124,6 @@ namespace Proto
          */
         void applyRefluxCorrection(MBLevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
         
-
-        
-
-
         void print() const;
       
         /// Access to layouts.

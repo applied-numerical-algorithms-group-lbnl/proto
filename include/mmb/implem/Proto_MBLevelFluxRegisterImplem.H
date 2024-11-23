@@ -377,6 +377,8 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
     BlockIndex block = m_crseLayout.block(a_coarseIndex);
     auto fineIndex = m_fineLayout.find(a_finePatch, block);
 
+    // this region must be unrefined for a coarse-fine boundary to exist
+    // we assume THIS fine patch is unrefined and search for adjacent refined patches
     if (fineIndex != *m_fineLayout.end()) { return; }
 
     for (auto dir : Point::DirectionsOfCodim(1))
@@ -425,6 +427,8 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisterFromAdjacent(
     Point a_dir,
     MBIndex a_fineIndexAdj)
 {
+    // we are specifically searching for refined regions since the
+    // patch we are searching from (a_finePatch) is unrefined
     if (a_fineIndexAdj == *m_fineLayout.end()) { return; }
     
     BlockIndex block = m_crseLayout.block(a_coarseIndex);

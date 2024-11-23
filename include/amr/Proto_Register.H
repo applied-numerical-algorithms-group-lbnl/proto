@@ -5,15 +5,14 @@
 #include "Proto_MemType.H"
 namespace Proto
 {
-    template<typename T, unsigned int C, MemType MEMTYPE>
+    template<typename T, unsigned int C, MemType MEM>
     struct Register
     {
-        std::shared_ptr<BoxData<T,C,MEMTYPE> > m_data;
+        std::shared_ptr<BoxData<T,C,MEM> > m_data;
         unsigned int m_dir;
         Side::LoHiSide m_side;
-        //unsigned int m_lohi;
         Register(
-                std::shared_ptr<BoxData<T,C,MEMTYPE> > a_data,
+                std::shared_ptr<BoxData<T,C,MEM> > a_data,
                 unsigned int a_dir,
                 Side::LoHiSide a_side)
         {
@@ -23,7 +22,7 @@ namespace Proto
         };
 
         Register(
-                std::shared_ptr<BoxData<T,C,MEMTYPE>> a_data,
+                std::shared_ptr<BoxData<T,C,MEM>> a_data,
                 Point a_dir)
         {
             PROTO_ASSERT(a_dir.codim() == 1,
@@ -43,6 +42,11 @@ namespace Proto
                 }
             }
         }
+
+        BoxData<T,C,MEM>& data() { return *m_data; } 
+
+        Point dir() const { return Point::Basis(m_dir, m_side); }
+
     };
 }
 #endif

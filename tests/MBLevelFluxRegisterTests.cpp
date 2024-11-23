@@ -5,27 +5,31 @@
 
 using namespace Proto;
 
-// namespace {
-//     <template template<MemType> typename MAP>
-//     void flux_0(
-//             FluxBoxData<double, 1>& a_flux,
-//             MAP a_map,
-//             MBIndex a_index)
-//     {
-//         auto& layout = a_map.layout();
-//         Array<double, DIM> velocity = {1,1,1;};
-//         double rho = 1.0;
-
-//         auto block = layout.block(a_index);
-
-//         // flux = rho*vd
-//         for (int dd = 0; dd < DIM; dd++)
-//         {
-//             a_flux[dd].setVal(rho);
-//             a_flux[dd] *= velocity[dd];
-//         }
-//     }
-// }
+namespace {
+    template<typename T, unsigned int C, MemType MEM>
+    bool checkRegisters(
+        std::vector<Register<T,C,MEM>>& a_registers,
+        Box a_coarseFineBoundary,
+        Point a_dir)
+    {
+        BoxData<T,C,MEM> counterData(a_coarseFineBoundary);
+        counterData.setVal(0);
+        
+        for (auto ri : a_registers)
+        {
+            if (ri.dir() == a_dir)
+            {
+                BoxData<T,C,MEM> rdata(ri.data().box());
+                if (!a_coarseFineBoundary.containsBox(rdata.box())) { return false; }
+                rdata.setVal(1);
+                counterData += rdata;
+            }
+        }
+        int numDataInCoarseFineBoundary = a_coarseFineBoundary.size()*C;
+        bool success = (counterData.sum() == numDataInCoarseFineBoundary);
+        return success;
+    }
+}
 
 #if PR_MMB
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
@@ -34,7 +38,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #endif
 
     int domainSize = 16;
-    int boxSize = 16;
+    int boxSize = domainSize;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 2;
     int refRatio = 4;
@@ -58,9 +62,23 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
 
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
+    int fineDomainSize = domainSize * refRatio;
+    int finePatchesPerBoundary = (fineDomainSize / 2) / boxSize; 
+    Point refinedRegionLow = Point::Ones(domainSize / 2);
+    Point refinedRegionHigh = Point::Ones(domainSize - 1);
+    Box refinedRegion(refinedRegionLow, refinedRegionHigh);
+    Box coarseFineBound_X = refinedRegion.adjacent(0, Side::Lo, 1);
+    Box coarseFineBound_Y = refinedRegion.adjacent(1, Side::Lo, 1);
+    Box emptyBox;
+    
+    for (auto iter : grid[0])
     {
-        
+        auto registers = tester.getCoarseRegistersAtIndex(iter);
+        EXPECT_EQ(registers.size(), 2*finePatchesPerBoundary);
+        EXPECT_TRUE(checkRegisters(registers, coarseFineBound_X, Point::X()));
+        EXPECT_TRUE(checkRegisters(registers, coarseFineBound_Y, Point::Y()));
+        EXPECT_TRUE(checkRegisters(registers, emptyBox, -Point::X()));
+        EXPECT_TRUE(checkRegisters(registers, emptyBox, -Point::Y()));
     }
     
 }

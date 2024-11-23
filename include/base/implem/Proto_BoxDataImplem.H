@@ -1191,9 +1191,8 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
+    if (box().empty()) { return; }
     PR_TIME("BoxData::setVal");
-    // PC: replacing with forallInPlace
-    //this->operatorT<BoxDataOp::Assign>(a_val);
     forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
                   {
                     for (int ee = 0; ee < E; ee++)
