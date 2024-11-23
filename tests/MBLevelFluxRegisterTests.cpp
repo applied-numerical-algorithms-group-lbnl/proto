@@ -28,7 +28,7 @@ using namespace Proto;
 // }
 
 #if PR_MMB
-TEST(MBLevelFluxRegister, Reflux_XPoint) {
+TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
     #endif
@@ -37,7 +37,7 @@ TEST(MBLevelFluxRegister, Reflux_XPoint) {
     int boxSize = 16;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 2;
-    int refRatio = 2;
+    int refRatio = 4;
     int numGhost = 2;
     
     Point refRatios = Point::Ones(refRatio);
@@ -57,6 +57,11 @@ TEST(MBLevelFluxRegister, Reflux_XPoint) {
     gridSpacing /= domainSize;
     MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
+
+    for (BlockIndex bi = 0; bi < numBlocks; bi++)
+    {
+        
+    }
     
 }
 #endif

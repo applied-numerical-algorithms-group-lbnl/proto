@@ -126,13 +126,12 @@ namespace Proto
         
 
         
-        /// compute the hash tileIndex for a coarse register.
-        int tileIndex(const Box& a_bx,const MBIndex& a_di);
+
 
         void print() const;
       
         /// Access to layouts.
-        MBDisjointBoxLayout crseLayout() const {return m_crseLayout;};
+        MBDisjointBoxLayout crseLayout() const {return m_crseLayout;}; 
         MBDisjointBoxLayout fineLayout() const {return m_fineLayout;};
         
         protected:
@@ -141,6 +140,10 @@ namespace Proto
                 const std::vector<Point> &a_refRatios,
                 std::vector<Array<T, DIM>> &a_dxCoarse) const;
         void defineCoarse();
+        void addCoarseRegisters(Point a_finePatch, MBIndex a_coarseIndex); 
+        void addCoarseRegisterFromAdjacent(Point a_finePatch, MBIndex a_coarseIndex, Point a_dir, MBIndex a_fineIndexAdj);
+        MBIndex findAdjacentFinePatchIndex(MBIndex a_fineIndex, Point a_adjacentPatch, Point a_dir) const;
+        int computeTileIndex(const Box& a_bx,const MBIndex& a_di);
         void defineFine();
         void defineAverageStencils();
         
