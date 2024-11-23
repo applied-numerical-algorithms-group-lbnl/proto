@@ -73,6 +73,7 @@ namespace Proto
         inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
+        inline bool compatible(const MBIndex& a_index) const;
         inline Point connectivity(
                 const MBIndex&  a_i1,
                 const MBIndex&  a_i2) const;

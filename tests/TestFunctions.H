@@ -787,15 +787,21 @@ MBAMRGrid telescopingXPointGrid(
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
     MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();
         std::vector<MBPatchID_t> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
-        Point patch = patchDomain.high();
+        Point subDomainHigh = patchDomain.high();
+        Point subDomainLow = (subDomainHigh + Point::Ones()) / 2; 
+        Box patchSubDomain(subDomainLow, subDomainHigh);
         for (int bi = 0; bi < domain.size(); bi++)
         {
-            patches.push_back(MBPatchID_t(patch, bi));
+            for (auto patch : patchSubDomain)
+            {
+                patches.push_back(MBPatchID_t(patch, bi));
+            }
         }
         grid[li].define(domain, patches, boxSizeVect);
     }

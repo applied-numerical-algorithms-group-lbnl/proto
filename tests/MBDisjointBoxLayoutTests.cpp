@@ -153,7 +153,6 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
 
     Point patchDomainSize = Point::Ones(domainSize / boxSize);
     Box patchDomain(patchDomainSize);
-    std::cout << "patchDomain: " << patchDomain << std::endl;
 
     for (auto iter_i : layout)
     {
@@ -170,12 +169,8 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
                 auto dji = layout.connectivity(iter_j, iter_i);
                 if (dij == Point::Zeros())
                 {
-                    std::cout << "no connection between " << pi << " and " << pj << "(bj = " << bj << ")" << std::endl;
                     EXPECT_EQ(dji, Point::Zeros());
-                } else {
-                    std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
-                    std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
-                }
+                } 
             }
 
         }

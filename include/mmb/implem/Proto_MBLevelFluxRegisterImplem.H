@@ -393,7 +393,7 @@ MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
     Point a_dir) const
 {
     auto& finePatchDomain = m_fineLayout.partition().domain();
-    BlockIndex block = m_crseLayout.block(a_fineIndex);
+    BlockIndex block = m_fineLayout.block(a_fineIndex);
     Point adjacentPatch = a_finePatch + a_dir;
     MBIndex adjacentIndex = *m_fineLayout.end();
     if (finePatchDomain.inInterior(adjacentPatch, block))

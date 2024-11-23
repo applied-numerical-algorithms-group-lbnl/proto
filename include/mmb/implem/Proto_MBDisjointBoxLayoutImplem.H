@@ -162,6 +162,8 @@ MBIterator MBDisjointBoxLayout::end() const
 Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::point | Error: Layout is not defined");
+    PROTO_ASSERT(compatible(a_index),
+        "MBDisjointBoxLayout::point | Error: Index not compatible with layout");
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
@@ -171,6 +173,8 @@ Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::box | Error: Layout is not defined");
+    PROTO_ASSERT(compatible(a_index),
+        "MBDisjointBoxLayout::box | Error: Index not compatible with layout");
     auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
@@ -195,6 +199,8 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
+    PROTO_ASSERT(compatible(a_index),
+        "MBDisjointBoxLayout::block | Error: Index not compatible with layout");
     auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     return block;
@@ -251,6 +257,12 @@ bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::compatible | Error: Layout is not defined");
     return m_partition->compatible(*a_rhs.m_partition);
+}
+
+bool MBDisjointBoxLayout::compatible(const MBIndex& a_index) const
+{
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::compatible | Error: Layout is not defined");
+    return m_partition->compatible(a_index.partition());
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
