@@ -148,6 +148,24 @@ TEST(Point, DirectionsOfCodim)
     #endif
 }
 
+TEST(Point, NonZeroIndex)
+{
+    Point p0 = Point::Zeros();
+    Point p1 = Point::Basis(0,-1);
+    Point p2 = Point::Basis(DIM-1);
+    Point p3 = Point::Ones();
+
+    EXPECT_EQ(p0.firstNonZeroIndex(), DIM);
+    EXPECT_EQ(p1.firstNonZeroIndex(), 0);
+    EXPECT_EQ(p2.firstNonZeroIndex(), DIM-1);
+    EXPECT_EQ(p3.firstNonZeroIndex(), 0);
+
+    EXPECT_EQ(p0.lastNonZeroIndex(), -1);
+    EXPECT_EQ(p1.lastNonZeroIndex(), 0);
+    EXPECT_EQ(p2.lastNonZeroIndex(), DIM-1);
+    EXPECT_EQ(p3.lastNonZeroIndex(), DIM-1);
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

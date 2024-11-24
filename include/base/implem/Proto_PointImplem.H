@@ -480,6 +480,28 @@ std::vector<Point> Point::split() const
     return points;
 }
 
+int Point::firstNonZeroIndex() const
+{
+    int ii = 0;
+    while (ii < DIM)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii++;
+    }
+    return ii;
+}
+
+int Point::lastNonZeroIndex() const
+{
+    int ii = DIM-1;
+    while (ii >= 0)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii--;
+    }
+    return ii;
+}
+
 Point Point::dir() const
 {
     Point d;

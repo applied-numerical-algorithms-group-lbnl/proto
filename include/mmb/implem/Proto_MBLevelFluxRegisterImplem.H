@@ -324,54 +324,11 @@ void MBLevelFluxRegister<T,C,MEM>::defineCoarse ()
             addCoarseRegisters(finePatch, citer);
         }
     }
-/*
-    for (auto citer : m_crseLayout)
-    {
-        BlockIndex block = m_crseLayout.block(citer);
-        Point refRatio = m_refRatios[block];
-        Point fineBoxSize = m_fineLayout.boxSize(block);
-        Point crseBoxSize = m_crseLayout.boxSize(block);
-        Box crseBox = m_crseLayout[citer];
-        m_crseRegisters[citer].clear();
-        m_crseIncrement[citer].clear();
-        m_crseIndices[citer].clear();
-
-        auto coveringFinePatches = crseBox.refine(refRatio).coarsen(fineBoxSize);
-        PROTO_ASSERT(finePatchDomain.getBlock(block).box().containsBox(coveringFinePatches),
-            "MBLevelFluxRegister::define | Error: Data corruption.");
-        int k = 0;
-        for (auto finePatch : coveringFinePatches)
-        {
-            // check if fine patch is ABSENT from fine layout
-            auto fineIndex = m_fineLayout.find(finePatch, block);
-            if (fineIndex != *m_fineLayout.end()) { continue; }
-            // check adjacent fine patch that is PRESENT in fine layout
-            Box cfBox = Box(finePatch, finePatch).refine(fineBoxSize).coarsen(refRatio);
-            for (auto dir : Point::DirectionsOfCodim(1))
-            {
-                MBIndex fineIndexAdj = findAdjacentFinePatchIndex(fineIndex, finePatch, dir);
-                if (fineIndexAdj == *m_fineLayout.end()) { continue; } //adj patch is absent
-                // found a valid cf boundary in block interior
-                Box destBox = cfBox.face(dir);
-
-                int thisKey = computeTileIndex(destBox, citer);
-                shared_ptr<BoxData<T,C,MEM> > crseRegisterDataPtr(new BoxData<T,C,MEM>(destBox));
-                shared_ptr<BoxData<T,C,MEM> > crseIncrementDataPtr(new BoxData<T,C,MEM>(destBox));
-                Register<T,C,MEM> reg(crseRegisterDataPtr, dir);
-                m_crseRegisters[citer].push_back(reg);
-                m_crseIncrement[citer].push_back(crseIncrementDataPtr);
-                std::cout << "k: " << k << " | size: " << m_crseRegisters[citer].size() << std::endl;
-                m_crseIndices  [citer][thisKey] = k;
-                k++;
-            } // end dir loop
-        } // end fine patch loop
-    } // end coarse loop
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
-    Point a_finePatch,
+    PatchID a_finePatch,
     MBIndex a_coarseIndex)
 {
     BlockIndex block = m_crseLayout.block(a_coarseIndex);
@@ -391,7 +348,7 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
 template<typename T, unsigned int C, MemType MEM>
 MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
     MBIndex a_fineIndex,
-    Point a_finePatch,
+    PatchID a_finePatch,
     Point a_dir) const
 {
     auto& finePatchDomain = m_fineLayout.partition().domain();
@@ -422,7 +379,7 @@ MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
 
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisterFromAdjacent(
-    Point a_finePatch,
+    PatchID a_finePatch,
     MBIndex a_coarseIndex,
     Point a_dir,
     MBIndex a_fineIndexAdj)
@@ -480,6 +437,58 @@ int MBLevelFluxRegister<T,C,MEM>::computeTileIndex(const Box& a_bx, const MBInde
     return k;
 }
 
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::defineFine ()
+{
+    int numFinePatches = m_fineLayout.localSize();
+    m_fineRegisters.resize(numFinePatches);
+    m_fineIndices.resize(numFinePatches);
+    for (auto fiter : m_fineLayout)
+    {
+        addFineRegisters(fiter);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
+{
+    PatchID finePatch = m_fineLayout.point(a_fineIndex);
+    for (auto dir : Point::DirectionsOfCodim(1))
+    {
+        MBIndex fineIndexAdj = findAdjacentFinePatchIndex(a_fineIndex, finePatch, dir);
+        addFineRegisterFromAdjacent(finePatch, a_fineIndex, dir, fineIndexAdj);
+    }
+}
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
+    PatchID a_finePatch,
+    MBIndex a_fineIndex,
+    Point a_dir,
+    MBIndex a_fineIndexAdj)
+{
+    int coord = a_dir.firstNonZeroIndex();
+    int side = (a_dir[coord] < 0) ? 0 : 1;
+
+    if (a_fineIndexAdj == *m_fineLayout.end())
+    {
+        BlockIndex block = m_fineLayout.block(a_fineIndex);
+        Point refRatio = m_refRatios[block];
+        Box fineBox = m_fineLayout[a_fineIndex];
+        Box coarseBox = fineBox.coarsen(refRatio);
+        Box registerBox = coarseBox.adjacent(a_dir);
+
+        shared_ptr<BoxData<T, C, MEM>> temp(new BoxData<T, C, MEM>(registerBox));
+        Register<T, C, MEM> reg(temp, a_dir);
+        int index = m_fineRegisters[a_fineIndex].size();
+        m_fineRegisters[a_fineIndex].push_back(reg);
+        m_fineIndices[a_fineIndex][coord][side] = index;
+    }
+    else
+    {
+        m_fineIndices[a_fineIndex][coord][side] = -1;
+    }
+}
+/*
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::defineFine ()
 {
@@ -544,8 +553,7 @@ void MBLevelFluxRegister<T,C,MEM>::defineFine ()
         }
     }
 }
-
-
+*/
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::defineAverageStencils ()
 {

@@ -438,6 +438,10 @@ namespace Proto
         */
         inline std::array<Point, DIM> perpUnit() const;
 
+        inline int firstNonZeroIndex() const;
+
+        inline int lastNonZeroIndex() const;
+
         /// Coordinates of non-zero entries
         inline std::vector<int> coords() const;
 
