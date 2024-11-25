@@ -89,8 +89,6 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(
                                     block, adjBlock, ki);
-                            //std::cout << "localBlock: " << block << " | adjBlock: " << adjBlock << " | dir: " << ki << std::endl;
-                            // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, a_depth);
                             Box adjPatchBoundary;
                             if (a_bothSides)
@@ -98,12 +96,9 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                                 int sign = a_depth / abs(a_depth);
                                 patchBoundary = patchBoundary.extrude(ki*(-sign),abs(a_depth)); 
                                 adjPatchBoundary = patchBoundary; 
-                                //adjPatchBoundary = a_layout.domain().convert(
-                                //    patchBoundary, block, adjBlock, CTR);
                             } else {
                                 adjPatchBoundary = patchBox.edge(ki, a_depth);
                             }
-                            //std::cout << "localBoundary: " << patchBoundary << " | adjBoundary: " << adjPatchBoundary << std::endl;
 
                             PROTO_ASSERT(patchBoundary.size() == adjPatchBoundary.size(), 
                                     "MBBoundaryRegister::define | Error: data corruption.");
@@ -375,7 +370,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
                 
                 Box localBox_to = bound.localData->box();
-                Box adjBox_to = layout.domain().convert(
+                Box adjBox_to = layout.domain().convertBox(
                         bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(

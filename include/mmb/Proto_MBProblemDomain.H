@@ -69,13 +69,20 @@ namespace Proto
                 Point        a_dir) const;
         
         // Convert a Point Between Block Coordinate Systems
-        inline Point convert(
+        inline Point convertNode(
                 Point a_point,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock) const;
 
+        // Convert a Point Between Block Coordinate Systems
+        inline Point convertPoint(
+                Point a_point,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
+                Centering a_ctr) const;
+
         // Convert a Box Between Block Coordinate Systems
-        inline Box convert(
+        inline Box convertBox(
                 Box a_box,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock,

@@ -88,7 +88,7 @@ std::vector<MBGraphArc> MBProblemDomain::boundaries(
     return m_graph->boundaries(a_srcBlock, a_dir);
 }
 
-Point MBProblemDomain::convert(
+Point MBProblemDomain::convertNode(
         Point a_point,
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock) const
@@ -138,7 +138,18 @@ share a codimension 1 boundary.");
     return s10 + R01(a_point);
 }
 
-Box MBProblemDomain::convert(
+Point MBProblemDomain::convertPoint(
+        Point a_point,
+        BlockIndex a_srcBlock,
+        BlockIndex a_dstBlock,
+        Centering a_ctr) const
+{
+    Box srcBox(a_point, a_point);
+    Box dstBox = convertBox(srcBox, a_srcBlock, a_dstBlock, a_ctr);
+    return dstBox.low();
+}
+
+Box MBProblemDomain::convertBox(
         Box a_box,
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock,
@@ -149,16 +160,16 @@ Box MBProblemDomain::convert(
     {
         case PR_CELL:
         {
-            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-            H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
+            L = convertNode(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convertNode(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
             Box B(L, L);
             B = B & H;
             return Box(B.low(), B.high()-Point::Ones());
         }
         case PR_NODE:
         {
-            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-            H = convert(a_box.high(), a_srcBlock, a_dstBlock);
+            L = convertNode(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convertNode(a_box.high(), a_srcBlock, a_dstBlock);
             Box B(L, L);
             B = B & H;
             return B;

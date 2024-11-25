@@ -237,7 +237,7 @@ MBMap<Func, MEM>::operator()(
     Box domainBox0 = domainBox;
     if (a_computeBlock != a_domainBlock)
     {
-        domainBox0 = domain.convert(domainBox, a_domainBlock, a_computeBlock, a_ctr);
+        domainBox0 = domain.convertBox(domainBox, a_domainBlock, a_computeBlock, a_ctr);
     }
      
 #if PR_VERBOSE == 3

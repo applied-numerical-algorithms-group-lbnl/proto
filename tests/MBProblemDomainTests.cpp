@@ -5,20 +5,23 @@
 
 using namespace Proto;
 
-MBProblemDomain buildXPoint(int a_domainSize)
+namespace
 {
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    MBProblemDomain buildXPoint(int a_domainSize)
     {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        MBProblemDomain domain(XPOINT_SIZE);
+        auto CCW = CoordPermutation::ccw();
+        for (int ii = 0; ii < XPOINT_SIZE; ii++)
+        {
+            domain.defineBoundary(ii, (ii + 1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        }
+        for (int bi = 0; bi < XPOINT_SIZE; bi++)
+        {
+            domain.defineDomain(bi, Point::Ones(a_domainSize));
+        }
+        domain.close();
+        return domain;
     }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    domain.close();
-    return domain;
 }
 
 TEST(MBProblemDomain, ConvertSimple)
@@ -44,7 +47,7 @@ TEST(MBProblemDomain, ConvertSimple)
 
                 Box B0 = Box::Cube(boxSize).adjacent(dir);
                 Box B1 = Box::Cube(boxSize).edge(revDir);
-                Box B10 = domain.convert(B0,0,1);
+                Box B10 = domain.convertBox(B0,0,1);
                 EXPECT_EQ(B10, B1);
                 
                 R = R*CoordPermutation::ccw(axis);
@@ -73,17 +76,17 @@ TEST(MBProblemDomain, Convert) {
         Point sx = x*domainSize*2;
         Point sy = y*domainSize*2;
 
-        EXPECT_EQ(domain.convert(origin, bi, bx), sy);
-        EXPECT_EQ(domain.convert(origin, bi, by), sx);
+        EXPECT_EQ(domain.convertNode(origin, bi, bx), sy);
+        EXPECT_EQ(domain.convertNode(origin, bi, by), sx);
     
-        EXPECT_EQ(domain.convert(xAdj, bi, bx), yEdge);
-        EXPECT_EQ(domain.convert(yAdj, bi, by), xEdge);
+        EXPECT_EQ(domain.convertBox(xAdj, bi, bx), yEdge);
+        EXPECT_EQ(domain.convertBox(yAdj, bi, by), xEdge);
         
         if (XPOINT_SIZE > 3)
         {
             BlockIndex bxy = (bi + 2) % XPOINT_SIZE;
-            EXPECT_EQ(domain.convert(xyAdj, bi, bxy), xyEdge);
-            EXPECT_EQ(domain.convert(xyEdge, bi, bxy), xyAdj);
+            EXPECT_EQ(domain.convertBox(xyAdj, bi, bxy), xyEdge);
+            EXPECT_EQ(domain.convertBox(xyEdge, bi, bxy), xyAdj);
 
         }
     }

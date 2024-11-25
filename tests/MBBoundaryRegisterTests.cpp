@@ -218,7 +218,7 @@ TEST(MBBoundaryRegister, Exchange_XPoint) {
                 pr_out() << " | p2: " << p2 << " | b2: " << b2 << std::endl;
                 Box dstBox = bi.adjData->box();
                 auto R = bi.adjToLocal;
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<int, DIM> adjSln(srcBox);
                 BoxData<int, DIM> locSln(dstBox);
 
@@ -316,7 +316,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
                 pr_out() << "R (adj to local): " << std::endl;
                 R.print();
 #endif
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<int, DIM> adjSln(srcBox);
                 BoxData<int, DIM> locSln(dstBox);
 
@@ -454,7 +454,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
                 pr_out() << "R (adj to local): " << std::endl;
                 R.print();
 #endif
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<double, DIM> adjSln(srcBox);
                 BoxData<double, DIM> locSln(dstBox);
                 

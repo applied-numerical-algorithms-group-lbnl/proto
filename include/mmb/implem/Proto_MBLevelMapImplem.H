@@ -98,7 +98,7 @@ void MBLevelMap<MAP,MEM>::doApply(
     {
         PR_TIME("MBLevelMap::doApply");
         const auto& domain = layout().domain();
-        Box B = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
+        Box B = domain.convertBox(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
         BoxData<double, DIM, MEM> X_tmp(B);
         BoxData<double, 1, MEM> J_tmp(B);
         apply(X_tmp, J_tmp, a_computeBlock);

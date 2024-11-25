@@ -122,7 +122,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
                             Box adjPatchBoundary = a_layout.domain()
-                                .convert(patchBoundary, block, adjBlock, CTR);
+                                .convertBox(patchBoundary, block, adjBlock, CTR);
 
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             if (adjIter == a_layout.end()) { continue; } //patch was not found
