@@ -93,6 +93,7 @@ namespace Proto
         inline bool isInteriorBoundary(
                 const MBIndex&  a_index,
                 Point           a_dir) const;
+        /** Works even when a_patch doesn't exist in the layout */
         inline MBIndex findAdjacentIndex(
                 PatchID a_patch,
                 BlockIndex a_block,
