@@ -93,6 +93,10 @@ namespace Proto
         inline bool isInteriorBoundary(
                 const MBIndex&  a_index,
                 Point           a_dir) const;
+        inline MBIndex findAdjacentIndex(
+                PatchID a_patch,
+                BlockIndex a_block,
+                Point a_dir) const;
         inline std::vector<MBIndex> bounds(
                 const MBIndex&  a_index) const;
         inline unsigned int size() const;

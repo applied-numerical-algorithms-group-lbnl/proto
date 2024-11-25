@@ -340,43 +340,10 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
 
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        MBIndex fineIndexAdj = findAdjacentFinePatchIndex(fineIndex, a_finePatch, dir);
+        //MBIndex fineIndexAdj = findAdjacentFinePatchIndex(fineIndex, a_finePatch, dir);
+        MBIndex fineIndexAdj = m_fineLayout.findAdjacentIndex(a_finePatch, block, dir);
         addCoarseRegisterFromAdjacent(a_finePatch, a_coarseIndex, dir, fineIndexAdj);
     }
-}
-
-template<typename T, unsigned int C, MemType MEM>
-MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
-    MBIndex a_fineIndex,
-    PatchID a_finePatch,
-    Point a_dir) const
-{
-    auto& finePatchDomain = m_fineLayout.partition().domain();
-    BlockIndex block = m_fineLayout.block(a_fineIndex);
-    PatchID adjacentPatch = a_finePatch + a_dir;
-    MBIndex adjacentIndex = *m_fineLayout.end();
-
-    if (finePatchDomain.inInterior(adjacentPatch, block))
-    {
-        // INTERIOR case (normal case)
-        adjacentIndex = m_fineLayout.find(adjacentPatch, block);
-    } else if (finePatchDomain.inBlockBoundary(adjacentPatch, block))
-    {
-        // BLOCK BOUNDARY case
-        BlockIndex adjacentBlock = finePatchDomain.graph().adjacent(block, a_dir);
-        PatchID adjacentPatchLocalCoords = 
-            finePatchDomain.convertPoint(adjacentPatch, block, adjacentBlock, PR_CELL);
-        adjacentIndex = m_fineLayout.find(adjacentPatchLocalCoords, adjacentBlock);
-    }
-    else if (finePatchDomain.inDomainBoundary(adjacentPatch, block))
-    {
-        if (block == 0) { std::cout << "Exterior case detected" << std::endl; }
-        // EXTERIOR case (no CF boundary)
-    } else {
-        // INVALID case
-        PROTO_ASSERT(false, "MBLevelFluxRegister::define | Error: Data corruption.");
-    }  
-    return adjacentIndex;
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -455,9 +422,11 @@ template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
 {
     PatchID finePatch = m_fineLayout.point(a_fineIndex);
+    BlockIndex block = m_fineLayout.block(a_fineIndex);
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        MBIndex fineIndexAdj = findAdjacentFinePatchIndex(a_fineIndex, finePatch, dir);
+        //MBIndex fineIndexAdj = findAdjacentFinePatchIndex(a_fineIndex, finePatch, dir);
+        MBIndex fineIndexAdj = m_fineLayout.findAdjacentIndex(finePatch, block, dir);
         addFineRegisterFromAdjacent(finePatch, a_fineIndex, dir, fineIndexAdj);
     }
 }

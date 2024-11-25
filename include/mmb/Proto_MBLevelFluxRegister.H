@@ -140,7 +140,6 @@ namespace Proto
         void addFineRegisters(MBIndex a_fineIndex);
         void addCoarseRegisterFromAdjacent(PatchID a_finePatch, MBIndex a_coarseIndex, Point a_dir, MBIndex a_fineIndexAdj);
         void addFineRegisterFromAdjacent(PatchID a_finePatch, MBIndex a_fineIndex, Point a_dir, MBIndex a_fineIndexAdj);
-        MBIndex findAdjacentFinePatchIndex(MBIndex a_fineIndex, Point a_adjacentPatch, Point a_dir) const;
         int computeTileIndex(const Box& a_bx,const MBIndex& a_di);
         void defineFine();
         void defineAverageStencils();

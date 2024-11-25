@@ -301,6 +301,42 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
     return m_partition->isInteriorBoundary(a_index.global(), a_dir);
 }
+
+MBIndex MBDisjointBoxLayout::findAdjacentIndex(
+    PatchID a_patch,
+    BlockIndex a_block,
+    Point a_dir) const
+{
+    PROTO_ASSERT(a_dir.codim() == 1,
+        "MBDisjointBoxLayout::findAdjacentIndex | Error: This function is only well defined for codimension-1 directions");
+    PatchID adjacentPatch = a_patch + a_dir;
+    auto& patchDomain = partition().domain();
+    PROTO_ASSERT(patchDomain.getBlock(a_block).box().containsPoint(a_patch),
+        "MBDisjointBoxLayout::findAdjacentIndex | Error: Base patch is not inside the patch domain");
+    MBIndex adjacentIndex = *this->end();
+
+    if (patchDomain.inInterior(adjacentPatch, a_block))
+    {
+        // INTERIOR case (normal case)
+        adjacentIndex = find(adjacentPatch, a_block);
+    } else if (patchDomain.inBlockBoundary(adjacentPatch, a_block))
+    {
+        // BLOCK BOUNDARY case
+        BlockIndex adjacentBlock = patchDomain.graph().adjacent(a_block, a_dir);
+        PatchID adjacentPatchLocalCoords = 
+            patchDomain.convertPoint(adjacentPatch, a_block, adjacentBlock, PR_CELL);
+        adjacentIndex = find(adjacentPatchLocalCoords, adjacentBlock);
+    }
+    else if (patchDomain.inDomainBoundary(adjacentPatch, a_block))
+    {
+        // EXTERIOR case (no CF boundary)
+    } else {
+        // INVALID case
+        PROTO_ASSERT(false, "MBDisjointBoxLayout::findAdjacentIndex | Error: Data corruption.");
+    }  
+    return adjacentIndex;
+}
+
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const
 {
