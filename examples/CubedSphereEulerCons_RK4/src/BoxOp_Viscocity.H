@@ -117,7 +117,8 @@ viscFlux(
           // cout << "viscl = " << viscl << endl;
           State fluxtemp(bxface);
           fluxtemp.setToZero();
-          linearViscFlux = D5(a_USph, 1.0/128);
+          // linearViscFlux = D5(a_USph, 1.0/128);
+          linearViscFlux = D5(a_USph, 1.0/384); // more stable at short wavelengths
           primToMappedViscFlux(fluxtemp,linearViscFlux,WFace,adjDrDir,
                                deta_a,deta,A_matrix,ntrow,block,dir);
           BoxData<T,1,MEM> linvisccoef(bxface);

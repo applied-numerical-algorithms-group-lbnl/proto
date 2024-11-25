@@ -84,6 +84,10 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
               int a_kstage)
 {
   PR_TIMERS("BoxOp_Euler::PreStagePatch");
+  HDF5Handler h5;
+
+  // if (procID() == 0) h5.writePatch(1,a_USphStage,"a_USphStage_noBC");
+
   int a_block = this->block();
   Box bxGhosted = a_USphStage.box();
   BoxData<double> radius(a_dVolr.box());
@@ -93,6 +97,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   Array<double, DIM> dx;
   dx = this->dx();
   double dxradius = dx[0];
+  double a_h = dx[2];
   int thickness = std::round(1.0 / dxradius);
   // Set radial boundary condtions in radial ghost cells.
   int init_condition_type = ParseInputs::get_init_condition_type();
@@ -141,6 +146,54 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
                           a_Usph(6) *= pow(rad_last/rad,1.0); 
                           a_Usph(7) *= pow(rad_last/rad,1.0);
                         },bdryBoxHigh,a_USphStage,radius,radius_ghost);
+    }
+
+    if (init_condition_type == 6){
+      forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
+      
+      // Calculate A_matrix
+      double half = 0.5;
+      double dxiPerp = a_h;
+      Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+      Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+      Point high = bdryBoxHigh.high();
+      Point low = bdryBoxHigh.low();
+      high[0] = low[0];
+      Box bx0(low,high);
+      BoxData<T,DIM,MEM,DIM> A_matrix(bdryBoxHigh);
+      T offseta = half;
+      T offsetb = half;
+      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                      dxiPerp,offseta,offsetb);
+      spreadSlice(A_matrix);
+
+      BoxData<T,DIM,MEM,DIM> A_matrix_inv(bdryBoxHigh);
+      A_matrix_inv.setToZero();
+      forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+      // A constant U_cart
+      BoxData<double, DIM> U_cart(bdryBoxHigh);
+      BoxData<double, DIM> W_sph(bdryBoxHigh);
+      forallInPlace_p([ ] PROTO_LAMBDA
+      (Point a_pt,
+      Var<double, DIM, HOST> &a_U_cart)
+      {  
+        a_U_cart(0) = 0.0001;
+        a_U_cart(1) = 0.0;
+        a_U_cart(2) = 0.0;
+      }, U_cart);
+
+      T one = 1.0;  
+      forallInPlace(f_matVecProd,W_sph,A_matrix_inv,U_cart,one);
+
+      forallInPlace([ ] PROTO_LAMBDA
+      (Var<double, NUMCOMPS, HOST> &a_a_W,
+      Var<double, DIM, HOST> &a_W_sph)
+      {  
+        a_a_W(iBX) += a_W_sph(0);
+        a_a_W(iBY) += a_W_sph(1);
+        a_a_W(iBZ) += a_W_sph(2);
+      },bdryBoxHigh, a_USphStage, W_sph);
     }
   }
   // Inner BCs
@@ -193,7 +246,57 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
         a_USph(7) = Bz; //Bz
       },bdryBoxLow,a_USphStage,radius,m_gamma);
     }
+
+    if (init_condition_type == 6){
+      forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
+      // Calculate A_matrix
+      double half = 0.5;
+      double dxiPerp = a_h;
+      Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+      Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+      Point high = bdryBoxLow.high();
+      Point low = bdryBoxLow.low();
+      high[0] = low[0];
+      Box bx0(low,high);
+      BoxData<T,DIM,MEM,DIM> A_matrix(bdryBoxLow);
+      T offseta = half;
+      T offsetb = half;
+      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                      dxiPerp,offseta,offsetb);
+      spreadSlice(A_matrix);
+
+      BoxData<T,DIM,MEM,DIM> A_matrix_inv(bdryBoxLow);
+      A_matrix_inv.setToZero();
+      forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+      // A constant U_cart
+      BoxData<double, DIM> U_cart(bdryBoxLow);
+      BoxData<double, DIM> W_sph(bdryBoxLow);
+      forallInPlace_p([ ] PROTO_LAMBDA
+      (Point a_pt,
+      Var<double, DIM, HOST> &a_U_cart)
+      {  
+        a_U_cart(0) = 0.0001;
+        a_U_cart(1) = 0.0;
+        a_U_cart(2) = 0.0;
+      }, U_cart);
+
+      T one = 1.0;  
+      forallInPlace(f_matVecProd,W_sph,A_matrix_inv,U_cart,one);
+
+      forallInPlace([ ] PROTO_LAMBDA
+      (Var<double, NUMCOMPS, HOST> &a_a_W,
+      Var<double, DIM, HOST> &a_W_sph)
+      {  
+        a_a_W(iBX) += a_W_sph(0);
+        a_a_W(iBY) += a_W_sph(1);
+        a_a_W(iBZ) += a_W_sph(2);
+      },bdryBoxLow, a_USphStage, W_sph);
+    }
   }
+
+  // if (procID() == 0) h5.writePatch(1,a_USphStage,"a_USphStage_withBC");
+
 }
 
 

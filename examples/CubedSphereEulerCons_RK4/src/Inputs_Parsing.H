@@ -20,13 +20,14 @@ private:
     // 3 for H5 BCs
     // 4 for radial shell with small constant cartesian velocity
     // 5 for radial Shock
+    // 6 for radial shell with small constant cartesian magnetic field
     int domainSize; // Number of cells in non radial direction
     int thickness; // Number of cells in radial direction
     int boxSize_nonrad; // Size of the box for domain decomposition
     int boxSize_rad; // Size of the box for domain decomposition
     int max_iter; 
     double CFL;
-  double strength; // Strength of perturbation for test problems.
+    double strength; // Strength of perturbation for test problems.
     int write_cadence; 
     int checkpoint_cadence;
     string data_file_prefix;

@@ -67,7 +67,7 @@ void f_radialShellInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;
+  a_W(iVX) = 0.0;//ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -274,5 +274,56 @@ initialize(State& a_W,
 
   if (init_condition_type == 5) forallInPlace_p(f_radialShockInit, a_W, a_radius, a_gamma, strength, a_nradius);
 
+  // Adding constant cartesian B field to radial shell problem
+  if (init_condition_type == 6){
+    forallInPlace_p(f_radialShellInit, a_W, a_radius, a_gamma, a_nradius);
+
+    // Calculate A_matrix
+    Box bx = a_W.box();
+    double half = 0.5;
+    double dxiPerp = a_h;
+    Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+    Point high = bx.high();
+    Point low = bx.low();
+    high[0] = low[0];
+    Box bx0(low,high);
+    BoxData<T,DIM,MEM,DIM> A_matrix(bx);
+    T offseta = half;
+    T offsetb = half;
+    forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                    dxiPerp,offseta,offsetb);
+    spreadSlice(A_matrix);
+
+    BoxData<T,DIM,MEM,DIM> A_matrix_inv(bx);
+    A_matrix_inv.setToZero();
+    forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+    // A constant U_cart
+    BoxData<double, DIM> U_cart(bx);
+    BoxData<double, DIM> W_sph(bx);
+    forallInPlace_p([ ] PROTO_LAMBDA
+    (Point a_pt,
+     Var<double, DIM, HOST> &a_U_cart,
+     double a_a_gamma,
+     int a_a_nradius)
+    {  
+      a_U_cart(0) = 0.0001;
+      a_U_cart(1) = 0.0;
+      a_U_cart(2) = 0.0;
+    },U_cart, a_gamma, a_nradius);
+
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,W_sph,A_matrix_inv,U_cart,one);
+
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_a_W,
+     Var<double, DIM, HOST> &a_W_sph)
+    {  
+      a_a_W(iBX) += a_W_sph(0);
+      a_a_W(iBY) += a_W_sph(1);
+      a_a_W(iBZ) += a_W_sph(2);
+    },a_W, W_sph);
+  }
   
 }
