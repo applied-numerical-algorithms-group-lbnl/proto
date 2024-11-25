@@ -29,6 +29,7 @@ namespace {
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
         return success;
     }
+
 }
 
 #if PR_MMB
@@ -71,14 +72,32 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     Box coarseFineBound_Y = refinedRegion.adjacent(1, Side::Lo, 1);
     Box emptyBox;
     
+
     for (auto iter : grid[0])
     {
-        auto registers = tester.getCoarseRegistersAtIndex(iter);
-        EXPECT_EQ(registers.size(), 2*finePatchesPerBoundary);
-        EXPECT_TRUE(checkRegisters(registers, coarseFineBound_X, Point::X()));
-        EXPECT_TRUE(checkRegisters(registers, coarseFineBound_Y, Point::Y()));
-        EXPECT_TRUE(checkRegisters(registers, emptyBox, -Point::X()));
-        EXPECT_TRUE(checkRegisters(registers, emptyBox, -Point::Y()));
+        auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
+        EXPECT_EQ(coarseRegisters.size(), 2*finePatchesPerBoundary);
+        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_X, Point::X()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_Y, Point::Y()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::X()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::Y()));
+    }
+
+    Box refinedPatches = refinedRegion.coarsen(boxSize);
+    for (auto iter : grid[1])
+    {
+        PatchID patch = grid[1].point(iter);
+
+        Box cfBound_x = grid[1][iter].adjacent(0, Side::Lo, 1).coarsen(refRatio);
+        Box cfBound_y = grid[1][iter].adjacent(1, Side::Lo, 1).coarsen(refRatio);
+        cfBound_x &= coarseFineBound_X;
+        cfBound_y &= coarseFineBound_Y;
+        auto fineRegisters = tester.getFineRegistersAtIndex(iter);
+        //EXPECT_EQ(fineRegisters.size(), 2*finePatchesPerBoundary);
+        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x, -Point::X()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_y, -Point::Y()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::X()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::Y()));
     }
     
 }

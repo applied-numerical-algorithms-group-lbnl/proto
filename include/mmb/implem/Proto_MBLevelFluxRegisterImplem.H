@@ -353,8 +353,9 @@ MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
 {
     auto& finePatchDomain = m_fineLayout.partition().domain();
     BlockIndex block = m_fineLayout.block(a_fineIndex);
-    Point adjacentPatch = a_finePatch + a_dir;
+    PatchID adjacentPatch = a_finePatch + a_dir;
     MBIndex adjacentIndex = *m_fineLayout.end();
+
     if (finePatchDomain.inInterior(adjacentPatch, block))
     {
         // INTERIOR case (normal case)
@@ -363,12 +364,13 @@ MBIndex MBLevelFluxRegister<T,C,MEM>::findAdjacentFinePatchIndex(
     {
         // BLOCK BOUNDARY case
         BlockIndex adjacentBlock = finePatchDomain.graph().adjacent(block, a_dir);
-        Point adjacentPatchLocalCoords = 
-            finePatchDomain.convert(adjacentPatch, block, adjacentBlock);
+        PatchID adjacentPatchLocalCoords = 
+            finePatchDomain.convertPoint(adjacentPatch, block, adjacentBlock, PR_CELL);
         adjacentIndex = m_fineLayout.find(adjacentPatchLocalCoords, adjacentBlock);
     }
     else if (finePatchDomain.inDomainBoundary(adjacentPatch, block))
     {
+        if (block == 0) { std::cout << "Exterior case detected" << std::endl; }
         // EXTERIOR case (no CF boundary)
     } else {
         // INVALID case
@@ -460,6 +462,7 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
     }
 }
 template<typename T, unsigned int C, MemType MEM>
+
 void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
     PatchID a_finePatch,
     MBIndex a_fineIndex,
@@ -482,6 +485,7 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
         int index = m_fineRegisters[a_fineIndex].size();
         m_fineRegisters[a_fineIndex].push_back(reg);
         m_fineIndices[a_fineIndex][coord][side] = index;
+
     }
     else
     {
@@ -523,7 +527,7 @@ void MBLevelFluxRegister<T,C,MEM>::defineFine ()
                     // BLOCK case
                     BlockIndex blockAdj = finePatchDomain.graph().adjacent(block, dir);
                     Point finePointAdjLocal = 
-                        finePatchDomain.convert(finePointAdj, block, blockAdj);
+                        finePatchDomain.convertPoint(finePointAdj, block, blockAdj);
                     fineIndexAdj = m_fineLayout.find(finePointAdjLocal, blockAdj);
                 }
                 else if (finePatchDomain.inDomainBoundary(finePointAdj, block))
