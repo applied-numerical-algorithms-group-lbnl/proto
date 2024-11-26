@@ -61,6 +61,15 @@ namespace Proto
 
         /// Build Copier Motion Plan
         inline void buildMotionPlans(MBFluxRegisterCopierOp<T, C, MEM>& a_op);
+
+        private:
+
+        inline void addCoarseMotionItems(MBLevelFluxRegister<T,C,MEM>& a_fluxRegister);
+        inline void addFineMotionItems(MBLevelFluxRegister<T,C,MEM>& a_fluxRegister);
+        inline MBIndex getCoarseIndex(
+                MBLevelFluxRegister<T,C,MEM>& a_fluxRegister,
+                MBIndex a_fineIndex,
+                Point a_dir);
     }; //end class MBFluxRegisterCopier
 
     template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT>

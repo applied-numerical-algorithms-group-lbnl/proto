@@ -97,7 +97,7 @@ namespace Proto
         inline MBIndex findAdjacentIndex(
                 PatchID a_patch,
                 BlockIndex a_block,
-                Point a_dir) const;
+                Point a_codim1Dir) const;
         inline std::vector<MBIndex> bounds(
                 const MBIndex&  a_index) const;
         inline unsigned int size() const;
