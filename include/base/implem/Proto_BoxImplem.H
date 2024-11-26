@@ -594,6 +594,12 @@ Box Box::edge(const Point& a_dir, int a_dist) const
     }
 }
 
+Box Box::edge(int a_dir, Side::LoHiSide a_side, int a_dist) const
+{
+    Point dir = Point::Basis(a_dir, a_side);
+    return edge(dir, a_dist);
+}
+
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
     PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),

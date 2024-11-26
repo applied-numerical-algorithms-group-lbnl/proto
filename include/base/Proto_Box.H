@@ -752,7 +752,7 @@ namespace Proto
             @endcode
         */
         inline Box edge(const Point& a_dir) const;
-
+        inline Box edge(int a_dir, Side::LoHiSide a_side, int a_dist) const;
         /// Face
         /**
           Returns the face (e.g. region of codimension 1) of this box in a specified direction.
