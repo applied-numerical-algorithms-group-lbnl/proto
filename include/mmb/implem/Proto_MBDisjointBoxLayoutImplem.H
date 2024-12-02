@@ -225,16 +225,26 @@ MBDisjointBoxLayout::getBlock(BlockIndex a_block) const
     return m_layouts[a_block];
 }
 
-MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(MBPatchID a_patch) const
+MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex a_block) const
 {
-    return find(a_patch.patch, a_patch.block);
-}
-
-MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(PatchID a_localPatch, BlockIndex a_block) const
-{
-    auto globalIndex = m_partition->find(a_localPatch, a_block);
+    auto globalIndex = m_partition->find(a_point, a_block);
     if (globalIndex == numBoxes()) { return *end(); }
     else { return MBIndex(m_partition, globalIndex); }
+    /*
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::find | Error: Layout is not defined");
+    auto patchDomain = m_layouts[a_block].patchDomain();
+    if (!patchDomain.contains(a_point))
+    {
+        return *end();
+    }
+    auto globalIndex = m_partition->find(a_point, a_block);
+    if (globalIndex == numBoxes())
+    {
+        return *end();
+    } else {
+        return MBIndex(m_partition, globalIndex);
+    }
+    */
 }
 
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
@@ -299,25 +309,25 @@ MBIndex MBDisjointBoxLayout::findAdjacentIndex(
 {
     PROTO_ASSERT(a_dir.codim() == 1,
         "MBDisjointBoxLayout::findAdjacentIndex | Error: This function is only well defined for codimension-1 directions");
-    MBPatchID adjacentPatch(a_patch + a_dir, a_block);
+    PatchID adjacentPatch = a_patch + a_dir;
     auto& patchDomain = partition().domain();
     PROTO_ASSERT(patchDomain.getBlock(a_block).box().containsPoint(a_patch),
         "MBDisjointBoxLayout::findAdjacentIndex | Error: Base patch is not inside the patch domain");
     MBIndex adjacentIndex = *this->end();
 
-    if (patchDomain.inInterior(adjacentPatch))
+    if (patchDomain.inInterior(adjacentPatch, a_block))
     {
         // INTERIOR case (normal case)
-        adjacentIndex = find(adjacentPatch);
-    } else if (patchDomain.inBlockBoundary(adjacentPatch))
+        adjacentIndex = find(adjacentPatch, a_block);
+    } else if (patchDomain.inBlockBoundary(adjacentPatch, a_block))
     {
         // BLOCK BOUNDARY case
         BlockIndex adjacentBlock = patchDomain.graph().adjacent(a_block, a_dir);
         PatchID adjacentPatchLocalCoords = 
-            patchDomain.convertPoint(adjacentPatch.patch, a_block, adjacentBlock, PR_CELL);
+            patchDomain.convertPoint(adjacentPatch, a_block, adjacentBlock, PR_CELL);
         adjacentIndex = find(adjacentPatchLocalCoords, adjacentBlock);
     }
-    else if (patchDomain.inDomainBoundary(adjacentPatch))
+    else if (patchDomain.inDomainBoundary(adjacentPatch, a_block))
     {
         // EXTERIOR case (no CF boundary)
     } else {

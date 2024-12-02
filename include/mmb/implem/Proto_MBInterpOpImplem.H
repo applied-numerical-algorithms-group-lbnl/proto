@@ -388,23 +388,22 @@ void MBInterpOp::define(
 #endif
         for (auto dir : Box::Kernel(1))
         {
-            //Point patch_j = patch_i + dir; 
-            MBPatchID patch_j(patch_i + dir, block);
+            Point patch_j = patch_i + dir; 
 #if PR_VERBOSE > 1
             pr_out() << "\t\tDir: " << dir << " | Neighbor: " << patch_j << std::endl;
-            if (patchDomain.inInterior(patch_j))
+            if (patchDomain.inInterior(patch_j, block))
             {
                 pr_out() << "\t\t\tNeighbor is in the interior -> skipping" << std::endl;
             }
-            if (patchDomain.inDomainBoundary(patch_j))
+            if (patchDomain.inDomainBoundary(patch_j, block))
             {
                 pr_out() << "\t\t\tNeighbor is in the domain boundary -> skipping" << std::endl;
             }
 #endif
-            if (patchDomain.inInterior(patch_j)) { continue; }
-            if (patchDomain.inDomainBoundary(patch_j)) { continue; }
+            if (patchDomain.inInterior(patch_j, block)) { continue; }
+            if (patchDomain.inDomainBoundary(patch_j, block)) { continue; }
             Box boundBox = patchBox.adjacent(m_ghost*dir);
-            if (patchDomain.inTriplePoint(patch_j))
+            if (patchDomain.inTriplePoint(patch_j, block))
             {
 #if PR_VERBOSE > 1
                 pr_out() << "\t\t\tNeighbor is inside a triple point region: " << boundBox << std::endl;
@@ -482,7 +481,7 @@ void MBInterpOp::define(
                 }
                 continue;
             }
-            PROTO_ASSERT(patchDomain.inBlockBoundary(patch_j),
+            PROTO_ASSERT(patchDomain.inBlockBoundary(patch_j, block),
                     "MBInterpOp::define | Data corruption.");
             auto bounds = a_map.map().bounds(iter, dir);
 #if PR_VERBOSE > 1
@@ -517,8 +516,8 @@ void MBInterpOp::define(
                         Point d2 = Point::Basis(ii);
                         bool onLoEdge = boundBox.edge(-d2).containsPoint(bi);
                         bool onHiEdge = boundBox.edge( d2).containsPoint(bi);
-                        bool hasLoTriplePoint = patchDomain.inTriplePoint(MBPatchID(patch_j.patch - d2, block));
-                        bool hasHiTriplePoint = patchDomain.inTriplePoint(MBPatchID(patch_j.patch + d2, block));
+                        bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
+                        bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
                         if (onLoEdge && hasLoTriplePoint)
                         {
 #if PR_VERBOSE > 1

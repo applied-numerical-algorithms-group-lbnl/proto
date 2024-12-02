@@ -336,11 +336,11 @@ std::vector<MBPatchID> MBProblemDomain::patches(const std::vector<Point>& a_boxS
     return patchVect;
 }
 
-Point MBProblemDomain::getDirectionFromPatch(MBPatchID a_patch) const
+Point MBProblemDomain::getDirectionFromPatch(Point a_point, BlockIndex a_block) const
 {
-    Box patchDomain = getBlock(a_patch.block).box();
-    Point hiDiff = a_patch.patch - patchDomain.high();
-    Point loDiff = patchDomain.low() - a_patch.patch;
+    Box patchDomain = getBlock(a_block).box();
+    Point hiDiff = a_point - patchDomain.high();
+    Point loDiff = patchDomain.low() - a_point;
     Point dir = Point::Zeros();
     for (int di = 0; di < DIM; di++)
     {
@@ -357,24 +357,32 @@ Point MBProblemDomain::getDirectionFromPatch(MBPatchID a_patch) const
     return dir;
 }
 
-bool MBProblemDomain::inTriplePoint(MBPatchID a_patch) const
+bool MBProblemDomain::inTriplePoint(
+        PatchID     a_point,
+        BlockIndex  a_block) const
 {
-    return graph().isTriplePoint(a_patch.block, getDirectionFromPatch(a_patch));
+    return graph().isTriplePoint(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
-bool MBProblemDomain::inBlockBoundary(MBPatchID a_patch) const
+bool MBProblemDomain::inBlockBoundary(
+        PatchID     a_point,
+        BlockIndex  a_block) const
 {
-    return graph().isBlockBoundary(a_patch.block, getDirectionFromPatch(a_patch));
+    return graph().isBlockBoundary(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
-bool MBProblemDomain::inDomainBoundary(MBPatchID a_patch) const
+bool MBProblemDomain::inDomainBoundary(
+        PatchID     a_point,
+        BlockIndex  a_block) const
 {
-    return graph().isDomainBoundary(a_patch.block, getDirectionFromPatch(a_patch));
+    return graph().isDomainBoundary(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
-bool MBProblemDomain::inInterior(MBPatchID a_patch) const
+bool MBProblemDomain::inInterior(
+        PatchID     a_point,
+        BlockIndex  a_block) const
 {
-    return getBlock(a_patch.block).box().containsPoint(a_patch.patch);
+    return getBlock(a_block).box().containsPoint(a_point);
 }
 
 bool MBProblemDomain::onBlockBoundary(PatchID a_patch, Point a_dir) const

@@ -61,9 +61,7 @@ namespace Proto
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
         inline uint64_t localIndex(uint64_t a_globalIndex, unsigned int a_proc) const;
         inline uint64_t globalIndex(uint64_t a_localIndex, unsigned int a_proc) const;
-        inline uint64_t find(MBPatchID a_patch) const;
         inline uint64_t find(Point a_patch, BlockIndex a_block) const;
-        inline bool contains(MBPatchID a_patch) const;
         inline bool contains(Point a_patch, BlockIndex a_block) const;
         
         inline bool isBlockBoundary(

@@ -129,9 +129,9 @@ void MBBoxPartition::findBoundaries()
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
-            if (m_patchDomain.inTriplePoint(partitionData.first)) { continue; } 
+            if (m_patchDomain.inTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
-            if (m_patchDomain.inInterior(MBPatchID(patch_ji, block_i))) //getBlock(block_i).box().containsPoint(patch_ji))
+            if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {
                 // patch_j is interior to the block
                 continue; 
@@ -240,11 +240,6 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(BlockIndex a
     return m_blockPartitions[a_block];
 }
 
-uint64_t MBBoxPartition::find(MBPatchID a_patch) const
-{
-    return find(a_patch.patch, a_patch.block);
-}
-
 uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
 {
     auto blockDomain = m_patchDomain.getBlock(a_block);
@@ -256,11 +251,6 @@ uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
     // if the box isn't in the partition, return failure
     if (data == m_indexMap.end()) { return numBoxes(); }
     return m_indexMap[patchID];
-}
-
-bool MBBoxPartition::contains(MBPatchID a_patch) const
-{
-    return contains(a_patch.patch, a_patch.block);
 }
 
 bool MBBoxPartition::contains(Point a_patch, BlockIndex a_block) const

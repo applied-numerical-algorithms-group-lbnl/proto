@@ -121,11 +121,11 @@ namespace Proto
         inline std::vector<MBPatchID> patches(Point a_boxSize) const;
         inline std::vector<MBPatchID> patches(const std::vector<Point>& a_boxSizes) const;
 
-        inline Point getDirectionFromPatch(MBPatchID a_patch) const;
-        inline bool inTriplePoint(MBPatchID a_patch) const;
-        inline bool inBlockBoundary(MBPatchID a_patch) const;
-        inline bool inDomainBoundary(MBPatchID a_patch) const;
-        inline bool inInterior(MBPatchID a_patch) const;
+        inline Point getDirectionFromPatch(PatchID a_point, BlockIndex a_block) const;
+        inline bool inTriplePoint(PatchID a_point, BlockIndex a_block) const;
+        inline bool inBlockBoundary(PatchID a_point, BlockIndex a_block) const;
+        inline bool inDomainBoundary(PatchID a_point, BlockIndex a_block) const;
+        inline bool inInterior(PatchID a_point, BlockIndex a_block) const;
         inline bool onBlockBoundary(PatchID a_patch, Point a_dir) const;
         inline bool onDomainBoundary(PatchID a_patch, Point a_dir) const;
 
