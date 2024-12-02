@@ -7,7 +7,25 @@
 
 namespace Proto
 {
-    typedef std::pair<Point, BlockIndex> MBPatchID_t;
+    struct MBPatchID
+    {
+        PatchID patch;
+        BlockIndex block;
+
+        inline MBPatchID(PatchID a_patch, BlockIndex a_block) : patch(a_patch), block(a_block) {}
+        inline MBPatchID(const MBPatchID& a_rhs) : patch(a_rhs.patch), block(a_rhs.block) {}
+        MBPatchID& operator=(const MBPatchID& a_rhs) = default;
+        inline bool operator<(const MBPatchID& a_rhs) const
+        {
+            if (block == a_rhs.block)
+            {
+                return (patch < a_rhs.patch);
+            } else {
+                return (block < a_rhs.block);
+            }
+        }
+        
+    };
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -99,15 +117,17 @@ namespace Proto
         inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void close() const;
         
-        inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
+        inline std::vector<MBPatchID> patches(int a_boxSize) const;
+        inline std::vector<MBPatchID> patches(Point a_boxSize) const;
+        inline std::vector<MBPatchID> patches(const std::vector<Point>& a_boxSizes) const;
 
-        inline Point getDir(Point a_point, BlockIndex a_block) const;
-        inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;
-        inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inInterior(Point a_point, BlockIndex a_block) const;
+        inline Point getDirectionFromPatch(PatchID a_point, BlockIndex a_block) const;
+        inline bool inTriplePoint(PatchID a_point, BlockIndex a_block) const;
+        inline bool inBlockBoundary(PatchID a_point, BlockIndex a_block) const;
+        inline bool inDomainBoundary(PatchID a_point, BlockIndex a_block) const;
+        inline bool inInterior(PatchID a_point, BlockIndex a_block) const;
+        inline bool onBlockBoundary(PatchID a_patch, Point a_dir) const;
+        inline bool onDomainBoundary(PatchID a_patch, Point a_dir) const;
 
         private:
 

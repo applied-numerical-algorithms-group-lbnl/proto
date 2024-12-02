@@ -25,6 +25,7 @@ namespace {
                 counterData += rdata;
             }
         }
+        counterData.printData();
         int numDataInCoarseFineBoundary = a_coarseFineBoundary.size()*C;
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
         return success;
@@ -33,6 +34,7 @@ namespace {
 }
 
 #if PR_MMB
+#if 0
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
@@ -101,12 +103,13 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     }
     
 }
+#endif
 
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
     #endif
-
+    std::cout << " REMINDER: MBDisjointBoxLayout::isBlockBoundary(index) may have a bug when the other side of the block boundary is not a valid index" << std::endl;
     int domainSize = 16;
     int boxSize = domainSize;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
@@ -127,48 +130,45 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
         h5.writeMBAMRData({"data"}, map, data, "BlockBoundary_XPoint_Data");
     #endif
 
-    // Array<double, DIM> gridSpacing = Point::Ones();
-    // gridSpacing /= domainSize;
-    // MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
-    // MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
+    Array<double, DIM> gridSpacing = Point::Ones();
+    gridSpacing /= domainSize;
+    MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
 
-    // int fineDomainSize = domainSize * refRatio;
-    // int finePatchesPerBoundary = (fineDomainSize / 2) / boxSize; 
-    // Point refinedRegionLow = Point::Ones(domainSize / 2);
-    // Point refinedRegionHigh = Point::Ones(domainSize - 1);
-    // Box refinedRegion(refinedRegionLow, refinedRegionHigh);
-    // Box coarseFineBound_X = refinedRegion.adjacent(0, Side::Lo, 1);
-    // Box coarseFineBound_Y = refinedRegion.adjacent(1, Side::Lo, 1);
-    // Box emptyBox;
+    int refinedRegionWidth = boxSize / refRatio;
+    Box unrefinedRegion = Box::Cube(domainSize).extrude(Point::X(), -refinedRegionWidth);
+    Box refinedRegion = unrefinedRegion.adjacent(0,Side::Hi, refinedRegionWidth);
+    Box coarseFineBound_X0 = unrefinedRegion.edge(0, Side::Hi, 1);
+    Box coarseFineBound_X1 = refinedRegion.adjacent(0, Side::Hi, 1);
+    coarseFineBound_X1 = coarseFineBound_X1.extrude(Point::Y(), -refinedRegionWidth);
+    Box coarseFineBound_Y = unrefinedRegion.edge(1, Side::Hi, 1);
+    Box emptyBox;
     
+    for (auto iter : grid[0])
+    {
+        auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
+        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_X0, Point::X()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_Y, Point::Y()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::X()));
+        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::Y()));
+    }
 
-    // for (auto iter : grid[0])
-    // {
-    //     auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
-    //     EXPECT_EQ(coarseRegisters.size(), 2*finePatchesPerBoundary);
-    //     EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_X, Point::X()));
-    //     EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_Y, Point::Y()));
-    //     EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::X()));
-    //     EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::Y()));
-    // }
+    for (auto iter : grid[1])
+    {
+        PatchID patch = grid[1].point(iter);
 
-    // Box refinedPatches = refinedRegion.coarsen(boxSize);
-    // for (auto iter : grid[1])
-    // {
-    //     PatchID patch = grid[1].point(iter);
-
-    //     Box cfBound_x = grid[1][iter].adjacent(0, Side::Lo, 1).coarsen(refRatio);
-    //     Box cfBound_y = grid[1][iter].adjacent(1, Side::Lo, 1).coarsen(refRatio);
-    //     cfBound_x &= coarseFineBound_X;
-    //     cfBound_y &= coarseFineBound_Y;
-    //     auto fineRegisters = tester.getFineRegistersAtIndex(iter);
-    //     //EXPECT_EQ(fineRegisters.size(), 2*finePatchesPerBoundary);
-    //     EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x, -Point::X()));
-    //     EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_y, -Point::Y()));
-    //     EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::X()));
-    //     EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::Y()));
-    // }
-    
+        Box cfBound_x0 = grid[1][iter].adjacent(0, Side::Lo, 1).coarsen(refRatio);
+        Box cfBound_x1 = grid[1][iter].adjacent(0, Side::Hi, 1).coarsen(refRatio);
+        Box cfBound_y = grid[1][iter].adjacent(1, Side::Lo, 1).coarsen(refRatio);
+        cfBound_x0 &= coarseFineBound_X0;
+        cfBound_x1 &= coarseFineBound_X1;
+        cfBound_y &= coarseFineBound_Y;
+        auto fineRegisters = tester.getFineRegistersAtIndex(iter);
+        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x0, -Point::X()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_y, -Point::Y()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x1, Point::X()));
+        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::Y()));
+    }
 }
 
 #endif

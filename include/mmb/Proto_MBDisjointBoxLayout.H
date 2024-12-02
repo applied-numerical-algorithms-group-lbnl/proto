@@ -28,7 +28,7 @@ namespace Proto
         
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t>         a_patches,
+                std::vector<MBPatchID>         a_patches,
                 std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
@@ -41,7 +41,7 @@ namespace Proto
         
         inline void define(
                 MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t>         a_patches,
+                std::vector<MBPatchID>         a_patches,
                 std::vector<Point>               a_boxSizes);
 
         inline void define(
@@ -55,7 +55,7 @@ namespace Proto
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
-        inline std::vector<MBPatchID_t> patches() const;
+        inline std::vector<MBPatchID> patches() const;
         inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
         inline Box operator[](const MBIndex& a_index) const;
         inline MBIterator begin() const;
@@ -70,6 +70,7 @@ namespace Proto
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
         inline MBIndex find(Point a_point, BlockIndex a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
+        inline const MBProblemDomain& patchDomain() const { return partition().domain(); }
         inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;

@@ -26,12 +26,12 @@ TEST(MBAMRData, Construction) {
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();
-        std::vector<MBPatchID_t> patches;
+        std::vector<MBPatchID> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
         Point patch = patchDomain.high();
         for (int bi = 0; bi < domain.size(); bi++)
         {
-            patches.push_back(MBPatchID_t(patch, bi));
+            patches.push_back(MBPatchID(patch, bi));
         }
         grid[li].define(domain, patches, boxSizeVect);
     }

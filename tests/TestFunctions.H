@@ -791,7 +791,7 @@ MBAMRGrid telescopingXPointGrid(
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();
-        std::vector<MBPatchID_t> patches;
+        std::vector<MBPatchID> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
         Point subDomainHigh = patchDomain.high();
         Point subDomainLow = (subDomainHigh + Point::Ones()) / 2; 
@@ -800,7 +800,7 @@ MBAMRGrid telescopingXPointGrid(
         {
             for (auto patch : patchSubDomain)
             {
-                patches.push_back(MBPatchID_t(patch, bi));
+                patches.push_back(MBPatchID(patch, bi));
             }
         }
         grid[li].define(domain, patches, boxSizeVect);
@@ -824,14 +824,14 @@ MBAMRGrid refinedBlockBoundaryXPointGrid(
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();
-        std::vector<MBPatchID_t> patches;
+        std::vector<MBPatchID> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
         Box refinedDomain = patchDomain.edge(Point::X());
         for (int bi = 0; bi < domain.size(); bi++)
         {
             for (auto patch : refinedDomain)
             {
-                patches.push_back(MBPatchID_t(patch, bi));
+                patches.push_back(MBPatchID(patch, bi));
             }
         }
         grid[li].define(domain, patches, boxSizeVect);

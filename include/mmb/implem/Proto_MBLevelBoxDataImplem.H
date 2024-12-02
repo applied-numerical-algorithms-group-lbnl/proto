@@ -525,7 +525,7 @@ MBLevelBoxData<T, C, MEM, CTR>::offset(unsigned int a_proc) const
         {
             if (pdata.second == proc)
             {
-                auto block = pdata.first.second;
+                auto block = pdata.first.block;
                 ret += getBlock(block).patchSize();
             }
         }

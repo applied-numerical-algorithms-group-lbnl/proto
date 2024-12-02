@@ -48,7 +48,7 @@ TEST(HDF5, ReadMBLevel)
     int boxSize = 2;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPatchID> patches;
     std::vector<Point> boxSizes;
     for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
     {
@@ -56,7 +56,7 @@ TEST(HDF5, ReadMBLevel)
         for (Point pi : Box::Cube(domainSize / boxSize))
         {
             if (pi == Point::Zeros()) { continue; }
-            patches.push_back(std::make_pair(pi, bi));
+            patches.push_back(MBPatchID(pi, bi));
         }
     }
 

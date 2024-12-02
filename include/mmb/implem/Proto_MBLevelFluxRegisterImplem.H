@@ -524,27 +524,46 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
 {
     PatchID finePatch = m_fineLayout.point(a_fineIndex);
     BlockIndex block = m_fineLayout.block(a_fineIndex);
+    std::cout << "\nbase patch: " << finePatch << std::endl;
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        //MBIndex fineIndexAdj = findAdjacentFinePatchIndex(a_fineIndex, finePatch, dir);
-        MBIndex fineIndexAdj = m_fineLayout.findAdjacentIndex(finePatch, block, dir);
-        addFineRegisterFromAdjacent(finePatch, a_fineIndex, dir, fineIndexAdj);
+        bool adj = adjacentInProblemDomain(a_fineIndex, dir);
+        std::cout << "\tpatch: " << finePatch + dir << " | valid?: " << adj << std::endl;
+        if (adjacentInProblemDomain(a_fineIndex, dir))
+        {
+            addFineRegisterFromAdjacent(a_fineIndex, dir);
+        }
     }
 }
-template<typename T, unsigned int C, MemType MEM>
 
-void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
-    PatchID a_finePatch,
+template<typename T, unsigned int C, MemType MEM>
+bool MBLevelFluxRegister<T,C,MEM>::adjacentInProblemDomain(
     MBIndex a_fineIndex,
-    Point a_dir,
-    MBIndex a_fineIndexAdj)
+    Point a_dir) const
+{
+    PatchID finePatch = m_fineLayout.point(a_fineIndex);
+    BlockIndex block = m_fineLayout.block(a_fineIndex);
+    Box patchDomain = m_fineLayout.patchDomain().getBlock(block).box();
+    PatchID adjFinePatch = finePatch + a_dir;
+
+    if (patchDomain.containsPoint(adjFinePatch)) { return true; }
+    else if (m_fineLayout.isBlockBoundary(a_fineIndex, a_dir)) { return true; }
+    else { return false; }
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
+    MBIndex a_fineIndex,
+    Point a_dir)
 {
     int coord = a_dir.firstNonZeroIndex();
     int side = (a_dir[coord] < 0) ? 0 : 1;
+    BlockIndex block = m_fineLayout.block(a_fineIndex);
 
-    if (a_fineIndexAdj == *m_fineLayout.end())
+    Point finePatch = m_fineLayout.point(a_fineIndex);
+    MBIndex adjFineIndex = m_fineLayout.findAdjacentIndex(finePatch, block, a_dir);
+    if (adjFineIndex == *m_fineLayout.end())
     {
-        BlockIndex block = m_fineLayout.block(a_fineIndex);
         Point refRatio = m_refRatios[block];
         Box fineBox = m_fineLayout[a_fineIndex];
         Box coarseBox = fineBox.coarsen(refRatio);
@@ -555,7 +574,6 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
         int index = m_fineRegisters[a_fineIndex].size();
         m_fineRegisters[a_fineIndex].push_back(reg);
         m_fineIndices[a_fineIndex][coord][side] = index;
-
     }
     else
     {

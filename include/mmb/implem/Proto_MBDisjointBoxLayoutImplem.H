@@ -15,7 +15,7 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
         MBProblemDomain&  a_domain,
-        std::vector<MBPatchID_t>          a_patches,
+        std::vector<MBPatchID>          a_patches,
         std::vector<Point>                a_boxSizes)
 {
     define(a_domain, a_patches, a_boxSizes);
@@ -35,13 +35,13 @@ void MBDisjointBoxLayout::define(
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
     
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPatchID> patches;
     for (BlockIndex bi = 0; bi < a_domain.numBlocks(); bi++)
     {
         Box patchBox = a_domain.getBlock(bi).box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchBox)
         {
-            patches.push_back(MBPatchID_t(pi, bi));
+            patches.push_back(MBPatchID(pi, bi));
         }
     }
     define(a_domain, patches, a_boxSizes);
@@ -49,7 +49,7 @@ void MBDisjointBoxLayout::define(
 
 void MBDisjointBoxLayout::define(
         MBProblemDomain&            a_domain,
-        std::vector<MBPatchID_t>    a_patches,
+        std::vector<MBPatchID>    a_patches,
         std::vector<Point>          a_boxSizes)
 {
     a_domain.close();
@@ -119,10 +119,10 @@ unsigned int MBDisjointBoxLayout::numProcs() const
     return m_partition->numProcs();
 }
 
-std::vector<MBPatchID_t> MBDisjointBoxLayout::patches() const
+std::vector<MBPatchID> MBDisjointBoxLayout::patches() const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::patches | Error: Layout is not defined");
-    std::vector<MBPatchID_t> patchList;
+    std::vector<MBPatchID> patchList;
     for (auto item : m_partition->partition())
     {
         patchList.push_back(item.first);
@@ -165,8 +165,8 @@ Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::point | Error: Index not compatible with layout");
     auto data = m_partition->partition()[a_index.global()];
-    auto block = data.first.second;
-    auto patch = data.first.first;
+    auto block = data.first.block;
+    auto patch = data.first.patch;
     return patch;
 }
 
@@ -176,8 +176,8 @@ Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::box | Error: Index not compatible with layout");
     auto& data = m_partition->partition()[a_index.global()];
-    auto block = data.first.second;
-    auto patch = data.first.first;
+    auto block = data.first.block;
+    auto patch = data.first.patch;
     auto boxSize = m_layouts[block].boxSize();
     return Box(patch, patch).refine(boxSize);
 }
@@ -202,7 +202,7 @@ unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::block | Error: Index not compatible with layout");
     auto& data = m_partition->partition()[a_index.global()];
-    auto block = data.first.second;
+    auto block = data.first.block;
     return block;
 }
 
@@ -485,8 +485,8 @@ void MBDisjointBoxLayout::print() const
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)
 {
     auto& partition = a_di.partition().partition();;
-    a_os << "block: " << partition[a_di.global()].first.second;
-    a_os << " | patch: " << partition[a_di.global()].first.first;
+    a_os << "block: " << partition[a_di.global()].first.block;
+    a_os << " | patch: " << partition[a_di.global()].first.patch;
     a_os << " | localIndex: " << a_di.local();
     a_os << " | globalIndex: " << a_di.global() << std::endl;
     return a_os;

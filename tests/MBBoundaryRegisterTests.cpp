@@ -14,14 +14,14 @@ TEST(MBBoundaryRegister, Construction) {
     bool bothSides = true;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPatchID> patches;
     for (int bi = 0; bi < numBlocks; bi++)
     {
         boxSizeVect.push_back(Point::Ones(boxSize));
         for (auto pi : Box::Cube(domainSize / boxSize))
         {
             if (pi == Point::X()*(domainSize/boxSize - 1)) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPatchID(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
@@ -166,14 +166,14 @@ TEST(MBBoundaryRegister, Exchange_XPoint) {
     bool bothSides = true;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPatchID> patches;
     for (int bi = 0; bi < numBlocks; bi++)
     {
         boxSizeVect.push_back(Point::Ones(boxSize));
         for (auto pi : Box::Cube(domainSize / boxSize))
         {
             if (pi == Point::X()*(domainSize/boxSize - 1)) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPatchID(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);

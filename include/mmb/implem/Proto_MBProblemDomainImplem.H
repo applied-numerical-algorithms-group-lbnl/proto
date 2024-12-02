@@ -307,21 +307,21 @@ void MBProblemDomain::close() const
     m_closed = true;
 }
 
-std::vector<MBPatchID_t> MBProblemDomain::patches(int a_boxSize) const
+std::vector<MBPatchID> MBProblemDomain::patches(int a_boxSize) const
 {
     return patches(Point::Ones(a_boxSize));
 }
-std::vector<MBPatchID_t> MBProblemDomain::patches(Point a_boxSize) const
+std::vector<MBPatchID> MBProblemDomain::patches(Point a_boxSize) const
 {
     std::vector<Point> boxSizes(numBlocks(), a_boxSize);
     return patches(boxSizes);
 }
 
-std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+std::vector<MBPatchID> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
 {
     PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
             "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
-    std::vector<MBPatchID_t> patchVect;
+    std::vector<MBPatchID> patchVect;
 
     for (int bi = 0; bi < numBlocks(); bi++)
     {
@@ -330,13 +330,13 @@ std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_bo
         Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchDomain)
         {
-            patchVect.push_back(MBPatchID_t(pi, bi));
+            patchVect.push_back(MBPatchID(pi, bi));
         }
     }
     return patchVect;
 }
 
-Point MBProblemDomain::getDir(Point a_point, BlockIndex a_block) const
+Point MBProblemDomain::getDirectionFromPatch(Point a_point, BlockIndex a_block) const
 {
     Box patchDomain = getBlock(a_block).box();
     Point hiDiff = a_point - patchDomain.high();
@@ -358,29 +358,35 @@ Point MBProblemDomain::getDir(Point a_point, BlockIndex a_block) const
 }
 
 bool MBProblemDomain::inTriplePoint(
-        Point       a_point,
+        PatchID     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isTriplePoint(a_block, getDir(a_point, a_block));
+    return graph().isTriplePoint(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
 bool MBProblemDomain::inBlockBoundary(
-        Point       a_point,
+        PatchID     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isBlockBoundary(a_block, getDir(a_point, a_block));
+    return graph().isBlockBoundary(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
 bool MBProblemDomain::inDomainBoundary(
-        Point       a_point,
+        PatchID     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isDomainBoundary(a_block, getDir(a_point, a_block));
+    return graph().isDomainBoundary(a_block, getDirectionFromPatch(a_point, a_block));
 }
 
 bool MBProblemDomain::inInterior(
-        Point       a_point,
+        PatchID     a_point,
         BlockIndex  a_block) const
 {
     return getBlock(a_block).box().containsPoint(a_point);
 }
+
+bool MBProblemDomain::onBlockBoundary(PatchID a_patch, Point a_dir) const
+{}
+
+bool MBProblemDomain::onDomainBoundary(PatchID a_patch, Point a_dir) const
+{}
