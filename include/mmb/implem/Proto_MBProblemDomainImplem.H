@@ -336,7 +336,7 @@ std::vector<MBPatchID> MBProblemDomain::patches(const std::vector<Point>& a_boxS
     return patchVect;
 }
 
-Point MBProblemDomain::getDirectionFromPatch(Point a_point, BlockIndex a_block) const
+Point MBProblemDomain::getDirectionFromPoint(Point a_point, BlockIndex a_block) const
 {
     Box patchDomain = getBlock(a_block).box();
     Point hiDiff = a_point - patchDomain.high();
@@ -358,35 +358,35 @@ Point MBProblemDomain::getDirectionFromPatch(Point a_point, BlockIndex a_block) 
 }
 
 bool MBProblemDomain::inTriplePoint(
-        PatchID     a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isTriplePoint(a_block, getDirectionFromPatch(a_point, a_block));
+    return graph().isTriplePoint(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inBlockBoundary(
-        PatchID     a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isBlockBoundary(a_block, getDirectionFromPatch(a_point, a_block));
+    return graph().isBlockBoundary(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inDomainBoundary(
-        PatchID     a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isDomainBoundary(a_block, getDirectionFromPatch(a_point, a_block));
+    return graph().isDomainBoundary(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inInterior(
-        PatchID     a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
     return getBlock(a_block).box().containsPoint(a_point);
 }
 
-bool MBProblemDomain::onBlockBoundary(PatchID a_patch, Point a_dir) const
+bool MBProblemDomain::onBlockBoundary(Point a_point, Point a_dir) const
 {}
 
-bool MBProblemDomain::onDomainBoundary(PatchID a_patch, Point a_dir) const
+bool MBProblemDomain::onDomainBoundary(Point a_point, Point a_dir) const
 {}
