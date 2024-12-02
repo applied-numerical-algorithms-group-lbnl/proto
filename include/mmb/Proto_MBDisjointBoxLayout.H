@@ -68,7 +68,8 @@ namespace Proto
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
-        inline MBIndex find(Point a_point, BlockIndex a_block) const;
+        inline MBIndex find(MBPatchID a_patch) const;
+        inline MBIndex find(PatchID a_localPatch, BlockIndex a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
         inline const MBProblemDomain& patchDomain() const { return partition().domain(); }
         inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
