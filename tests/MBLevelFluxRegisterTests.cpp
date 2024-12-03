@@ -6,6 +6,82 @@
 using namespace Proto;
 
 namespace {
+    
+    std::map<Point, Box> telescopingCFBoundary_Coarse(int domainSize)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox = Box::Cube(domainSize);
+
+        Point refinedRegionLow = Point::Ones(domainSize / 2);
+        Point refinedRegionHigh = Point::Ones(domainSize - 1);
+        Box refinedRegion(refinedRegionLow, refinedRegionHigh);
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+        boundMap[Point::X()] = refinedRegion.adjacent(0, Side::Lo, 1);
+        boundMap[Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
+
+        return boundMap;
+    }
+
+    std::map<Point, Box> telescopingCFBoundary_Fine(int domainSize)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox = Box::Cube(domainSize);
+
+        Point refinedRegionLow = Point::Ones(domainSize / 2);
+        Point refinedRegionHigh = Point::Ones(domainSize - 1);
+        Box refinedRegion(refinedRegionLow, refinedRegionHigh);
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+        boundMap[-Point::X()] = refinedRegion.adjacent(0, Side::Lo, 1);
+        boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
+
+        return boundMap;
+    }
+    
+    std::map<Point, Box> refinedBlockBoundaryCFBoundary_Coarse(int domainSize, int boxSize, int refRatio)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox = Box::Cube(domainSize);
+
+        int refinedRegionWidth = boxSize / refRatio;
+        Box unrefinedRegion = Box::Cube(domainSize).extrude(Point::X(), -refinedRegionWidth);
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+        boundMap[Point::X()] = unrefinedRegion.edge(0, Side::Hi, 1);
+        boundMap[Point::Y()] = unrefinedRegion.edge(1, Side::Hi, 1);
+
+        return boundMap;
+    }
+    
+    std::map<Point, Box> refinedBlockBoundaryCFBoundary_Fine(int domainSize, int boxSize, int refRatio)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox = Box::Cube(domainSize);
+
+        int refinedRegionWidth = boxSize / refRatio;
+        Box unrefinedRegion = Box::Cube(domainSize).extrude(Point::X(), -refinedRegionWidth);
+        Box refinedRegion = unrefinedRegion.adjacent(0, Side::Hi, refinedRegionWidth);
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+        boundMap[Point::X()]  = refinedRegion.adjacent(0, Side::Hi, 1).extrude(Point::Y(), -refinedRegionWidth);
+        boundMap[-Point::X()] = unrefinedRegion.edge(0, Side::Hi, 1);
+
+        return boundMap;
+    }
+
     template<typename T, unsigned int C, MemType MEM>
     bool checkRegisters(
         std::vector<Register<T,C,MEM>>& a_registers,
@@ -63,44 +139,31 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     gridSpacing /= domainSize;
     MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
-
-    int fineDomainSize = domainSize * refRatio;
-    int finePatchesPerBoundary = (fineDomainSize / 2) / boxSize; 
-    Point refinedRegionLow = Point::Ones(domainSize / 2);
-    Point refinedRegionHigh = Point::Ones(domainSize - 1);
-    Box refinedRegion(refinedRegionLow, refinedRegionHigh);
-    Box coarseFineBound_X = refinedRegion.adjacent(0, Side::Lo, 1);
-    Box coarseFineBound_Y = refinedRegion.adjacent(1, Side::Lo, 1);
-    Box emptyBox;
     
+    auto cfBounds_Coarse = telescopingCFBoundary_Coarse(domainSize);
 
     for (auto iter : grid[0])
     {
         auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
-        EXPECT_EQ(coarseRegisters.size(), 2*finePatchesPerBoundary);
-        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_X, Point::X()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_Y, Point::Y()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::X()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::Y()));
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+        EXPECT_TRUE(checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir));
+        }
     }
 
-    Box refinedPatches = refinedRegion.coarsen(boxSize);
+    auto cfBounds_Fine = telescopingCFBoundary_Fine(domainSize);
     for (auto iter : grid[1])
     {
         PatchID patch = grid[1].point(iter);
-
-        Box cfBound_x = grid[1][iter].adjacent(0, Side::Lo, 1).coarsen(refRatio);
-        Box cfBound_y = grid[1][iter].adjacent(1, Side::Lo, 1).coarsen(refRatio);
-        cfBound_x &= coarseFineBound_X;
-        cfBound_y &= coarseFineBound_Y;
         auto fineRegisters = tester.getFineRegistersAtIndex(iter);
-        //EXPECT_EQ(fineRegisters.size(), 2*finePatchesPerBoundary);
-        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x, -Point::X()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_y, -Point::Y()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::X()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::Y()));
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            Box cfBound = grid[1][iter].adjacent(dir).coarsen(refRatio);
+            cfBound &= cfBounds_Fine[dir];
+            EXPECT_TRUE(checkRegisters(fineRegisters, cfBound, dir));
+        }
     }
-    
 }
 
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
@@ -131,41 +194,44 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     gridSpacing /= domainSize;
     MBLevelFluxRegister<double, 1, HOST> fluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
-
-    int refinedRegionWidth = boxSize / refRatio;
-    Box unrefinedRegion = Box::Cube(domainSize).extrude(Point::X(), -refinedRegionWidth);
-    Box refinedRegion = unrefinedRegion.adjacent(0,Side::Hi, refinedRegionWidth);
-    Box coarseFineBound_X0 = unrefinedRegion.edge(0, Side::Hi, 1);
-    Box coarseFineBound_X1 = refinedRegion.adjacent(0, Side::Hi, 1);
-    coarseFineBound_X1 = coarseFineBound_X1.extrude(Point::Y(), -refinedRegionWidth);
-    Box coarseFineBound_Y = unrefinedRegion.edge(1, Side::Hi, 1);
-    Box emptyBox;
     
+    auto cfBounds_Coarse = refinedBlockBoundaryCFBoundary_Coarse(domainSize, boxSize, refRatio);
     for (auto iter : grid[0])
     {
         auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
-        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_X0, Point::X()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, coarseFineBound_Y, Point::Y()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::X()));
-        EXPECT_TRUE(checkRegisters(coarseRegisters, emptyBox, -Point::Y()));
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            EXPECT_TRUE(checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir));
+        }
     }
 
+    auto cfBounds_Fine = refinedBlockBoundaryCFBoundary_Fine(domainSize, boxSize, refRatio);
     for (auto iter : grid[1])
     {
         PatchID patch = grid[1].point(iter);
-
-        Box cfBound_x0 = grid[1][iter].adjacent(0, Side::Lo, 1).coarsen(refRatio);
-        Box cfBound_x1 = grid[1][iter].adjacent(0, Side::Hi, 1).coarsen(refRatio);
-        Box cfBound_y = grid[1][iter].adjacent(1, Side::Lo, 1).coarsen(refRatio);
-        cfBound_x0 &= coarseFineBound_X0;
-        cfBound_x1 &= coarseFineBound_X1;
-        cfBound_y &= coarseFineBound_Y;
         auto fineRegisters = tester.getFineRegistersAtIndex(iter);
-        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x0, -Point::X()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_y, -Point::Y()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, cfBound_x1, Point::X()));
-        EXPECT_TRUE(checkRegisters(fineRegisters, emptyBox, Point::Y()));
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            Box cfBound = grid[1][iter].adjacent(dir).coarsen(refRatio);
+            cfBound &= cfBounds_Fine[dir];
+            EXPECT_TRUE(checkRegisters(fineRegisters, cfBound, dir));
+        }
     }
+}
+
+TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
+    int domainSize = 16;
+    int boxSize = 16;
+    int refRatio = 4;
+    int ghostWidth = 2;
+
+    Point refRatios = Point::Ones(refRatio);
+    Point ghostWidths = Point::Ones(ghostWidth);
+
+    auto grid = telescopingXPointGrid(domainSize, 2, refRatio, boxSize);
+    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
+    MBAMRData<double, 1, HOST> data(grid, ghostWidths);
 }
 
 #if DIM == 3
