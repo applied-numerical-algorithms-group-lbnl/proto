@@ -113,9 +113,9 @@ namespace Proto
          */
         void incrementCoarseRegister(
                 const BoxData<T,C,MEM>& a_flux,
-                const MBIndex& a_di,
-                const T& a_weight,
-                unsigned int a_dir);
+                const MBIndex& a_index,
+                int a_dir,
+                const T& a_weight = 1.0);
 
         /// Increment Fine
         /**
@@ -123,9 +123,9 @@ namespace Proto
           Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
         void incrementFineRegister(const BoxData<T,C,MEM>& a_flux,
-                const MBIndex& a_di,
-                const T& a_weight,
-                unsigned int a_dir); 
+                const MBIndex& a_index,
+                int a_dir,
+                const T& a_weight = 1.0); 
 
         /// Reflux
         /**
@@ -147,6 +147,7 @@ namespace Proto
         void defineCoarse();
         void addCoarseRegisters(PatchID a_finePatch, MBIndex a_coarseIndex); 
         void addFineRegisters(MBIndex a_fineIndex);
+        void initFineRegisterIndices();
         bool adjacentInProblemDomain(MBIndex a_fineIndex, Point a_dir) const;
         void addCoarseRegisterFromAdjacent(PatchID a_finePatch, MBIndex a_coarseIndex, Point a_dir, MBIndex a_fineIndexAdj);
         void addFineRegisterFromAdjacent(MBIndex a_fineIndex, Point a_dir);

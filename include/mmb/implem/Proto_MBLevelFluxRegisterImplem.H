@@ -89,91 +89,9 @@ template<typename T, unsigned int C, MemType MEM>
 void MBFluxRegisterCopier<T,C,MEM>::buildMotionPlans (MBFluxRegisterCopierOp<T, C, MEM >& a_op)
 {
     auto & fluxRegister = *(a_op.m_register);
-    // auto & fineLayout = lfr.m_fineLayout;
-    // auto & crseLayout = lfr.m_crseLayout;
-    // auto & crseRegisters = lfr.m_crseRegisters;
-    // auto & crseIncrement = lfr.m_crseIncrement;
-    // auto & fineRegisters = lfr.m_fineRegisters;
-    // auto & fineIndices = lfr.m_fineIndices;
 
     addCoarseMotionItems(fluxRegister);
     addFineMotionItems(fluxRegister);
-    // for (auto citer : crseLayout)
-    // {
-    //     auto block = crseLayout.block(citer);
-    //     auto & refRatio = lfr.m_refRatios[block];
-    //     auto& localRegisters = crseRegisters[citer];
-    //     for (int k = 0; k < localRegisters.size(); k++)
-    //     {
-    //         // Find the index of the fineRegister source.
-    //         // The index is associated with the fine patch contributing the averaged flux
-    //         auto& reg     = localRegisters[k];
-    //         Box   destBox = reg.m_data->box();
-    //         auto  side    = reg.m_side;
-    //         int   dir     = reg.m_dir;
-    //         Point finePatchPoint = 
-    //             destBox.low()*refRatio/fineLayout.boxSize(block) + Point::Basis(dir,side);
-    //         auto fineIndex = fineLayout.find(finePatchPoint, block);
-            
-    //         PROTO_ASSERT(fineIndex != *fineLayout.end(),
-    //             "MBFluxRegisterCopier::buildMotionPlans | Error:\
-    //             Could not find fine register index.");
-            
-    //         // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
-    //         Box cfBox  = fineLayout.box(fineIndex).coarsen(refRatio);
-    //         Box srcBox = cfBox.adjacent(dir, flip(side), 1);
-            
-    //         // Boxes for the fine registers are defined relative to the fine patch
-    //         // coordinates, even if the register Boxes are periodic images outside the
-    //         // ProblemDomain Box.
-    //         MBMotionItem toMotionItem(fineIndex, citer, srcBox, destBox);
-    //         auto fineID = fineLayout.procID(fineIndex);
-    //         if (fineID == procID())
-    //         { 
-    //             this->m_localMotionPlan.push_back(toMotionItem);
-    //         }
-    //         else
-    //         {
-    //             toMotionItem.procID = fineID;
-    //             this->m_toMotionPlan.push_back(toMotionItem);
-    //         }
-    //     } // for each local coarse register
-    // } // end for coarse patch
-
-    // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
-    // int destProcID = procID();
-    // for (auto fiter : fineLayout.begin())
-    // {
-    //     auto block = fineLayout.block(fiter);
-    //     for (int dir = 0; dir < DIM; dir++)
-    //     {
-    //         SideIterator siter;
-    //         for (siter.begin(); siter.ok(); ++siter)
-    //         {
-    //             int k = fineIndices[fiter][dir][*siter];
-    //             if (k >= 0) //otherwise there is no fine register for this (dir, side)
-    //             {
-    //               Box srcBox = fineRegisters[fiter][k].m_data->box();
-    //               Point crsePatchPoint = srcBox.low()/crseLayout.boxSize(block);
-                    
-    //                 auto crseIndex  = crseLayout.find(crsePatchPoint, block);
-    //                 int  crseProcID = crseLayout.procID(crseIndex);
-    //                 //Automatically defines dstBox to be the correct periodic image. NO IT DOESN'T.
-    //                 //Box dstBox = crseLayout.domain() & srcBox;
-    //                 //dstBox = crseLayout.domain().image(dstBox); 
-                    
-    //                 // TODO: consider periodic
-    //                 Box dstBox = srcBox;
-    //                 if (crseProcID != procID())
-    //                 {
-    //                     MBMotionItem fromMotionItem(fiter, crseIndex, srcBox, dstBox);
-    //                     fromMotionItem.procID = crseProcID;
-    //                     this->m_fromMotionPlan.push_back(fromMotionItem);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }     
     this->sort();
 }
 
@@ -399,7 +317,6 @@ void MBLevelFluxRegister<T,C,MEM>::clearInternalData ()
     m_crseIndices.resize(numCrsePatches);
 }
 
-
 template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::defineCoarse ()
 {
@@ -512,9 +429,23 @@ void MBLevelFluxRegister<T,C,MEM>::defineFine ()
     int numFinePatches = m_fineLayout.localSize();
     m_fineRegisters.resize(numFinePatches);
     m_fineIndices.resize(numFinePatches);
+    initFineRegisterIndices();
     for (auto fiter : m_fineLayout)
     {
         addFineRegisters(fiter);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBLevelFluxRegister<T,C,MEM>::initFineRegisterIndices ()
+{
+    for (auto& fineIndexArray : m_fineIndices)
+    {
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            fineIndexArray[dd][(int)Side::Lo] = -1;
+            fineIndexArray[dd][(int)Side::Hi] = -1;
+        }
     }
 }
 
@@ -525,7 +456,6 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
     BlockIndex block = m_fineLayout.block(a_fineIndex);
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        bool adj = adjacentInProblemDomain(a_fineIndex, dir);
         if (adjacentInProblemDomain(a_fineIndex, dir))
         {
             addFineRegisterFromAdjacent(a_fineIndex, dir);
@@ -568,13 +498,10 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
 
         shared_ptr<BoxData<T, C, MEM>> temp(new BoxData<T, C, MEM>(registerBox));
         Register<T, C, MEM> reg(temp, a_dir);
+
         int index = m_fineRegisters[a_fineIndex].size();
         m_fineRegisters[a_fineIndex].push_back(reg);
         m_fineIndices[a_fineIndex][coord][side] = index;
-    }
-    else
-    {
-        m_fineIndices[a_fineIndex][coord][side] = -1;
     }
 }
 
@@ -610,13 +537,18 @@ template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::incrementCoarseRegister (
         const BoxData<T,C,MEM>& a_flux,
         const MBIndex& a_crseIndex,
-        const T& a_weight,
-        unsigned int a_dir)
+        int a_dir,
+        const T& a_weight)
 {
+    PROTO_ASSERT(m_crseLayout.compatible(a_crseIndex),
+        "MBLevelFluxRegister::incrementCoarseRegister | Error: Incompatible Data Index");
+    BlockIndex block = m_crseLayout.block(a_crseIndex);
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    T weight = a_weight / m_dxCrse[a_dir];
+    T weight = a_weight / m_dxCrse[block][a_dir];
+
     Stencil<T> scaleHigh = weight*Shift::Basis(a_dir, +1);
     Stencil<T> scaleLow = -weight*Shift::Zeros();
+
     for (int k = 0; k < crseRegisters.size(); k++)
     {   
         auto& reg = crseRegisters[k];
@@ -640,11 +572,15 @@ template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
         const BoxData<T, C , MEM>& a_flux,
         const MBIndex& a_fineIndex,
-        const T& a_weight,
-        unsigned int a_dir)
+        int a_dir,
+        const T& a_weight)
 {
+    PROTO_ASSERT(m_fineLayout.compatible(a_fineIndex),
+        "MBLevelFluxRegister::incrementCoarseRegister | Error: Incompatible Data Index");
+    BlockIndex block = m_fineLayout.block(a_fineIndex);
+
     auto & fineRegister = m_fineRegisters[a_fineIndex];
-    T weight = a_weight / m_dxCrse[a_dir];
+    T weight = a_weight / m_dxCrse[block][a_dir];
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];
@@ -652,7 +588,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
         {
             auto& data = reg.m_data;
             auto  side = reg.m_side;
-            (*data) += m_avgFlux[a_dir][side](a_flux, weight);
+            (*data) += m_avgFlux[block][a_dir][side](a_flux, weight);
         }
     }
 }
