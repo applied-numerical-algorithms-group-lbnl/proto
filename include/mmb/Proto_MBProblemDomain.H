@@ -126,8 +126,10 @@ namespace Proto
         inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
         inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
         inline bool inInterior(Point a_point, BlockIndex a_block) const;
-        inline bool onBlockBoundary(Point a_patch, Point a_dir) const;
-        inline bool onDomainBoundary(Point a_patch, Point a_dir) const;
+        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block) const;
+        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
+        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block) const;
+        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
 
         private:
 

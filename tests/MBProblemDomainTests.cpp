@@ -56,11 +56,67 @@ TEST(MBProblemDomain, ConvertSimple)
     }
 }
 
+TEST(MBProblemDomain, OnBlockBoundary)
+{
+    int domainSize = 4;
+    auto domain = buildXPoint(domainSize);
+    Box domainBox = Box::Cube(domainSize);
+    std::vector<Box> blockBoundaries;
+    std::vector<Box> domainBoundaries;
+
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir == Point::Zeros())
+        {
+            continue; 
+        }
+        else if (dir == Point::X() || dir == Point::Y() || dir == Point::X() + Point::Y())
+        {
+            blockBoundaries.push_back(domainBox.edge(dir));
+        } else {
+            domainBoundaries.push_back(domainBox.edge(dir));
+        }
+    }
+
+    BoxData<double, 1> blockBoundaryMask(domainBox);
+    blockBoundaryMask.setVal(0);
+    for (auto box : blockBoundaries)
+    {
+        blockBoundaryMask.setVal(1, box);
+    }
+    BoxData<double, 1> domainBoundaryMask(domainBox);
+    domainBoundaryMask.setVal(0);
+    for (auto box : domainBoundaries)
+    {
+        domainBoundaryMask.setVal(1, box);
+    }
+
+    for (BlockIndex block = 0; block < domain.numBlocks(); block++)
+    {
+        for (Point point : domainBox)
+        {
+            if (blockBoundaryMask(point) == 1)
+            {
+                EXPECT_TRUE(domain.onBlockBoundary(point, block));
+            } else {
+                EXPECT_FALSE(domain.onBlockBoundary(point, block));
+            }
+            if (domainBoundaryMask(point) == 1)
+            {
+                EXPECT_TRUE(domain.onDomainBoundary(point, block));
+            } else {
+                EXPECT_FALSE(domain.onDomainBoundary(point, block));
+            }
+        }
+    }
+
+}
+
 TEST(MBProblemDomain, Convert) {
     int domainSize = 64;
     auto domain = buildXPoint(domainSize);
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
+    Point x = Point::X();
+    Point y = Point::Y();
     Point origin = Point::Zeros();
     Box domainBox = Box::Cube(domainSize);
     Box xAdj = domainBox.adjacent(x, 1);

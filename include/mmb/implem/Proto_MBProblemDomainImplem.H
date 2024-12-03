@@ -384,9 +384,42 @@ bool MBProblemDomain::inInterior(
 {
     return getBlock(a_block).box().containsPoint(a_point);
 }
+bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block) const
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onBlockBoundary(a_point, a_block, dir)) { return true; }
+    }
+    return false;
+}
 
-bool MBProblemDomain::onBlockBoundary(Point a_point, Point a_dir) const
-{}
-
-bool MBProblemDomain::onDomainBoundary(Point a_point, Point a_dir) const
-{}
+bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+{
+    bool isValidBlockBoundary = graph().isBlockBoundary(a_block, a_dir);
+    if (isValidBlockBoundary){
+        Box domainBox = getBlock(a_block).box();
+        Box domainBoundBox = domainBox.edge(a_dir);
+        return domainBoundBox.containsPoint(a_point);
+    } else {
+        return false;
+    }
+}
+bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block) const
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onDomainBoundary(a_point, a_block, dir)) { return true; }
+    }
+    return false;
+}
+bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+{
+        bool isValidDomainBoundary = graph().isDomainBoundary(a_block, a_dir);
+    if (isValidDomainBoundary){
+        Box domainBox = getBlock(a_block).box();
+        Box domainBoundBox = domainBox.edge(a_dir);
+        return domainBoundBox.containsPoint(a_point);
+    } else {
+        return false;
+    }
+}
