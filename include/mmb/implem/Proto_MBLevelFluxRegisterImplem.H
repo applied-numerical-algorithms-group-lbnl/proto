@@ -19,22 +19,22 @@ MBFluxRegisterCopierOp<T,C,MEM>::MBFluxRegisterCopierOp(MBLevelFluxRegister<T, C
     m_register = &a_register;
 }
 
-template<typename T, unsigned int C, MemType MEM>
-int MBFluxRegisterCopierOp<T,C,MEM>::linearSize(
-                                   const Box& a_bx,
-                                   const MBIndex& a_index) const
+template <typename T, unsigned int C, MemType MEM>
+int MBFluxRegisterCopierOp<T, C, MEM>::linearSize(
+    const Box &a_box,
+    const MBIndex &a_index) const
 {
-    return C*a_bx.size()*sizeof(T);
+    return C*a_box.size()*sizeof(T);
 }
 template<typename T, unsigned int C, MemType MEM>
-void MBFluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buf, const MBMotionItem& a_info) const
+void MBFluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buffer, const MBMotionItem& a_motionItem) const
 {
     // linearOut copies from source data holders into buffers.
-    const auto& index = a_info.fromIndex;
-    const auto& domain = a_info.fromRegion;
+    const auto& index = a_motionItem.fromIndex;
+    const auto& domain = a_motionItem.fromRegion;
     auto& data = m_register->sourceData(domain, index);
     CInterval cint(0,C-1);
-    data.linearOut(a_buf, domain, cint);
+    data.linearOut(a_buffer, domain, cint);
 }
 
 template<typename T, unsigned int C, MemType MEM>
