@@ -67,6 +67,20 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     }
 }
 
+std::set<Point> Point::Directions()
+{
+    std::set<Point> returnDirs;
+    for (int codim = 1; codim <= DIM; codim++)
+    {
+        auto dirs = DirectionsOfCodim(codim);
+        for (auto dir : dirs)
+        {
+            returnDirs.insert(dir);
+        }
+    }
+    return returnDirs;
+}
+
 std::set<Point> Point::DirectionsOfCodim(int a_codim)
 {
     std::set<Point> returnDirs;

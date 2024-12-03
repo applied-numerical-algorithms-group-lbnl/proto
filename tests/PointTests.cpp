@@ -148,6 +148,22 @@ TEST(Point, DirectionsOfCodim)
     #endif
 }
 
+TEST(Point, Directions)
+{
+    auto dirs = Point::Directions();
+    std::set<Point> correctDirs;
+    for (auto p : Box::Kernel(1))
+    {
+        if (p == Point::Zeros()) { continue; }
+        correctDirs.insert(p);
+    }
+    EXPECT_EQ(correctDirs.size(), dirs.size());
+    for (auto dir : dirs)
+    {
+        EXPECT_NE(correctDirs.find(dir), correctDirs.end());
+    }
+}
+
 TEST(Point, NonZeroIndex)
 {
     Point p0 = Point::Zeros();

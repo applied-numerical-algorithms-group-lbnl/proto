@@ -144,7 +144,9 @@ namespace Proto
         ACCEL_DECORATION inline static Point Y() { return Basis(1); }
         ACCEL_DECORATION inline static Point Z() { return Basis(2); }
 
+        inline static std::set<Point> Directions();
         inline static std::set<Point> DirectionsOfCodim(int a_codim);
+        
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
