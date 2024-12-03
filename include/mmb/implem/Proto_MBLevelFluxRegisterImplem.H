@@ -436,12 +436,11 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
     auto fineIndex = m_fineLayout.find(a_finePatch, block);
 
     // this region must be unrefined for a coarse-fine boundary to exist
-    // we assume THIS fine patch is unrefined and search for adjacent refined patches
+    // we assume THIS fine patch is unrefined and search for adjacent patches that are refined
     if (fineIndex != *m_fineLayout.end()) { return; }
 
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        //MBIndex fineIndexAdj = findAdjacentFinePatchIndex(fineIndex, a_finePatch, dir);
         MBIndex fineIndexAdj = m_fineLayout.findAdjacentIndex(a_finePatch, block, dir);
         addCoarseRegisterFromAdjacent(a_finePatch, a_coarseIndex, dir, fineIndexAdj);
     }
@@ -524,11 +523,9 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisters(MBIndex a_fineIndex)
 {
     PatchID finePatch = m_fineLayout.point(a_fineIndex);
     BlockIndex block = m_fineLayout.block(a_fineIndex);
-    std::cout << "\nbase patch: " << finePatch << std::endl;
     for (auto dir : Point::DirectionsOfCodim(1))
     {
         bool adj = adjacentInProblemDomain(a_fineIndex, dir);
-        std::cout << "\tpatch: " << finePatch + dir << " | valid?: " << adj << std::endl;
         if (adjacentInProblemDomain(a_fineIndex, dir))
         {
             addFineRegisterFromAdjacent(a_fineIndex, dir);
@@ -547,7 +544,7 @@ bool MBLevelFluxRegister<T,C,MEM>::adjacentInProblemDomain(
     PatchID adjFinePatch = finePatch + a_dir;
 
     if (patchDomain.containsPoint(adjFinePatch)) { return true; }
-    else if (m_fineLayout.isBlockBoundary(a_fineIndex, a_dir)) { return true; }
+    else if (m_fineLayout.onBlockBoundary(finePatch, block, a_dir)) { return true; }
     else { return false; }
 }
 

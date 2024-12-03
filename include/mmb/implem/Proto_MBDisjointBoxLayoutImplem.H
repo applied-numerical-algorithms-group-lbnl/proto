@@ -285,6 +285,35 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     return m_partition->isBlockBoundary(a_index.global(), a_dir);
 }
 
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBIndex& a_i1,
+        const MBIndex& a_i2) const
+{
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
+    if (block(a_i1) == block(a_i2)) {return false;}
+    if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
+    return true;
+}
+
+bool MBDisjointBoxLayout::onBlockBoundary(
+    PatchID a_patch,
+    BlockIndex a_block) const 
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onBlockBoundary(a_patch, a_block, dir)) { return true; }
+    }
+    return false;
+}
+
+bool MBDisjointBoxLayout::onBlockBoundary(
+    PatchID a_patch,
+    BlockIndex a_block,
+    Point a_dir) const 
+{
+    return patchDomain().onBlockBoundary(a_patch, a_block, a_dir);
+}
+
 bool MBDisjointBoxLayout::isDomainBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
@@ -292,6 +321,26 @@ bool MBDisjointBoxLayout::isDomainBoundary(
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
     return m_partition->isDomainBoundary(a_index, a_dir);
+}
+
+
+bool MBDisjointBoxLayout::onDomainBoundary(
+    PatchID a_patch,
+    BlockIndex a_block) const 
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onDomainBoundary(a_patch, a_block, dir)) { return true; }
+    }
+    return false;
+}
+
+bool MBDisjointBoxLayout::onDomainBoundary(
+    PatchID a_patch,
+    BlockIndex a_block,
+    Point a_dir) const 
+{
+    return patchDomain().onDomainBoundary(a_patch, a_block, a_dir);
 }
 
 bool MBDisjointBoxLayout::isInteriorBoundary(
@@ -404,15 +453,6 @@ Point MBDisjointBoxLayout::connectivity(
     return Point::Zeros();
 }
 
-bool MBDisjointBoxLayout::isBlockBoundary(
-        const MBIndex& a_i1,
-        const MBIndex& a_i2) const
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    if (block(a_i1) == block(a_i2)) {return false;}
-    if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
-    return true;
-}
 
 unsigned int MBDisjointBoxLayout::size() const
 {

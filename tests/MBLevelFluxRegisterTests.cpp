@@ -34,7 +34,6 @@ namespace {
 }
 
 #if PR_MMB
-#if 0
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
@@ -103,13 +102,11 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     }
     
 }
-#endif
 
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
     #endif
-    std::cout << " REMINDER: MBDisjointBoxLayout::isBlockBoundary(index) may have a bug when the other side of the block boundary is not a valid index" << std::endl;
     int domainSize = 16;
     int boxSize = domainSize;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
@@ -171,8 +168,6 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     }
 }
 
-#endif
-
 #if DIM == 3
 TEST(MBLevelFluxRegister, Reflux_CubedSphere) {
    
@@ -181,6 +176,7 @@ TEST(MBLevelFluxRegister, Reflux_CubedSphere) {
     int ghostSize = 2;
 
 }
+#endif
 #endif
 
 int main(int argc, char *argv[]) {
