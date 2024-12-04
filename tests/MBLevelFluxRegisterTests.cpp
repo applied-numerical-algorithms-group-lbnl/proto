@@ -172,6 +172,98 @@ namespace {
         return outData;
     }
 
+    template <typename T, unsigned int C, MemType MEM>
+    bool computeIncrementFineError(
+        MBLevelBoxData<T, C, MEM> &fineRegisters,
+        std::map<Point, Box> cfBounds,
+        int refRatio)
+    {
+        auto& layout = fineRegisters.layout();
+        for (auto iter : layout)
+        {
+            Box B0 = layout[iter];
+            auto &fineData = fineRegisters[iter];
+            BoxData<T,C> error(fineData.box());
+            error.setVal(0);
+            error += fineData;
+            for (auto dir : Point::DirectionsOfCodim(1))
+            {
+                Box registerBox = cfBounds[dir];
+                if (registerBox.empty())
+                {
+                    continue;
+                }
+                auto fineSoln = testFineReflux<T,C>(registerBox, dir, refRatio);
+                error -= fineSoln;
+            }
+            if (error.absMax() > 1e-12) { return false; }
+        }
+        return true;
+    }
+
+    template <typename T, unsigned int C, MemType MEM>
+    bool computeIncrementCoarseError(
+        MBLevelBoxData<T, C, MEM> &coarseRegisters,
+        std::map<Point, Box> cfBounds)
+    {
+        auto& layout = coarseRegisters.layout();
+        for (auto iter : layout)
+        {
+            Box B0 = layout[iter];
+            auto &coarseData = coarseRegisters[iter];
+            BoxData<T,C> error(coarseData.box());
+            error.setVal(0);
+            error += coarseData;
+            for (auto dir : Point::DirectionsOfCodim(1))
+            {
+                Box registerBox = cfBounds[dir];
+                if (registerBox.empty())
+                {
+                    continue;
+                }
+                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir);
+                error -= coarseSoln;
+            }
+            if (error.absMax() > 1e-12) { return false; }
+        }
+        return true;
+    }
+
+    template <typename T, unsigned int C, MemType MEM>
+    bool computeRefluxError(
+        MBLevelBoxData<T, C, MEM> &refluxRegisters,
+        std::map<Point, Box> coarseCFBounds,
+        int refRatio)
+    {
+        auto& layout = refluxRegisters.layout();
+        for (auto iter : layout)
+        {
+            Box B0 = layout[iter];
+            auto &refluxData = refluxRegisters[iter];
+            BoxData<T,C> error(refluxData.box());
+            error.setVal(0);
+            error += refluxData;
+            for (auto dir : Point::DirectionsOfCodim(1))
+            {
+                Box registerBox = coarseCFBounds[dir];
+                if (registerBox.empty())
+                {
+                    continue;
+                }
+                BoxData<T,C> refluxSoln(registerBox);
+                refluxSoln.setVal(0);
+                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir);
+                auto fineSoln = testFineReflux<T,C>(registerBox, -dir, refRatio);
+
+                refluxSoln += fineSoln;
+                refluxSoln += coarseSoln;
+
+                error -= refluxSoln;
+            }
+            if (error.absMax() > 1e-12) { return false; }
+        }
+        return true;
+    }
 }
 
 #if PR_MMB
@@ -348,68 +440,12 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     h5.writeMBLevel(map[0], refluxRegisters, "REFLUX_REGISTERS");
 #endif
     auto coarseCFBounds = telescopingCFBoundary_Coarse(domainSize);
-    for (auto iter : grid[0])
-    {
-        Box B0 = grid[0][iter];
-        auto& coarseData = coarseRegisters[iter];
-        BoxData<double, NUM_COMPS> error(coarseData.box());
-        error.setVal(0);
-        error += coarseData; 
-        for (auto dir : Point::DirectionsOfCodim(1))
-        {
-            Box registerBox = coarseCFBounds[dir];
-            if (registerBox.empty()) { continue; }
-            auto coarseSoln = testCoarseReflux<double, NUM_COMPS>(registerBox, dir);
-            error -= coarseSoln; 
-        }
-        
-        EXPECT_LT(error.absMax(), 1e-12);
-    }
+    EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds));
 
     auto fineCFBounds = telescopingCFBoundary_Fine(domainSize);
-    for (auto iter : grid[0])
-    {
-        Box B0 = grid[0][iter];
-        auto& fineData = fineRegisters[iter];
-        BoxData<double, NUM_COMPS> error(fineData.box());
-        error.setVal(0);
-        error += fineData; 
-        for (auto dir : Point::DirectionsOfCodim(1))
-        {
-            Box registerBox = fineCFBounds[dir];
-            if (registerBox.empty()) { continue; }
-            auto fineSoln = testFineReflux<double, NUM_COMPS>(registerBox, dir, refRatio);
-            error -= fineSoln; 
-        }
-        
-        EXPECT_LT(error.absMax(), 1e-12);
-    }
-
-    for (auto iter : grid[0])
-    {
-        Box B0 = grid[0][iter];
-        auto& refluxData = refluxRegisters[iter];
-        BoxData<double, NUM_COMPS> error(refluxData.box());
-        error.setVal(0);
-        error += refluxData; 
-        for (auto dir : Point::DirectionsOfCodim(1))
-        {
-            Box registerBox = coarseCFBounds[dir];
-            if (registerBox.empty()) { continue; }
-            BoxData<double, NUM_COMPS> refluxSoln(registerBox);
-            refluxSoln.setVal(0);
-            auto coarseSoln = testCoarseReflux<double, NUM_COMPS>(registerBox, dir);
-            auto fineSoln = testFineReflux<double, NUM_COMPS>(registerBox, -dir, refRatio);
-            
-            refluxSoln += fineSoln; 
-            refluxSoln += coarseSoln;
-
-            error -= refluxSoln;
-        }
-        
-        EXPECT_LT(error.absMax(), 1e-12);
-    }
-
+    EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio));
+    
+    EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio));
 }
 
 #if DIM == 3
