@@ -106,22 +106,14 @@ namespace Proto
         void initFineRegisters(T a_val = 0);
         void initIncrement(T a_val = 0);
 
-        /// Increment Coarse
-        /**
-          Increments all the registers contained in the coarse patch a_di, direction a_dir. 
-          Assumes that a_flux is defined on all the a_dir faces in the patch.
-         */
+        /** Increments all coarse registers associated with an index, in a given coordinate direction */
         void incrementCoarseRegister(
                 const BoxData<T,C,MEM>& a_flux,
                 const MBIndex& a_index,
                 int a_dir,
                 const T& a_weight = 1.0);
 
-        /// Increment Fine
-        /**
-          Increments all the registers contained in the fine patch a_di, direction a_dir. 
-          Assumes that a_flux is defined on all the a_dir faces in the patch.
-         */
+        /** Increments all fine registers associated with an index, in a given coordinate direction */
         void incrementFineRegister(const BoxData<T,C,MEM>& a_flux,
                 const MBIndex& a_index,
                 int a_dir,

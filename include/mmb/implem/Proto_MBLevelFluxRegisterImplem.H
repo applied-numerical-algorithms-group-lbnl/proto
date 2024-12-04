@@ -546,7 +546,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementCoarseRegister (
         "MBLevelFluxRegister::incrementCoarseRegister | Error: Incompatible Data Index");
     BlockIndex block = m_crseLayout.block(a_crseIndex);
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    T weight = a_weight;// / m_dxCrse[block][a_dir];
+    T weight = a_weight / m_dxCrse[block][a_dir];
 
     // negative because high side fluxes are leaving this cell, contributing negatively to divergence
     Stencil<T> scaleHigh = -weight*Shift::Basis(a_dir, +1);
@@ -586,7 +586,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
     BlockIndex block = m_fineLayout.block(a_fineIndex);
 
     auto & fineRegister = m_fineRegisters[a_fineIndex];
-    T weight = a_weight;// / m_dxCrse[block][a_dir];
+    T weight = a_weight / m_dxCrse[block][a_dir];
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];

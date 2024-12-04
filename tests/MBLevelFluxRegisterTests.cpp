@@ -119,7 +119,7 @@ namespace {
     PROTO_KERNEL_END(f_testFluxF, f_testFlux);
 
     template<typename T, unsigned int C>
-    BoxData<T,C> testCoarseReflux(Box registerBox, Point dir)
+    BoxData<T,C> testCoarseReflux(Box registerBox, Point dir, Array<T,DIM> gridSpacing)
     {
         PROTO_ASSERT(dir.codim() == 1, "Error");
         int coord = dir.firstNonZeroIndex();
@@ -136,6 +136,7 @@ namespace {
 
         // Coarse flux contribution is subtracted during refluxing
         shiftAndScale *= -1;
+        shiftAndScale *= (1.0/gridSpacing[coord]);
 
         Box sourceBox = registerBox.grow(PR_NODE);
         auto sourceData = forall_p<T,C>(f_testFlux, sourceBox, coord);
@@ -147,7 +148,7 @@ namespace {
     }
 
     template<typename T, unsigned int C>
-    BoxData<T,C> testFineReflux(Box registerBox, Point dir, int refRatio)
+    BoxData<T,C> testFineReflux(Box registerBox, Point dir, int refRatio, Array<T,DIM> gridSpacing)
     {
         PROTO_ASSERT(dir.codim() == 1, "Error");
         int coord = dir.firstNonZeroIndex();
@@ -161,6 +162,8 @@ namespace {
             avgShiftAndScale.destShift() = Point::Basis(coord,Side::Lo);
             avgShiftAndScale *= -1;
         }
+
+        avgShiftAndScale *= (1.0/gridSpacing[coord]);
 
         Box sourceBox = registerBox.grow(PR_NODE);
         sourceBox = sourceBox.refine(refRatio);
@@ -176,7 +179,8 @@ namespace {
     bool computeIncrementFineError(
         MBLevelBoxData<T, C, MEM> &fineRegisters,
         std::map<Point, Box> cfBounds,
-        int refRatio)
+        int refRatio,
+        Array<T,DIM> gridSpacing)
     {
         auto& layout = fineRegisters.layout();
         for (auto iter : layout)
@@ -193,7 +197,7 @@ namespace {
                 {
                     continue;
                 }
-                auto fineSoln = testFineReflux<T,C>(registerBox, dir, refRatio);
+                auto fineSoln = testFineReflux<T,C>(registerBox, dir, refRatio, gridSpacing);
                 error -= fineSoln;
             }
             if (error.absMax() > 1e-12) { return false; }
@@ -204,7 +208,8 @@ namespace {
     template <typename T, unsigned int C, MemType MEM>
     bool computeIncrementCoarseError(
         MBLevelBoxData<T, C, MEM> &coarseRegisters,
-        std::map<Point, Box> cfBounds)
+        std::map<Point, Box> cfBounds,
+        Array<T,DIM> gridSpacing)
     {
         auto& layout = coarseRegisters.layout();
         for (auto iter : layout)
@@ -221,7 +226,7 @@ namespace {
                 {
                     continue;
                 }
-                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir);
+                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir,gridSpacing);
                 error -= coarseSoln;
             }
             if (error.absMax() > 1e-12) { return false; }
@@ -233,7 +238,8 @@ namespace {
     bool computeRefluxError(
         MBLevelBoxData<T, C, MEM> &refluxRegisters,
         std::map<Point, Box> coarseCFBounds,
-        int refRatio)
+        int refRatio,
+        Array<T,DIM> gridSpacing)
     {
         auto& layout = refluxRegisters.layout();
         for (auto iter : layout)
@@ -252,8 +258,8 @@ namespace {
                 }
                 BoxData<T,C> refluxSoln(registerBox);
                 refluxSoln.setVal(0);
-                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir);
-                auto fineSoln = testFineReflux<T,C>(registerBox, -dir, refRatio);
+                auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir, gridSpacing);
+                auto fineSoln = testFineReflux<T,C>(registerBox, -dir, refRatio,gridSpacing);
 
                 refluxSoln += fineSoln;
                 refluxSoln += coarseSoln;
@@ -435,17 +441,88 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
 
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
 
-    h5.writeMBLevel(map[0], coarseRegisters, "COARSE_REGISTERS");
-    h5.writeMBLevel(map[0], fineRegisters, "FINE_REGISTERS");
-    h5.writeMBLevel(map[0], refluxRegisters, "REFLUX_REGISTERS");
+    h5.writeMBLevel(map[0], coarseRegisters, "TELESCOPING_COARSE_REGISTERS");
+    h5.writeMBLevel(map[0], fineRegisters, "TELESCOPING_FINE_REGISTERS");
+    h5.writeMBLevel(map[0], refluxRegisters, "TELESCOPING_REFLUX_REGISTERS");
 #endif
     auto coarseCFBounds = telescopingCFBoundary_Coarse(domainSize);
-    EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds));
+    EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds, gridSpacing));
 
     auto fineCFBounds = telescopingCFBoundary_Fine(domainSize);
-    EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio));
+    EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio, gridSpacing));
     
-    EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio));
+    EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing));
+}
+
+TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
+    constexpr int NUM_COMPS = 2;
+    
+    int domainSize = 16;
+    int boxSize = 16;
+    int refRatio = 4;
+    int ghostWidth = 2;
+
+    Point refRatios = Point::Ones(refRatio);
+    Point ghostWidths = Point::Ones(ghostWidth);
+
+    auto grid = refinedBlockBoundaryXPointGrid(domainSize, 2, refRatio, boxSize);
+
+    Array<double, DIM> gridSpacing = Point::Ones();
+    gridSpacing /= domainSize;
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> coarseFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> fineFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> refluxFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+
+    for (auto iter : grid[0])
+    {
+        FluxBoxData<double, NUM_COMPS> fluxes(grid[0][iter]);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            forallInPlace_p(f_testFlux, fluxes[dd], dd);
+            coarseFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
+            refluxFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
+        }
+    }
+
+    for (auto iter : grid[1])
+    {
+        FluxBoxData<double, NUM_COMPS> fluxes(grid[1][iter]);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            forallInPlace_p(f_testFlux, fluxes[dd], dd);
+            fineFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
+            refluxFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
+        }
+    }
+
+    MBLevelBoxData<double, NUM_COMPS, HOST> refluxRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> fineRegisters(grid[0], Point::Zeros());
+
+    coarseRegisters.setVal(0);
+    fineRegisters.setVal(0);
+    refluxRegisters.setVal(0);
+
+    coarseFluxRegister.applyRefluxCorrection(coarseRegisters, 1.0);
+    fineFluxRegister.applyRefluxCorrection(fineRegisters, 1.0);
+    refluxFluxRegister.applyRefluxCorrection(refluxRegisters, 1.0);
+
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+
+    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
+
+    h5.writeMBLevel(map[0], coarseRegisters, "REFINED_BB_COARSE_REGISTERS");
+    h5.writeMBLevel(map[0], fineRegisters, "REFINED_BB_FINE_REGISTERS");
+    h5.writeMBLevel(map[0], refluxRegisters, "REFINED_BB_REFLUX_REGISTERS");
+#endif
+    auto coarseCFBounds = refinedBlockBoundaryCFBoundary_Coarse(domainSize, boxSize, refRatio);
+    EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds, gridSpacing));
+
+    auto fineCFBounds = refinedBlockBoundaryCFBoundary_Fine(domainSize, boxSize, refRatio);
+    EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio, gridSpacing));
+    
+    EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing));
 }
 
 #if DIM == 3
