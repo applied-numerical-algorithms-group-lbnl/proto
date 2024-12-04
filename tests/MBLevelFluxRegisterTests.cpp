@@ -99,17 +99,17 @@ namespace {
                 counterData += rdata;
             }
         }
-        counterData.printData();
         int numDataInCoarseFineBoundary = a_coarseFineBoundary.size()*C;
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
         return success;
     }
 
+
     template<typename T, unsigned int C, MemType MEM>
     PROTO_KERNEL_START
     void f_testFluxF(Point& a_pt, Var<T,C,MEM>& a_F, int a_dir)
     {
-        double sign = pow(-1,a_dir);
+        double sign = 1.0;// pow(-1,a_dir);
         for (int cc = 0; cc < C; cc++)
         {
             a_F(cc) = sign * (a_pt.sum()*1.0 + 1000.0*cc);
@@ -117,6 +117,61 @@ namespace {
 
     }
     PROTO_KERNEL_END(f_testFluxF, f_testFlux);
+
+    template<typename T, unsigned int C>
+    BoxData<T,C> testCoarseReflux(Box registerBox, Point dir)
+    {
+        PROTO_ASSERT(dir.codim() == 1, "Error");
+        int coord = dir.firstNonZeroIndex();
+        auto side = (dir[coord] > 0) ? Side::Hi : Side::Lo;
+        Stencil<T> shiftAndScale;
+        if (side == Side::Hi)
+        {
+            // Hi side flux is outward flowing -> contributes negatively to divergence
+            shiftAndScale = -1.0*Shift::Basis(coord,+1);
+        } else {
+            // Lo side flux is inward flowing -> contributes positively to divergence
+            shiftAndScale = +1.0*Shift::Zeros();
+        }
+
+        // Coarse flux contribution is subtracted during refluxing
+        shiftAndScale *= -1;
+
+        Box sourceBox = registerBox.grow(PR_NODE);
+        auto sourceData = forall_p<T,C>(f_testFlux, sourceBox, coord);
+        BoxData<T,C> outData(registerBox);
+        Box rangeBox = shiftAndScale.range(sourceBox);
+        PROTO_ASSERT(rangeBox.containsBox(registerBox), "Error");
+        outData |= shiftAndScale(sourceData);
+        return outData;
+    }
+
+    template<typename T, unsigned int C>
+    BoxData<T,C> testFineReflux(Box registerBox, Point dir, int refRatio)
+    {
+        PROTO_ASSERT(dir.codim() == 1, "Error");
+        int coord = dir.firstNonZeroIndex();
+        auto side = (dir[coord] > 0) ? Side::Hi : Side::Lo;
+        auto avgShiftAndScale = Stencil<T>::AvgDownFace(coord, Side::Lo, refRatio);
+        if (side == Side::Hi)
+        {
+            
+        } else {
+            // low side fluxes contribute negatively to the divergence of the adjacent cell
+            avgShiftAndScale.destShift() = Point::Basis(coord,Side::Lo);
+            avgShiftAndScale *= -1;
+        }
+
+        Box sourceBox = registerBox.grow(PR_NODE);
+        sourceBox = sourceBox.refine(refRatio);
+        auto sourceData = forall_p<T,C>(f_testFlux, sourceBox, coord);
+        BoxData<T,C> outData(registerBox);
+        Box rangeBox = avgShiftAndScale.range(sourceBox);
+        PROTO_ASSERT(rangeBox.containsBox(registerBox), "Error");
+        outData |= avgShiftAndScale(sourceData);
+        return outData;
+    }
+
 }
 
 #if PR_MMB
@@ -243,9 +298,6 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
 
     auto grid = telescopingXPointGrid(domainSize, 2, refRatio, boxSize);
 
-    
-
-
     Array<double, DIM> gridSpacing = Point::Ones();
     gridSpacing /= domainSize;
     MBLevelFluxRegister<double, NUM_COMPS, HOST> coarseFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
@@ -274,23 +326,90 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
         }
     }
 
+    MBLevelBoxData<double, NUM_COMPS, HOST> refluxRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> fineRegisters(grid[0], Point::Zeros());
+
+    coarseRegisters.setVal(0);
+    fineRegisters.setVal(0);
+    refluxRegisters.setVal(0);
+
+    coarseFluxRegister.applyRefluxCorrection(coarseRegisters, 1.0);
+    fineFluxRegister.applyRefluxCorrection(fineRegisters, 1.0);
+    refluxFluxRegister.applyRefluxCorrection(refluxRegisters, 1.0);
+
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
 
-    MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Ones());
-    MBLevelBoxData<double, NUM_COMPS, HOST> fineRegisters(grid[0], Point::Ones());
-
-    coarseRegisters.setVal(0);
-    fineRegisters.setVal(0);
-
-    coarseFluxRegister.applyRefluxCorrection(coarseRegisters, 1.0);
-    fineFluxRegister.applyRefluxCorrection(fineRegisters, 1.0);
-
     h5.writeMBLevel(map[0], coarseRegisters, "COARSE_REGISTERS");
     h5.writeMBLevel(map[0], fineRegisters, "FINE_REGISTERS");
+    h5.writeMBLevel(map[0], refluxRegisters, "REFLUX_REGISTERS");
 #endif
+    auto coarseCFBounds = telescopingCFBoundary_Coarse(domainSize);
+    for (auto iter : grid[0])
+    {
+        Box B0 = grid[0][iter];
+        auto& coarseData = coarseRegisters[iter];
+        BoxData<double, NUM_COMPS> error(coarseData.box());
+        error.setVal(0);
+        error += coarseData; 
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            Box registerBox = coarseCFBounds[dir];
+            if (registerBox.empty()) { continue; }
+            auto coarseSoln = testCoarseReflux<double, NUM_COMPS>(registerBox, dir);
+            error -= coarseSoln; 
+        }
+        
+        EXPECT_LT(error.absMax(), 1e-12);
+    }
+
+    auto fineCFBounds = telescopingCFBoundary_Fine(domainSize);
+    for (auto iter : grid[0])
+    {
+        Box B0 = grid[0][iter];
+        auto& fineData = fineRegisters[iter];
+        BoxData<double, NUM_COMPS> error(fineData.box());
+        error.setVal(0);
+        error += fineData; 
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            Box registerBox = fineCFBounds[dir];
+            if (registerBox.empty()) { continue; }
+            auto fineSoln = testFineReflux<double, NUM_COMPS>(registerBox, dir, refRatio);
+            error -= fineSoln; 
+        }
+        
+        EXPECT_LT(error.absMax(), 1e-12);
+    }
+
+    for (auto iter : grid[0])
+    {
+        Box B0 = grid[0][iter];
+        auto& refluxData = refluxRegisters[iter];
+        BoxData<double, NUM_COMPS> error(refluxData.box());
+        error.setVal(0);
+        error += refluxData; 
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            Box registerBox = coarseCFBounds[dir];
+            if (registerBox.empty()) { continue; }
+            BoxData<double, NUM_COMPS> refluxSoln(registerBox);
+            refluxSoln.setVal(0);
+            auto coarseSoln = testCoarseReflux<double, NUM_COMPS>(registerBox, dir);
+            auto fineSoln = testFineReflux<double, NUM_COMPS>(registerBox, -dir, refRatio);
+            
+            refluxSoln += fineSoln; 
+            refluxSoln += coarseSoln;
+
+            error -= refluxSoln;
+        }
+        
+        EXPECT_LT(error.absMax(), 1e-12);
+    }
+
 }
 
 #if DIM == 3

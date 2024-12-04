@@ -516,15 +516,17 @@ void MBLevelFluxRegister<T,C,MEM>::defineAverageStencils ()
             SideIterator siter;
             for (siter.begin(); siter.ok(); ++siter)
             {
-                // Side::Lo is not a typo -CLG
+                // Side::Lo is used in either case
+                // On the high side, the data being averaged is "outside" of the domain
+                // So the face being averaged to is still the Lo side
+                // This is also why Hi sides don't need a destShift
                 auto avg = Stencil<T>::AvgDownFace(d, Side::Lo, m_refRatios[bi]);
-                if (*siter == Side::Hi)
+                if (*siter == Side::Lo)
                 {
+                    // Low face averages negatively effect divergence of ADJACENT cell
+                    // which is the cell being updated by reflux
                     avg = avg * (-1);
-                }
-                else if (*siter == Side::Lo)
-                {
-                    // Side::Lo is not a typo here either -CLG
+                    // Shift is needed to place result in ADJACENT cell
                     avg.destShift() = Point::Basis(d, Side::Lo);
                 }
                 m_avgFlux[bi][d][*siter] = avg;
@@ -544,10 +546,14 @@ void MBLevelFluxRegister<T,C,MEM>::incrementCoarseRegister (
         "MBLevelFluxRegister::incrementCoarseRegister | Error: Incompatible Data Index");
     BlockIndex block = m_crseLayout.block(a_crseIndex);
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    T weight = a_weight / m_dxCrse[block][a_dir];
+    T weight = a_weight;// / m_dxCrse[block][a_dir];
 
-    Stencil<T> scaleHigh = weight*Shift::Basis(a_dir, +1);
-    Stencil<T> scaleLow = -weight*Shift::Zeros();
+    // negative because high side fluxes are leaving this cell, contributing negatively to divergence
+    Stencil<T> scaleHigh = -weight*Shift::Basis(a_dir, +1);
+    // positive because high side fluxes are leaving this cell, contributing negatively to divergence
+    Stencil<T> scaleLow = +weight*Shift::Zeros();
+
+    // negative sign associated with the coarse fluxes being subtracted appears in refluxing step
 
     for (int k = 0; k < crseRegisters.size(); k++)
     {   
@@ -580,7 +586,7 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
     BlockIndex block = m_fineLayout.block(a_fineIndex);
 
     auto & fineRegister = m_fineRegisters[a_fineIndex];
-    T weight = a_weight / m_dxCrse[block][a_dir];
+    T weight = a_weight;// / m_dxCrse[block][a_dir];
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];
