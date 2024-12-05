@@ -30,11 +30,11 @@ template<typename T, unsigned int C, MemType MEM>
 void MBFluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buffer, const MBMotionItem& a_motionItem) const
 {
     // linearOut copies from source data holders into buffers.
-    const auto& index = a_motionItem.fromIndex;
-    const auto& domain = a_motionItem.fromRegion;
-    auto& data = m_register->sourceData(domain, index);
-    CInterval cint(0,C-1);
-    data.linearOut(a_buffer, domain, cint);
+    const auto& fineRegisterIndex = a_motionItem.fromIndex;
+    const auto& fineRegisterBox = a_motionItem.fromRegion;
+    auto& fineRegisterData = m_register->findFineRegisterData(fineRegisterBox, fineRegisterIndex);
+    CInterval allComponents(0,C-1);
+    fineRegisterData.linearOut(a_buffer, fineRegisterBox, allComponents);
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -43,16 +43,15 @@ void MBFluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const MBMotionItem& 
     // linearIn copies from buffers into destination data holders.
     const auto& index = a_info.toIndex;
     const auto& range = a_info.toRegion;
-    //BoxData<T,C,MEM>& data = m_register->destData(a_bx,a_index);
-    auto& data = m_register->destData(range, index);
-    CInterval cint(0,C-1);
-    data.linearIn(a_buf, range, cint);
+    auto& data = m_register->findCoarseRegisterData(range, index);
+    CoordPermutation rotation = a_info.rotation;
+    rotation.rotateBuffer<T, C>((T *)a_buf, data.data(), a_info.fromRegion, a_info.toRegion);
 }
 
 template<typename T, unsigned int C, MemType MEM>
 void MBFluxRegisterCopierOp<T,C,MEM>::localCopy(const MBMotionItem& a_info) const
 {
-#define noLinearizationTest 1
+#define noLinearizationTest 0
     const auto& srcIndex =  a_info.fromIndex;
     const auto& domain =    a_info.fromRegion;
     const auto& dstIndex =  a_info.toIndex;
@@ -61,8 +60,8 @@ void MBFluxRegisterCopierOp<T,C,MEM>::localCopy(const MBMotionItem& a_info) cons
 #if noLinearizationTest
 
     PR_TIMERS("MBFluxRegisterCopier_localCopy_1");
-    auto& src = m_register->sourceData(domain, srcIndex);
-    auto& dst = m_register->destData(  range,  dstIndex);
+    auto& src = m_register->findFineRegisterData(domain, srcIndex);
+    auto& dst = m_register->findCoarseRegisterData(  range,  dstIndex);
     Point shift = range.low() - domain.low();
     src.copyTo(dst, domain, shift);
 #else
@@ -116,7 +115,19 @@ void MBFluxRegisterCopier<T,C,MEM>::addCoarseMotionItems (MBLevelFluxRegister<T,
             PROTO_ASSERT(adjFineIndex != *fineLayout.end(),
                 "MBFluxRegisterCopier::addCoarseMotionItems | Error: Data corruption");
             
-            MBMotionItem toMotionItem(adjFineIndex, iter, coarseBox, coarseBox);
+            BlockIndex fineBlock = fineLayout.block(adjFineIndex);
+            Box dstBox = coarseBox;
+            Box srcBox = dstBox;
+            CoordPermutation rotation = CoordPermutation::identity();
+            if (fineBlock != block)
+            {
+                srcBox = coarseLayout.domain().convertBox(srcBox, block, fineBlock);
+                Point reverseDir = coarseLayout.domain().graph().reverseDir(block, fineBlock, ri.dir());
+                rotation = coarseLayout.domain().graph().rotation(fineBlock, reverseDir, block);
+                
+            }
+            MBMotionItem toMotionItem(adjFineIndex, iter, srcBox, dstBox);
+            toMotionItem.rotation = rotation;
             auto fineID = fineLayout.procID(adjFineIndex);
             if (fineID == procID())
             { 
@@ -138,7 +149,7 @@ void MBFluxRegisterCopier<T,C,MEM>::addFineMotionItems (MBLevelFluxRegister<T,C,
     auto& fineLayout = a_fluxRegister.m_fineLayout;
     for (auto fineIndex : fineLayout.begin())
     {
-        auto block = fineLayout.block(fineIndex);
+        auto fineBlock = fineLayout.block(fineIndex);
         for (Point dir : Point::DirectionsOfCodim(1))
         {
             int coord = dir.firstNonZeroIndex();
@@ -152,16 +163,22 @@ void MBFluxRegisterCopier<T,C,MEM>::addFineMotionItems (MBLevelFluxRegister<T,C,
 
             Box registerBox = fineRegister.data().box();
 
-            // If this code needs to deal with periodicity, this will no longer be trivial
-            // because one of these boxes may need to be shifted across the periodic boundary
-            Box srcBox = registerBox; 
-            Box dstBox = registerBox;
-
             MBIndex adjCoarseIndex = getCoarseIndex(a_fluxRegister, fineIndex, dir);
+            BlockIndex coarseBlock = coarseLayout.block(adjCoarseIndex);
+            Box srcBox = registerBox;
+            Box dstBox = registerBox;
+            CoordPermutation rotation = CoordPermutation::identity();
+            if (coarseBlock != fineBlock)
+            {
+                dstBox = coarseLayout.domain().convertBox(srcBox, fineBlock, coarseBlock);
+                rotation = coarseLayout.domain().graph().rotation(fineBlock, dir, coarseBlock);
+            }
+
             int adjCoarseProcID = coarseLayout.procID(adjCoarseIndex);
             if (adjCoarseProcID != procID())
             {
                 MBMotionItem fromMotionItem(fineIndex, adjCoarseIndex, srcBox, dstBox);
+                fromMotionItem.rotation = rotation;
                 fromMotionItem.procID = adjCoarseProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }
@@ -587,6 +604,11 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
 
     auto & fineRegister = m_fineRegisters[a_fineIndex];
     T weight = a_weight / m_dxCrse[block][a_dir];
+
+    // pr_out() << "Increment Fine | patch: " << m_fineLayout.point(a_fineIndex) << " | dir: " << a_dir << std::endl;
+    // pr_out() << "Flux Data: " << std::endl;
+    // a_flux.printData();
+
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];
@@ -595,6 +617,8 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
             auto& data = reg.m_data;
             auto  side = reg.m_side;
             (*data) += m_avgFlux[block][a_dir][side](a_flux, weight);
+            // pr_out() << "Register Data: " << std::endl;
+            // data->printData();
         }
     }
 }
@@ -611,19 +635,21 @@ void MBLevelFluxRegister<T,C,MEM>::applyRefluxCorrection(
     // the copier moves fine register data into the coarse increment. 
     m_copier.execute();
 
-    // We compute the difference between the coarse and fine registers, and increment a_coarseData.
     Stencil<T> increment = (-1.0)*Shift::Zeros();
     for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
     {
         int numRegisters = m_crseIncrement[*iter].size();
         auto& dest = m_crseIncrement[*iter];
         auto& creg = m_crseRegisters[*iter];
-        // subtract off the coarse fluxes
+
+        // data from fine registers has already been copied into dest
+        // when the copier was invoked. Now subtract off coarse register data
         for (int k = 0; k < numRegisters; k++)
         {
             *(dest[k]) += increment(*(creg[k].m_data));
             *(dest[k]) *= a_weight;
         }
+
         // add increment to input data
         for (int k = 0; k < numRegisters; k++)
         {
@@ -671,8 +697,10 @@ void MBLevelFluxRegister<T, C, MEM>::initIncrement(T a_val)
 
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const MBIndex& a_fineIndex)
+BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::findFineRegisterData(const Box& a_bx, const MBIndex& a_fineIndex)
 {
+    PROTO_ASSERT(m_fineLayout.compatible(a_fineIndex),
+        "MBLevelFluxRegister::findFineRegisterData | Error: Data Corruption");
     auto block = m_fineLayout.block(a_fineIndex);
     std::shared_ptr<BoxData<T,C,MEM>> retval;
     Box fineBox = m_fineLayout.box(a_fineIndex);
@@ -690,15 +718,16 @@ BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, cons
         }
     }
     if (!retval) {
+        std::cout << "Failed to find " << a_bx << " adjacent to " << cfBox << std::endl;
         std::cout << "Invalid Box: " << a_bx << " or invalid index: " << (int)a_fineIndex << std::endl;
         PROTO_ASSERT(false,
-            "MBLevelFluxRegister::sourceData | Error: Could not locate data.");
+            "MBLevelFluxRegister::findFineRegisterData | Error: Could not locate data.");
     }
     return *retval;
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const MBIndex& a_crseIndex)
+BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::findCoarseRegisterData(const Box& a_bx, const MBIndex& a_crseIndex)
 {
     int crseKey       = computeTileIndex(a_bx, a_crseIndex);
     int mapIndex      = m_crseIndices[a_crseIndex][crseKey];

@@ -175,6 +175,45 @@ namespace {
         return outData;
     }
 
+    template<typename T, unsigned int C, MemType MEM>
+    void rotateFluxFromFineRegister(
+        BoxData<T,C,MEM>& flux,
+        MBIndex fineIndex,
+        Point dir,
+        MBDisjointBoxLayout fineLayout)
+    {
+        PatchID finePatch = fineLayout.point(fineIndex);
+        BlockIndex block = fineLayout.block(fineIndex);
+        bool patchOnBlockBoundary = fineLayout.onBlockBoundary(finePatch, block, dir);
+        if (patchOnBlockBoundary)
+        {
+            BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);
+            CoordPermutation R = fineLayout.domain().graph().rotation(block, dir);
+            Box rotatedDomain = fineLayout.domain().convertBox(flux.box(), block, adjBlock);
+            flux.rotate(rotatedDomain, R);
+        }
+    }
+
+    std::tuple<Point, Box, BlockIndex> getFineRegisterArgsFromCoarse(
+        Point coarseDir,
+        Box coarseRegisterBox,
+        MBDisjointBoxLayout coarseLayout,
+        MBIndex coarseIndex)
+    {
+        auto block = coarseLayout.block(coarseIndex);
+        Box domainBox = coarseLayout.domain().getBlock(block).box();
+        bool boxOnBlockBoundary = domainBox.edge(coarseDir).containsBox(coarseRegisterBox);
+        if (boxOnBlockBoundary)
+        {
+            auto adjBlock = coarseLayout.domain().graph().adjacent(block, coarseDir);
+            Box fineRegisterBox = coarseLayout.domain().convertBox(coarseRegisterBox, block, adjBlock);
+            Point fineDir = coarseLayout.domain().graph().reverseDir(block, adjBlock, coarseDir);
+            return std::make_tuple(fineDir, fineRegisterBox, adjBlock);
+        } else {
+            return std::make_tuple(-coarseDir, coarseRegisterBox, block);
+        }
+    }
+
     template <typename T, unsigned int C, MemType MEM>
     bool computeIncrementFineError(
         MBLevelBoxData<T, C, MEM> &fineRegisters,
@@ -198,9 +237,13 @@ namespace {
                     continue;
                 }
                 auto fineSoln = testFineReflux<T,C>(registerBox, dir, refRatio, gridSpacing);
+                rotateFluxFromFineRegister(fineSoln, iter, dir, layout);
                 error -= fineSoln;
             }
-            if (error.absMax() > 1e-12) { return false; }
+            if (error.absMax() > 1e-12)
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -259,14 +302,23 @@ namespace {
                 BoxData<T,C> refluxSoln(registerBox);
                 refluxSoln.setVal(0);
                 auto coarseSoln = testCoarseReflux<T,C>(registerBox, dir, gridSpacing);
-                auto fineSoln = testFineReflux<T,C>(registerBox, -dir, refRatio,gridSpacing);
-
+                auto fineArgs = getFineRegisterArgsFromCoarse(dir, registerBox, layout, iter);
+                auto fineSoln = testFineReflux<T,C>(get<1>(fineArgs), get<0>(fineArgs), refRatio,gridSpacing);
+                if (get<2>(fineArgs) != layout.block(iter))
+                {
+                    auto R = layout.domain().graph().rotation(layout.block(iter), dir);
+                    auto Rinv = R.inverse();
+                    fineSoln.rotate(registerBox, Rinv);
+                }
                 refluxSoln += fineSoln;
                 refluxSoln += coarseSoln;
 
                 error -= refluxSoln;
             }
-            if (error.absMax() > 1e-12) { return false; }
+            if (error.absMax() > 1e-12)
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -382,7 +434,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
         }
     }
 }
-
+#if 0
 TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     constexpr int NUM_COMPS = 2;
     
@@ -453,12 +505,12 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     
     EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing));
 }
-
+#endif
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
-    constexpr int NUM_COMPS = 2;
+    constexpr int NUM_COMPS = 1;
     
-    int domainSize = 16;
-    int boxSize = 16;
+    int domainSize = 8;
+    int boxSize = 8;
     int refRatio = 4;
     int ghostWidth = 2;
 

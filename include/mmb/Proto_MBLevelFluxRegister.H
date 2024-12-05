@@ -148,8 +148,8 @@ namespace Proto
         void defineAverageStencils();
         
 
-        BoxData<T, C, MEM> &sourceData(const Box &a_bx, const MBIndex &di);
-        BoxData<T, C, MEM> &destData(const Box &a_bx, const MBIndex &di);
+        BoxData<T, C, MEM> &findFineRegisterData(const Box &a_bx, const MBIndex &di);
+        BoxData<T, C, MEM> &findCoarseRegisterData(const Box &a_bx, const MBIndex &di);
 
         MBDisjointBoxLayout m_crseLayout;
         MBDisjointBoxLayout m_fineLayout;
