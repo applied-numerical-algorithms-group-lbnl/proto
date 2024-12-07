@@ -12,8 +12,10 @@ namespace {
         std::map<Point, Box> boundMap;
         Box domainBox = Box::Cube(domainSize);
 
-        Point refinedRegionLow = Point::Ones(domainSize / 2);
         Point refinedRegionHigh = Point::Ones(domainSize - 1);
+        Point refinedRegionLow = Point::Zeros();
+        refinedRegionLow[0] = domainSize / 2;
+        refinedRegionLow[1] = domainSize / 2;
         Box refinedRegion(refinedRegionLow, refinedRegionHigh);
 
         for (auto dir : Point::DirectionsOfCodim(1))
@@ -30,8 +32,10 @@ namespace {
         std::map<Point, Box> boundMap;
         Box domainBox = Box::Cube(domainSize);
 
-        Point refinedRegionLow = Point::Ones(domainSize / 2);
         Point refinedRegionHigh = Point::Ones(domainSize - 1);
+        Point refinedRegionLow = Point::Zeros();
+        refinedRegionLow[0] = domainSize / 2;
+        refinedRegionLow[1] = domainSize / 2;
         Box refinedRegion(refinedRegionLow, refinedRegionHigh);
 
         for (auto dir : Point::DirectionsOfCodim(1))
@@ -94,7 +98,10 @@ namespace {
             if (ri.dir() == a_dir)
             {
                 BoxData<T,C,MEM> rdata(ri.data().box());
-                if (!a_coarseFineBoundary.containsBox(rdata.box())) { return false; }
+                if (!a_coarseFineBoundary.containsBox(rdata.box()))
+                {
+                    return false;
+                }
                 rdata.setVal(1);
                 counterData += rdata;
             }
@@ -104,7 +111,72 @@ namespace {
         return success;
     }
 
+#if DIM == 3
+#ifdef PR_AMR
+#ifdef PR_MMB
+    std::vector<MBPatchID> getTestAMRGridPatches(
+        Box domainBox,
+        Point boxSizes,
+        BlockIndex block)
+    {
+        Box patchDomain = domainBox.coarsen(boxSizes);
+        std::vector<MBPatchID> patches;
+        if (block < 2)
+        {
+            int width = boxSizes[0];
+            int height = boxSizes[1];
+            int depth = boxSizes[2];
+            Point shift = Point::Y() * (height / 4);
+            Box refinedRegion = domainBox.grow(-shift).shift(shift);
+            Box refinedPatches = refinedRegion.coarsen(boxSizes);
 
+            for (PatchID patch : refinedPatches)
+            {
+                patches.push_back(MBPatchID(patch, block));
+            }
+        }
+        else
+        {
+            Box refinedPatches = patchDomain.edge(Point::X());
+            for (PatchID patch : refinedPatches)
+            {
+                patches.push_back(MBPatchID(patch, block));
+            }
+        }
+        return patches;
+    }
+
+    MBAMRGrid testCubedSphereGrid(
+        int domainSize,
+        int thickness,
+        int boxSize, 
+        std::vector<Point> refRatios)
+    {
+        int numBlocks = 6;
+        auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
+        Point boxSizeVect(domainSize, domainSize, thickness);
+        std::vector<Point> boxSizes(numBlocks, boxSizeVect);
+        auto coarsePatches = domain.patches(boxSizeVect);
+        
+        MBAMRGrid grid(domain, coarsePatches, boxSizes, refRatios);
+
+        for (int li = 1; li < 2; li++)
+        {
+            auto domain = grid[li].domain();
+            std::vector<MBPatchID> patches;
+            for (BlockIndex bi = 0; bi < 6; bi++)
+            {
+                auto blockPatches = getTestAMRGridPatches(domain.getBlock(bi).box(), boxSizeVect, bi);
+                for (auto patch : blockPatches) { patches.push_back(patch); }
+            }
+            grid[li].define(domain, patches, boxSizes);
+        }
+        return grid;
+    }
+
+#endif
+#endif
+#endif
     template<typename T, unsigned int C, MemType MEM>
     PROTO_KERNEL_START
     void f_testFluxF(Point& a_pt, Var<T,C,MEM>& a_F, int a_dir)
@@ -356,13 +428,13 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     MBLevelFluxRegisterTester<double, 1, HOST> tester(fluxRegister);
     
     auto cfBounds_Coarse = telescopingCFBoundary_Coarse(domainSize);
-
     for (auto iter : grid[0])
     {
         auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
         for (auto dir : Point::DirectionsOfCodim(1))
         {
-        EXPECT_TRUE(checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir));
+            bool success = checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir);
+            EXPECT_TRUE(success);
         }
     }
 
@@ -434,7 +506,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
         }
     }
 }
-#if 0
+
 TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     constexpr int NUM_COMPS = 2;
     
@@ -505,7 +577,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     
     EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing));
 }
-#endif
+
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
     constexpr int NUM_COMPS = 1;
     
@@ -578,12 +650,26 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
 }
 
 #if DIM == 3
-TEST(MBLevelFluxRegister, Reflux_CubedSphere) {
+TEST(MBLevelFluxRegister, CubedSphereConstruction) {
    
-    int domainSize = 32;
+    int domainSize = 16;
     int boxSize = 16;
+    int thickness = 2;
     int ghostWidth = 2;
+    int refRatio = 4;
 
+    Point refRatios(refRatio, refRatio, 1);
+    std::vector<Point> allRefRatios(6,refRatios);
+
+    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, allRefRatios);
+    MBAMRData<double, 1, HOST> data(grid, Point::Zeros());
+    auto coarseMap = CubedSphereShell::Map(grid[0], Point::Zeros());
+    auto fineMap = CubedSphereShell::Map(grid[1], Point::Zeros());
+
+    HDF5Handler h5;
+    h5.writeMBLevel({"data"}, coarseMap, data[0], "CUBED_SPHERE_COARSE");
+    h5.writeMBLevel({"data"}, fineMap, data[1], "CUBED_SPHERE_FINE");
+    
 }
 #endif
 #endif

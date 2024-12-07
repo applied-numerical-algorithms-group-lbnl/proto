@@ -362,7 +362,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
     Point boxSizes = Point::Ones(boxSize);
     boxSizes[c_r] = min(thickness, boxSize);
     std::vector<Point> boxSizeVect(numBlocks, boxSizes);
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPatchID> patches;
     Point patchDomainSizes = Point::Ones(domainSize / boxSize);
     patchDomainSizes[c_r] = 1;
 #if 0

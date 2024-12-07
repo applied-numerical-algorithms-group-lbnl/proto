@@ -28,7 +28,7 @@ MBProblemDomain CubedSphereShell::Domain(
                 domain.defineBoundary(srcBlock, 0, -y, RSouth);
                 break;
             default:
-                MayDay<void>::Abort("NOT IMPLEMENTED");
+                MayDay<void>::Abort("Specified radial coordinate is not implemented for CubedSphereShell::Domain");
         }
         RNorth = RNorth*CW;
         RSouth = RSouth*CCW;

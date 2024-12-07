@@ -605,10 +605,6 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
     auto & fineRegister = m_fineRegisters[a_fineIndex];
     T weight = a_weight / m_dxCrse[block][a_dir];
 
-    // pr_out() << "Increment Fine | patch: " << m_fineLayout.point(a_fineIndex) << " | dir: " << a_dir << std::endl;
-    // pr_out() << "Flux Data: " << std::endl;
-    // a_flux.printData();
-
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];
@@ -617,8 +613,6 @@ void MBLevelFluxRegister<T,C,MEM>::incrementFineRegister (
             auto& data = reg.m_data;
             auto  side = reg.m_side;
             (*data) += m_avgFlux[block][a_dir][side](a_flux, weight);
-            // pr_out() << "Register Data: " << std::endl;
-            // data->printData();
         }
     }
 }
