@@ -52,7 +52,24 @@ private:
     double BC_cadence; // In hours
     int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
     int BC_force_single_frame; // 1: Use only one frame for BCs, 0: Use all frames for BCs (if present)
-
+    int CME_type; // 0: No CME, 1: CME
+    double CME_Enter_Time;
+    double CME_r1;
+    double CME_r0;
+    double CME_halfangle;
+    double CME_pol_flux_control;
+    double CME_FRiED_n;
+    double CME_lat;
+    double CME_lon;
+    double CME_tilt;
+    double CME_Vandas_R0;
+    double CME_apex_speed;
+    double CME_energy_control;
+    double CME_density;
+    double CME_helicity_sign;
+    double CME_a1;
+    double CME_shift;
+    
     // Private Constructor
     ParseInputs() {}
 
@@ -100,6 +117,23 @@ public:
     static double get_BC_cadence() {return getInstance().BC_cadence;}
     static int get_BC_frame_rotate() {return getInstance().BC_frame_rotate;}
     static int get_BC_force_single_frame() {return getInstance().BC_force_single_frame;}
+    static int get_CME_type() {return getInstance().CME_type;}
+    static double get_CME_Enter_Time() {return getInstance().CME_Enter_Time;}
+    static double get_CME_r1() {return getInstance().CME_r1;}
+    static double get_CME_r0() {return getInstance().CME_r0;}
+    static double get_CME_halfangle() {return getInstance().CME_halfangle;}
+    static double get_CME_pol_flux_control() {return getInstance().CME_pol_flux_control;}
+    static double get_CME_FRiED_n() {return getInstance().CME_FRiED_n;}
+    static double get_CME_lat() {return getInstance().CME_lat;}
+    static double get_CME_lon() {return getInstance().CME_lon;}
+    static double get_CME_tilt() {return getInstance().CME_tilt;}
+    static double get_CME_Vandas_R0() {return getInstance().CME_Vandas_R0;}
+    static double get_CME_apex_speed() {return getInstance().CME_apex_speed;}
+    static double get_CME_energy_control() {return getInstance().CME_energy_control;}
+    static double get_CME_density() {return getInstance().CME_density;}
+    static double get_CME_helicity_sign() {return getInstance().CME_helicity_sign;}
+    static double get_CME_a1() {return getInstance().CME_a1;}
+    static double get_CME_shift() {return getInstance().CME_shift;}
 
     // Parses now with command-line arguments
     void parsenow(int argc, char* argv[]) {
@@ -136,6 +170,23 @@ public:
         args.add("BC_cadence", BC_cadence);
         args.add("BC_frame_rotate", BC_frame_rotate);
         args.add("BC_force_single_frame", BC_force_single_frame);
+        args.add("CME_Enter_Time", CME_Enter_Time);
+        args.add("CME_type", CME_type);
+        args.add("CME_r1", CME_r1);
+        args.add("CME_r0", CME_r0);
+        args.add("CME_halfangle", CME_halfangle);
+        args.add("CME_pol_flux_control", CME_pol_flux_control);
+        args.add("CME_FRiED_n", CME_FRiED_n);
+        args.add("CME_lat", CME_lat);
+        args.add("CME_lon", CME_lon);
+        args.add("CME_tilt", CME_tilt);
+        args.add("CME_Vandas_R0", CME_Vandas_R0);
+        args.add("CME_apex_speed", CME_apex_speed);
+        args.add("CME_energy_control", CME_energy_control);
+        args.add("CME_density", CME_density);
+        args.add("CME_helicity_sign", CME_helicity_sign);
+        args.add("CME_a1", CME_a1);
+        args.add("CME_shift", CME_shift);
         args.parse(argc, argv);
 
         int pid = procID();
@@ -174,6 +225,23 @@ public:
             cout << "BC_cadence: " << BC_cadence << endl;
             cout << "BC_frame_rotate: " << BC_frame_rotate << endl;
             cout << "BC_force_single_frame: " << BC_force_single_frame << endl;
+            cout << "CME_type: " << CME_type << endl;
+            cout << "CME_Enter_Time: " << CME_Enter_Time << endl;
+            cout << "CME_r1: " << CME_r1 << endl;
+            cout << "CME_r0: " << CME_r0 << endl;
+            cout << "CME_halfangle: " << CME_halfangle << endl;
+            cout << "CME_pol_flux_control: " << CME_pol_flux_control << endl;
+            cout << "CME_FRiED_n: " << CME_FRiED_n << endl;
+            cout << "CME_lat: " << CME_lat << endl;
+            cout << "CME_lon: " << CME_lon << endl;
+            cout << "CME_tilt: " << CME_tilt << endl;
+            cout << "CME_Vandas_R0: " << CME_Vandas_R0 << endl;
+            cout << "CME_apex_speed: " << CME_apex_speed << endl;
+            cout << "CME_energy_control: " << CME_energy_control << endl;
+            cout << "CME_density: " << CME_density << endl;
+            cout << "CME_helicity_sign: " << CME_helicity_sign << endl;
+            cout << "CME_a1: " << CME_a1 << endl;
+            cout << "CME_shift: " << CME_shift << endl;
             cout << setw(75) << setfill('-') << "-" << endl;
         }
     }
