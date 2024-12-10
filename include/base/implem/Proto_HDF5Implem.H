@@ -1353,7 +1353,13 @@ void HDF5Handler::writeMBLevel(
         std::string a_filename,
         Args... a_params)
 {
-
+    Point ghostDiff = a_map.map().ghost()[0] - a_data.ghost()[0];
+    if(ghostDiff.min() < 0)
+    {
+        std::cout << "WARNING: HDF5Handler::writeMBLevel detected ghost region mismatch between plot data and map data." << \
+        "\n\tGhost region data may not render correctly" << std::endl;
+    }
+        
     std::vector<std::string> a_mapVarNames;
 #if DIM > 0
     a_mapVarNames.push_back("x");
