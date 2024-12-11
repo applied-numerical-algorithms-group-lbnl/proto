@@ -391,6 +391,14 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisterFromAdjacent(
     // patch we are searching from (a_finePatch) is unrefined
     if (a_fineIndexAdj == *m_fineLayout.end()) { return; }
     
+    // std::cout << "\nMBLevelFluxRegister::addCoarseRegister" << std::endl;
+    // std::cout << "\tCoarse Patch: " << m_crseLayout.point(a_coarseIndex);
+    // std::cout << " | " << m_crseLayout.block(a_coarseIndex) << std::endl;
+    // std::cout << "\tUnrefined Fine Patch: " << a_finePatch << std::endl;
+    // std::cout << "\tDir: " << a_dir << std::endl;
+    // std::cout << "\tRefined Fine Patch: " << m_fineLayout.point(a_fineIndexAdj);
+    // std::cout << " | " << m_fineLayout.block(a_fineIndexAdj) << std::endl;
+
     BlockIndex block = m_crseLayout.block(a_coarseIndex);
     Point refRatio = m_refRatios[block];
     Point fineBoxSize = m_fineLayout.boxSize(block);
@@ -398,6 +406,8 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisterFromAdjacent(
 
     Box cfBox = Box(a_finePatch, a_finePatch).refine(fineBoxSize).coarsen(refRatio);
     Box destBox = cfBox.face(a_dir);
+
+    //std::cout << "\t\tAdding Coarse Register: " << destBox << " | " << a_dir << std::endl;
 
     shared_ptr<BoxData<T, C, MEM>> crseRegisterDataPtr(new BoxData<T, C, MEM>(destBox));
     Register<T, C, MEM> reg(crseRegisterDataPtr, a_dir);

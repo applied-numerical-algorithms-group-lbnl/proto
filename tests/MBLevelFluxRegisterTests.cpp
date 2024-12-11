@@ -92,14 +92,17 @@ namespace {
     {
         BoxData<T,C,MEM> counterData(a_coarseFineBoundary);
         counterData.setVal(0);
+        //std::cout << "Checking coarse registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
         
         for (auto ri : a_registers)
         {
+            //std::cout << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
             if (ri.dir() == a_dir)
             {
                 BoxData<T,C,MEM> rdata(ri.data().box());
                 if (!a_coarseFineBoundary.containsBox(rdata.box()))
                 {
+                    //std::cout << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
                     return false;
                 }
                 rdata.setVal(1);
@@ -108,6 +111,12 @@ namespace {
         }
         int numDataInCoarseFineBoundary = a_coarseFineBoundary.size()*C;
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
+        if (!success)
+        {
+            //std::cout << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
+        } else {
+            //std::cout << "\t\tSUCCESS" << std::endl;
+        }
         return success;
     }
 
@@ -132,15 +141,14 @@ namespace {
         int domainSize,
         int thickness,
         int boxSize, 
-        std::vector<Point> refRatios)
+        Point refRatio)
     {
         int numBlocks = 6;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
         Point boxSizeVect(boxSize, boxSize, thickness);
         std::vector<Point> boxSizes(numBlocks, boxSizeVect);
         auto coarsePatches = domain.patches(boxSizeVect);
-        
-        MBAMRGrid grid(domain, coarsePatches, boxSizes, refRatios);
+        MBAMRGrid grid(domain, boxSizeVect, refRatio, 2);
 
         for (int li = 1; li < 2; li++)
         {
@@ -178,7 +186,7 @@ namespace {
         {
             case 0:
                 boundMap[-Point::X()] = posYStrip.edge(0,Side::Lo,1);
-                boundMap[Point::Y()] = negXStrip.edge(1, Side::Lo, 1);
+                boundMap[-Point::Y()] = negXStrip.edge(1, Side::Lo, 1);
                 break;
             case 1:
                 boundMap[-Point::X()] = negYStrip.edge(0,Side::Lo,1);
@@ -460,14 +468,14 @@ namespace {
 }
 
 #if PR_MMB
-#if 0
+#if 1
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
     #endif
 
     int domainSize = 16;
-    int boxSize = domainSize;
+    int boxSize = 8;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 2;
     int refRatio = 4;
@@ -497,7 +505,8 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
         auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
         for (auto dir : Point::DirectionsOfCodim(1))
         {
-            bool success = checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir);
+            Box cfBound = cfBounds_Coarse[dir] & grid[0][iter];
+            bool success = checkRegisters(coarseRegisters, cfBound, dir);
             EXPECT_TRUE(success);
         }
     }
@@ -522,7 +531,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
         HDF5Handler h5;
     #endif
     int domainSize = 16;
-    int boxSize = domainSize;
+    int boxSize = 8;
     int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int numLevels = 2;
     int refRatio = 4;
@@ -552,7 +561,8 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
         auto coarseRegisters = tester.getCoarseRegistersAtIndex(iter);
         for (auto dir : Point::DirectionsOfCodim(1))
         {
-            EXPECT_TRUE(checkRegisters(coarseRegisters, cfBounds_Coarse[dir], dir));
+            Box cfBound = cfBounds_Coarse[dir] & grid[0][iter];
+            EXPECT_TRUE(checkRegisters(coarseRegisters, cfBound, dir));
         }
     }
 
@@ -716,6 +726,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
 #if DIM == 3
 TEST(MBLevelFluxRegister, CubedSphereConstruction) {
    
+    constexpr int NUMCOMPS = 1;
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 2;
@@ -724,55 +735,77 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
 
     Point ghostSize(ghostWidth, ghostWidth, 0);
     Point refRatios(refRatio, refRatio, 1);
-    std::vector<Point> allRefRatios(1,refRatios);
+    Array<double, DIM> gridSpacing;
+    gridSpacing.fill(1.0/domainSize);
 
-    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, allRefRatios);
-    //auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
-    //MBAMRGrid grid(domain, Point(boxSize, boxSize, thickness), Point(refRatio, refRatio, 1), 2);
+    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
 
     auto& fineLayout = grid[1];
     auto& crseLayout = grid[0];
 
-    MBLevelBoxData<double, 1, HOST> coarseRegisters(grid[0], ghostSize);
-    MBLevelBoxData<double, 1, HOST> fineRegisters(grid[0], ghostSize);
-    coarseRegisters.setVal(0);
-    fineRegisters.setVal(0);
     auto coarseMap = CubedSphereShell::Map(grid[0], ghostSize);
     auto fineMap = CubedSphereShell::Map(grid[1], ghostSize);
     
-
-    
+    MBLevelFluxRegister<double,NUMCOMPS,HOST> fluxRegister(crseLayout, fineLayout, refRatios, gridSpacing);
+    MBLevelFluxRegisterTester<double, NUMCOMPS, HOST> tester(fluxRegister);
     for (BlockIndex bi = 0; bi < 6; bi++)
     {
-        auto cfBoundsCoarse = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
-        auto& levelDataCoarse = coarseRegisters.getBlock(bi);
-        for (auto iter : levelDataCoarse)
+        auto& localLayout = crseLayout.getBlock(bi);
+        auto cfBounds = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
+        for (auto iter : crseLayout.getBlock(bi))
         {
-            auto& patchData = levelDataCoarse[iter];
-            for (auto bound : cfBoundsCoarse)
+            
+            PatchID patch = localLayout.point(iter);
+            //std::cout << "\nChecking coarse registers from coarse patch " << patch << " | " << bi << std::endl;
+            MBIndex globalIter = crseLayout.find(patch, bi);
+            PROTO_ASSERT(globalIter != crseLayout.end(),
+                "MBLevelFluxRegisterTests | Error: Data Corruption");
+            
+            auto coarseRegisters = tester.getCoarseRegistersAtIndex(globalIter);
+            for (auto dir : Point::DirectionsOfCodim(1))
             {
-                BoxData<double, 1> boundData(bound.second);
-                boundData.setVal(1);
-                patchData += boundData;
-            }
-        }
-        auto cfBoundsFine = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
-        auto& levelDataFine = fineRegisters.getBlock(bi);
-        for (auto iter : levelDataFine)
-        {
-            auto& patchData = levelDataFine[iter];
-            for (auto bound : cfBoundsFine)
-            {
-                BoxData<double, 1> boundData(bound.second);
-                boundData.setVal(1);
-                patchData += boundData;
+                Box cfBound = cfBounds[dir] & crseLayout[globalIter];
+                bool success = checkRegisters(coarseRegisters, cfBound, dir);
+                EXPECT_TRUE(success);
             }
         }
     }
 
-    HDF5Handler h5;
-    h5.writeMBLevel({"data"}, coarseMap, coarseRegisters, "CUBED_SPHERE_COARSE_REGISTERS");
-    h5.writeMBLevel({"data"}, coarseMap, fineRegisters, "CUBED_SPHERE_FINE_REGISTERS");
+    // MBLevelBoxData<double, 1, HOST> coarseRegisters(grid[0], ghostSize);
+    // MBLevelBoxData<double, 1, HOST> fineRegisters(grid[0], ghostSize);
+    // coarseRegisters.setVal(0);
+    // fineRegisters.setVal(0);
+    // for (BlockIndex bi = 0; bi < 6; bi++)
+    // {
+    //     auto cfBoundsCoarse = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
+    //     auto& levelDataCoarse = coarseRegisters.getBlock(bi);
+    //     for (auto iter : levelDataCoarse)
+    //     {
+    //         auto& patchData = levelDataCoarse[iter];
+    //         for (auto bound : cfBoundsCoarse)
+    //         {
+    //             BoxData<double, 1> boundData(bound.second);
+    //             boundData.setVal(1);
+    //             patchData += boundData;
+    //         }
+    //     }
+    //     auto cfBoundsFine = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
+    //     auto& levelDataFine = fineRegisters.getBlock(bi);
+    //     for (auto iter : levelDataFine)
+    //     {
+    //         auto& patchData = levelDataFine[iter];
+    //         for (auto bound : cfBoundsFine)
+    //         {
+    //             BoxData<double, 1> boundData(bound.second);
+    //             boundData.setVal(1);
+    //             patchData += boundData;
+    //         }
+    //     }
+    // }
+
+    // HDF5Handler h5;
+    // h5.writeMBLevel({"data"}, coarseMap, coarseRegisters, "CUBED_SPHERE_COARSE_REGISTERS");
+    // h5.writeMBLevel({"data"}, coarseMap, fineRegisters, "CUBED_SPHERE_FINE_REGISTERS");
 
     
 }
