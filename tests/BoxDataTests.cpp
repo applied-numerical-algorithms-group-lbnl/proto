@@ -333,6 +333,7 @@ TEST(BoxData, Reduction) {
     std::array<T, C> minValue;
     std::array<T, C> absMaxValue;
     std::array<T, C> sumValue;
+    std::array<T, C> sumSquareValue;
     std::array<T, DIM> dx;
     T dxProduct = 1;
     for (int dir = 0; dir < DIM; dir++)
@@ -342,12 +343,14 @@ TEST(BoxData, Reduction) {
     }
 
     T globalSum = 0;
+    T globalSumSquare = 0;
     T globalMax = INT_MIN;
     T globalMin = INT_MAX;
     T globalAbsMax = 0;
     maxValue.fill(INT_MIN);
     minValue.fill(INT_MAX);
     sumValue.fill(0);
+    sumSquareValue.fill(0);
     absMaxValue.fill(0);
 
     for (int cc = 0; cc < C; cc++)
@@ -357,16 +360,19 @@ TEST(BoxData, Reduction) {
             maxValue[cc] = max(hostData(pt, cc), maxValue[cc]);
             minValue[cc] = min(hostData(pt, cc), minValue[cc]);
             sumValue[cc] += hostData(pt, cc);
+            sumSquareValue[cc] += hostData(pt,cc)*hostData(pt,cc);
         }
         absMaxValue[cc] = max(abs(minValue[cc]), abs(maxValue[cc]));
         globalMax = max(globalMax, maxValue[cc]);
         globalMin = min(globalMin, minValue[cc]);
         globalAbsMax = max(absMaxValue[cc], globalAbsMax);
         globalSum += sumValue[cc];
+        globalSumSquare += sumSquareValue[cc];
         EXPECT_EQ(hostData.absMax(cc), absMaxValue[cc]);
         EXPECT_EQ(hostData.max(cc), maxValue[cc]);
         EXPECT_EQ(hostData.min(cc), minValue[cc]);
         EXPECT_EQ(hostData.sum(cc), sumValue[cc]);
+        EXPECT_EQ(hostData.sumSquare(cc), sumSquareValue[cc]);
         EXPECT_EQ(hostData.integrate(dx, cc), sumValue[cc]*dxProduct);
 #ifdef PROTO_ACCEL
         EXPECT_EQ(deviData.absMax(cc), absMaxValue[cc]);
@@ -387,11 +393,13 @@ TEST(BoxData, Reduction) {
     EXPECT_EQ(hostData.max(), globalMax);
     EXPECT_EQ(hostData.min(), globalMin);
     EXPECT_EQ(hostData.sum(), globalSum);
+    EXPECT_EQ(hostData.sumSquare(), globalSumSquare);
 #ifdef PROTO_ACCEL
     EXPECT_EQ(deviData.absMax(), globalAbsMax);
     EXPECT_EQ(deviData.max(), globalMax);
     EXPECT_EQ(deviData.min(), globalMin);
     EXPECT_NEAR(deviData.sum(), globalSum, std::numeric_limits<T>::epsilon());
+    EXPECT_NEAR(deviData.sumSquare(), globalSumSquare, std::numeric_limits<T>::epsilon());
 #endif
 }
 

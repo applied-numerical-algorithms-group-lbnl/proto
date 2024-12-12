@@ -1182,6 +1182,12 @@ namespace Proto
           */
         inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
+        
+        inline T sumSquare() const;
+        inline T sumSquare(int a_c, int a_d = 0, int a_e = 0) const;
+        inline void sumSquare(Reduction<T, SumSquare, MEM>& a_rxn) const;
+        inline void sumSquare(Reduction<T, SumSquare, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+
         /// Integrate (Isotropic Grid)
         /**
           Approximate the definite integral using an isotropic grid spacing as
