@@ -92,17 +92,17 @@ namespace {
     {
         BoxData<T,C,MEM> counterData(a_coarseFineBoundary);
         counterData.setVal(0);
-        //std::cout << "Checking coarse registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
+        std::cout << "Checking registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
         
         for (auto ri : a_registers)
         {
-            //std::cout << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
+            std::cout << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
             if (ri.dir() == a_dir)
             {
                 BoxData<T,C,MEM> rdata(ri.data().box());
                 if (!a_coarseFineBoundary.containsBox(rdata.box()))
                 {
-                    //std::cout << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
+                    std::cout << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
                     return false;
                 }
                 rdata.setVal(1);
@@ -113,9 +113,9 @@ namespace {
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
         if (!success)
         {
-            //std::cout << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
+            std::cout << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
         } else {
-            //std::cout << "\t\tSUCCESS" << std::endl;
+            std::cout << "\t\tSUCCESS" << std::endl;
         }
         return success;
     }
@@ -468,7 +468,7 @@ namespace {
 }
 
 #if PR_MMB
-#if 1
+#if 0
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
@@ -514,7 +514,6 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     auto cfBounds_Fine = telescopingCFBoundary_Fine(domainSize);
     for (auto iter : grid[1])
     {
-        PatchID patch = grid[1].point(iter);
         auto fineRegisters = tester.getFineRegistersAtIndex(iter);
 
         for (auto dir : Point::DirectionsOfCodim(1))
@@ -569,9 +568,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     auto cfBounds_Fine = refinedBlockBoundaryCFBoundary_Fine(domainSize, boxSize, refRatio);
     for (auto iter : grid[1])
     {
-        PatchID patch = grid[1].point(iter);
         auto fineRegisters = tester.getFineRegistersAtIndex(iter);
-
         for (auto dir : Point::DirectionsOfCodim(1))
         {
             Box cfBound = grid[1][iter].adjacent(dir).coarsen(refRatio);
@@ -750,13 +747,12 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
     MBLevelFluxRegisterTester<double, NUMCOMPS, HOST> tester(fluxRegister);
     for (BlockIndex bi = 0; bi < 6; bi++)
     {
-        auto& localLayout = crseLayout.getBlock(bi);
-        auto cfBounds = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
+        auto& localCoarseLayout = crseLayout.getBlock(bi);
+        auto cfBoundsCoarse = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
         for (auto iter : crseLayout.getBlock(bi))
         {
             
-            PatchID patch = localLayout.point(iter);
-            //std::cout << "\nChecking coarse registers from coarse patch " << patch << " | " << bi << std::endl;
+            PatchID patch = localCoarseLayout.point(iter);
             MBIndex globalIter = crseLayout.find(patch, bi);
             PROTO_ASSERT(globalIter != crseLayout.end(),
                 "MBLevelFluxRegisterTests | Error: Data Corruption");
@@ -764,48 +760,73 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
             auto coarseRegisters = tester.getCoarseRegistersAtIndex(globalIter);
             for (auto dir : Point::DirectionsOfCodim(1))
             {
-                Box cfBound = cfBounds[dir] & crseLayout[globalIter];
+                Box cfBound = cfBoundsCoarse[dir] & crseLayout[globalIter];
                 bool success = checkRegisters(coarseRegisters, cfBound, dir);
+                EXPECT_TRUE(success);
+            }
+        }
+
+        auto &localFineLayout = fineLayout.getBlock(bi);
+        auto cfBoundsFine = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
+        for (auto iter : fineLayout.getBlock(bi))
+        {
+
+            PatchID patch = localFineLayout.point(iter);
+            MBIndex globalIter = fineLayout.find(patch, bi);
+            PROTO_ASSERT(globalIter != fineLayout.end(),
+                         "MBLevelFluxRegisterTests | Error: Data Corruption");
+
+            auto fineRegisters = tester.getFineRegistersAtIndex(globalIter);
+            
+            for (auto dir : Point::DirectionsOfCodim(1))
+            {
+                std::cout << "\nchecking fine registers in patch: " << patch << " | dir: " << dir << " | block: " << bi << std::endl;
+                Box cfBound = fineLayout[globalIter].adjacent(dir).coarsen(refRatios);
+                cfBound &= cfBoundsFine[dir];
+                bool success = checkRegisters(fineRegisters, cfBound, dir);
                 EXPECT_TRUE(success);
             }
         }
     }
 
-    // MBLevelBoxData<double, 1, HOST> coarseRegisters(grid[0], ghostSize);
-    // MBLevelBoxData<double, 1, HOST> fineRegisters(grid[0], ghostSize);
-    // coarseRegisters.setVal(0);
-    // fineRegisters.setVal(0);
-    // for (BlockIndex bi = 0; bi < 6; bi++)
-    // {
-    //     auto cfBoundsCoarse = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
-    //     auto& levelDataCoarse = coarseRegisters.getBlock(bi);
-    //     for (auto iter : levelDataCoarse)
-    //     {
-    //         auto& patchData = levelDataCoarse[iter];
-    //         for (auto bound : cfBoundsCoarse)
-    //         {
-    //             BoxData<double, 1> boundData(bound.second);
-    //             boundData.setVal(1);
-    //             patchData += boundData;
-    //         }
-    //     }
-    //     auto cfBoundsFine = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
-    //     auto& levelDataFine = fineRegisters.getBlock(bi);
-    //     for (auto iter : levelDataFine)
-    //     {
-    //         auto& patchData = levelDataFine[iter];
-    //         for (auto bound : cfBoundsFine)
-    //         {
-    //             BoxData<double, 1> boundData(bound.second);
-    //             boundData.setVal(1);
-    //             patchData += boundData;
-    //         }
-    //     }
-    // }
+    MBLevelBoxData<double, 1, HOST> fineGrid(grid[1], Point::Zeros());
+    MBLevelBoxData<double, 1, HOST> coarseRegisters(grid[0], ghostSize);
+    MBLevelBoxData<double, 1, HOST> fineRegisters(grid[0], ghostSize);
+    coarseRegisters.setVal(0);
+    fineRegisters.setVal(0);
+    fineGrid.setVal(0);
+    for (BlockIndex bi = 0; bi < 6; bi++)
+    {
+        auto cfBoundsCoarse = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
+        auto& levelDataCoarse = coarseRegisters.getBlock(bi);
+        for (auto iter : levelDataCoarse)
+        {
+            auto& patchData = levelDataCoarse[iter];
+            for (auto bound : cfBoundsCoarse)
+            {
+                BoxData<double, 1> boundData(bound.second);
+                boundData.setVal(1);
+                patchData += boundData;
+            }
+        }
+        auto cfBoundsFine = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
+        auto& levelDataFine = fineRegisters.getBlock(bi);
+        for (auto iter : levelDataFine)
+        {
+            auto& patchData = levelDataFine[iter];
+            for (auto bound : cfBoundsFine)
+            {
+                BoxData<double, 1> boundData(bound.second);
+                boundData.setVal(1);
+                patchData += boundData;
+            }
+        }
+    }
 
-    // HDF5Handler h5;
-    // h5.writeMBLevel({"data"}, coarseMap, coarseRegisters, "CUBED_SPHERE_COARSE_REGISTERS");
-    // h5.writeMBLevel({"data"}, coarseMap, fineRegisters, "CUBED_SPHERE_FINE_REGISTERS");
+    HDF5Handler h5;
+    h5.writeMBLevel({"data"}, coarseMap, coarseRegisters, "CUBED_SPHERE_COARSE_REGISTERS");
+    h5.writeMBLevel({"data"}, coarseMap, fineRegisters, "CUBED_SPHERE_FINE_REGISTERS");
+    h5.writeMBLevel({"proxy"}, fineMap, fineGrid, "CUBED_SPHERE_FINE_GRID");
 
     
 }
