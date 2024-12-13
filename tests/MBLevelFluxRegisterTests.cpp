@@ -6,7 +6,7 @@
 using namespace Proto;
 
 namespace {
-    
+
     std::map<Point, Box> telescopingCFBoundary_Coarse(int domainSize)
     {
         std::map<Point, Box> boundMap;
@@ -92,17 +92,17 @@ namespace {
     {
         BoxData<T,C,MEM> counterData(a_coarseFineBoundary);
         counterData.setVal(0);
-        std::cout << "Checking registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
+        pr_out() << "Checking registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
         
         for (auto ri : a_registers)
         {
-            std::cout << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
+            pr_out() << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
             if (ri.dir() == a_dir)
             {
                 BoxData<T,C,MEM> rdata(ri.data().box());
                 if (!a_coarseFineBoundary.containsBox(rdata.box()))
                 {
-                    std::cout << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
+                    pr_out() << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
                     return false;
                 }
                 rdata.setVal(1);
@@ -113,9 +113,10 @@ namespace {
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
         if (!success)
         {
-            std::cout << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
+            pr_out() << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
+            counterData.printData();
         } else {
-            std::cout << "\t\tSUCCESS" << std::endl;
+            pr_out() << "\t\tSUCCESS" << std::endl;
         }
         return success;
     }
@@ -231,9 +232,11 @@ namespace {
         {
             case 0:
                 boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
+                boundMap[Point::X()] = boundMap[Point::X()].extrude(-Point::Y(), -coarsenedFinePatchSize);
                 break;
             case 1:
                 boundMap[Point::Y()]  = refinedRegion.adjacent(1, Side::Hi, 1);
+                boundMap[Point::X()] = boundMap[Point::X()].extrude(Point::Y(), -coarsenedFinePatchSize);
                 break;
             case 4:
             case 5:
@@ -358,15 +361,47 @@ namespace {
     }
 
     template <typename T, unsigned int C, MemType MEM>
+    std::tuple<bool, bool, bool> initializeFluxRegisters(
+        MBLevelFluxRegister<T,C,MEM>& coarseFluxRegister,
+        MBLevelFluxRegister<T,C,MEM>& fineFluxRegister,
+        MBLevelFluxRegister<T,C,MEM>& refluxFluxRegister,
+        MBAMRGrid& grid)
+    {
+        for (auto iter : grid[0])
+        {
+            FluxBoxData<T, C> fluxes(grid[0][iter]);
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                forallInPlace_p(f_testFlux, fluxes[dd], dd);
+                coarseFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
+                refluxFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
+            }
+        }
+
+        for (auto iter : grid[1])
+        {
+            FluxBoxData<T,C> fluxes(grid[1][iter]);
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                forallInPlace_p(f_testFlux, fluxes[dd], dd);
+                fineFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
+                refluxFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
+            }
+        }
+    }
+
+    template <typename T, unsigned int C, MemType MEM>
     bool computeIncrementFineError(
         MBLevelBoxData<T, C, MEM> &fineRegisters,
         std::map<Point, Box> cfBounds,
         int refRatio,
-        Array<T,DIM> gridSpacing)
+        Array<T,DIM> gridSpacing,
+        int block = -1)
     {
         auto& layout = fineRegisters.layout();
         for (auto iter : layout)
         {
+            if (block >= 0 && layout.block(iter) != block) { continue; }
             Box B0 = layout[iter];
             auto &fineData = fineRegisters[iter];
             BoxData<T,C> error(fineData.box());
@@ -395,11 +430,13 @@ namespace {
     bool computeIncrementCoarseError(
         MBLevelBoxData<T, C, MEM> &coarseRegisters,
         std::map<Point, Box> cfBounds,
-        Array<T,DIM> gridSpacing)
+        Array<T,DIM> gridSpacing,
+        int block = -1)
     {
         auto& layout = coarseRegisters.layout();
         for (auto iter : layout)
         {
+            if (block >= 0 && layout.block(iter) != block) { continue; }
             Box B0 = layout[iter];
             auto &coarseData = coarseRegisters[iter];
             BoxData<T,C> error(coarseData.box());
@@ -425,11 +462,13 @@ namespace {
         MBLevelBoxData<T, C, MEM> &refluxRegisters,
         std::map<Point, Box> coarseCFBounds,
         int refRatio,
-        Array<T,DIM> gridSpacing)
+        Array<T,DIM> gridSpacing,
+        int block = -1)
     {
         auto& layout = refluxRegisters.layout();
         for (auto iter : layout)
         {
+            if (block >= 0 && layout.block(iter) != block) { continue; }
             Box B0 = layout[iter];
             auto &refluxData = refluxRegisters[iter];
             BoxData<T,C> error(refluxData.box());
@@ -597,27 +636,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     MBLevelFluxRegister<double, NUM_COMPS, HOST> fineFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegister<double, NUM_COMPS, HOST> refluxFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
 
-    for (auto iter : grid[0])
-    {
-        FluxBoxData<double, NUM_COMPS> fluxes(grid[0][iter]);
-        for (int dd = 0; dd < DIM; dd++)
-        {
-            forallInPlace_p(f_testFlux, fluxes[dd], dd);
-            coarseFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
-            refluxFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
-        }
-    }
-
-    for (auto iter : grid[1])
-    {
-        FluxBoxData<double, NUM_COMPS> fluxes(grid[1][iter]);
-        for (int dd = 0; dd < DIM; dd++)
-        {
-            forallInPlace_p(f_testFlux, fluxes[dd], dd);
-            fineFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
-            refluxFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
-        }
-    }
+    initializeFluxRegisters(coarseFluxRegister, fineFluxRegister, refluxFluxRegister, grid);
 
     MBLevelBoxData<double, NUM_COMPS, HOST> refluxRegisters(grid[0], Point::Zeros());
     MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Zeros());
@@ -652,8 +671,8 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
 TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
     constexpr int NUM_COMPS = 1;
     
-    int domainSize = 8;
-    int boxSize = 8;
+    int domainSize = 16;
+    int boxSize = 16;
     int refRatio = 4;
     int ghostWidth = 2;
 
@@ -668,27 +687,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
     MBLevelFluxRegister<double, NUM_COMPS, HOST> fineFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
     MBLevelFluxRegister<double, NUM_COMPS, HOST> refluxFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
 
-    for (auto iter : grid[0])
-    {
-        FluxBoxData<double, NUM_COMPS> fluxes(grid[0][iter]);
-        for (int dd = 0; dd < DIM; dd++)
-        {
-            forallInPlace_p(f_testFlux, fluxes[dd], dd);
-            coarseFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
-            refluxFluxRegister.incrementCoarseRegister(fluxes[dd], iter, dd);
-        }
-    }
-
-    for (auto iter : grid[1])
-    {
-        FluxBoxData<double, NUM_COMPS> fluxes(grid[1][iter]);
-        for (int dd = 0; dd < DIM; dd++)
-        {
-            forallInPlace_p(f_testFlux, fluxes[dd], dd);
-            fineFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
-            refluxFluxRegister.incrementFineRegister(fluxes[dd], iter, dd);
-        }
-    }
+    initializeFluxRegisters(coarseFluxRegister, fineFluxRegister, refluxFluxRegister, grid);
 
     MBLevelBoxData<double, NUM_COMPS, HOST> refluxRegisters(grid[0], Point::Zeros());
     MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Zeros());
@@ -780,7 +779,7 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
             
             for (auto dir : Point::DirectionsOfCodim(1))
             {
-                std::cout << "\nchecking fine registers in patch: " << patch << " | dir: " << dir << " | block: " << bi << std::endl;
+                pr_out() << "\nchecking fine registers in patch: " << patch << " | dir: " << dir << " | block: " << bi << std::endl;
                 Box cfBound = fineLayout[globalIter].adjacent(dir).coarsen(refRatios);
                 cfBound &= cfBoundsFine[dir];
                 bool success = checkRegisters(fineRegisters, cfBound, dir);
@@ -829,6 +828,65 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
     h5.writeMBLevel({"proxy"}, fineMap, fineGrid, "CUBED_SPHERE_FINE_GRID");
 
     
+}
+
+TEST(MBLevelFluxRegister, CubedSphereIncrement) {
+    constexpr int NUM_COMPS = 2;
+    
+    int domainSize = 16;
+    int boxSize = 16;
+    int refRatio = 4;
+    int ghostWidth = 2;
+    int thickness = 2;
+
+    Point refRatios = Point::Ones(refRatio);
+    Point ghostWidths = Point::Ones(ghostWidth);
+    refRatios[2] = 1;
+    ghostWidths[2] = 0;
+
+    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
+
+    Array<double, DIM> gridSpacing = Point::Ones();
+    gridSpacing /= domainSize;
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> coarseFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> fineFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+    MBLevelFluxRegister<double, NUM_COMPS, HOST> refluxFluxRegister(grid[0], grid[1], refRatios, gridSpacing);
+
+    initializeFluxRegisters(coarseFluxRegister, fineFluxRegister, refluxFluxRegister, grid);
+
+    MBLevelBoxData<double, NUM_COMPS, HOST> refluxRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> coarseRegisters(grid[0], Point::Zeros());
+    MBLevelBoxData<double, NUM_COMPS, HOST> fineRegisters(grid[0], Point::Zeros());
+
+    coarseRegisters.setVal(0);
+    fineRegisters.setVal(0);
+    refluxRegisters.setVal(0);
+
+    coarseFluxRegister.applyRefluxCorrection(coarseRegisters, 1.0);
+    fineFluxRegister.applyRefluxCorrection(fineRegisters, 1.0);
+    refluxFluxRegister.applyRefluxCorrection(refluxRegisters, 1.0);
+
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+
+    auto map = CubedSphereShell::Map(grid[0], ghostWidths);
+
+    h5.writeMBLevel(map, coarseRegisters, "REFINED_BB_COARSE_REGISTERS");
+    h5.writeMBLevel(map, fineRegisters, "REFINED_BB_FINE_REGISTERS");
+    h5.writeMBLevel(map, refluxRegisters, "REFINED_BB_REFLUX_REGISTERS");
+#endif
+
+    for (BlockIndex bi = 0; bi < 6; bi++)
+    {
+        auto coarseCFBounds = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
+        EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds, gridSpacing, bi));
+
+        auto fineCFBounds = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
+        EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio, gridSpacing, bi));
+
+        EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing, bi));
+    }
+
 }
 #endif
 #endif

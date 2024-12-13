@@ -310,9 +310,12 @@ void MBLevelFluxRegister<T,C,MEM>::validateInputs (
             Point ri = a_refRatios[bi];
             if (ri[dir] > 1)
             {
-                PROTO_ASSERT(a_fineLayout.boxSize(bi)[dir]/ri[dir] > 1,
+                int finePatchCellSize = a_fineLayout.boxSize(bi)[dir];
+                int refRatio = ri[dir];
+                PROTO_ASSERT(finePatchCellSize / refRatio > 1,
                     "MBLevelFluxRegister::validateInputs | Error:\
-                    fine patch cell size is smaller than the refinement ratio.");
+                    fine patch cell size %i is smaller than the refinement ratio %i.",
+                    finePatchCellSize, dir);
             }
         }
     }
