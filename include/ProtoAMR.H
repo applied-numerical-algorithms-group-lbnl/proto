@@ -3,6 +3,7 @@
 
 #include "Proto.H"
 
+#include "amr/Proto_CoarseFineBoundary.H"
 #include "amr/Proto_FinitePointSet.H"
 #include "amr/Proto_AMRGrid.H"
 #include "amr/Proto_AMRData.H"
