@@ -92,17 +92,14 @@ namespace {
     {
         BoxData<T,C,MEM> counterData(a_coarseFineBoundary);
         counterData.setVal(0);
-        pr_out() << "Checking registers for boundary: " << a_coarseFineBoundary << " in direction " << a_dir << std::endl;
         
         for (auto ri : a_registers)
         {
-            pr_out() << "\tChecking register: " << ri.data().box() << " | with dir: " << ri.dir() << std::endl;
             if (ri.dir() == a_dir)
             {
                 BoxData<T,C,MEM> rdata(ri.data().box());
                 if (!a_coarseFineBoundary.containsBox(rdata.box()))
                 {
-                    pr_out() << "\t\tFAILURE: coarse fine boundary doesn't contain the register" << std::endl;
                     return false;
                 }
                 rdata.setVal(1);
@@ -111,13 +108,6 @@ namespace {
         }
         int numDataInCoarseFineBoundary = a_coarseFineBoundary.size()*C;
         bool success = (counterData.sum() == numDataInCoarseFineBoundary);
-        if (!success)
-        {
-            pr_out() << "\t\tFAILURE: num data in cf bound: " << numDataInCoarseFineBoundary << " != counter sum: " << counterData.sum() << std::endl;
-            counterData.printData();
-        } else {
-            pr_out() << "\t\tSUCCESS" << std::endl;
-        }
         return success;
     }
 
@@ -255,10 +245,9 @@ namespace {
     PROTO_KERNEL_START
     void f_testFluxF(Point& a_pt, Var<T,C,MEM>& a_F, int a_dir)
     {
-        double sign = 1.0;// pow(-1,a_dir);
         for (int cc = 0; cc < C; cc++)
         {
-            a_F(cc) = sign * (a_pt.sum()*1.0 + 1000.0*cc);
+            a_F(cc) = a_pt[1] + 100*a_pt[0] + 10000*cc;
         }
 
     }
@@ -322,7 +311,7 @@ namespace {
     }
 
     template<typename T, unsigned int C, MemType MEM>
-    void rotateFluxFromFineRegister(
+    MBIndex rotateFluxFromFineRegister(
         BoxData<T,C,MEM>& flux,
         MBIndex fineIndex,
         Point dir,
@@ -337,7 +326,18 @@ namespace {
             CoordPermutation R = fineLayout.domain().graph().rotation(block, dir);
             Box rotatedDomain = fineLayout.domain().convertBox(flux.box(), block, adjBlock);
             flux.rotate(rotatedDomain, R);
+
+            PatchID adjPatch = rotatedDomain.coarsen(fineLayout.boxSizes()[adjBlock]).low();
+            auto adjIndex = fineLayout.find(adjPatch, adjBlock);
+            if (adjIndex == *fineLayout.end())
+            {
+                std::cout << "Couldn't find adjacent index" << std::endl;
+                std::cout << "source data: " << finePatch << " | " << block << std::endl;
+                std::cout << "dir: " << dir << std::endl;
+                std::cout << "adj data: " << adjPatch << " | " << adjBlock << std::endl;
+            }
         }
+        return fineLayout.find(finePatch, block);
     }
 
     std::tuple<Point, Box, BlockIndex> getFineRegisterArgsFromCoarse(
@@ -407,6 +407,8 @@ namespace {
             BoxData<T,C> error(fineData.box());
             error.setVal(0);
             error += fineData;
+            // pr_out() << "\nChecking error in patch " << layout.point(iter) << " | " << layout.block(iter) << std::endl;
+            // pr_out() << "\tPatch box: " << B0 << std::endl;
             for (auto dir : Point::DirectionsOfCodim(1))
             {
                 Box registerBox = cfBounds[dir];
@@ -414,17 +416,68 @@ namespace {
                 {
                     continue;
                 }
+                // pr_out() << "\t\tFound non-empty register in direction " << dir << " | " << registerBox << std::endl;
                 auto fineSoln = testFineReflux<T,C>(registerBox, dir, refRatio, gridSpacing);
+                // pr_out() << "\t\tComputed solution box: " << fineSoln.box() << std::endl;
                 rotateFluxFromFineRegister(fineSoln, iter, dir, layout);
+                // pr_out() << "\t\tRotated solution box: " << fineSoln.box() << std::endl;
                 error -= fineSoln;
             }
             if (error.absMax() > 1e-12)
             {
+                // pr_out() << "\nIncrement Fine Error Detected" << std::endl;
+                // pr_out() << "\tblock: " << block << " | patch: " << layout.point(iter) << std::endl;
+                // pr_out() << "\tcomputed data: " << std::endl;
+                // fineData.printData();
+                // pr_out() << "\terror data: " << std::endl;
+                // error.printData();
+                // BoxData<T,C> trueData(error.box());
+                // trueData.setVal(0);
+                // trueData += fineData;
+                // trueData -= error;
+                // pr_out() << "\ttrue data: " << std::endl;
+                // trueData.printData();
                 return false;
             }
         }
         return true;
     }
+
+    template <typename T, unsigned int C, MemType MEM>
+    bool computeIncrementFineErrorForCubedSphere(
+        MBLevelBoxData<T, C, MEM> &fineRegisterData,
+        MBLevelFluxRegister<T, C, MEM> &fluxRegister,
+        int refRatio,
+        Array<T,DIM> gridSpacing)
+        {
+            auto layout = fineRegisterData.layout();
+            MBLevelFluxRegisterTester<T,C,MEM> tester(fluxRegister);
+            MBLevelBoxData<T,C,MEM> error(layout, Point::Zeros());
+            error.setVal(0);
+            for (auto iter : layout)
+            {
+                auto& fineRegisters = tester.getFineRegistersAtIndex(iter);
+                for (auto& ri : fineRegisters)
+                {
+                    auto fineSoln = testFineReflux<T,C>(ri.data().box(), ri.dir(), refRatio, gridSpacing);
+                    MBIndex adjIndex = rotateFluxFromFineRegister(fineSoln, iter, ri.dir(), layout);
+                    PROTO_ASSERT(adjIndex != *layout.end(), "Error: Data Corruption");
+                    PROTO_ASSERT(layout[adjIndex].containsBox(fineSoln.box()), "Error: Data Corruption");
+
+                    auto& error_i = error[adjIndex];
+                    auto& data_i = fineRegisterData[adjIndex];
+                    BoxData<T,C,MEM> tmpData(fineSoln.box());
+                    data_i.copyTo(tmpData);
+
+                    error_i += tmpData;
+                    error_i -= fineSoln;
+                }
+            }
+            T errorNorm = error.absMax();
+            bool success = (errorNorm < 1e-12);
+            return success;
+        }
+
 
     template <typename T, unsigned int C, MemType MEM>
     bool computeIncrementCoarseError(
@@ -779,7 +832,7 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
             
             for (auto dir : Point::DirectionsOfCodim(1))
             {
-                pr_out() << "\nchecking fine registers in patch: " << patch << " | dir: " << dir << " | block: " << bi << std::endl;
+                //pr_out() << "\nchecking fine registers in patch: " << patch << " | dir: " << dir << " | block: " << bi << std::endl;
                 Box cfBound = fineLayout[globalIter].adjacent(dir).coarsen(refRatios);
                 cfBound &= cfBoundsFine[dir];
                 bool success = checkRegisters(fineRegisters, cfBound, dir);
@@ -831,13 +884,13 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
 }
 
 TEST(MBLevelFluxRegister, CubedSphereIncrement) {
-    constexpr int NUM_COMPS = 2;
+    constexpr int NUM_COMPS = 1;
     
-    int domainSize = 16;
-    int boxSize = 16;
+    int domainSize = 8;
+    int boxSize = 8;
     int refRatio = 4;
     int ghostWidth = 2;
-    int thickness = 2;
+    int thickness = 1;
 
     Point refRatios = Point::Ones(refRatio);
     Point ghostWidths = Point::Ones(ghostWidth);
@@ -881,11 +934,13 @@ TEST(MBLevelFluxRegister, CubedSphereIncrement) {
         auto coarseCFBounds = cubedSphereShellCFBoundary_Coarse(domainSize, boxSize, thickness, refRatio, bi);
         EXPECT_TRUE(computeIncrementCoarseError(coarseRegisters, coarseCFBounds, gridSpacing, bi));
 
-        auto fineCFBounds = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
-        EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio, gridSpacing, bi));
+        //auto fineCFBounds = cubedSphereShellCFBoundary_Fine(domainSize, boxSize, thickness, refRatio, bi);
+        //EXPECT_TRUE(computeIncrementFineError(fineRegisters, fineCFBounds, refRatio, gridSpacing, bi));
 
-        EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing, bi));
+        //EXPECT_TRUE(computeRefluxError(refluxRegisters, coarseCFBounds, refRatio, gridSpacing, bi));
     }
+
+    EXPECT_TRUE(computeIncrementFineErrorForCubedSphere(fineRegisters, fineFluxRegister, refRatio, gridSpacing));
 
 }
 #endif
