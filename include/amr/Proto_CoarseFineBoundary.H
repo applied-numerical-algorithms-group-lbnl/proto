@@ -20,8 +20,8 @@ namespace Proto
         private:
             std::shared_ptr<P> m_coarsePartition;
             std::shared_ptr<P> m_finePartition;
-            std::map<DataIndex<P>, std::vector<CoarseFineBoundaryData<P>>> m_coarseMap;
-            std::map<DataIndex<P>, std::vector<CoarseFineBoundaryData<P>>> m_fineMap;
+            std::map<DataIndex<P>, std::vector<DataIndex<P>>> m_coarseMap;
+            std::map<DataIndex<P>, std::vector<DataIndex<P>>> m_fineMap;
 
     };
 
