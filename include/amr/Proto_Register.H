@@ -43,6 +43,7 @@ namespace Proto
             }
         }
 
+        const BoxData<T,C,MEM>& data() const { return *m_data; } 
         BoxData<T,C,MEM>& data() { return *m_data; } 
 
         Point dir() const { return Point::Basis(m_dir, m_side); }

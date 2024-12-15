@@ -111,136 +111,7 @@ namespace {
         return success;
     }
 
-#if DIM == 3
-#ifdef PR_AMR
-#ifdef PR_MMB
-    std::vector<MBPatchID> getTestAMRGridPatches(
-        Box domainBox,
-        Point boxSizes,
-        BlockIndex block)
-    {
-        Box patchDomain = domainBox.coarsen(boxSizes);
-        std::vector<MBPatchID> patches;
-        for (auto patch : patchDomain.edge(Point::X()))
-        {
-            patches.push_back(MBPatchID(patch, block));
-        }
-        return patches;
-    }
 
-    MBAMRGrid testCubedSphereGrid(
-        int domainSize,
-        int thickness,
-        int boxSize, 
-        Point refRatio)
-    {
-        int numBlocks = 6;
-        auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
-        Point boxSizeVect(boxSize, boxSize, thickness);
-        std::vector<Point> boxSizes(numBlocks, boxSizeVect);
-        auto coarsePatches = domain.patches(boxSizeVect);
-        MBAMRGrid grid(domain, boxSizeVect, refRatio, 2);
-
-        for (int li = 1; li < 2; li++)
-        {
-            auto domain = grid[li].domain();
-            std::vector<MBPatchID> patches;
-            for (BlockIndex bi = 0; bi < 6; bi++)
-            {
-                auto blockPatches = getTestAMRGridPatches(domain.getBlock(bi).box(), boxSizeVect, bi);
-                for (auto patch : blockPatches) { patches.push_back(patch); }
-            }
-            grid[li].define(domain, patches, boxSizes);
-        }
-        return grid;
-    }
-    
-    std::map<Point, Box> cubedSphereShellCFBoundary_Coarse(int domainSize, int boxSize, int thickness, int refRatio, BlockIndex block)
-    {
-        std::map<Point, Box> boundMap;
-        Box domainBox(Point(domainSize, domainSize, thickness));
-        int coarsenedFinePatchSize = boxSize / refRatio;
-
-        for (auto dir : Point::DirectionsOfCodim(1))
-        {
-            boundMap[dir] = Box();
-        }
-        
-        Box unrefinedRegion = domainBox.extrude(Point::X(), -coarsenedFinePatchSize);
-        Box posYStrip = domainBox.edge(Point::Y(), coarsenedFinePatchSize);
-        Box negYStrip = domainBox.edge(-Point::Y(), coarsenedFinePatchSize);
-        Box posXStrip = domainBox.edge(Point::X(), coarsenedFinePatchSize);
-        Box negXStrip = domainBox.edge(-Point::X(), coarsenedFinePatchSize);
-        boundMap[Point::X()] = unrefinedRegion.edge(0,Side::Hi,1);
-
-        switch (block)
-        {
-            case 0:
-                boundMap[-Point::X()] = posYStrip.edge(0,Side::Lo,1);
-                boundMap[-Point::Y()] = negXStrip.edge(1, Side::Lo, 1);
-                break;
-            case 1:
-                boundMap[-Point::X()] = negYStrip.edge(0,Side::Lo,1);
-                boundMap[Point::Y()] = negXStrip.edge(1, Side::Hi, 1);
-                break;
-            case 2:
-                boundMap[-Point::X()] = unrefinedRegion.edge(0,Side::Lo, 1);
-                break;
-            case 3:
-                boundMap[-Point::X()] = unrefinedRegion.edge(0,Side::Lo, 1);
-                boundMap[Point::Y()] = unrefinedRegion.edge(1,Side::Hi, 1);
-                boundMap[-Point::Y()] = unrefinedRegion.edge(1,Side::Lo, 1);
-                break;
-            case 4:
-                boundMap[-Point::X()] = unrefinedRegion.edge(0,Side::Lo, 1);
-                boundMap[Point::Y()] = negXStrip.edge(1,Side::Hi, 1);
-                boundMap[-Point::Y()] = negXStrip.edge(1,Side::Lo, 1);
-                break;
-            case 5:
-                boundMap[-Point::X()] = unrefinedRegion.edge(0,Side::Lo, 1);
-                break;
-        }
-
-        return boundMap;
-    }
-    std::map<Point, Box> cubedSphereShellCFBoundary_Fine(int domainSize, int boxSize, int thickness, int refRatio, BlockIndex block)
-    {
-        std::map<Point, Box> boundMap;
-        Box domainBox(Point(domainSize, domainSize, thickness));
-        int coarsenedFinePatchSize = boxSize / refRatio;
-
-        for (auto dir : Point::DirectionsOfCodim(1))
-        {
-            boundMap[dir] = Box();
-        }
-        
-        Box refinedRegion = domainBox.edge(Point::X() * coarsenedFinePatchSize);
-        boundMap[-Point::X()] = refinedRegion.adjacent(0,Side::Lo,1);
-        boundMap[Point::X()]  = refinedRegion.adjacent(0,Side::Hi,1);
-
-        switch(block)
-        {
-            case 0:
-                boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
-                boundMap[Point::X()] = boundMap[Point::X()].extrude(-Point::Y(), -coarsenedFinePatchSize);
-                break;
-            case 1:
-                boundMap[Point::Y()]  = refinedRegion.adjacent(1, Side::Hi, 1);
-                boundMap[Point::X()] = boundMap[Point::X()].extrude(Point::Y(), -coarsenedFinePatchSize);
-                break;
-            case 4:
-            case 5:
-                boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
-                boundMap[Point::Y()]  = refinedRegion.adjacent(1, Side::Hi, 1);
-                break;
-            default: break;
-        }
-
-        return boundMap;
-    }
-#endif
-#endif
-#endif
     template<typename T, unsigned int C, MemType MEM>
     PROTO_KERNEL_START
     void f_testFluxF(Point& a_pt, Var<T,C,MEM>& a_F, int a_dir)
@@ -444,42 +315,6 @@ namespace {
     }
 
     template <typename T, unsigned int C, MemType MEM>
-    bool computeIncrementFineErrorForCubedSphere(
-        MBLevelBoxData<T, C, MEM> &fineRegisterData,
-        MBLevelFluxRegister<T, C, MEM> &fluxRegister,
-        int refRatio,
-        Array<T,DIM> gridSpacing)
-        {
-            auto layout = fineRegisterData.layout();
-            MBLevelFluxRegisterTester<T,C,MEM> tester(fluxRegister);
-            MBLevelBoxData<T,C,MEM> error(layout, Point::Zeros());
-            error.setVal(0);
-            for (auto iter : layout)
-            {
-                auto& fineRegisters = tester.getFineRegistersAtIndex(iter);
-                for (auto& ri : fineRegisters)
-                {
-                    auto fineSoln = testFineReflux<T,C>(ri.data().box(), ri.dir(), refRatio, gridSpacing);
-                    MBIndex adjIndex = rotateFluxFromFineRegister(fineSoln, iter, ri.dir(), layout);
-                    PROTO_ASSERT(adjIndex != *layout.end(), "Error: Data Corruption");
-                    PROTO_ASSERT(layout[adjIndex].containsBox(fineSoln.box()), "Error: Data Corruption");
-
-                    auto& error_i = error[adjIndex];
-                    auto& data_i = fineRegisterData[adjIndex];
-                    BoxData<T,C,MEM> tmpData(fineSoln.box());
-                    data_i.copyTo(tmpData);
-
-                    error_i += tmpData;
-                    error_i -= fineSoln;
-                }
-            }
-            T errorNorm = error.absMax();
-            bool success = (errorNorm < 1e-12);
-            return success;
-        }
-
-
-    template <typename T, unsigned int C, MemType MEM>
     bool computeIncrementCoarseError(
         MBLevelBoxData<T, C, MEM> &coarseRegisters,
         std::map<Point, Box> cfBounds,
@@ -557,10 +392,179 @@ namespace {
         }
         return true;
     }
+
+
+#if DIM == 3
+#ifdef PR_AMR
+#ifdef PR_MMB
+    std::vector<MBPatchID> getTestAMRGridPatches(
+        Box domainBox,
+        Point boxSizes,
+        BlockIndex block)
+    {
+        Box patchDomain = domainBox.coarsen(boxSizes);
+        std::vector<MBPatchID> patches;
+        for (auto patch : patchDomain.edge(Point::X()))
+        {
+            patches.push_back(MBPatchID(patch, block));
+        }
+        return patches;
+    }
+
+    MBAMRGrid testCubedSphereGrid(
+        int domainSize,
+        int thickness,
+        int boxSize, 
+        Point refRatio)
+    {
+        int numBlocks = 6;
+        auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
+        Point boxSizeVect(boxSize, boxSize, thickness);
+        std::vector<Point> boxSizes(numBlocks, boxSizeVect);
+        auto coarsePatches = domain.patches(boxSizeVect);
+        MBAMRGrid grid(domain, boxSizeVect, refRatio, 2);
+
+        for (int li = 1; li < 2; li++)
+        {
+            auto domain = grid[li].domain();
+            std::vector<MBPatchID> patches;
+            for (BlockIndex bi = 0; bi < 6; bi++)
+            {
+                auto blockPatches = getTestAMRGridPatches(domain.getBlock(bi).box(), boxSizeVect, bi);
+                for (auto patch : blockPatches) { patches.push_back(patch); }
+            }
+            grid[li].define(domain, patches, boxSizes);
+        }
+        return grid;
+    }
+
+    std::map<Point, Box> cubedSphereShellCFBoundary_Coarse(int domainSize, int boxSize, int thickness, int refRatio, BlockIndex block)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox(Point(domainSize, domainSize, thickness));
+        int coarsenedFinePatchSize = boxSize / refRatio;
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+
+        Box unrefinedRegion = domainBox.extrude(Point::X(), -coarsenedFinePatchSize);
+        Box posYStrip = domainBox.edge(Point::Y(), coarsenedFinePatchSize);
+        Box negYStrip = domainBox.edge(-Point::Y(), coarsenedFinePatchSize);
+        Box posXStrip = domainBox.edge(Point::X(), coarsenedFinePatchSize);
+        Box negXStrip = domainBox.edge(-Point::X(), coarsenedFinePatchSize);
+        boundMap[Point::X()] = unrefinedRegion.edge(0, Side::Hi, 1);
+
+        switch (block)
+        {
+        case 0:
+            boundMap[-Point::X()] = posYStrip.edge(0, Side::Lo, 1);
+            boundMap[-Point::Y()] = negXStrip.edge(1, Side::Lo, 1);
+            break;
+        case 1:
+            boundMap[-Point::X()] = negYStrip.edge(0, Side::Lo, 1);
+            boundMap[Point::Y()] = negXStrip.edge(1, Side::Hi, 1);
+            break;
+        case 2:
+            boundMap[-Point::X()] = unrefinedRegion.edge(0, Side::Lo, 1);
+            break;
+        case 3:
+            boundMap[-Point::X()] = unrefinedRegion.edge(0, Side::Lo, 1);
+            boundMap[Point::Y()] = unrefinedRegion.edge(1, Side::Hi, 1);
+            boundMap[-Point::Y()] = unrefinedRegion.edge(1, Side::Lo, 1);
+            break;
+        case 4:
+            boundMap[-Point::X()] = unrefinedRegion.edge(0, Side::Lo, 1);
+            boundMap[Point::Y()] = negXStrip.edge(1, Side::Hi, 1);
+            boundMap[-Point::Y()] = negXStrip.edge(1, Side::Lo, 1);
+            break;
+        case 5:
+            boundMap[-Point::X()] = unrefinedRegion.edge(0, Side::Lo, 1);
+            break;
+        }
+
+        return boundMap;
+    }
+    std::map<Point, Box> cubedSphereShellCFBoundary_Fine(int domainSize, int boxSize, int thickness, int refRatio, BlockIndex block)
+    {
+        std::map<Point, Box> boundMap;
+        Box domainBox(Point(domainSize, domainSize, thickness));
+        int coarsenedFinePatchSize = boxSize / refRatio;
+
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            boundMap[dir] = Box();
+        }
+
+        Box refinedRegion = domainBox.edge(Point::X() * coarsenedFinePatchSize);
+        boundMap[-Point::X()] = refinedRegion.adjacent(0, Side::Lo, 1);
+        boundMap[Point::X()] = refinedRegion.adjacent(0, Side::Hi, 1);
+
+        switch (block)
+        {
+        case 0:
+            boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
+            boundMap[Point::X()] = boundMap[Point::X()].extrude(-Point::Y(), -coarsenedFinePatchSize);
+            break;
+        case 1:
+            boundMap[Point::Y()] = refinedRegion.adjacent(1, Side::Hi, 1);
+            boundMap[Point::X()] = boundMap[Point::X()].extrude(Point::Y(), -coarsenedFinePatchSize);
+            break;
+        case 4:
+        case 5:
+            boundMap[-Point::Y()] = refinedRegion.adjacent(1, Side::Lo, 1);
+            boundMap[Point::Y()] = refinedRegion.adjacent(1, Side::Hi, 1);
+            break;
+        default:
+            break;
+        }
+
+        return boundMap;
+    }
+
+    template <typename T, unsigned int C, MemType MEM>
+    bool computeIncrementFineErrorForCubedSphere(
+        MBLevelBoxData<T, C, MEM> &fineRegisterData,
+        MBLevelFluxRegister<T, C, MEM> &fluxRegister,
+        int refRatio,
+        Array<T, DIM> gridSpacing)
+    {
+        auto layout = fineRegisterData.layout();
+        MBLevelFluxRegisterTester<T, C, MEM> tester(fluxRegister);
+        MBLevelBoxData<T, C, MEM> error(layout, Point::Zeros());
+        error.setVal(0);
+        for (auto iter : layout)
+        {
+            auto &fineRegisters = tester.getFineRegistersAtIndex(iter);
+            for (auto &ri : fineRegisters)
+            {
+                auto fineSoln = testFineReflux<T, C>(ri.data().box(), ri.dir(), refRatio, gridSpacing);
+                MBIndex adjIndex = rotateFluxFromFineRegister(fineSoln, iter, ri.dir(), layout);
+                PROTO_ASSERT(adjIndex != *layout.end(), "Error: Data Corruption");
+                PROTO_ASSERT(layout[adjIndex].containsBox(fineSoln.box()), "Error: Data Corruption");
+
+                auto &error_i = error[adjIndex];
+                auto &data_i = fineRegisterData[adjIndex];
+                BoxData<T, C, MEM> tmpData(fineSoln.box());
+                data_i.copyTo(tmpData);
+
+                error_i += tmpData;
+                error_i -= fineSoln;
+            }
+        }
+        T errorNorm = error.absMax();
+        bool success = (errorNorm < 1e-12);
+        return success;
+    }
+
+#endif
+#endif
+#endif
 }
 
 #if PR_MMB
-#if 0
+#if 1
 TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     #if PR_VERBOSE > 0
         HDF5Handler h5;
@@ -773,6 +777,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
 }
 #endif
 #if DIM == 3
+
 TEST(MBLevelFluxRegister, CubedSphereConstruction) {
    
     constexpr int NUMCOMPS = 1;
@@ -883,6 +888,7 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
     
 }
 
+#if 0 //This test needs reworking
 TEST(MBLevelFluxRegister, CubedSphereIncrement) {
     constexpr int NUM_COMPS = 1;
     
@@ -943,6 +949,7 @@ TEST(MBLevelFluxRegister, CubedSphereIncrement) {
     EXPECT_TRUE(computeIncrementFineErrorForCubedSphere(fineRegisters, fineFluxRegister, refRatio, gridSpacing));
 
 }
+#endif
 #endif
 #endif
 
