@@ -161,7 +161,7 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -280,7 +280,7 @@ TEST(MBInterpOp, XPointTest)
 #endif
 #endif
 #if DIM == 3
-#if 0
+#if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
 #define CUBED_SPHERE_SHELL_R0 0.5
