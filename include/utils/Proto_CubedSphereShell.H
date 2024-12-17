@@ -59,16 +59,16 @@ namespace Proto {
     /** 
      */
     template<MemType MEM>
-    static MBInterpOp InterpOp(
+    static MBInterpOp InterpOpOld(
                                const MBDisjointBoxLayout& a_layout,
                                Point a_ghost,
                                int a_order = 4);
     /// New operator construction.
     template<MemType MEM>
-    static MBInterpOp InterpOpNew(
-                                  const MBDisjointBoxLayout& a_layout,
-                                  Point a_ghost,
-                                  int a_order = 4); 
+    static MBInterpOp InterpOp(
+                               const MBDisjointBoxLayout& a_layout,
+                               Point a_ghost,
+                               int a_order = 4); 
     /// Get MB Interpolation Operator
     /** 
      */
