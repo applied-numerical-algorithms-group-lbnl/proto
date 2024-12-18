@@ -4,6 +4,7 @@
 #     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 # blt_add_test(NAME BCDemo COMMAND BCDemo)
 
+
 blt_add_executable(NAME PointTests SOURCES PointTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -20,6 +21,10 @@ blt_add_executable(NAME ReductionTests SOURCES ReductionTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME ReductionTests COMMAND ReductionTests)
+blt_add_executable(NAME DistributedSetTests SOURCES DistributedSetTests.cpp
+    DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME DistributedSetTests COMMAND DistributedSetTests)
 blt_add_executable(NAME BoxDataTests SOURCES BoxDataTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -92,6 +97,7 @@ endif()
         blt_add_test(NAME LevelFluxRegisterTests COMMAND LevelFluxRegisterTests)
     endif()
     if (MMB)
+
         blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
