@@ -78,7 +78,7 @@ CubedSphereShell::Operator(
 
 template<MemType MEM>
 MBInterpOp
-CubedSphereShell::InterpOp(
+CubedSphereShell::InterpOpOld(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)
@@ -115,7 +115,7 @@ CubedSphereShell::InterpOp(
 }
 template<MemType MEM>
 MBInterpOp
-CubedSphereShell::InterpOpNew(
+CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)

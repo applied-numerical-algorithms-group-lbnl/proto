@@ -89,16 +89,16 @@ int main(int argc, char *argv[])
       if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
       // Point ghostForInterp = OP::ghost() + Point::Ones();
-      //MBInterpOp iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),
+      //MBInterpOp iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),
       //                                                  ghostForInterp,4);
       MBInterpOp iop;
       if (MBInterp_define == 0)
         {
-          iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+          iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),OP::ghost(),4);
         }
       else
         {
-          iop = CubedSphereShell::InterpOpNew<HOST>(JU.layout(),OP::ghost(),4);
+          iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
         }
       // Set input solution.
       if (restart_file.empty())
