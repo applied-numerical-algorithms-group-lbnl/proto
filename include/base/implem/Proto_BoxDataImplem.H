@@ -506,7 +506,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
             Src interval size %i =/= dst interval size %i on axis %i.",
             a_srcComps.size(ii), a_dstComps.size(ii),ii);
     }
-    PROTO_ASSERT(m_box.contains(a_srcBox),
+    PROTO_ASSERT(m_box.containsBox(a_srcBox),
         "BoxData::copyTo | Error: \
         Source Box input is not a subset of source array domain.");
 
@@ -679,7 +679,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
         unsigned int a_d,
         unsigned int a_e) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
             "BoxData::data | Error: Point argument must be in this->box().");   
     PROTO_ASSERT((a_c < C),
             "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
@@ -791,8 +791,8 @@ T* BoxData<T,C,MEM,D,E>::data(
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
-  //PR_TIME("BoxData::var");
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PR_TIME("BoxData::var");
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -812,7 +812,7 @@ Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -1191,9 +1191,8 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
+    if (box().empty()) { return; }
     PR_TIME("BoxData::setVal");
-    // PC: replacing with forallInPlace
-    //this->operatorT<BoxDataOp::Assign>(a_val);
     forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
                   {
                     for (int ee = 0; ee < E; ee++)
@@ -1477,6 +1476,39 @@ T BoxData<T,C,MEM,D,E>::sumAbs(int a_c, int a_d, int a_e) const
     return rxn.fetchLocal();
 }
 
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM,unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::sumSquare(Reduction<T, SumSquare, MEM>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+// Sum of Abs Values (Componentwise)
+template <class T, unsigned int C, MemType MEM,unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::sumSquare( Reduction<T, SumSquare, MEM>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+T BoxData<T,C,MEM,D,E>::sumSquare() const
+{
+    Reduction<T,SumSquare,MEM> rxn(true);
+    reduce(rxn);
+    return rxn.fetchLocal();
+}
+
+// Sum of Values (Componentwise)
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+T BoxData<T,C,MEM,D,E>::sumSquare(int a_c, int a_d, int a_e) const
+{
+    Reduction<T,SumSquare,MEM> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetchLocal();
+}
+
+
 // Integrate (Isotropic Grid)
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 T BoxData<T,C,MEM,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
@@ -1516,7 +1548,7 @@ void BoxData<T,C,MEM,D,E>::linearOut(
 {
 
     PR_TIME("BoxData::linearOut");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearOut | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1559,7 +1591,7 @@ void BoxData<T,C,MEM,D,E>::linearIn(
 {
 
     PR_TIME("BoxData::linearIn");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearIn | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1672,7 +1704,7 @@ void BoxData<T,C,MEM,D,E>::printData(
         return;
     }
 
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
         "BoxData::printData(a_box,...) | Error: \
         Box is not a subset of the domain of *this.");
     
@@ -1834,5 +1866,19 @@ BoxData<T,CC,MEM> slice(
     const Box& b = a_src.box();
     T* ptr = (T*)(a_src.data(b.low(),a_nstart));
     BoxData<T,CC,MEM> rtn(a_src.m_data, ptr, b);
+    return rtn;
+}
+
+template<typename T, unsigned int C, unsigned int D, MemType MEM>
+BoxData<T,C,MEM,1> plane(
+        const BoxData<T,C,MEM,D>& a_src,
+        unsigned int a_d)
+{
+    PR_TIME("slice(BoxData<T,C,1,1>&, int)");
+    PROTO_ASSERT((a_d < D),
+        "slice(const BoxData&, uint) | Error: Invalid slicing range")
+    const Box& b = a_src.box();
+    T* ptr = (T*)(a_src.data(b.low(),0,a_d));
+    BoxData<T,C,MEM,1> rtn(a_src.m_data, ptr, b);
     return rtn;
 }

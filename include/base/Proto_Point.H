@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <array>
+#include <set>
 
 namespace Proto
 {
@@ -142,6 +143,10 @@ namespace Proto
         ACCEL_DECORATION inline static Point X() { return Basis(0); }
         ACCEL_DECORATION inline static Point Y() { return Basis(1); }
         ACCEL_DECORATION inline static Point Z() { return Basis(2); }
+
+        inline static std::set<Point> Directions();
+        inline static std::set<Point> DirectionsOfCodim(int a_codim);
+        
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -434,6 +439,10 @@ namespace Proto
             Otherwise, the ith element of the output will be Zeros().
         */
         inline std::array<Point, DIM> perpUnit() const;
+
+        inline int firstNonZeroIndex() const;
+
+        inline int lastNonZeroIndex() const;
 
         /// Coordinates of non-zero entries
         inline std::vector<int> coords() const;

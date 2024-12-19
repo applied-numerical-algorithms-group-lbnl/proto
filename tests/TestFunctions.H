@@ -11,7 +11,7 @@ PROTO_KERNEL_START
 void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
     double p = 6.0;
-    double s = 1.0;
+    double s = 2.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -27,7 +27,7 @@ PROTO_KERNEL_START
 void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
 {
     double p = 6.0;
-    double s = 1.0;
+    double s = 2.0;
     double r2 = 0;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -63,6 +63,7 @@ void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_val
 }
 PROTO_KERNEL_END(f_MBConstF, f_MBConst);
 
+
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
 void f_iotaCornerF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
@@ -84,6 +85,7 @@ void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
     }
 }
 PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
+
 
 #ifdef PR_MMB
 
@@ -164,7 +166,7 @@ MBProblemDomain buildIdentity(int a_domainSize)
 
 MBProblemDomain buildXPoint(int a_domainSize)
 {
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
@@ -779,27 +781,68 @@ MBAMRGrid telescopingXPointGrid(
         int refRatio,
         int boxSize)
 {
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
     MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();
-        std::vector<MBPatchID_t> patches;
+        std::vector<MBPoint> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
-        Point patch = patchDomain.high();
+        Point patchDomainSizes = patchDomain.sizes();
+        //Point growDir = patchDomainSizes * (Point::X() + Point::Y());
+        //Point subDomainHigh = patchDomain.high();
+    
+        //Point subDomainLow = (subDomainHigh + Point::Ones()) / 2; 
+        //Box patchSubDomain(subDomainLow, subDomainHigh);
+        Box patchSubDomain = patchDomain.extrude(-Point::X(), -patchDomainSizes[0]/2);
+        patchSubDomain = patchSubDomain.extrude(-Point::Y(), -patchDomainSizes[1]/2);
         for (int bi = 0; bi < domain.size(); bi++)
         {
-            patches.push_back(MBPatchID_t(patch, bi));
+            for (auto patch : patchSubDomain)
+            {
+                patches.push_back(MBPoint(patch, bi));
+            }
         }
         grid[li].define(domain, patches, boxSizeVect);
     }
     return grid;
 }
 
+MBAMRGrid refinedBlockBoundaryXPointGrid(
+        int domainSize,
+        int numLevels,
+        int refRatio,
+        int boxSize)
+{
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    auto domain = buildXPoint(domainSize);
+    std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
+    std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
+    auto coarsePatches = domain.patches(boxSize);
+    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+
+    for (int li = 1; li < numLevels; li++)
+    {
+        auto domain = grid[li].domain();
+        std::vector<MBPoint> patches;
+        Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
+        Box refinedDomain = patchDomain.edge(Point::X());
+        for (int bi = 0; bi < domain.size(); bi++)
+        {
+            for (auto patch : refinedDomain)
+            {
+                patches.push_back(MBPoint(patch, bi));
+            }
+        }
+        grid[li].define(domain, patches, boxSizeVect);
+    }
+    return grid;
+}
 
 #endif
 #endif

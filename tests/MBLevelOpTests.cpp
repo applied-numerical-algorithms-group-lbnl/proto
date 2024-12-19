@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 #include "MBMap_XPointRigid.H"
 #include "MBMap_Shear.H"
@@ -156,17 +156,12 @@ TEST(MBLevelOp, XPointLaplace) {
     HDF5Handler h5;
     int domainSize = 32;
     int boxSize = 32;
-    int numGhost = 4;
+    int ghostWidth = 4;
+    Point ghostWidths = Point::Ones(ghostWidth);
+    Point noGhost = Point::Zeros();
     Array<double, DIM> k{1,1,1,0,0,0};
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
-    Array<Point, DIM+1> srcGhost;
-    Array<Point, DIM+1> dstGhost;
-    Array<Point, DIM+1> mapGhost;
-
-    srcGhost.fill(Point::Ones(numGhost));
-    mapGhost.fill(Point::Ones(numGhost+1));
-    dstGhost.fill(Point::Zeros());
 
     int N = 3;
     double err[N];
@@ -175,34 +170,34 @@ TEST(MBLevelOp, XPointLaplace) {
         err[nn] = 0.0;
         double dx = 1.0/domainSize;
         auto domain = buildXPoint(domainSize);
-        Point boxSizeVect = Point::Ones(boxSize);
-        MBDisjointBoxLayout layout(domain, boxSizeVect);
+        Point boxSizes = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizes);
 
         MBLevelMap<MBMap_XPointRigid, HOST> map;
-        map.define(layout, mapGhost);
+        map.define(layout, ghostWidths);
         
-        MBLevelBoxData<double, 1, HOST> hostSrc(layout, srcGhost);
-        MBLevelBoxData<double, DIM, HOST> hostFlx(layout, srcGhost);
-        MBLevelBoxData<double, 1, HOST> hostDst(layout, dstGhost);
-        MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
-        MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
+        MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghostWidths);
+        MBLevelBoxData<double, DIM, HOST> hostFlx(layout, ghostWidths);
+        MBLevelBoxData<double, 1, HOST> hostDst(layout, noGhost);
+        MBLevelBoxData<double, 1, HOST> hostSln(layout, noGhost);
+        MBLevelBoxData<double, 1, HOST> hostErr(layout, noGhost);
 
-        auto C2C = Stencil<double>::CornersToCells(4);
+        auto cornersToCells = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
             auto& src_i = hostSrc[iter];
-            Box b_i = C2C.domain(layout[iter]).grow(numGhost);
-            BoxData<double, DIM> x_i(b_i);
-            BoxData<double, 1> J_i(b_i);
+            Box cornersToCellsDomain = cornersToCells.domain(layout[iter]).grow(ghostWidth);
+            BoxData<double, DIM> x_i(cornersToCellsDomain);
+            BoxData<double, 1> J_i(cornersToCellsDomain);
             map.apply(x_i, J_i, block);
-            double J0 = J_i.absMax(); //J is a constant
+            double J0 = J_i.absMax(); //J is a constant for the XPointRigid map
             BoxData<double, 1> phi = forall_p<double, 1>(f_phiM, block, x_i, k, offset);
-            src_i |= C2C(phi);
+            src_i |= cornersToCells(phi);
        
             BoxData<double, 1> lphi = forall_p<double, 1>(f_LphiM, block, x_i, k, offset);
             auto& sln_i = hostSln[iter];
-            sln_i |= C2C(lphi);
+            sln_i |= cornersToCells(lphi);
             sln_i *= J0;
         }
 
@@ -214,28 +209,26 @@ TEST(MBLevelOp, XPointLaplace) {
         hostSrc.exchange();
         hostDst.setVal(0);
         hostErr.setVal(0);
-        hostFlx.setVal(7);
+        hostFlx.setVal(0);
 
         MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
         op.define(map);
         op(hostDst, hostSrc);
-        hostDst.exchange();
+        //hostDst.exchange();
          
         for (auto iter : layout)
         {
-            auto& src_i = hostSrc[iter];    //source data already initialized
-            auto& flx_i = hostFlx[iter];    //uninitialized data with DIM components
+            auto& src_i = hostSrc[iter];    
+            auto& flx_i = hostFlx[iter];    
             for (int ii = 0; ii < DIM; ii++)
             {
-                auto fd = slice(flx_i, ii); //alias to a single component(?)
-                op[iter].flux(fd, src_i,ii);              //update fd
+                auto fd = slice(flx_i, ii);
+                op[iter].flux(fd, src_i,ii);
             }
 
             auto& err_i = hostErr[iter];
             auto& dst_i = hostDst[iter];
             auto& sln_i = hostSln[iter];
-            //double J0 = map.jacobian()[iter].absMax(); //J is a constant
-            //dst_i /= (J0);
             dst_i.copyTo(err_i);
             err_i -= sln_i;
             err[nn] = max(err_i.absMax(), err[nn]);

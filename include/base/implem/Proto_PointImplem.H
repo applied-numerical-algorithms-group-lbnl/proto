@@ -67,6 +67,47 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     }
 }
 
+std::set<Point> Point::Directions()
+{
+    std::set<Point> returnDirs;
+    for (int codim = 1; codim <= DIM; codim++)
+    {
+        auto dirs = DirectionsOfCodim(codim);
+        for (auto dir : dirs)
+        {
+            returnDirs.insert(dir);
+        }
+    }
+    return returnDirs;
+}
+
+std::set<Point> Point::DirectionsOfCodim(int a_codim)
+{
+    std::set<Point> returnDirs;
+    if (a_codim == 1)
+    {
+        for(int dd = 0; dd < DIM; dd++)
+        {
+            returnDirs.insert(Point::Basis(dd,+1));
+            returnDirs.insert(Point::Basis(dd,-1));
+        }
+    } else {
+        std::set<Point> lowerCodimDirs = DirectionsOfCodim(a_codim-1);
+        for (auto dir : lowerCodimDirs)
+        {
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                if (dir[dd] == 0)
+                {
+                    returnDirs.insert(dir + Point::Basis(dd));
+                    returnDirs.insert(dir - Point::Basis(dd));
+                }
+            }
+        }
+    }
+    return returnDirs;
+}
+
 ACCEL_DECORATION
 const int& Point::operator[](unsigned int a_index) const
 {
@@ -451,6 +492,28 @@ std::vector<Point> Point::split() const
         }
     }
     return points;
+}
+
+int Point::firstNonZeroIndex() const
+{
+    int ii = 0;
+    while (ii < DIM)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii++;
+    }
+    return ii;
+}
+
+int Point::lastNonZeroIndex() const
+{
+    int ii = DIM-1;
+    while (ii >= 0)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii--;
+    }
+    return ii;
 }
 
 Point Point::dir() const

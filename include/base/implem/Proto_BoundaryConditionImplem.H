@@ -58,7 +58,7 @@ void BoundaryCondition::Dirichlet(
         if (bound.empty()) { return; }
         auto S = DirichletStencil(a_dx[dd], a_face, dd);
 
-        PROTO_ASSERT(a_state.box().contains(S.stencil.domain(bound)),
+        PROTO_ASSERT(a_state.box().containsBox(S.stencil.domain(bound)),
                 "BoundaryCondition::Dirichlet | Error: Not enough state data to apply BC");
 
         BoxData<T,C,MEM,D,E> fluxTemp = S.stencil(a_state, bound);
@@ -85,9 +85,9 @@ void BoundaryCondition::Dirichlet(
         if (bound.empty()) { return; }
         auto S = DirichletStencil(a_dx[dd], a_face, dd);
 
-        PROTO_ASSERT(a_state.box().contains(S.stencil.domain(bound)),
+        PROTO_ASSERT(a_state.box().containsPoint(S.stencil.domain(bound)),
                 "BoundaryCondition::Dirichlet | Error: Not enough state data to apply BC");
-        PROTO_ASSERT(a_values.box().contains(bound),
+        PROTO_ASSERT(a_values.box().containsBox(bound),
                 "BoundaryCondition::Dirichlet | Error: Insufficient prescribed BC data");
         BoxData<T,C,MEM,D,E> fluxTemp = S.stencil(a_state, bound);
         Stencil<T> I = 1.0*Shift::Zeros();

@@ -1,5 +1,7 @@
 /.vscode
-/build
+build
+blis
+blt
 *.hdf5
 *.h5
 *.vtk

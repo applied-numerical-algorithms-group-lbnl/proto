@@ -11,7 +11,7 @@
 
 namespace Proto {
 
-enum Operation { Max, Min, Abs, Sum, SumAbs };
+enum Operation { Max, Min, Abs, Sum, SumAbs, SumSquare };
 enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line

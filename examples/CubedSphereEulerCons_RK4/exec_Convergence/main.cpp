@@ -1,5 +1,5 @@
 #include "Proto.H"
-#include "Inputs_Parsing.H"
+#include "InputParser.H"
 #include "BoxOp_EulerCubedSphere.H"
 #include "MHD_IO.H"
 #include "MHD_CME.H"

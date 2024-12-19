@@ -2,7 +2,7 @@
 
 #include "Proto.H"
 
-#define SHEAR_MAP_SLOPE 1.0
+#define MB_MAP_SHEAR_SLOPE 1.0
 
 using namespace Proto;
 
@@ -23,20 +23,20 @@ namespace {
                 a_X[0] = X - 1.0;
                 a_X[1] = Y - 1.0;
                 break;
-                // upper left
+            // upper left
             case 3:
                 a_X[0] = X - 1.0;
                 a_X[1] = Y;
                 break;
-                // lower right
+            // lower right
             case 1:
                 a_X[0] = X;
-                a_X[1] = Y + SHEAR_MAP_SLOPE*X - 1.0;
+                a_X[1] = Y + MB_MAP_SHEAR_SLOPE*X - 1.0;
                 break;
-                // upper right
+            // upper right
             case 2:
                 a_X[0] = X;
-                a_X[1] = Y + SHEAR_MAP_SLOPE*X;
+                a_X[1] = Y + MB_MAP_SHEAR_SLOPE*X;
                 break;
         }
     }

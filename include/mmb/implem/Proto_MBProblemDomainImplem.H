@@ -88,7 +88,7 @@ std::vector<MBGraphArc> MBProblemDomain::boundaries(
     return m_graph->boundaries(a_srcBlock, a_dir);
 }
 
-Point MBProblemDomain::convert(
+Point MBProblemDomain::convertNode(
         Point a_point,
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock) const
@@ -138,7 +138,18 @@ share a codimension 1 boundary.");
     return s10 + R01(a_point);
 }
 
-Box MBProblemDomain::convert(
+Point MBProblemDomain::convertPoint(
+        Point a_point,
+        BlockIndex a_srcBlock,
+        BlockIndex a_dstBlock,
+        Centering a_ctr) const
+{
+    Box srcBox(a_point, a_point);
+    Box dstBox = convertBox(srcBox, a_srcBlock, a_dstBlock, a_ctr);
+    return dstBox.low();
+}
+
+Box MBProblemDomain::convertBox(
         Box a_box,
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock,
@@ -149,16 +160,16 @@ Box MBProblemDomain::convert(
     {
         case PR_CELL:
         {
-            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-            H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
+            L = convertNode(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convertNode(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
             Box B(L, L);
             B = B & H;
             return Box(B.low(), B.high()-Point::Ones());
         }
         case PR_NODE:
         {
-            L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-            H = convert(a_box.high(), a_srcBlock, a_dstBlock);
+            L = convertNode(a_box.low(), a_srcBlock, a_dstBlock);
+            H = convertNode(a_box.high(), a_srcBlock, a_dstBlock);
             Box B(L, L);
             B = B & H;
             return B;
@@ -296,21 +307,21 @@ void MBProblemDomain::close() const
     m_closed = true;
 }
 
-std::vector<MBPatchID_t> MBProblemDomain::patches(int a_boxSize) const
+std::vector<MBPoint> MBProblemDomain::patches(int a_boxSize) const
 {
     return patches(Point::Ones(a_boxSize));
 }
-std::vector<MBPatchID_t> MBProblemDomain::patches(Point a_boxSize) const
+std::vector<MBPoint> MBProblemDomain::patches(Point a_boxSize) const
 {
     std::vector<Point> boxSizes(numBlocks(), a_boxSize);
     return patches(boxSizes);
 }
 
-std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+std::vector<MBPoint> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
 {
     PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
             "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
-    std::vector<MBPatchID_t> patchVect;
+    std::vector<MBPoint> patchVect;
 
     for (int bi = 0; bi < numBlocks(); bi++)
     {
@@ -319,13 +330,13 @@ std::vector<MBPatchID_t> MBProblemDomain::patches(const std::vector<Point>& a_bo
         Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchDomain)
         {
-            patchVect.push_back(MBPatchID_t(pi, bi));
+            patchVect.push_back(MBPoint(pi, bi));
         }
     }
     return patchVect;
 }
 
-Point MBProblemDomain::getDir(Point a_point, BlockIndex a_block) const
+Point MBProblemDomain::getDirectionFromPoint(Point a_point, BlockIndex a_block) const
 {
     Box patchDomain = getBlock(a_block).box();
     Point hiDiff = a_point - patchDomain.high();
@@ -347,29 +358,68 @@ Point MBProblemDomain::getDir(Point a_point, BlockIndex a_block) const
 }
 
 bool MBProblemDomain::inTriplePoint(
-        Point       a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isTriplePoint(a_block, getDir(a_point, a_block));
+    return graph().isTriplePoint(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inBlockBoundary(
-        Point       a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isBlockBoundary(a_block, getDir(a_point, a_block));
+    return graph().isBlockBoundary(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inDomainBoundary(
-        Point       a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return graph().isDomainBoundary(a_block, getDir(a_point, a_block));
+    return graph().isDomainBoundary(a_block, getDirectionFromPoint(a_point, a_block));
 }
 
 bool MBProblemDomain::inInterior(
-        Point       a_point,
+        Point     a_point,
         BlockIndex  a_block) const
 {
-    return getBlock(a_block).box().contains(a_point);
+    return getBlock(a_block).box().containsPoint(a_point);
+}
+bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block) const
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onBlockBoundary(a_point, a_block, dir)) { return true; }
+    }
+    return false;
+}
+
+bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+{
+    bool isValidBlockBoundary = graph().isBlockBoundary(a_block, a_dir);
+    if (isValidBlockBoundary){
+        Box domainBox = getBlock(a_block).box();
+        Box domainBoundBox = domainBox.edge(a_dir);
+        return domainBoundBox.containsPoint(a_point);
+    } else {
+        return false;
+    }
+}
+bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block) const
+{
+    for (auto dir : Point::Directions())
+    {
+        if (onDomainBoundary(a_point, a_block, dir)) { return true; }
+    }
+    return false;
+}
+bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+{
+        bool isValidDomainBoundary = graph().isDomainBoundary(a_block, a_dir);
+    if (isValidDomainBoundary){
+        Box domainBox = getBlock(a_block).box();
+        Box domainBoundBox = domainBox.edge(a_dir);
+        return domainBoundBox.containsPoint(a_point);
+    } else {
+        return false;
+    }
 }

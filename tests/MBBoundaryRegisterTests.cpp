@@ -1,27 +1,27 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
 #include "MBMap_XPointRigid.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 using namespace Proto;
 
 TEST(MBBoundaryRegister, Construction) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPoint> patches;
     for (int bi = 0; bi < numBlocks; bi++)
     {
         boxSizeVect.push_back(Point::Ones(boxSize));
         for (auto pi : Box::Cube(domainSize / boxSize))
         {
             if (pi == Point::X()*(domainSize/boxSize - 1)) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPoint(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
@@ -117,10 +117,10 @@ TEST(MBBoundaryRegister, Construction) {
                     adjPatchBoundary = interior;
                 }
 
-                if (patchDomain.contains(neighbor))
+                if (patchDomain.containsPoint(neighbor))
                 {
                     EXPECT_EQ(bounds.size(), 0);
-                } else if (patchDomain.adjacent(nx,1).contains(neighbor))
+                } else if (patchDomain.adjacent(nx,1).containsPoint(neighbor))
                 {
                     EXPECT_EQ(bounds.size(), 1);
                     EXPECT_TRUE(layout.isBlockBoundary(iter, dir, xBlock));
@@ -128,7 +128,7 @@ TEST(MBBoundaryRegister, Construction) {
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  xBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
                     EXPECT_EQ(bounds[0].adjData->box(),  adjPatchBoundary.grow(ghost));
-                } else if (patchDomain.adjacent(ny,1).contains(neighbor))
+                } else if (patchDomain.adjacent(ny,1).containsPoint(neighbor))
                 {
                     if (neighbor == Point::Y()*(domainSize/boxSize)){continue;} //we manually removed this patch. 
                     EXPECT_EQ(bounds.size(),  1);
@@ -137,7 +137,7 @@ TEST(MBBoundaryRegister, Construction) {
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  yBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
                     EXPECT_EQ(bounds[0].adjData->box(),  adjPatchBoundary.grow(ghost));
-                } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
+                } else if (patchDomain.adjacent(nx+ny,1).containsPoint(neighbor))
                 {
                     EXPECT_EQ(bounds.size(), numBlocks-3);
                     for (auto bound : bounds)
@@ -160,20 +160,20 @@ TEST(MBBoundaryRegister, Construction) {
 TEST(MBBoundaryRegister, Exchange_XPoint) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
     auto domain = buildXPoint(domainSize);
     std::vector<Point> boxSizeVect;
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPoint> patches;
     for (int bi = 0; bi < numBlocks; bi++)
     {
         boxSizeVect.push_back(Point::Ones(boxSize));
         for (auto pi : Box::Cube(domainSize / boxSize))
         {
             if (pi == Point::X()*(domainSize/boxSize - 1)) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPoint(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
@@ -218,7 +218,7 @@ TEST(MBBoundaryRegister, Exchange_XPoint) {
                 pr_out() << " | p2: " << p2 << " | b2: " << b2 << std::endl;
                 Box dstBox = bi.adjData->box();
                 auto R = bi.adjToLocal;
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<int, DIM> adjSln(srcBox);
                 BoxData<int, DIM> locSln(dstBox);
 
@@ -240,7 +240,7 @@ TEST(MBBoundaryRegister, Exchange_XPoint) {
 }
 #endif
 #if DIM == 3
-#if 0
+#if 1
 TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
 
     int domainSize = 16;
@@ -257,7 +257,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
     Point boxSizes = Point::Ones(boxSize);
     boxSizes[c_r] = min(thickness, boxSize);
     std::vector<Point> boxSizeVect(numBlocks, boxSizes);
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPoint> patches;
     Point patchDomainSizes = Point::Ones(domainSize / boxSize);
     patchDomainSizes[c_r] = 1;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -265,7 +265,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
         for (auto pi : Box(patchDomainSizes))
         {
             if (pi == Point::Zeros()) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPoint(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
@@ -316,7 +316,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell) {
                 pr_out() << "R (adj to local): " << std::endl;
                 R.print();
 #endif
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<int, DIM> adjSln(srcBox);
                 BoxData<int, DIM> locSln(dstBox);
 
@@ -362,22 +362,20 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
     Point boxSizes = Point::Ones(boxSize);
     boxSizes[c_r] = min(thickness, boxSize);
     std::vector<Point> boxSizeVect(numBlocks, boxSizes);
-    std::vector<MBPatchID_t> patches;
+    std::vector<MBPoint> patches;
     Point patchDomainSizes = Point::Ones(domainSize / boxSize);
     patchDomainSizes[c_r] = 1;
-#if 0
+
     for (int bi = 0; bi < numBlocks; bi++)
     {
         for (auto pi : Box(patchDomainSizes))
         {
             if (pi == Point::Zeros()) {continue;}
-            patches.push_back(MBPatchID_t(pi,bi));
+            patches.push_back(MBPoint(pi,bi));
         }
     }
     MBDisjointBoxLayout layout(domain, patches, boxSizeVect);
-#else
-    MBDisjointBoxLayout layout(domain, boxSizeVect);
-#endif
+
     Point ghost = Point::Ones(depth);
     ghost[c_r] = 0;
     auto map = CubedSphereShell::Map(layout, ghost);
@@ -403,8 +401,6 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
             {
                 auto b1 = layout.block(bi.localIndex);
                 auto b2 = layout.block(bi.adjIndex);
-                //auto p1 = layout.point(bi.localIndex);
-                //auto p2 = layout.point(bi.adjIndex);
             
                 Box localBox = bi.localData->box();
                 BoxData<double, DIM> X0(C2C.domain(localBox));
@@ -454,7 +450,7 @@ TEST(MBBoundaryRegister, Exchange_CubedSphereShell_Alt) {
                 pr_out() << "R (adj to local): " << std::endl;
                 R.print();
 #endif
-                Box srcBox = layout.domain().convert(dstBox, b1, b2);
+                Box srcBox = layout.domain().convertBox(dstBox, b1, b2);
                 BoxData<double, DIM> adjSln(srcBox);
                 BoxData<double, DIM> locSln(dstBox);
                 

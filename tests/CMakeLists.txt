@@ -1,3 +1,10 @@
+
+# blt_add_executable(NAME BCDemo SOURCES BCDemo.cpp
+#     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+#     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+# blt_add_test(NAME BCDemo COMMAND BCDemo)
+
+
 blt_add_executable(NAME PointTests SOURCES PointTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -14,6 +21,10 @@ blt_add_executable(NAME ReductionTests SOURCES ReductionTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME ReductionTests COMMAND ReductionTests)
+blt_add_executable(NAME DistributedSetTests SOURCES DistributedSetTests.cpp
+    DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME DistributedSetTests COMMAND DistributedSetTests)
 blt_add_executable(NAME BoxDataTests SOURCES BoxDataTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -70,7 +81,7 @@ if(OPS)
       INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
   blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 endif()
-if(ENABLE_ALL_TESTS)
+#if(ENABLE_ALL_TESTS)
     blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
         DEPENDS_ON Headers_Base ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -86,6 +97,7 @@ if(ENABLE_ALL_TESTS)
         blt_add_test(NAME LevelFluxRegisterTests COMMAND LevelFluxRegisterTests)
     endif()
     if (MMB)
+
         blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -135,8 +147,6 @@ if(ENABLE_ALL_TESTS)
         blt_add_executable(NAME MBInterpOpTests SOURCES MBInterpOpTests.cpp
             DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        #target_compile_options(MBInterpOpTests PRIVATE -O2 -g)
-        #target_compile_options(MBInterpOpTests PRIVATE -fstack-protector)
         blt_add_test(NAME MBInterpOpTests COMMAND MBInterpOpTests)
         blt_add_executable(NAME MBLevelOpTests SOURCES MBLevelOpTests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
@@ -156,9 +166,13 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRDataTests COMMAND MBAMRDataTests)
+        blt_add_executable(NAME MBLevelFluxRegisterTests SOURCES MBLevelFluxRegisterTests.cpp
+            DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelFluxRegisterTests COMMAND MBLevelFluxRegisterTests)
         blt_add_executable(NAME MBAMRTests SOURCES MBAMRTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBAMRTests COMMAND MBAMRTests)
     endif()
-endif()
+#endif()

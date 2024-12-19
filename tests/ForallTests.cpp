@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 PROTO_KERNEL_START
 void consToPrim_temp(Var<double,DIM+2>& W, 

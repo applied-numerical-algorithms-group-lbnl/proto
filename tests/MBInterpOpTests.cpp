@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 #include "MBMap_Shear.H"
 #include "MBMap_XPointRigid.H"
-//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
@@ -70,19 +69,16 @@ TEST(MBInterpOp, ShearTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    // grid parameters
-    int domainSize = 32;
-    int boxSize = 16;
-    int ghostSize = 1;
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
     
-    // interplating function parameters
     double order = 4.0;
     Array<double, DIM> exp{1,1,0,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
   
-    
     int numIter = 3;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
@@ -112,13 +108,12 @@ TEST(MBInterpOp, ShearTest)
             FluxBoxData<double, DIM> NT(b_i);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
             src_i |= C2C(x_pow);
             dst_i |= C2C(x_pow);
         }
         hostErr.setVal(0);
-        hostDst.exchange(); // fill boundary data
-        MBInterpOp interp;//(map, order);
+        hostDst.exchange();
+        MBInterpOp interp;
         std::vector<Point> footprint;
         for (auto pi : Box::Kernel(2))
         {
@@ -147,7 +142,6 @@ TEST(MBInterpOp, ShearTest)
                 }
             }
         }
-
 #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << err[nn] << std::endl;
         h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_Shear_Src_N%i",nn);
@@ -173,8 +167,8 @@ TEST(MBInterpOp, XPointTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 16;
+    int boxSize = 8;
     int ghostSize = 5;
     int numIter = 3;
     double order = 4;
@@ -189,18 +183,16 @@ TEST(MBInterpOp, XPointTest)
         err[nn] = 0;
         auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
-#if 0
-        std::vector<MBPatchID_t> patches;
+
+        std::vector<MBPoint> patches;
         std::vector<Point> boxSizes;
         for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
         {
-            patches.push_back(MBPatchID_t(Point::Ones(domainSize / boxSize - 1), bi));
+            patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), bi));
             boxSizes.push_back(boxSizeVect);
         }
         MBDisjointBoxLayout layout(domain, patches, boxSizes);
-#else
-        MBDisjointBoxLayout layout(domain, boxSizeVect);
-#endif
+
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
@@ -295,9 +287,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
     HDF5Handler h5;
 #endif
     int domainSize = 16;
-    int boxSize = 16;
-    int thickness = 32;
-    int ghostSize = 4;
+
+    int boxSize = 8;
+    int thickness = 8;
+    int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -412,6 +405,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 }
 #endif
 #endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

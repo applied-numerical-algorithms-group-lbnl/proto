@@ -4,7 +4,7 @@
 #include "BoxOp_Euler.H"
 #include "AMRRK4.H"
 #include "InputParser.H"
-//#include "Lambdas.H"
+//#include "TestFunctions.H"
 using namespace Proto;
 
 int TIME_STEP = 0;
@@ -248,7 +248,7 @@ using Proto::pr_out;
                 int numBoxes = 0;
                 for (int ll = 0; ll < U.numLevels();ll++)
                   {
-                    numBoxes += U[ll].size();
+                    numBoxes += U[ll].numBoxes();
                   }
                 if ((Proto::procID() == 0)&&(((k+1) % outputInterval) == 0 ))
                   {

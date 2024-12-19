@@ -611,6 +611,8 @@ namespace Proto {
         /** @name Stencil Library */
         ///@{
 
+        static Stencil<T> Identity() { return ((T)1.0)*Shift::Zeros(); }
+
         /// Stencil Library: Derivative
         /**
           Built in implementation of compact differentiation stencils.

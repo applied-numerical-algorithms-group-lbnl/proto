@@ -291,7 +291,7 @@ TEST(MBGraph, TriplePoint) {
 #endif
 }
 
-#if 0
+#if 1
 TEST(MBGraph, Equality) {
     
     auto CCW = CoordPermutation::ccw();

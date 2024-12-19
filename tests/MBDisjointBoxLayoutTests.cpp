@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 using namespace Proto;
 TEST(MBDisjointBoxLayout, Iteration) {
@@ -93,7 +93,7 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
                 q2 = R.rotateCell(p2, edgXY, adjXY); 
             }
 
-            if (Box::Kernel(1).shift(p1).contains(q2))
+            if (Box::Kernel(1).shift(p1).containsPoint(q2))
             {
                 EXPECT_EQ(p, q2 - p1);
             } else {
@@ -123,7 +123,7 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = XPOINT_NUM_BLOCKS;
+    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -153,7 +153,6 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
 
     Point patchDomainSize = Point::Ones(domainSize / boxSize);
     Box patchDomain(patchDomainSize);
-    std::cout << "patchDomain: " << patchDomain << std::endl;
 
     for (auto iter_i : layout)
     {
@@ -170,18 +169,14 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
                 auto dji = layout.connectivity(iter_j, iter_i);
                 if (dij == Point::Zeros())
                 {
-                    std::cout << "no connection between " << pi << " and " << pj << "(bj = " << bj << ")" << std::endl;
                     EXPECT_EQ(dji, Point::Zeros());
-                } else {
-                    std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
-                    std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
-                }
+                } 
             }
 
         }
     }
 }
-#if 0
+#if 1
 #if DIM == 3
 TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
 {
@@ -197,7 +192,6 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
     Point patchDomainSize = Point::Ones(domainSize / boxSize);
     patchDomainSize[radialDir] = thickness > boxSize ? thickness / boxSize : 1;
     Box patchDomain(patchDomainSize);
-    std::cout << "patchDomain: " << patchDomain << std::endl;
 
     for (auto iter_i : layout)
     {
@@ -214,17 +208,11 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
                 auto dji = layout.connectivity(iter_j, iter_i);
                 if (dij == Point::Zeros())
                 {
-                    std::cout << "no connection between " << pi << " and " << pj << "(bj = " << bj << ")" << std::endl;
                     EXPECT_EQ(dji, Point::Zeros());
-                } else {
-                    std::cout << "\npi: " << pi << " ,bi: " << bi << " | pj: " << pj << ", " << bj << std::endl;
-                    std::cout << "\tdij: " << dij << ", dji: " << dji << std::endl;
                 }
             }
-
         }
     }
-
 }
 #endif
 #endif

@@ -7,6 +7,7 @@
 
 //#include "Proto.H"
 
+
 #include "mmb/Proto_MBGraph.H"
 #include "mmb/Proto_MBProblemDomain.H"
 #include "mmb/Proto_MBBoxPartition.H"
@@ -28,6 +29,7 @@
 #include "mmb/Proto_MBAMRGrid.H"
 #include "mmb/Proto_MBAMRData.H"
 #include "mmb/Proto_MBAMRMap.H"
+#include "mmb/Proto_MBLevelFluxRegister.H"
 #endif
 
 // Maps

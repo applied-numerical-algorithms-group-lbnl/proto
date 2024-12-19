@@ -133,8 +133,7 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
     apply(
         StateData& a_output,
         Array<StateData, DIM>& a_fluxes,
-        const StateData& a_state,
-        T                a_scale = 1.0) const {}
+        const StateData& a_state) const {}
     
 #if 0 //CURRENTLY UNUSED
 

@@ -81,8 +81,24 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
         const StateData& a_state,
         T                a_scale)  const
 {
+    if (a_scale == 0)
+    {
+        a_output.setVal(0);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            a_fluxes[dd].setVal(0);
+        }
+    }
     // Call user defined function
-    this->apply(a_output, a_fluxes, a_state, a_scale);
+    this->apply(a_output, a_fluxes, a_state);
+    if (a_scale != 1.0)
+    {
+        a_output *= a_scale;
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            a_fluxes[dd] *= a_scale;
+        }
+    }
     //BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_scale);
 }
 #if 0 // CURRENTLY UNUSED

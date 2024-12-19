@@ -42,12 +42,12 @@ namespace Proto
                 const MBProblemDomain& a_domain);
         inline MBBoxPartition(
                 const MBProblemDomain& a_domain,
-                const std::vector<MBPatchID_t>& a_patches);
+                const std::vector<MBPoint>& a_patches);
         inline void define(
                 const MBProblemDomain& a_domain,
-                const std::vector<MBPatchID_t>& a_patches);
+                const std::vector<MBPoint>& a_patches);
         inline void define(
-                const std::vector<MBPatchID_t>& a_patches);
+                const std::vector<MBPoint>& a_patches);
         inline void loadBalance();
         inline void findBoundaries();
         inline bool compatible(const MBBoxPartition& a_rhs);
@@ -78,7 +78,7 @@ namespace Proto
                 uint64_t  a_index,
                 Point           a_dir) const;
 
-        inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const
+        inline const std::vector<std::pair<MBPoint, unsigned int>>& partition() const
         { return m_partition; }
         inline std::shared_ptr<BoxPartition> blockPartition(BlockIndex a_block) const;
         inline void print();
@@ -95,10 +95,10 @@ namespace Proto
         inline void buildGlobalMaps();
 
         MBProblemDomain m_patchDomain;
-        mutable std::map<MBPatchID_t, uint64_t> m_indexMap; ///< Maps local to global
+        mutable std::map<MBPoint, uint64_t> m_indexMap; ///< Maps local to global
         mutable std::unordered_map<unsigned int, std::pair<uint64_t, uint64_t>> m_procMap; ///< Maps proc to global indices
         std::vector<std::shared_ptr<BoxPartition>> m_blockPartitions;
-        std::vector<std::pair<MBPatchID_t, unsigned int>> m_partition;
+        std::vector<std::pair<MBPoint, unsigned int>> m_partition;
         mutable std::unordered_map<PatchBound, std::vector<uint64_t>, PatchBound::Hash> m_blockBoundaries;
         mutable std::unordered_set<PatchBound, PatchBound::Hash> m_domainBoundaries;
     };

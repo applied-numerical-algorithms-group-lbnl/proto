@@ -6,7 +6,7 @@ using namespace Proto;
 
 void f_foo(Point& a_pt, Var<double> a_data, double a_dx, Box a_box)
 {
-    if (a_box.contains(a_pt))
+    if (a_box.containsPoint(a_pt))
     {
         a_data(0) = -1;
     } else {

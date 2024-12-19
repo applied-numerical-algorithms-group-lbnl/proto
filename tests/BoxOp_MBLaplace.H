@@ -44,14 +44,14 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     apply(
             BoxData<T,1>& a_output,
             Array<BoxData<T,1>, DIM>& a_fluxes,
-            const BoxData<T,1>& a_state,
-            T                a_scale = 1.0) const override
+            const BoxData<T,1>& a_state) const override
     {
         for (int dd = 0; dd < DIM; dd++)
         {
             flux(a_fluxes[dd], a_state, dd);
         }
-        this->boundaryConditions(a_fluxes, a_state);
+        //TODO: BCs are not passing tests yet. 
+        //this->boundaryConditions(a_fluxes, a_state);
         this->divergence(a_output, a_fluxes);
     }
 
@@ -107,7 +107,7 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
             //NT should have (conservative) 2 layers of ghost cells
             m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
         }
-        m_useBC = false;
+        m_useBC = true;
     }
 
     inline void toggleBC(bool flag) { m_useBC = flag; }

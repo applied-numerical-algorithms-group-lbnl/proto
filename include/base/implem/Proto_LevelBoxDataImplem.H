@@ -235,7 +235,7 @@ LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int 
-LevelBoxData<T, C, MEM, CTR>::size() const
+LevelBoxData<T, C, MEM, CTR>::numBoxes() const
 {
     return m_layout.size();
 }
@@ -269,7 +269,7 @@ LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
+LevelBoxData<T, C, MEM, CTR>::setDomainBoundary(T a_value, int a_comp)
 {
     PROTO_ASSERT(m_isDefined, "LevelBoxData::setBoundary | Error: Object not defined");
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
@@ -919,7 +919,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             // The source box is shifted, the dest box is not.
             
             Box destBx = nit.destBox();
-            if (!destBx.empty() && !bx0.contains(destBx))
+            if (!destBx.empty() && !bx0.containsBox(destBx))
             {
                 Box srcBx = nit.srcBox();
                 LevelMotionItem toMotionItem(*nit, dit, srcBx, destBx);

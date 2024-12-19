@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 #include "BoxOp_TestFlux.H"
 #include "BoxOp_TestSource.H"
 #include "BoxOp_TestDiag.H"

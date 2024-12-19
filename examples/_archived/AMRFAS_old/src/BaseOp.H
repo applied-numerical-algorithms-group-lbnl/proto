@@ -729,7 +729,7 @@ void BaseOp<NCOMP, NGHOST>::interpBoundary(LevelData<FArrayBox>& a_phi,
         {
             if (*niter == Proto::Point::Zeros()) {continue;}
             Proto::Point bitNeighbor = bitPoint + *niter;
-            if (!bitBox.contains(bitNeighbor))
+            if (!bitBox.containsPoint(bitNeighbor))
             {
                 Proto::Box coarseNeighborBox(bitNeighbor, bitNeighbor);
                 coarseNeighborBox =

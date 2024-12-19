@@ -53,7 +53,7 @@ void testCopy(
     {
         for (int c = 0; c < NUMCOMPS; c++)
         {
-            if (intersect.contains(*biter))
+            if (intersect.containsPoint(*biter))
             {
                 pass &= (a_srcData(*biter - a_dstShift, c) == a_dstData(*biter, c));
                 if (!pass)

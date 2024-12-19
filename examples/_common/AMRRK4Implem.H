@@ -548,7 +548,7 @@ void AMRRK4<OpType,T,BCType,MEM>::regrid(int a_baseLevel)
             auto& U0_i   = (*m_data)[level][iter];
             m_ops[level][iter].generateTags(tags_i, U0_i);
         }
-        tags.setBoundary(0);
+        tags.setDomainBoundary(0);
         newGrids.addFinerTags(tags, level);
         AMRGrid::buffer(tags, Point::Ones(m_bufferSize[level]));
         newGrids.regrid(tags, level);

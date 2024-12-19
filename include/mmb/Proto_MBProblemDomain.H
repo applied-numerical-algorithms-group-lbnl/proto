@@ -7,7 +7,25 @@
 
 namespace Proto
 {
-    typedef std::pair<Point, BlockIndex> MBPatchID_t;
+    struct MBPoint
+    {
+        PatchID point;
+        BlockIndex block;
+
+        inline MBPoint(PatchID a_patch, BlockIndex a_block) : point(a_patch), block(a_block) {}
+        inline MBPoint(const MBPoint& a_rhs) : point(a_rhs.point), block(a_rhs.block) {}
+        MBPoint& operator=(const MBPoint& a_rhs) = default;
+        inline bool operator<(const MBPoint& a_rhs) const
+        {
+            if (block == a_rhs.block)
+            {
+                return (point < a_rhs.point);
+            } else {
+                return (block < a_rhs.block);
+            }
+        }
+        
+    };
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -69,13 +87,20 @@ namespace Proto
                 Point        a_dir) const;
         
         // Convert a Point Between Block Coordinate Systems
-        inline Point convert(
+        inline Point convertNode(
                 Point a_point,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock) const;
 
+        // Convert a Point Between Block Coordinate Systems
+        inline Point convertPoint(
+                Point a_point,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
+                Centering a_ctr) const;
+
         // Convert a Box Between Block Coordinate Systems
-        inline Box convert(
+        inline Box convertBox(
                 Box a_box,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock,
@@ -92,15 +117,19 @@ namespace Proto
         inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void close() const;
         
-        inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
+        inline std::vector<MBPoint> patches(int a_boxSize) const;
+        inline std::vector<MBPoint> patches(Point a_boxSize) const;
+        inline std::vector<MBPoint> patches(const std::vector<Point>& a_boxSizes) const;
 
-        inline Point getDir(Point a_point, BlockIndex a_block) const;
+        inline Point getDirectionFromPoint(Point a_point, BlockIndex a_block) const;
         inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;
         inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
         inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
         inline bool inInterior(Point a_point, BlockIndex a_block) const;
+        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block) const;
+        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
+        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block) const;
+        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
 
         private:
 

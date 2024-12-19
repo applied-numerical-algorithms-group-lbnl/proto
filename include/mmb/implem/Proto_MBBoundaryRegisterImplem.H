@@ -40,7 +40,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     continue;
                 }
                 // adjacent patch is in the same block
-                if (patchDomain.contains(patch + di))
+                if (patchDomain.containsPoint(patch + di))
                 {
                     continue;
                 }
@@ -51,7 +51,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
                 }
                 Box k = K.grow(shrinkDirs).shift(di);
-                PROTO_ASSERT(k.contains(di),
+                PROTO_ASSERT(k.containsPoint(di),
                              "MBLevelBoxData::define | Error: Data corruption");
                 // all patches that bound this block in the given direction
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
@@ -73,7 +73,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
                         // found a valid potential neighbor (if it exists)
-                        if (boundaryPatches.contains(neighbor))
+                        if (boundaryPatches.containsPoint(neighbor))
                         {
                             auto adjPatch = R.rotateCell(
                                     neighbor, boundaryPatches, adjBoundaryPatches);
@@ -89,8 +89,6 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(
                                     block, adjBlock, ki);
-                            //std::cout << "localBlock: " << block << " | adjBlock: " << adjBlock << " | dir: " << ki << std::endl;
-                            // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, a_depth);
                             Box adjPatchBoundary;
                             if (a_bothSides)
@@ -98,12 +96,9 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                                 int sign = a_depth / abs(a_depth);
                                 patchBoundary = patchBoundary.extrude(ki*(-sign),abs(a_depth)); 
                                 adjPatchBoundary = patchBoundary; 
-                                //adjPatchBoundary = a_layout.domain().convert(
-                                //    patchBoundary, block, adjBlock, CTR);
                             } else {
                                 adjPatchBoundary = patchBox.edge(ki, a_depth);
                             }
-                            //std::cout << "localBoundary: " << patchBoundary << " | adjBoundary: " << adjPatchBoundary << std::endl;
 
                             PROTO_ASSERT(patchBoundary.size() == adjPatchBoundary.size(), 
                                     "MBBoundaryRegister::define | Error: data corruption.");
@@ -354,7 +349,7 @@ increment(Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
                     a_corr(comp) = a_fluxdir(comp)*a_weight;
                 }
              },bxLocal,a_fluxes[dir],a_weight);
-        if (!((mb.localData->box()).contains(bxLocal)))
+        if (!((mb.localData->box()).containsBox(bxLocal)))
         {
             cout << mb.localData -> box() << ", " << bxLocal << endl;
         }
@@ -490,7 +485,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
                 
                 Box localBox_to = bound.localData->box();
-                Box adjBox_to = layout.domain().convert(
+                Box adjBox_to = layout.domain().convertBox(
                         bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(

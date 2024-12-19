@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 using namespace Proto;
 
 DisjointBoxLayout testLayout(int domainSize, Point boxSize)

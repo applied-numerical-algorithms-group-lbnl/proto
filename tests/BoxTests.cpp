@@ -14,7 +14,7 @@ TEST(Base, Box) {
     Box cube = Box::Cube(4);
     EXPECT_FALSE(cube.empty());
     EXPECT_EQ(cube.size(),int(pow(4,DIM)));
-    EXPECT_TRUE(cube.contains(Box(Point::Ones(4))));
+    EXPECT_TRUE(cube.containsBox(Box(Point::Ones(4))));
     for (int i=0; i<DIM; i++)
         EXPECT_EQ(cube.size(i),4);
     EXPECT_TRUE(cube.onBoundary(Point(0,2,3)));

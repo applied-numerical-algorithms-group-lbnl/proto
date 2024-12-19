@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 TEST(InterpStencil, BoxInference)
 {
@@ -93,7 +93,7 @@ TEST(InterpStencil, Constant) {
         for (int cc = 0; cc < C; cc++)
         for (int dd = 0; dd < D; dd++)
         {
-            if (limitBox.contains(pi))
+            if (limitBox.containsPoint(pi))
             {
                 EXPECT_EQ(hostDstData(pi,cc,dd), hostSlnData(pi, cc, dd));
             } else {

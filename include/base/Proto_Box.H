@@ -234,7 +234,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Point& a_pt) const;
+            inline bool containsPoint(const Point& a_pt) const;
 
         /// Contains Box Query
         /**
@@ -256,7 +256,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Box& a_rhs) const;
+            inline bool containsBox(const Box& a_rhs) const;
 
         /// Point on Boundry Query
         /**
@@ -752,7 +752,7 @@ namespace Proto
             @endcode
         */
         inline Box edge(const Point& a_dir) const;
-
+        inline Box edge(int a_dir, Side::LoHiSide a_side, int a_dist) const;
         /// Face
         /**
           Returns the face (e.g. region of codimension 1) of this box in a specified direction.
@@ -775,6 +775,8 @@ namespace Proto
           @endcode
         */
         inline Box face(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
+        
+        inline Box face(Point a_dir, int a_dist = 1) const;
 
         //TODO: redundant with face, unused
         //Box faceBox(int a_idir, const Side::LoHiSide a_side) const;

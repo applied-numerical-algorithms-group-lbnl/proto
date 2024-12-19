@@ -25,89 +25,13 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class LevelBoxData;
 
-// =======================================================================
-// LEVEL BOX DATA COPIER OP
-    
-    /// Level Copier Operator
-    /**
-        Copier operator which provides the necessary interface to copy to and from
-        LevelBoxData using the Copier interface. See Proto_Copier.H.
-    */
-    template
-    <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
-    class LevelCopierOp
-    {
-        public:
-        LevelBoxData<T,C,SRC_MEM,CTR>*  m_src;
-        LevelBoxData<T,C,DST_MEM,CTR>*  m_dst;
-
-        inline LevelCopierOp(){};
-        
-        inline LevelCopierOp(
-            LevelBoxData<T, C, SRC_MEM, CTR>& a_src,
-            LevelBoxData<T, C, DST_MEM, CTR>& a_dst);
-        
-        /// Get Serialized Size
-        inline int linearSize(const Box& a_bx,
-                const DataIndex<BoxPartition>& a_index) const;
-        
-        /// Serial Write To Buffer
-        inline void linearOut(void* a_buf, const LevelMotionItem& a_info);
-        //inline void linearOut(void* a_buf, 
-        //        const Box& a_bx,
-        //        const DataIndex<BoxPartition>& a_index) const;
-        
-        /// Serial Read From Buffer
-        inline void linearIn(void* a_buf, const LevelMotionItem& a_info);
-        //inline void linearIn(void* a_buf, 
-        //        const Box& a_bx,
-        //        const DataIndex<BoxPartition>& a_index) const;
-        
-        /// Local Copy
-        inline void localCopy(const LevelMotionItem& a_info);
-        //inline void localCopy(
-        //    const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
-        //    const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
-    };
-// =======================================================================
-// LEVEL BOX DATA COPIERS
-    
-    /// Level Copier
-    /**
-        A Copier used to implement copying of data between LevelBoxData objects.
-    */
-    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
-    class LevelCopier 
-    : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, BoxPartition, BoxPartition, SRC_MEM, DST_MEM>
-    {
-        public:
-        
-        inline LevelCopier(){};
-        
-        /// Build Copier Motion Plan
-        inline void buildMotionPlans(LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
-    };
-    
-    /// Exchange Copier
-    /**
-        A Copier used to execute the data copies necessary for filling ghost regions
-        within a LevelBoxData.
-    */
-    template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class LevelExchangeCopier
-    : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, BoxPartition, BoxPartition, MEM, MEM>
-    {
-        public:
-
-        inline LevelExchangeCopier(){};
-        
-        /// Build Copier Motion Plan
-        inline virtual void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
-    };
 
 // =======================================================================
 // LEVEL BOX DATA
     
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class LevelExchangeCopier;
+
     /// Level Box Data
     /**
         A distributed data holder implementing the abstraction of a union of logically rectangular patches.
@@ -118,69 +42,27 @@ namespace Proto
     {
         public:
 
-        /// Default constructor
-        /**
-            Constructs an undefined LevelBoxData. Can be initialized through define(...)
-        */
         inline LevelBoxData();
 
-        /// Layout Constructor
-        /**
-            Constructs a non-trivial LevelBoxData by calling define.
-        */
-        inline LevelBoxData(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
+        inline LevelBoxData(const DisjointBoxLayout& a_layout, const Point& a_ghostRegionSizes);
 
-        /// Slice Constructor
-        /**
-            Constructs a LevelBoxData by aliasing C compontents of <code>a_src</code> starting with
-            component <code>a_startComp</code>. The operation fails by assertion if 
-            <code>a_startComp + C > CC </code>
+        template<unsigned int DST_DATA_COMPONENTS>
+        inline LevelBoxData(const LevelBoxData<T, DST_DATA_COMPONENTS, MEM, CTR>& a_srcData, unsigned int a_firstComponent);
 
-            \param a_src        Source Data
-            \param a_startComp  Starting component
-        */
-        template<unsigned int CC>
-        inline LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src, unsigned int a_startComp);
+        inline void define(const DisjointBoxLayout& a_layout, const Point& a_ghostRegionSizes);
 
-        /// Define
-        /**
-            Lazily constructs a non-trivial LevelBoxData
-        */
-        inline void define(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
+        inline unsigned int numBoxes() const;
 
-
-        /// Size
-        /**
-            Returns the number of boxes in the union across all processes.
-        */
-        inline unsigned int size() const;
-
-        /// Initialize To Zero
-        /**
-            Sets all values in all patches equal to zero. This function is mostly for 
-            debugging purposes and should be used sparingly if at all in production code.
-        */
         inline void setToZero(int a_comp = -1);
         
-        /// Initialize as Constant
-        /**
-            Set's all values in all patches equal to a constant value (including ghost cells.)
-        
-            \param a_value  A constant value
-        */
         inline void setVal(T a_value, int a_comp = -1);
 
-        /// Set the Level Boundary Ghost Cells
-        /**
-            Set's all values in non-periodic boundary ghost cells equal to a constant value.
-        
-            \param a_value  A constant value
-        */
-        inline void setBoundary(T a_value, int a_comp = -1);
-      
-        /// Set data to random noise between two values
+        /** Set data to random noise between two values */
         inline void setRandom(T a_low, T a_high); 
 
+        /** Periodic boundaries are not considered domain boundaries */
+        inline void setDomainBoundary(T a_value, int a_comp = -1);
+      
         inline void iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
 
         /// Function Initialization
@@ -459,6 +341,87 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>(const LevelBoxData<T, C, MEM, CTR>& a_rhs);
     }; // end class LevelBoxData
     
+// =======================================================================
+// LEVEL BOX DATA COPIER OP
+    
+    /// Level Copier Operator
+    /**
+        Copier operator which provides the necessary interface to copy to and from
+        LevelBoxData using the Copier interface. See Proto_Copier.H.
+    */
+    template
+    <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class LevelCopierOp
+    {
+        public:
+        LevelBoxData<T,C,SRC_MEM,CTR>*  m_src;
+        LevelBoxData<T,C,DST_MEM,CTR>*  m_dst;
+
+        inline LevelCopierOp(){};
+        
+        inline LevelCopierOp(
+            LevelBoxData<T, C, SRC_MEM, CTR>& a_src,
+            LevelBoxData<T, C, DST_MEM, CTR>& a_dst);
+        
+        /// Get Serialized Size
+        inline int linearSize(const Box& a_bx,
+                const DataIndex<BoxPartition>& a_index) const;
+        
+        /// Serial Write To Buffer
+        inline void linearOut(void* a_buf, const LevelMotionItem& a_info);
+        //inline void linearOut(void* a_buf, 
+        //        const Box& a_bx,
+        //        const DataIndex<BoxPartition>& a_index) const;
+        
+        /// Serial Read From Buffer
+        inline void linearIn(void* a_buf, const LevelMotionItem& a_info);
+        //inline void linearIn(void* a_buf, 
+        //        const Box& a_bx,
+        //        const DataIndex<BoxPartition>& a_index) const;
+        
+        /// Local Copy
+        inline void localCopy(const LevelMotionItem& a_info);
+        //inline void localCopy(
+        //    const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
+        //    const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
+    };
+// =======================================================================
+// LEVEL BOX DATA COPIERS
+    
+    /// Level Copier
+    /**
+        A Copier used to implement copying of data between LevelBoxData objects.
+    */
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class LevelCopier 
+    : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, BoxPartition, BoxPartition, SRC_MEM, DST_MEM>
+    {
+        public:
+        
+        inline LevelCopier(){};
+        
+        /// Build Copier Motion Plan
+        inline void buildMotionPlans(LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
+    };
+    
+    /// Exchange Copier
+    /**
+        A Copier used to execute the data copies necessary for filling ghost regions
+        within a LevelBoxData.
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class LevelExchangeCopier
+    : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, BoxPartition, BoxPartition, MEM, MEM>
+    {
+        public:
+
+        inline LevelExchangeCopier(){};
+        
+        /// Build Copier Motion Plan
+        inline virtual void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
+    };
+
+
     /// Interpolate Boundaries
     /**
         General utility function for interpolating data into coarse-fine boundaries.

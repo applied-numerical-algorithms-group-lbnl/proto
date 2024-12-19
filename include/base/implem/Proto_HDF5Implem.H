@@ -701,7 +701,7 @@ void HDF5Handler::readMBLayout(
     assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_blocks, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, blockData) >= 0);
 
-    std::vector<std::pair<Point, int>> patches;
+    std::vector<MBPoint> patches;
     std::vector<Point> boxSizes;
     MBProblemDomain domain(a_graph);
     for (int bi = 0; bi < n_blocks; bi++)
@@ -712,7 +712,7 @@ void HDF5Handler::readMBLayout(
         for (int bj = 0; bj < n_boxes; bj++)
         {
             Box b = boxData[bj];
-            if (domainBox.contains(b))
+            if (domainBox.containsBox(b))
             {
                 if (boxSize == Point::Zeros()) { boxSize = b.sizes(); }
                 else {
@@ -720,7 +720,7 @@ void HDF5Handler::readMBLayout(
                             "HDF5Handler::readMBLayout | Error: Non-fixed box size detected.");
                 }
                 Point patch = (b.low()-offset) / boxSize; 
-                patches.push_back(std::make_pair(patch, bi));
+                patches.push_back(MBPoint(patch, bi));
             }
         }
         if (boxSize == Point::Zeros())
@@ -1378,7 +1378,13 @@ void HDF5Handler::writeMBLevel(
         std::string a_filename,
         Args... a_params)
 {
-
+    Point ghostDiff = a_map.map().ghost()[0] - a_data.ghost()[0];
+    if(ghostDiff.min() < 0)
+    {
+        std::cout << "WARNING: HDF5Handler::writeMBLevel detected ghost region mismatch between plot data and map data." << \
+        "\n\tGhost region data may not render correctly" << std::endl;
+    }
+        
     std::vector<std::string> a_mapVarNames;
 #if DIM > 0
     a_mapVarNames.push_back("x");

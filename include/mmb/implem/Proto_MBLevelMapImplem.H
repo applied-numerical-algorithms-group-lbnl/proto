@@ -37,23 +37,20 @@ void MBLevelMap<MAP,MEM>::define(
     PR_TIME("MBLevelMap::define");
     m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
-    //FIXME: stencil should take an order parameter
     m_c2c = Stencil<double>::CornersToCells(4);
-    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, a_ghost);
-    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, a_ghost);
+    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, m_ghost);
+    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, m_ghost);
     m_X->setVal(0);
     m_J->setVal(0);
-    m_dx.resize(a_layout.numBlocks());
+    //m_dx.resize(a_layout.numBlocks());
     m_ops.resize(a_layout.numBlocks());
+    
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().getBlock(bi).box();
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            m_dx[bi][dir] = 1.0/domainBox.size(dir);
-        }
-        m_ops[bi].define(m_dx[bi], bi, a_focalBlock);
+        m_ops[bi].define(dx(bi), bi, a_focalBlock);
     }
+    
 
     for (auto iter : a_layout)
     {
@@ -101,7 +98,7 @@ void MBLevelMap<MAP,MEM>::doApply(
     {
         PR_TIME("MBLevelMap::doApply");
         const auto& domain = layout().domain();
-        Box B = domain.convert(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
+        Box B = domain.convertBox(a_X.box(), a_outBlock, a_computeBlock, PR_NODE);
         BoxData<double, DIM, MEM> X_tmp(B);
         BoxData<double, 1, MEM> J_tmp(B);
         apply(X_tmp, J_tmp, a_computeBlock);
@@ -227,13 +224,14 @@ template<template<MemType> typename MAP, MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }
     
 template<template<MemType> typename MAP, MemType MEM>
-const Array<double, DIM>& MBLevelMap<MAP,MEM>::dx(int a_blockID) const 
+const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
 {
-    return m_dx[a_blockID];
+    return layout().dx(a_blockID);
+    //return m_dx[a_blockID];
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-MAP<MEM>& MBLevelMap<MAP,MEM>::op(int a_blockID) const
+MAP<MEM>& MBLevelMap<MAP,MEM>::op(BlockIndex a_blockID) const
 {
     return m_ops[a_blockID];
 }

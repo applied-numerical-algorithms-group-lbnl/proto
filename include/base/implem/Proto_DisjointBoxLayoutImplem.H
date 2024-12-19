@@ -77,7 +77,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Box             & a_region,
                           const Point           & a_boxSize)
 {
-    PROTO_ASSERT(a_problemDomain.box().contains(a_region),
+    PROTO_ASSERT(a_problemDomain.box().containsBox(a_region),
         "DisjointBoxLayout::define | Error: Sub-region is not a subset of the domain.");
     Box patchBox = a_region.coarsen(a_boxSize);
     std::vector<Point> patches;

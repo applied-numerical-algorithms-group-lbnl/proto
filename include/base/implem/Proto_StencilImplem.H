@@ -443,7 +443,7 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_sc
 {
 #ifndef NDEBUG
     Box b = this->range(a_src.box());
-    PROTO_ASSERT(b.contains(a_box),
+    PROTO_ASSERT(b.containsBox(a_box),
             "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
     PROTO_ASSERT(!a_box.empty(),
             "Stencil::operator() | Error: User explicitly passed an empty Box.");
@@ -732,7 +732,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
     PR_TIME("Stencil::hostApply");
     if (m_coefs.size() == 0){return;}
 
-    if (!m_span.contains(Point::Zeros()))
+    if (!m_span.containsPoint(Point::Zeros()))
     {
         Point s = m_span.low();
         a_src.shift(-s);
@@ -809,7 +809,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
             for (auto iter = cross.begin(); iter != cross.end(); ++iter)
             {
                 Point dpt = (*iter)*m_destRefratio + m_destShift;
-                if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+                if (!a_dest.box().containsPoint(dpt)){continue;} //can happen when destShift is non-trivial
                 for (int jj = 0; jj < this->size(); jj++)
                 {
                     Point spt = (*iter)*m_srcRefratio;
