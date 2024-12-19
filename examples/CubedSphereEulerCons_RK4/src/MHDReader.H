@@ -54,6 +54,8 @@ public:
 			BC_data[i].copyTo(BC_data_extended[i]);
 		}
 		Box_BC = BT;
+		int force_single_frame = ParseInputs::get_BC_force_single_frame();
+		if (force_single_frame == 1) BC_data.resize(1);
 	}
 
 	template <typename T, MemType MEM>
@@ -123,7 +125,7 @@ public:
 			double effective_time1, effective_time2, angle_to_rotate1, angle_to_rotate2, needed_fraction1, needed_fraction2;
 			int cells_to_rotate1, cells_to_rotate2;
 
-			if (frames_rotate = 1){
+			if (frames_rotate == 1){
 				// Use this when frames rotate. Tae's WSA BCs have rotating frames.
 				effective_time1 = 360 * (time_temp + low_frame * h5_cadence * 3600) / carr_rot_time;
 				effective_time2 = 360 * (time_temp + next_frame * h5_cadence * 3600) / carr_rot_time; // Should effective time be the same for both? No, if frames rotate as well, Yes, if frames are fixed.
@@ -131,7 +133,7 @@ public:
 				angle_to_rotate2 = fmod(effective_time2, 360);
 			}
 
-			if (frames_rotate = 0){
+			if (frames_rotate == 0){
 				//In SWiG, frames are fixed. In that case, use this
 				angle_to_rotate1 = fmod(360 * a_time / carr_rot_time, 360);
 				angle_to_rotate2 = fmod(360 * a_time / carr_rot_time, 360);

@@ -67,7 +67,7 @@ void f_radialShellInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;
+  a_W(iVX) = 0.0;//ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -170,45 +170,42 @@ initialize(State& a_W,
       forallInPlace_p(f_nonradialInit, a_W, a_Xcart, a_gamma, a_nradius);
     }
   if (init_condition_type == 2) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
-  if (init_condition_type == 3) forallInPlace_p(f_radialoutflowInit, a_W, a_radius, a_Xcart, a_gamma, a_nradius);
 
-
-  // The following breaks if decompostion is there in radial direction. That's because BCs are available at -1.
-  // if (init_condition_type == 3) {
-  //   Point source_lo = Point(a_BC.box().low()[0],a_BC.box().low()[1],a_BC.box().low()[2]);
-  //   Point source_hi = Point(a_BC.box().low()[0],a_BC.box().high()[1],a_BC.box().high()[2]);
-  //   Box sourceBox(source_lo,source_hi);
-  //   int low_index = a_W.box().low()[0];
-  //   int high_index = a_W.box().high()[0];
-  //   for (int i = low_index; i <= high_index; i++){
-  //     a_BC.copyTo(a_W,sourceBox,Point::Basis(0)*(i+1));
-  //   }
-  //   // In primitive spherical. To correct units. scale by radius.
-  //   forallInPlace([ ] PROTO_LAMBDA
-  //   (Var<double, NUMCOMPS, HOST> &a_WSph,
-  //   Var<double> &a_radius,
-  //   double a_gamma)
-  //   {  
-  //     double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
-  //     double rad = a_radius(0);
-  //     double rho = a_WSph(0)*c_MP*pow(r_BC/rad,2.0);
-  //     double u = a_WSph(1);
-  //     double v = a_WSph(2);
-  //     double w = a_WSph(3);
-  //     double p = a_WSph(4)*1.0e-12*pow(r_BC/rad,2.0*a_gamma); // From picodyne to dyne 
-  //     double Bx = a_WSph(5)*1.0e-6*pow(r_BC/rad,2.0); // MicroGauss to Gauss
-  //     double By = a_WSph(6)*1.0e-6*pow(r_BC/rad,1.0);
-  //     double Bz = a_WSph(7)*1.0e-6*pow(r_BC/rad,1.0);
-  //     a_WSph(0) = rho; //rho
-  //     a_WSph(1) = u; //V-x
-  //     a_WSph(2) = v; //V-y
-  //     a_WSph(3) = w; //V-z
-  //     a_WSph(4) = p; //Pressure
-  //     a_WSph(5) = Bx; //Bx
-  //     a_WSph(6) = By; //By
-  //     a_WSph(7) = Bz; //Bz
-  //   },a_W,a_radius,a_gamma);
-  // }
+  if (init_condition_type == 3) {
+    Point source_lo = Point(a_BC.box().low()[0],a_BC.box().low()[1],a_BC.box().low()[2]);
+    Point source_hi = Point(a_BC.box().low()[0],a_BC.box().high()[1],a_BC.box().high()[2]);
+    Box sourceBox(source_lo,source_hi);
+    int low_index = a_W.box().low()[0];
+    int high_index = a_W.box().high()[0];
+    for (int i = -NGHOST; i <= (high_index-low_index)-NGHOST; i++){
+      a_BC.copyTo(a_W,sourceBox,Point::Basis(0)*(i+1));
+    }
+    // In primitive spherical. To correct units. scale by radius.
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_WSph,
+    Var<double> &a_radius,
+    double a_gamma)
+    {  
+      double r_BC = CUBED_SPHERE_SHELL_R0; //in cm
+      double rad = a_radius(0);
+      double rho = a_WSph(0)*c_MP*pow(r_BC/rad,2.0);
+      double u = a_WSph(1);
+      double v = a_WSph(2);
+      double w = a_WSph(3);
+      double p = a_WSph(4)*1.0e-12*pow(r_BC/rad,2.0*a_gamma); // From picodyne to dyne 
+      double Bx = a_WSph(5)*1.0e-6*pow(r_BC/rad,2.0); // MicroGauss to Gauss
+      double By = a_WSph(6)*1.0e-6*pow(r_BC/rad,1.0);
+      double Bz = a_WSph(7)*1.0e-6*pow(r_BC/rad,1.0);
+      a_WSph(0) = rho; //rho
+      a_WSph(1) = u; //V-x
+      a_WSph(2) = v; //V-y
+      a_WSph(3) = w; //V-z
+      a_WSph(4) = p; //Pressure
+      a_WSph(5) = Bx; //Bx
+      a_WSph(6) = By; //By
+      a_WSph(7) = Bz; //Bz
+    },a_W,a_radius,a_gamma);
+  }
 
   // Adding small constant cartesian velocity to the radial velocity
   if (init_condition_type == 4){
@@ -277,5 +274,56 @@ initialize(State& a_W,
 
   if (init_condition_type == 5) forallInPlace_p(f_radialShockInit, a_W, a_radius, a_gamma, strength, a_nradius);
 
+  // Adding constant cartesian B field to radial shell problem
+  if (init_condition_type == 6){
+    forallInPlace_p(f_radialShellInit, a_W, a_radius, a_gamma, a_nradius);
+
+    // Calculate A_matrix
+    Box bx = a_W.box();
+    double half = 0.5;
+    double dxiPerp = a_h;
+    Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+    Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+    Point high = bx.high();
+    Point low = bx.low();
+    high[0] = low[0];
+    Box bx0(low,high);
+    BoxData<T,DIM,MEM,DIM> A_matrix(bx);
+    T offseta = half;
+    T offsetb = half;
+    forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
+                    dxiPerp,offseta,offsetb);
+    spreadSlice(A_matrix);
+
+    BoxData<T,DIM,MEM,DIM> A_matrix_inv(bx);
+    A_matrix_inv.setToZero();
+    forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+    // A constant U_cart
+    BoxData<double, DIM> U_cart(bx);
+    BoxData<double, DIM> W_sph(bx);
+    forallInPlace_p([ ] PROTO_LAMBDA
+    (Point a_pt,
+     Var<double, DIM, HOST> &a_U_cart,
+     double a_a_gamma,
+     int a_a_nradius)
+    {  
+      a_U_cart(0) = 0.0001;
+      a_U_cart(1) = 0.0;
+      a_U_cart(2) = 0.0;
+    },U_cart, a_gamma, a_nradius);
+
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,W_sph,A_matrix_inv,U_cart,one);
+
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_a_W,
+     Var<double, DIM, HOST> &a_W_sph)
+    {  
+      a_a_W(iBX) += a_W_sph(0);
+      a_a_W(iBY) += a_W_sph(1);
+      a_a_W(iBZ) += a_W_sph(2);
+    },a_W, W_sph);
+  }
   
 }

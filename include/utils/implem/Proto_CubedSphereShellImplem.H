@@ -78,7 +78,7 @@ CubedSphereShell::Operator(
 
 template<MemType MEM>
 MBInterpOp
-CubedSphereShell::InterpOp(
+CubedSphereShell::InterpOpOld(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)
@@ -115,7 +115,7 @@ CubedSphereShell::InterpOp(
 }
 template<MemType MEM>
 MBInterpOp
-CubedSphereShell::InterpOpNew(
+CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)
@@ -448,10 +448,10 @@ CubedSphereShell::BCNearestOp(
         if (a_side == Side::Lo)
         {
             boundDomain = blockDomain.face(rCoord, a_side, 1);
-            boundDomain_i = layout[iter].face(rCoord, a_side, 1) & boundDomain;
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1);// & boundDomain; // Commenting this so ghost layer of not innermost boxes get BCs too
         } else {
             boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
-            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1) & boundDomain;
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1);// & boundDomain;
         }
         if (boundDomain_i.size() <= 0) { continue; }
 
