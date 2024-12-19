@@ -4,7 +4,7 @@
 
 #include "Proto.H"
 #include "Proto_CubedSphereShell.H"
-#include "Inputs_Parsing.H"
+//#include "Inputs_Parsing.H"
 
 namespace Proto {
 
@@ -118,8 +118,10 @@ advance(
     int kstage;
     m_delta.setVal(0.);
     m_blockreg.clear();
-    int opswitchiv = ParseInputs::get_operator_switchiv();
-    bool flagi = (opswitchiv != 1);
+    
+    //int opswitchiv = ParseInputs::get_operator_switchiv();
+    //bool flagi = (opswitchiv != 1);
+    bool flagi = true; 
     //if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;
     
     if (a_order == 1)
@@ -214,7 +216,8 @@ advance(
 
     // Update State.
     
-    int boundary_reflux = ParseInputs::get_boundary_reflux();
+    //int boundary_reflux = ParseInputs::get_boundary_reflux();
+    int boundary_reflux = 1;
     if (boundary_reflux == 1){
       {
         PR_TIMERS("block_reflux");
