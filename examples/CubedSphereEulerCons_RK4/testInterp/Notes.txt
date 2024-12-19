@@ -1,0 +1,9 @@
+Notes on test.
+- It builds using Make. It has one (100x50x50) patch / block, and I've been running it using mpirun -n 6
+(mpirun -n 6 testInterp.exe inputs).
+- The input (restart) file is UComp. It contains only one component of the solution (the one Talwinder and
+I have been focusing on)
+- To see the exact region we,ve been looking at, take a radial slice at (90,0,0) on block 3.
+You will need to reduce the range of values in the color map to (-5.e17,5.e-17) in order to see anything.
+- We output both the LevelBoxData after interpolation (UCompPost), as well as BoxData's for blocks 0-5
+(UCompPostBlock_{0,...,5}). The corresponding data before interpolation are in UCompPre, UCompPreBlock_{0,...,5}.
