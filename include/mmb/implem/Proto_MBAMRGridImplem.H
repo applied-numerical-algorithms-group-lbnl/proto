@@ -8,7 +8,7 @@ MBAMRGrid::MBAMRGrid(
 
 MBAMRGrid::MBAMRGrid(
         const MBProblemDomain&          a_coarseDomain,
-        const std::vector<MBPatchID>& a_coarsePatches,
+        const std::vector<MBPoint>& a_coarsePatches,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
 {
@@ -38,13 +38,13 @@ void MBAMRGrid::define(
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
 {
-    std::vector<MBPatchID> patches;
+    std::vector<MBPoint> patches;
     for (BlockIndex bi = 0; bi < a_coarseDomain.numBlocks(); bi++)
     {
         Box patchBox = a_coarseDomain.getBlock(bi).box().coarsen(a_coarseBoxSizes[bi]);
         for (auto pi : patchBox)
         {
-            patches.push_back(MBPatchID(pi, bi));
+            patches.push_back(MBPoint(pi, bi));
         }
     }
     define(a_coarseDomain, patches, a_coarseBoxSizes, a_refRatios);
@@ -52,7 +52,7 @@ void MBAMRGrid::define(
 
 void MBAMRGrid::define(
         const MBProblemDomain&          a_coarseDomain,
-        const std::vector<MBPatchID>& a_coarsePatches,
+        const std::vector<MBPoint>& a_coarsePatches,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
 {
@@ -85,10 +85,10 @@ void MBAMRGrid::define(
 }
 
 void MBAMRGrid::setPatches(
-        const std::vector<MBPatchID>& a_patches)
+        const std::vector<MBPoint>& a_patches)
 {
-    std::vector<MBPatchID> patches = a_patches;
-    std::vector<MBPatchID> finePatches;
+    std::vector<MBPoint> patches = a_patches;
+    std::vector<MBPoint> finePatches;
     for (int li = 0; li < numLevels(); li++)
     {
         setPatches(li, patches);
@@ -97,11 +97,11 @@ void MBAMRGrid::setPatches(
             finePatches.clear();
             for (auto pi : patches)
             {
-                Box b(pi.patch, pi.patch);
+                Box b(pi.point, pi.point);
                 b = b.refine(m_refRatios[li]);
                 for (auto pj : b)
                 {
-                    finePatches.push_back(MBPatchID(pj, pi.block));
+                    finePatches.push_back(MBPoint(pj, pi.block));
                 }
             }
             patches = finePatches;
@@ -111,7 +111,7 @@ void MBAMRGrid::setPatches(
 
 void MBAMRGrid::setPatches(
         int a_level,
-        const std::vector<MBPatchID>& a_patches)
+        const std::vector<MBPoint>& a_patches)
 {
     auto part = m_partition->getLevel(a_level);
     part->define(a_patches);

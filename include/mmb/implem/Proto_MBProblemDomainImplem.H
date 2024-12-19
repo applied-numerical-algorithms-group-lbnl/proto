@@ -307,21 +307,21 @@ void MBProblemDomain::close() const
     m_closed = true;
 }
 
-std::vector<MBPatchID> MBProblemDomain::patches(int a_boxSize) const
+std::vector<MBPoint> MBProblemDomain::patches(int a_boxSize) const
 {
     return patches(Point::Ones(a_boxSize));
 }
-std::vector<MBPatchID> MBProblemDomain::patches(Point a_boxSize) const
+std::vector<MBPoint> MBProblemDomain::patches(Point a_boxSize) const
 {
     std::vector<Point> boxSizes(numBlocks(), a_boxSize);
     return patches(boxSizes);
 }
 
-std::vector<MBPatchID> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
+std::vector<MBPoint> MBProblemDomain::patches(const std::vector<Point>& a_boxSizes) const
 {
     PROTO_ASSERT(a_boxSizes.size() == numBlocks(),
             "MBProblemDomain::patches | Error: Wrong number of box sizes specified");
-    std::vector<MBPatchID> patchVect;
+    std::vector<MBPoint> patchVect;
 
     for (int bi = 0; bi < numBlocks(); bi++)
     {
@@ -330,7 +330,7 @@ std::vector<MBPatchID> MBProblemDomain::patches(const std::vector<Point>& a_boxS
         Box patchDomain = m_domains[bi].box().coarsen(a_boxSizes[bi]);
         for (auto pi : patchDomain)
         {
-            patchVect.push_back(MBPatchID(pi, bi));
+            patchVect.push_back(MBPoint(pi, bi));
         }
     }
     return patchVect;

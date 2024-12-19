@@ -695,7 +695,7 @@ void HDF5Handler::readMBLayout(
     assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_blocks, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, blockData) >= 0);
 
-    std::vector<MBPatchID> patches;
+    std::vector<MBPoint> patches;
     std::vector<Point> boxSizes;
     MBProblemDomain domain(a_graph);
     for (int bi = 0; bi < n_blocks; bi++)
@@ -714,7 +714,7 @@ void HDF5Handler::readMBLayout(
                             "HDF5Handler::readMBLayout | Error: Non-fixed box size detected.");
                 }
                 Point patch = (b.low()-offset) / boxSize; 
-                patches.push_back(MBPatchID(patch, bi));
+                patches.push_back(MBPoint(patch, bi));
             }
         }
         if (boxSize == Point::Zeros())

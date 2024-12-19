@@ -397,16 +397,16 @@ namespace {
 #if DIM == 3
 #ifdef PR_AMR
 #ifdef PR_MMB
-    std::vector<MBPatchID> getTestAMRGridPatches(
+    std::vector<MBPoint> getTestAMRGridPatches(
         Box domainBox,
         Point boxSizes,
         BlockIndex block)
     {
         Box patchDomain = domainBox.coarsen(boxSizes);
-        std::vector<MBPatchID> patches;
+        std::vector<MBPoint> patches;
         for (auto patch : patchDomain.edge(Point::X()))
         {
-            patches.push_back(MBPatchID(patch, block));
+            patches.push_back(MBPoint(patch, block));
         }
         return patches;
     }
@@ -427,7 +427,7 @@ namespace {
         for (int li = 1; li < 2; li++)
         {
             auto domain = grid[li].domain();
-            std::vector<MBPatchID> patches;
+            std::vector<MBPoint> patches;
             for (BlockIndex bi = 0; bi < 6; bi++)
             {
                 auto blockPatches = getTestAMRGridPatches(domain.getBlock(bi).box(), boxSizeVect, bi);

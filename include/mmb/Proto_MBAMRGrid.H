@@ -17,7 +17,7 @@ namespace Proto
 
         inline MBAMRGrid(
             const MBProblemDomain&          a_coarseDomain,
-            const std::vector<MBPatchID>& a_coarsePatches,
+            const std::vector<MBPoint>& a_coarsePatches,
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
         
@@ -34,7 +34,7 @@ namespace Proto
 
         inline void define(
             const MBProblemDomain&          a_coarseDomain,
-            const std::vector<MBPatchID>& a_coarsePatches,
+            const std::vector<MBPoint>& a_coarsePatches,
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
         
@@ -44,11 +44,11 @@ namespace Proto
             const std::vector<Point>&       a_refRatios);
 
         inline void setPatches(
-            const std::vector<MBPatchID>& a_coarsePatches);
+            const std::vector<MBPoint>& a_coarsePatches);
         
         inline void setPatches(
             int a_level,
-            const std::vector<MBPatchID>& a_coarsePatches);
+            const std::vector<MBPoint>& a_coarsePatches);
         
         inline const AMRGrid& getBlock(BlockIndex a_block) const;
         inline AMRGrid& getBlock(BlockIndex a_block);

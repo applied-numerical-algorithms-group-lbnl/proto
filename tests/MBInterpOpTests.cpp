@@ -69,8 +69,8 @@ TEST(MBInterpOp, ShearTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 16;
+    int boxSize = 8;
     int ghostSize = 2;
     
     double order = 4.0;
@@ -167,8 +167,8 @@ TEST(MBInterpOp, XPointTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 16;
+    int boxSize = 8;
     int ghostSize = 5;
     int numIter = 3;
     double order = 4;
@@ -183,18 +183,16 @@ TEST(MBInterpOp, XPointTest)
         err[nn] = 0;
         auto domain = buildXPoint(domainSize);
         Point boxSizeVect = Point::Ones(boxSize);
-#if 0
-        std::vector<MBPatchID_t> patches;
+
+        std::vector<MBPoint> patches;
         std::vector<Point> boxSizes;
         for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
         {
-            patches.push_back(MBPatchID_t(Point::Ones(domainSize / boxSize - 1), bi));
+            patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), bi));
             boxSizes.push_back(boxSizeVect);
         }
         MBDisjointBoxLayout layout(domain, patches, boxSizes);
-#else
-        MBDisjointBoxLayout layout(domain, boxSizeVect);
-#endif
+
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
@@ -289,8 +287,8 @@ TEST(MBInterpOp, CubedSphereShellTest)
     HDF5Handler h5;
 #endif
     int domainSize = 16;
-    int boxSize = 16;
-    int thickness = 32;
+    int boxSize = 8;
+    int thickness = 8;
     int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;

@@ -7,19 +7,19 @@
 
 namespace Proto
 {
-    struct MBPatchID
+    struct MBPoint
     {
-        PatchID patch;
+        PatchID point;
         BlockIndex block;
 
-        inline MBPatchID(PatchID a_patch, BlockIndex a_block) : patch(a_patch), block(a_block) {}
-        inline MBPatchID(const MBPatchID& a_rhs) : patch(a_rhs.patch), block(a_rhs.block) {}
-        MBPatchID& operator=(const MBPatchID& a_rhs) = default;
-        inline bool operator<(const MBPatchID& a_rhs) const
+        inline MBPoint(PatchID a_patch, BlockIndex a_block) : point(a_patch), block(a_block) {}
+        inline MBPoint(const MBPoint& a_rhs) : point(a_rhs.point), block(a_rhs.block) {}
+        MBPoint& operator=(const MBPoint& a_rhs) = default;
+        inline bool operator<(const MBPoint& a_rhs) const
         {
             if (block == a_rhs.block)
             {
-                return (patch < a_rhs.patch);
+                return (point < a_rhs.point);
             } else {
                 return (block < a_rhs.block);
             }
@@ -117,9 +117,9 @@ namespace Proto
         inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void close() const;
         
-        inline std::vector<MBPatchID> patches(int a_boxSize) const;
-        inline std::vector<MBPatchID> patches(Point a_boxSize) const;
-        inline std::vector<MBPatchID> patches(const std::vector<Point>& a_boxSizes) const;
+        inline std::vector<MBPoint> patches(int a_boxSize) const;
+        inline std::vector<MBPoint> patches(Point a_boxSize) const;
+        inline std::vector<MBPoint> patches(const std::vector<Point>& a_boxSizes) const;
 
         inline Point getDirectionFromPoint(Point a_point, BlockIndex a_block) const;
         inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;

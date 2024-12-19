@@ -1,21 +1,21 @@
 MBBoxPartition::MBBoxPartition(
         const MBProblemDomain& a_patchDomain)
 {
-    std::vector<MBPatchID> patches;
+    std::vector<MBPoint> patches;
     // creates the BoxPartition with no patches in it
     define(a_patchDomain, patches);
 }
 
 MBBoxPartition::MBBoxPartition(
         const MBProblemDomain& a_patchDomain,
-        const std::vector<MBPatchID>& a_patches)
+        const std::vector<MBPoint>& a_patches)
 {
     define(a_patchDomain, a_patches);
 }
 
 void MBBoxPartition::define(
         const MBProblemDomain& a_patchDomain,
-        const std::vector<MBPatchID>& a_patches)
+        const std::vector<MBPoint>& a_patches)
 {
     a_patchDomain.close();
     m_patchDomain = a_patchDomain;
@@ -31,13 +31,13 @@ void MBBoxPartition::define(
 }
 
 void MBBoxPartition::define(
-        const std::vector<MBPatchID>& a_patches)
+        const std::vector<MBPoint>& a_patches)
 {
     std::vector<std::vector<Point>> blockPatches;
     blockPatches.resize(m_patchDomain.numBlocks());
     for (auto pi : a_patches)
     {
-        blockPatches[pi.block].push_back(pi.patch);
+        blockPatches[pi.block].push_back(pi.point);
     }
     
     for (unsigned int bi = 0; bi < m_patchDomain.size(); bi++)
@@ -98,8 +98,8 @@ void MBBoxPartition::buildGlobalMaps()
                 currentProc = proc;
                 procRangeStart = globalIndex;
             }
-            MBPatchID mbPatch(patch, bi);
-            m_partition.push_back(std::pair<MBPatchID, unsigned int>(mbPatch, proc));
+            MBPoint mbPatch(patch, bi);
+            m_partition.push_back(std::pair<MBPoint, unsigned int>(mbPatch, proc));
             m_indexMap[mbPatch] = globalIndex;
             globalIndex++;
         }
@@ -125,7 +125,7 @@ void MBBoxPartition::findBoundaries()
     {
         auto& partitionData = m_partition[ind_i];
         int   block_i = partitionData.first.block;
-        auto  patch_i = partitionData.first.patch;
+        auto  patch_i = partitionData.first.point;
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
@@ -246,7 +246,7 @@ uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
     Point image = blockDomain.image(a_patch);
     // if the image isn't in the domain, return failure
     if (!blockDomain.contains(image)) { return numBoxes(); }
-    MBPatchID patchID(image, a_block);
+    MBPoint patchID(image, a_block);
     auto data = m_indexMap.find(patchID);
     // if the box isn't in the partition, return failure
     if (data == m_indexMap.end()) { return numBoxes(); }
@@ -336,7 +336,7 @@ void MBBoxPartition::print()
     {
         auto patchID = patchData.first;
         auto proc = patchData.second;
-        pr_out() << "\t\tBlock: " << patchID.block << " | Patch: " << patchID.patch;
+        pr_out() << "\t\tBlock: " << patchID.block << " | Patch: " << patchID.point;
         pr_out() << " | Proc: " << proc << std::endl;
     }
 }
