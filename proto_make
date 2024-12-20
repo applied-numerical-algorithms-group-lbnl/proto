@@ -24,6 +24,8 @@ parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
 parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
 parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
 parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
+parser.add_argument('-n', '--NPROC', type=int, help='Number of CPUS [1]', default='1')
+parser.add_argument('--RESTART', type=int, help="Restart test suite from this test", default='0')
 args = parser.parse_args()
 
 # Retrieve Targets
@@ -43,6 +45,7 @@ for f in test_files:
     tests.append(f.split('/')[-1].split('.')[0])
 
 # Print targets if TARGET == LIST
+
 print_width = 3
 if (args.TARGET == 'LIST'):
     print(dash)
