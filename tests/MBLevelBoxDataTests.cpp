@@ -614,6 +614,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
 
     // input footprint
     std::vector<Point> footprint;
+    
     for (auto pi : Box::Kernel(2))
     {
         if (pi.sumAbs() <= 2)
@@ -621,13 +622,17 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
             footprint.push_back(pi);
         }
     }
-
+  
     if (procID() == 0)
     {
         // inputs
-        Point p0 = Point::Basis(0,domainSize) + Point::Basis(1,boxSize+1);
-        Point patchID = Point::Basis(0,(domainSize / boxSize) - 1);
+        Point p0 = Point::Ones(boxSize/2);
+        p0[0] = domainSize;
+        p0[1] = boxSize+1;
+        //Point p0 = Point::Basis(0,domainSize) + Point::Basis(1,boxSize+1);
+        Point patchID = Point::Basis(0, (domainSize / boxSize) - 1);
         auto mbIndex = layout.find(patchID, 0);
+
 
         // correct output
         Point nx = Point::Basis(0);
@@ -660,6 +665,30 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
         std::sort(mb_footprint.begin(), mb_footprint.end()); 
         std::sort(soln.begin(), soln.end());
+        std::sort(footprint.begin(), footprint.end());
+#if PR_VERBOSE > 0
+        std::cout << "Domain Box: " << Box::Cube(domainSize) << std::endl;
+        std::cout << "Destination Point: (" << p0 << " | " << 0 << ") " << std::endl;
+        std::cout << "Base Footprint\t\tCorrect Footprint\t\tComputed Footprint" << std::endl;
+        int maxLength = max(max(footprint.size(), soln.size()), mb_footprint.size());
+        string line = "--------";
+        for (int ii = 0; ii < maxLength; ii++)
+        {
+            if (ii < footprint.size()) { std::cout << footprint[ii] + p0 << " | \t"; } else { std::cout << line; }
+            if (ii < soln.size())
+            {
+                std::cout << " (" << soln[ii].point() << " | " << soln[ii].block() << ") ";
+            } else {
+                std::cout << line << line;
+            }
+            if (ii < mb_footprint.size())
+            {
+                std::cout << " (" << mb_footprint[ii].point() << " | " << mb_footprint[ii].block() << ") " << std::endl;
+            } else {
+                std::cout << line << line << std::endl;
+            }
+        }
+#endif
         EXPECT_EQ(soln.size(), mb_footprint.size());
         for (int ii = 0; ii < soln.size(); ii++)
         {
