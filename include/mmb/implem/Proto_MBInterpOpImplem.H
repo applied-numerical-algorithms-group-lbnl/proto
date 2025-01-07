@@ -570,11 +570,14 @@ void MBInterpOp::defineInternals(
 #endif
               if (m_points.count(key)) { continue; }
               Point corner = patchBox.edge(dir,1).low();
+              int maxDistFromCorner = ((bi - corner)*footprintDims).abs().max();
               std::set<Point> fset;
               for (int ii = 0; ii < DIM; ii++)
                 {
                   if (dir[ii] == 0) { continue; }
-                  Point s = Point::Basis(ii,-1)*(bi-corner)*footprintDims;
+                  Point shiftFromCorner = Point::Basis(ii, maxDistFromCorner*dir[ii]);
+                  Point s = (corner + shiftFromCorner - bi)*footprintDims;
+                  // Point s = Point::Basis(ii,-1)*(bi-corner)*footprintDims;
                   for (auto fi : a_footprint)
                     {
                       fset.insert(fi + s);
@@ -665,32 +668,44 @@ void MBInterpOp::defineInternals(
                   bool onHiEdge = boundBox.edge( d2).containsPoint(bi);
                   bool hasLoTriplePoint = patchDomain.inTriplePoint(patch_j - d2, block);
                   bool hasHiTriplePoint = patchDomain.inTriplePoint(patch_j + d2, block);
+
                   if (onLoEdge && hasLoTriplePoint)
-                    {
-#if PR_VERBOSE > 1
-                      if (m_points.count(key))
-                        {
-                          pr_out() << "\t\t\t\tDetected adjacent triple point patch (lo): " << patch_j - d2 << std::endl;
-                        }
-#endif
+                  {
+                      PROTO_ASSERT(dir.codim() == 1, "This assert may be incorrect. Seek advice if it's being triggered");
+                      Point corner = patchBox.edge(dir, 1).low();
+                      Point normalShift = (corner - bi) * (dir.abs());
+                      Point orthShift = d2 * normalShift.abs().max();
                       for (auto fi : a_footprint)
-                        {
-                          fset.insert((fi + d2)*footprintDims);
-                        }
-                    }
+                      {
+                          fset.insert((fi + normalShift + orthShift) * footprintDims);
+                      }
+                  }
                   if (onHiEdge && hasHiTriplePoint)
-                    {
-#if PR_VERBOSE > 1
-                      if (m_points.count(key))
-                        {
-                          pr_out() << "\t\t\t\tDetected adjacent triple point patch (hi): " << patch_j + d2 << std::endl;
-                        }
-#endif
+                  {
+                      PROTO_ASSERT(dir.codim() == 1, "This assert may be incorrect. Seek advice if it's being triggered");
+                      Point corner = patchBox.edge(dir, 1).low();
+                      Point normalShift = (corner - bi) * (dir.abs());
+                      Point orthShift = -d2 * normalShift.abs().max();
                       for (auto fi : a_footprint)
-                        {
-                          fset.insert((fi - d2)*footprintDims);
-                        }
-                    }
+                      {
+                          fset.insert((fi + normalShift + orthShift) * footprintDims);
+                      }
+                  }
+
+                  // if (onLoEdge && hasLoTriplePoint)
+                  //   {
+                  //     for (auto fi : a_footprint)
+                  //       {
+                  //         fset.insert((fi + d2)*footprintDims);
+                  //       }
+                  //   }
+                  // if (onHiEdge && hasHiTriplePoint)
+                  //   {
+                  //     for (auto fi : a_footprint)
+                  //       {
+                  //         fset.insert((fi - d2)*footprintDims);
+                  //       }
+                  //   }
                 }
               std::vector<Point> extFootprint(fset.begin(), fset.end());
 #if PR_VERBOSE > 1

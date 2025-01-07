@@ -2,13 +2,11 @@
 
 #include "Proto.H"
 
-#define MB_MAP_XPOINT_NUM_BLOCKS 5
-
 using namespace Proto;
 
 namespace {
     ACCEL_DECORATION
-    void f_xpointMap(Array<double, DIM>& a_X, const Array<double, DIM>& a_X0, int a_block, int a_N)
+    void f_triplePointMap(Array<double, DIM>& a_X, const Array<double, DIM>& a_X0, int a_block, int a_N)
     {
         double X = a_X0[0];
         double Y = a_X0[1];
@@ -33,7 +31,7 @@ namespace {
 }
 
 template<MemType MEM>
-class MBMap_XPointRigid : public MBMapOp<MEM>
+class MBMap_TriplePoint : public MBMapOp<MEM>
 {
     public:
 
@@ -46,7 +44,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
-        int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+        int numBlocks = 3;
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -54,7 +52,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
                 Array<double, DIM> X0;
                 Array<double, DIM> X;
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
-                f_xpointMap(X, X0, a_block, a_N);
+                f_triplePointMap(X, X0, a_block, a_N);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
             }, a_X, X0, block, numBlocks
         );
@@ -64,9 +62,9 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
     inline Array<double, DIM> apply(const Array<double, DIM>& a_X)
     {
         auto block = this->block();
-        int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+        int numBlocks = 3;
         Array<double, DIM> X;
-        f_xpointMap(X,a_X, block, numBlocks);
+        f_triplePointMap(X,a_X, block, numBlocks);
         return X;
     }
     private:

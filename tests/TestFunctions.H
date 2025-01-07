@@ -164,9 +164,11 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize)
+MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = -1)
 {
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    if (numBlocks <= 0) {
+        numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    }
     MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
