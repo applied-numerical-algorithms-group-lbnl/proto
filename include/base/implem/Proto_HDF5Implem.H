@@ -1482,7 +1482,7 @@ void HDF5Handler::writeMBLevelBounds(
                     {
                         case 0: dirString += "0"; break;
                         case 1: dirString += "H"; break;
-                        case 2: dirString += "L"; break;
+                        case -1: dirString += "L"; break;
                     }
                     //dirString += std::to_string(dir[ii]);
                 }
