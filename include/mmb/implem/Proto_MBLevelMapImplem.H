@@ -35,27 +35,32 @@ void MBLevelMap<MAP,MEM>::define(
         unsigned int               a_focalBlock)
 {
     PR_TIME("MBLevelMap::define");
+    m_layout = a_layout;
     m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
-    m_c2c = Stencil<double>::CornersToCells(4);
-    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, m_ghost);
-    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, m_ghost);
-    m_X->setVal(0);
-    m_J->setVal(0);
-    //m_dx.resize(a_layout.numBlocks());
     m_ops.resize(a_layout.numBlocks());
-    
+    m_initialized = false;
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().getBlock(bi).box();
         m_ops[bi].define(dx(bi), bi, a_focalBlock);
     }
-    
+    m_c2c = Stencil<double>::CornersToCells(4);
+}
 
-    for (auto iter : a_layout)
+template<template<MemType> typename MAP, MemType MEM>
+void MBLevelMap<MAP,MEM>::initialize()
+{
+    
+    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(m_layout, m_ghost);
+    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(m_layout, m_ghost);
+    m_X->setVal(0);
+    m_J->setVal(0);
+    
+    for (auto iter : m_layout)
     {
-        auto block = a_layout.block(iter);
-        Box b_i = a_layout[iter];
+        auto block = m_layout.block(iter);
+        Box b_i = m_layout[iter];
         auto& X_i = (*m_X)[iter];
         auto& J_i = (*m_J)[iter];
         BoxData<double, 1, MEM> J0(X_i.box());
@@ -64,6 +69,7 @@ void MBLevelMap<MAP,MEM>::define(
     }
     m_X->exchange();
     m_J->exchange();
+    m_initialized = true;
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -221,7 +227,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& 
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }
+const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_layout; }
     
 template<template<MemType> typename MAP, MemType MEM>
 const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
@@ -257,20 +263,24 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map()
 {
+    if (!m_initialized) { initialize(); }
     return *m_X;
 }
 template<template<MemType> typename MAP, MemType MEM>
 const MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map() const
 {
+    if (!m_initialized) { initialize(); }
     return *m_X;
 }
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian()
 {
+    if (!m_initialized) { initialize(); }
     return *m_J;
 }
 template<template<MemType> typename MAP, MemType MEM>
 const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() const
 {
+    if (!m_initialized) { initialize(); }
     return *m_J;
 }

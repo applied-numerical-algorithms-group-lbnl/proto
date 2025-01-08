@@ -69,6 +69,8 @@ class MBLevelMap
             Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
 
+    inline void initialize();
+
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
      *  The returned data has NODE centering.
@@ -226,6 +228,8 @@ class MBLevelMap
         Stencil<double>                 m_c2c;
         mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
+        MBDisjointBoxLayout             m_layout;
+        bool                            m_initialized; 
         std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
         std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
 };
