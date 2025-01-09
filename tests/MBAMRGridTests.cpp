@@ -8,10 +8,10 @@ using namespace Proto;
 TEST(MBAMRGrid, Construction) {
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    int numBlocks = 5;
     int numLevels = 3;
     int refRatio = 2;
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 

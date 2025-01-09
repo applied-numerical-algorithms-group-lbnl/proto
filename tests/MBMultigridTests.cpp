@@ -21,7 +21,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    int numBlocks = 5;
     int numLevels = 1;
     double slope = 1.0;
     int comp = 0;
@@ -37,7 +37,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     for (int nn = 0; nn < 1; nn++)
     {
         // Create Layout
-        auto domain = buildXPoint(domainSize);
+        auto domain = buildXPoint(domainSize, numBlocks);
         MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
         // Create Multigrid Operator
@@ -55,6 +55,10 @@ TEST(MBMultigridTests, LaplaceXPoint) {
 
         // Build the (finest level) map
         MBLevelMap<MBMap_XPointRigid, HOST> map(layout, OP::ghost());
+        for (BlockIndex bi = 0; bi < numBlocks; bi++)
+        {
+            map[bi].setNumBlocks(numBlocks);
+        }
         
         // Initialize Data
         auto C2C = Stencil<double>::CornersToCells(4);

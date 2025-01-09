@@ -34,6 +34,7 @@ TEST(MBInterpOp, MBDataPoint)
 
     MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, Point::Ones(ghostSize));
+    map.initialize();
     
     std::vector<MBDataPoint> points;
     for (auto iter : layout)
@@ -94,6 +95,7 @@ TEST(MBInterpOp, ShearTest)
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
         MBLevelMap<MBMap_Shear, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
+        map.initialize();
 
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
@@ -199,6 +201,7 @@ TEST(MBInterpOp, XPointTest)
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
         MBLevelMap<MBMap_XPointRigid, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
+        map.initialize();
 
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)

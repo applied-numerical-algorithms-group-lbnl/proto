@@ -6,7 +6,8 @@ using namespace Proto;
 TEST(MBDisjointBoxLayout, Iteration) {
     int domainSize = 64;
     int boxSize = 16;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     
@@ -52,7 +53,8 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
 {
     int domainSize = 32;
     int boxSize = 16;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     
@@ -106,7 +108,8 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
 TEST(MBDisjointBoxLayout, Find) {
     int domainSize = 64;
     int boxSize = 16;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     
@@ -123,8 +126,8 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     
@@ -147,7 +150,8 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
 {
     int domainSize = 8;
     int boxSize = 4;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 

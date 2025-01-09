@@ -53,6 +53,15 @@ void MBAMRMap<MAP,MEM>::define(
 }
 
 template<template<MemType> typename MAP, MemType MEM>
+void MBAMRMap<MAP,MEM>::initialize()
+{
+    for (int li = 0; li < m_grid->numLevels(); li++)
+    {
+        m_maps[li]->initialize();
+    }
+}
+
+template<template<MemType> typename MAP, MemType MEM>
 const MBLevelMap<MAP,MEM>& MBAMRMap<MAP,MEM>::getLevel(unsigned int a_level) const
 {
     PROTO_ASSERT(a_level < m_grid->numLevels(),

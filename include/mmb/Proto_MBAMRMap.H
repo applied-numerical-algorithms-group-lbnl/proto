@@ -37,6 +37,7 @@ class MBAMRMap
                 const Point                 a_ghost,
                 unsigned int                a_focalBlock = 0);
         
+        inline void initialize();
         /// Get Level Map
         inline const MBLevelMap<MAP,MEM>& getLevel(unsigned int a_level) const;
 

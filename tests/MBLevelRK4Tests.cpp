@@ -22,6 +22,7 @@ TEST(MBLevelRK4Tests, Construction) {
     // initialize map
     MBLevelMap<MBMap_Shear, HOST> map;
     map.define(layout, ghost);
+    map.initialize();
 
     MBInterpOp interp(map, 4);
     MBLevelRK4<BoxOp_MBLaplace, MBMap_Shear, double> rk4(map, interp);
