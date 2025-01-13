@@ -437,16 +437,16 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     BoxData<double, NUMCOMPS, HOST> U_dim(dbx0);
     JUTemp[dit].copyTo(U_dim);
 
-    if (dbx1.contains(index_cc))
+    if (dbx1.containsPoint(index_cc))
     {
       for (int i = 0; i < NUMCOMPS; i++)
       {
         probed_values[i] = U_dim(index_cc, i);
-        if (dbx0.contains(index_n0))
+        if (dbx0.containsPoint(index_n0))
           probed_values[i] += (U_dim(index_n0, i) - U_dim(index_cc, i)) * (pt0 - (pt0_nearest + 0.5)) / (pt0_neigbor - (pt0_nearest + 0.5));
-        if (dbx0.contains(index_n1))
+        if (dbx0.containsPoint(index_n1))
           probed_values[i] += (U_dim(index_n1, i) - U_dim(index_cc, i)) * (pt1 - (pt1_nearest + 0.5)) / (pt1_neigbor - (pt1_nearest + 0.5));
-        if (dbx0.contains(index_n2))
+        if (dbx0.containsPoint(index_n2))
           probed_values[i] += (U_dim(index_n2, i) - U_dim(index_cc, i)) * (pt2 - (pt2_nearest + 0.5)) / (pt2_neigbor - (pt2_nearest + 0.5));
       }
 

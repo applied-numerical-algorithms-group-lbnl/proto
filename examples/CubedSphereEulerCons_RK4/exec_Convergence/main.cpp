@@ -101,6 +101,14 @@ int main(int argc, char *argv[])
           iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
         }
       // Set input solution.
+      for (auto dit : layout)
+        {
+          dx = eulerOp[dit].dx();
+          BoxData<double> radius(dVolrLev[dit].box());
+          BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+          BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+          eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
+        }
       if (restart_file.empty())
         {
         Reduction<double,Operation::Max,HOST> dtinv;
