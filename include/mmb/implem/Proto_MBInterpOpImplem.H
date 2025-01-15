@@ -35,58 +35,56 @@ MBPointInterpOp::MBPointInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
+    m_order = a_order;
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point(), a_ghost, a_footprint, a_dst.index());
     
-    // References
-    auto& layout = a_map.map().layout();
-    unsigned int dstBlock = a_dst.dstBlock();
-    Stencil<double> av2 = 1.0*Shift::Zeros();
-    Stencil<double> HOCorners = (1.0*Shift::Zeros() + (-1./12.)*(Stencil<double>::Laplacian()));
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
-    }
-    
-    // Compute Exponents
-    Box spanBox;
+    computeExponents();
+    validateMatrixDimensions(a_footprint);
+    auto momentData = computeMoments(a_map);
+    computeCoefficients(momentData);
+}
+
+void MBPointInterpOp::computeExponents()
+{
+    Box sourceSpanBox;
     for (auto si : m_srcs)
     {
-        spanBox &= si.point();
+        sourceSpanBox &= si.point();
     }
-    Point expBoxSize = Point::Ones(a_order);
-    // Cull exponents if the footprint is "flat" in a given direction
-    // This allows for sub-DIM dimensional operators
+    Point maxExponents = Point::Ones(m_order);
+
+    // If the span of the footprint only contains a single layer
+    // of data along the ith axis, assume that the interpolating
+    // polynomial is in a plane orthogonal to that axis
     for (int ii = 0; ii < DIM; ii++)
     {
-        if (spanBox.size(ii) == 1) { expBoxSize[ii] = 1; }
+        if (sourceSpanBox.size(ii) == 1) { maxExponents[ii] = 1; }
     }
-    std::vector<Point> exponents;
-    for (auto bi : Box(expBoxSize))
+    m_exponents.clear();
+    for (auto bi : Box(maxExponents))
     {
-        if (bi.sum() < a_order)
+        if (bi.sum() < m_order)
         {
-            exponents.push_back(bi);
+            m_exponents.push_back(bi);
         }
     }
-
-    int N = exponents.size();
+}
+void MBPointInterpOp::validateMatrixDimensions(
+    const std::vector<Point>& footprint) const
+{
+    int N = m_exponents.size();
     int M = m_srcs.size();
-   
-#if PR_VERBOSE > 1
-    pr_out() << "\t\t\t\t\tAdding MBPointInterpOp | point: " << m_dst.point() << " | N: " << N << " | M: " << M << std::endl;
-#endif
-
     if (N > M)
     {
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Underdetermined system detected" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
-        pr_out() << "\tDst Point: " << a_dst << std::endl;
-        pr_out() << "\tGhost: " << a_ghost << std::endl;
-        #if PR_VERBOSE > 1
+        pr_out() << "\tDst Point: " << m_dst << std::endl;
+        //pr_out() << "\tGhost: " << a_ghost << std::endl;
+#if PR_VERBOSE > 1
         pr_out() << "\tFootprint: " << std::endl;
-        for (auto fi : a_footprint)
+        for (auto fi : footprint)
         {
             pr_out() << "\t\t" << fi << std::endl;
         }
@@ -96,78 +94,86 @@ MBPointInterpOp::MBPointInterpOp(
             pr_out() << "\t\t" << si << std::endl;
         }
         pr_out() << "\tExponents: " << std::endl;
-        for (auto ei : exponents)
+        for (auto ei : m_exponents)
         {
             pr_out() << "\t\t" << ei << std::endl;
         }
-    
-        #endif
+#endif
         pr_out() << "====================================================================" << std::endl;
     }
-    //std::cout << "N: " << N << " | M: " << M << std::endl;
+}
 
-    // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
-    // Cjp = <(x-xg)^p/Rg>_j  |  p = nomial, j = source cell
-    // Mp = <(x-xg)^p/Rg>_g   |  p = nomial
-    // Sj = sum_p(Mp*Cinv_pj) = m_coefs[j]
-    
-    // Compute Rg
-    // This is the approximate radius in physical space of the operator
-    // Normalizing by Rg helps keep the matrices well conditioned
-    double Rg = 0.0;
-    //auto xg = a_map.cellCentered(a_dst);
-    auto xg = a_map.apply(a_dst);
-    
-    for (int ii = 0; ii < M; ii++)
-    {
-      PR_TIMERS("compute_Rg");
-        //auto xj = a_map.analyticCellCentered(m_srcs[ii]);
-        auto xj = a_map.apply(m_srcs[ii]);
-        auto dist = xj - xg;
-        Rg += dist.norm();
-    }
-    Rg /= M;
-    // Cache Moment Data
-    // We cache < J * ((x-xg)/Rg)^p > for each exponent p
-    //auto C2C = Stencil<double>::CornersToCells(a_order);
-    auto C2C = Stencil<double>::CornersToCells(4);
-    std::unordered_map<int, Box> srcBoxes;
-    std::unordered_map<int, std::vector<BoxData<double>>> srcData; 
-    Box B0(a_dst.point(), a_dst.point());
-    srcBoxes[a_dst.dstBlock()] = B0;
+template<template<MemType> typename MAP, MemType MEM>
+std::unordered_map<BlockIndex, std::vector<BoxData<double>>>
+MBPointInterpOp::computeMoments(
+    const MBLevelMap<MAP, MEM>& map) const
+{
+    // the radius in physical space of the neighborhood containing
+    // the source data points
+    auto xCenter = map.apply(m_dst);
+    double sourceDataRadius = computeSourceDataRadius(map, xCenter);
+
+    std::unordered_map<BlockIndex, Box> momentDomains;
+
+    std::unordered_map<BlockIndex, std::vector<BoxData<double>>> momentData;
+
+    // The domain of the block containing the destination point must
+    // at minimum include that point
+    Box B0(m_dst.point(), m_dst.point());
+    momentDomains[m_dst.dstBlock()] = B0;
+
     for (auto si : m_srcs)
     {
-        PR_TIMERS("compute_moment_domains");
         int bi = si.srcBlock();
-        if (srcBoxes.find(bi) == srcBoxes.end())
+        if (momentDomains.find(bi) == momentDomains.end())
         {
-            srcBoxes[bi] = Box(si.point(), si.point()); 
+            momentDomains[bi] = Box(si.point(), si.point());
         } else {
-            srcBoxes[bi] &= si.point();
+            momentDomains[bi] &= si.point();
         }
     }
-    
-    for (auto& [block, box] : srcBoxes)
-      {
-        PR_TIMERS("compute_moments");
-        BoxData<double, DIM, MEM> Xi(C2C.domain(box).grow(1));
-        BoxData<double, 1, MEM> Ji(Xi.box());
-        a_map.doApply(Xi, Ji, block, dstBlock); 
-        Xi -= xg;
-        Xi /= Rg;
-        for (int jj = 0; jj < N; jj++)
+
+    auto C2C = Stencil<double>::CornersToCells(4);
+    for (auto& [block, momentDomain] : momentDomains)
+    {
+        BoxData<double, DIM, MEM> Xi(C2C.domain(momentDomain).grow(1));
+        BoxData<double, 1, MEM> Ji(Xi.box()); //Ji is unused
+        map.doApply(Xi, Ji, block, m_dst.dstBlock()); 
+        Xi -= xCenter;
+        Xi /= sourceDataRadius;
+        for (auto ei : m_exponents)
         {
-            auto Xi_p = forall<double, 1>(f_binomialPower, Xi, exponents[jj]);
-            {
-                BoxData<double> temp = HOCorners(Xi_p);
-                {
-                    BoxData<double> Xi_p_avg = av2(temp);
-                    srcData[block].push_back(std::move(Xi_p_avg));
-                }
-            }
+            BoxData<double> moment = forall<double, 1>(f_binomialPower, Xi, ei);
+            BoxData<double> momentAvg = C2C(moment);
+            momentData[block].push_back(std::move(momentAvg));
         }
     }  
-    // Compute Matrices
+
+    return momentData;
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+double MBPointInterpOp::computeSourceDataRadius(
+    const MBLevelMap<MAP, MEM>& map,
+    Array<double, DIM>& xCenter) const
+{
+    double radius = 0.0;
+    
+    for (auto& src : m_srcs)
+    {
+        auto xSrc = map.apply(src);
+        auto dist = xSrc - xCenter;
+        radius += dist.norm();
+    }
+    radius /= (m_srcs.size());
+    return radius;
+}
+
+void MBPointInterpOp::computeCoefficients(
+    std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData)
+{
+    int N = m_exponents.size();
+    int M = m_srcs.size();
     Matrix<double> C(M,N);
     for (int ii = 0; ii < M; ii++)
     {
@@ -176,17 +182,18 @@ MBPointInterpOp::MBPointInterpOp(
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
         {
-            C(ii,jj) = srcData[srcBlock][jj](src.point());
+            C(ii,jj) = momentData[srcBlock][jj](src.point());
         }
     }
+
     Matrix<double> D(1,N);
+    auto dstBlock = m_dst.dstBlock();
     for (int jj = 0; jj < N; jj++)
     {
         PR_TIMERS("build_D_matrix");
-        D(0,jj) = srcData[dstBlock][jj](a_dst.point());
+        D(0,jj) = momentData[dstBlock][jj](m_dst.point());
     }
     
-    // Compute "Stencil"
     auto Cinv = C.inverse();
     auto S = D*Cinv;
     m_coefs.resize(M);
@@ -201,7 +208,6 @@ void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
-#if 1
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
     
     for (int ii = 0; ii < size(); ii++)
@@ -213,18 +219,6 @@ void MBPointInterpOp::apply(
             dst(cc) += m_coefs[ii]*src(cc);
         }
     }
-#else
-    auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
-    for (int cc = 0; cc < 1; cc++)
-    {
-        for (int ii = 0; ii < size(); ii++)
-        {
-            if (ii == 0) { dst(cc) = 0.0; }
-            auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
-            dst(cc) += m_coefs[ii]*src(cc);
-        }
-    }
-#endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -264,7 +258,6 @@ void MBInterpOp::printErrorPoints(
         }
     }
 }
-
 
 unsigned int MBPointInterpOp::size() const
 {

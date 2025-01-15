@@ -124,15 +124,23 @@ namespace Proto
         inline void print() const; 
         
         private:
-       
-        //std::vector<Point> m_exponents;
+
+        inline void computeExponents();
+        inline void validateMatrixDimensions(const std::vector<Point> &footprint) const;
+        template <template <MemType> typename MAP, MemType MEM>
+        double computeSourceDataRadius(
+            const MBLevelMap<MAP, MEM> &map,
+            Array<double, DIM>& xCenter) const;
+        template<template<MemType> typename MAP, MemType MEM>
+        std::unordered_map<BlockIndex, std::vector<BoxData<double>>> computeMoments(
+            const MBLevelMap<MAP, MEM>& map) const;
+        void computeCoefficients(std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData);
+        
         MBDataPoint m_dst;
-        //Matrix<double> m_C;
-        //Matrix<double> m_D;
-        //Matrix<double> m_S;
-        //Matrix<double> m_Cinv;
         std::vector<MBDataPoint> m_srcs;
+        std::vector<Point> m_exponents;
         std::vector<double> m_coefs;
+        int m_order;
     };
 
     /// Mapped Multiblock Block Boundary Interpolation Operator
