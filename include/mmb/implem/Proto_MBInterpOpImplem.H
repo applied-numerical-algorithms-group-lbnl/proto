@@ -70,7 +70,6 @@ void MBPointInterpOp::computeExponents()
         }
     }
 }
-
 void MBPointInterpOp::validateMatrixDimensions(
     const std::vector<Point>& footprint) const
 {
