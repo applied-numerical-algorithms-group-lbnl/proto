@@ -148,7 +148,6 @@ namespace Proto
     /** MBInterpOp interpolates data to all block boundary ghost cells in a 
      *  MBLevelBoxData. Ghost cells associated with domain boundaries are not
      *  affected. */
-    template<template<MemType> typename MAP, MemType MEM>
     class MBInterpOp
     {
         public:
@@ -158,7 +157,7 @@ namespace Proto
         /// Initialize 
         /** This function does not create any operators. The user must call define separately */
         inline MBInterpOp(Point a_ghost, unsigned int a_order);
-        
+        template<template<MemType> typename MAP, MemType MEM>
         inline MBInterpOp(
                 const MBLevelMap<MAP, MEM>& a_map,
                 int                         a_order = 4);
@@ -169,6 +168,7 @@ namespace Proto
          *  with (see constructor). This function only defines the operators used to interpolate
          *  into the specified block. A user may choose to specify a different version of
          *  physical space when building the operators for each block */
+        template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 int                         a_order = 4,
@@ -180,6 +180,7 @@ namespace Proto
          *  with (see constructor). This function only defines the operators used to interpolate
          *  into the specified block. A user may choose to specify a different version of
          *  physical space when building the operators for each block */
+        template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 const std::vector<Point>    a_footprint,
@@ -233,28 +234,37 @@ namespace Proto
 
         private:
      
-        void addPointOps(const MBIndex& index, Point dir);
-        void addTriplePointOps(const MBIndex& index, Point dir);
-        void addBlockBoundaryOps(const MBIndex& index, Point dir);
-        void addTriplePointAdjacentOps(const MBIndex& index, Point dir);
-        
+        template<template<MemType> typename MAP, MemType MEM>
+        void addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        template<template<MemType> typename MAP, MemType MEM>
+        void addTriplePointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        template<template<MemType> typename MAP, MemType MEM>
+        void addBlockBoundaryOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        template<template<MemType> typename MAP, MemType MEM>
+        void addTriplePointAdjacentOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        std::vector<Point> getTriplePointAdjacentFootprint(
+            Point centerPoint,
+            const MBIndex& index,
+            Point boundaryDir,
+            Point triplePointDir) const;
         bool containsOp(Point dataPoint, const MBIndex& index) const;
         std::vector<Point> getTriplePointFootprint(
             Point centerPoint,
             const MBIndex& index,
             Point dir) const;
+        template<template<MemType> typename MAP, MemType MEM>
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
-            const std::vector<Point>& footprint);
+            const std::vector<Point>& footprint,
+            const MBLevelMap<MAP,MEM>& map);
         void addShiftedOp(
             const MBPointInterpOp& baseOp,
             Point shift);
         void copyAlongSymmetryAxes(const MBPointInterpOp& pointOp);
 
         mutable Array<bool, DIM> m_copyAxes;
-        MBLevelMap<MAP, MEM> m_map;
-        //MBDisjointBoxLayout m_layout;
+        MBDisjointBoxLayout m_layout;
         std::vector<Point> m_baseFootprint;
         Point m_footprintDims;
         Point m_ghost;

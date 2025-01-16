@@ -32,7 +32,7 @@ public:
     
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
-            const MBInterpOp&           a_interp);
+            const MBInterpOp&  a_interp);
 
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
     inline void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
@@ -54,7 +54,7 @@ template <
     MemType MEM>
 MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     const MBLevelMap<MAP>&      a_map,
-    const MBInterpOp&           a_interp) : m_interp(a_interp)
+    const MBInterpOp&  a_interp) : m_interp(a_interp)
 {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
