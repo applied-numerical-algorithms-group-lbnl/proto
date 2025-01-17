@@ -97,7 +97,7 @@ namespace Proto
         for (auto dir : Point::DirectionsOfCodim(1))
         {
             if (dir * footprintMask() == Point::Zeros()) { continue; }
-            if (m_layout.onDomainBoundary(patch, block, dir))
+            if (m_layout.isPatchOnDomainBoundary(patch, block, dir))
             {
                 int coord = dir.firstNonZeroIndex();
                 Box faceBox = patchBox.edge(dir);

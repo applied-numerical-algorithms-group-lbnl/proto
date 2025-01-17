@@ -94,17 +94,17 @@ namespace Proto
         inline bool isInteriorBoundary(
                 const MBIndex&  a_index,
                 Point           a_dir) const;
-        inline bool onBlockBoundary(
+        inline bool isPatchOnBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
-        inline bool onBlockBoundary(
+        inline bool isPatchOnBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
-        inline bool onDomainBoundary(
+        inline bool isPatchOnDomainBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
-        inline bool onDomainBoundary(
+        inline bool isPatchOnDomainBoundary(
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;

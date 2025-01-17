@@ -190,7 +190,7 @@ namespace {
     {
         PatchID finePatch = fineLayout.point(fineIndex);
         BlockIndex block = fineLayout.block(fineIndex);
-        bool patchOnBlockBoundary = fineLayout.onBlockBoundary(finePatch, block, dir);
+        bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, block, dir);
         if (patchOnBlockBoundary)
         {
             BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);

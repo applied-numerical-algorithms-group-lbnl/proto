@@ -504,7 +504,7 @@ bool MBLevelFluxRegister<T,C,MEM>::adjacentInProblemDomain(
     PatchID adjFinePatch = finePatch + a_dir;
 
     if (patchDomain.containsPoint(adjFinePatch)) { return true; }
-    else if (m_fineLayout.onBlockBoundary(finePatch, block, a_dir)) { return true; }
+    else if (m_fineLayout.isPatchOnBlockBoundary(finePatch, block, a_dir)) { return true; }
     else { return false; }
 }
 

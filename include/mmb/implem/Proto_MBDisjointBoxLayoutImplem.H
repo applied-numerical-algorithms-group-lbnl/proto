@@ -295,18 +295,18 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     return true;
 }
 
-bool MBDisjointBoxLayout::onBlockBoundary(
+bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
     PatchID a_patch,
     BlockIndex a_block) const 
 {
     for (auto dir : Point::Directions())
     {
-        if (onBlockBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnBlockBoundary(a_patch, a_block, dir)) { return true; }
     }
     return false;
 }
 
-bool MBDisjointBoxLayout::onBlockBoundary(
+bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
     PatchID a_patch,
     BlockIndex a_block,
     Point a_dir) const 
@@ -324,18 +324,18 @@ bool MBDisjointBoxLayout::isDomainBoundary(
 }
 
 
-bool MBDisjointBoxLayout::onDomainBoundary(
+bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
     PatchID a_patch,
     BlockIndex a_block) const 
 {
     for (auto dir : Point::Directions())
     {
-        if (onDomainBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnDomainBoundary(a_patch, a_block, dir)) { return true; }
     }
     return false;
 }
 
-bool MBDisjointBoxLayout::onDomainBoundary(
+bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
     PatchID a_patch,
     BlockIndex a_block,
     Point a_dir) const 
