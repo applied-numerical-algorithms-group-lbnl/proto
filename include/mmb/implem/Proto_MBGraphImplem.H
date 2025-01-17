@@ -406,9 +406,9 @@ bool MBGraph::isTriplePoint(
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,
                     "MBGraph::isTriplePoint | Recursion Error");
-            if (!isTriplePoint(a_srcBlock, dir)) { return false; }
+            if (isTriplePoint(a_srcBlock, dir)) { return true; }
         }
-        return true;
+        return false;
     } else {
         auto dirs = a_dir.split();
         auto b0 = adjacent(a_srcBlock, dirs[0]);
@@ -423,6 +423,34 @@ bool MBGraph::isTriplePoint(
         return (b01 == b1 && b10 == b0);
     }
 
+}
+
+std::vector<std::pair<Point, Point>>
+MBGraph::getTriplePointCircuits(
+    BlockIndex a_srcBlock,
+    Point a_dir) const
+{
+    std::vector<std::pair<Point, Point>> circuits;
+    if (a_dir.codim() == 2)
+    {
+        if (isTriplePoint(a_srcBlock, a_dir))
+        {
+            auto codim1Dirs = a_dir.split();
+            auto dirPair = std::make_pair(codim1Dirs[0], codim1Dirs[1]);
+            circuits.push_back(dirPair);
+        }
+    } else if (a_dir.codim() > 2)
+    {
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            if (a_dir[dd] == 0) { continue; }
+            Point dir = a_dir;
+            dir[dd] = 0;
+            auto tmpCircuits = getTriplePointCircuits(a_srcBlock, dir);
+            circuits.insert(circuits.end(), tmpCircuits.begin(), tmpCircuits.end());
+        }
+    }
+    return circuits;
 }
 
 bool MBGraph::isDomainBoundary(
