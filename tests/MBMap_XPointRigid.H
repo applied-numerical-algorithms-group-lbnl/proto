@@ -2,8 +2,6 @@
 
 #include "Proto.H"
 
-//#define MB_MAP_XPOINT_NUM_BLOCKS 5
-
 using namespace Proto;
 
 namespace {

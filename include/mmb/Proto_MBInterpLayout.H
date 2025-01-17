@@ -15,6 +15,7 @@ namespace Proto
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
 
         inline bool isCopied(int a_dir) const { return m_copyAxes[a_dir]; }
+        inline std::set<Point> baseFootprint() const { return m_baseFootprint; }
         inline std::set<Point> footprint(
             Point point,
             Point boundaryDir,
