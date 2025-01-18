@@ -108,6 +108,27 @@ namespace Proto
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
+        inline bool isPatchInBlockBoundary(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInBlockBoundary(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
+        inline bool isPatchInDomainBoundary(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInDomainBoundary(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
+        inline bool isPatchInTriplePointRegion(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInTriplePointRegion(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
 
         /** Works even when a_patch doesn't exist in the layout */
         inline MBIndex findAdjacentIndex(

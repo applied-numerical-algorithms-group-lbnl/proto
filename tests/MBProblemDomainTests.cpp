@@ -97,15 +97,15 @@ TEST(MBProblemDomain, OnBlockBoundary)
         {
             if (blockBoundaryMask(point) == 1)
             {
-                EXPECT_TRUE(domain.onBlockBoundary(point, block));
+                EXPECT_TRUE(domain.isPointOnBlockBoundary(point, block));
             } else {
-                EXPECT_FALSE(domain.onBlockBoundary(point, block));
+                EXPECT_FALSE(domain.isPointOnBlockBoundary(point, block));
             }
             if (domainBoundaryMask(point) == 1)
             {
-                EXPECT_TRUE(domain.onDomainBoundary(point, block));
+                EXPECT_TRUE(domain.isPointOnDomainBoundary(point, block));
             } else {
-                EXPECT_FALSE(domain.onDomainBoundary(point, block));
+                EXPECT_FALSE(domain.isPointOnDomainBoundary(point, block));
             }
         }
     }

@@ -79,7 +79,7 @@ TEST(MBInterpLayout, BlockBoundary) {
             Box boundBox = patchBox.adjacent(dir * 3);
             for (auto center : boundBox)
             {
-                if (layout.domain().inInterior(center, 0)) { continue; }
+                if (layout.domain().isPointInInterior(center, 0)) { continue; }
                 auto footprintData = printInterpLayout(interpLayout, center, dir, iter);
 #if PR_VERBOSE > 0
                 h5.writePatch(footprintData, "FOOTPRINT_%i", plotIter);

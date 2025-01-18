@@ -62,10 +62,10 @@ namespace Proto
         Box patchBox = m_layout[index];
         std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
         addDomainBoundaryFootprint(footprint, point, index);
-        if (patchDomain.inTriplePoint(adjPatch, block))
+        if (patchDomain.isPointInTriplePoint(adjPatch, block))
         {
             addTriplePointFootprint(footprint, point, boundaryDir, index);
-        } else if (patchDomain.inBlockBoundary(adjPatch, block))
+        } else if (patchDomain.isPointInBlockBoundary(adjPatch, block))
         {
             Point orthDir = Point::Ones() - adjPatch.abs();
             std::vector<Point> orthDirs;
@@ -76,7 +76,7 @@ namespace Proto
             }
             for (auto orth : orthDirs)
             {
-                if (patchDomain.inTriplePoint(adjPatch + orth, block))
+                if (patchDomain.isPointInTriplePoint(adjPatch + orth, block))
                 {
                     addTriplePointFootprint(footprint, point, boundaryDir, index);
                 }

@@ -359,13 +359,13 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
     BlockIndex block = m_layout.block(index);
     auto& patchDomain = m_layout.patchDomain();
 
-    if (patchDomain.inInterior(adjPatch, block)) { return; }
-    else if (patchDomain.inDomainBoundary(adjPatch, block)) { return; }
-    else if (patchDomain.inTriplePoint(adjPatch, block))
+    if (patchDomain.isPointInInterior(adjPatch, block)) { return; }
+    else if (patchDomain.isPointInDomainBoundary(adjPatch, block)) { return; }
+    else if (patchDomain.isPointInTriplePoint(adjPatch, block))
     {
         addTriplePointOps(index, dir, map);
     } else {
-        PROTO_ASSERT(patchDomain.inBlockBoundary(adjPatch, block),
+        PROTO_ASSERT(patchDomain.isPointInBlockBoundary(adjPatch, block),
             "MBInterpOp::addPointOps | Data corruption.");
         addBlockBoundaryOps(index, dir, map);
     }
@@ -439,7 +439,7 @@ void MBInterpOp::addTriplePointAdjacentOps(const MBIndex& index, Point dir, cons
     for (auto adjDir : Point::DirectionsOfCodim(1))
     {
         PatchID boundPatchAdj = boundPatch + adjDir;
-        if (patchDomain.inTriplePoint(boundPatchAdj, block))
+        if (patchDomain.isPointInTriplePoint(boundPatchAdj, block))
         {
             for (auto boundPoint : boundBox.edge(adjDir, 1))
             {

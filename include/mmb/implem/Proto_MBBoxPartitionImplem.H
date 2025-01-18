@@ -129,7 +129,7 @@ void MBBoxPartition::findBoundaries()
         for (auto dir : Box::Kernel(1))
         {
             if (dir == Point::Zeros()) { continue; }
-            if (m_patchDomain.inTriplePoint(patch_i + dir, block_i)) { continue; } 
+            if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {

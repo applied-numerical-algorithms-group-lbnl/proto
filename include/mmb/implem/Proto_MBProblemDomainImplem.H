@@ -336,64 +336,65 @@ std::vector<MBPoint> MBProblemDomain::patches(const std::vector<Point>& a_boxSiz
     return patchVect;
 }
 
-Point MBProblemDomain::getDirectionFromPoint(Point a_point, BlockIndex a_block) const
+bool MBProblemDomain::isPointInTriplePoint(Point a_point, BlockIndex a_block) const
 {
-    Box patchDomain = getBlock(a_block).box();
-    Point hiDiff = a_point - patchDomain.high();
-    Point loDiff = patchDomain.low() - a_point;
-    Point dir = Point::Zeros();
-    for (int di = 0; di < DIM; di++)
+    Box domainBox = getBlock(a_block).box();
+    return graph().isTriplePoint(a_block, domainBox.whichBoundaryContains(a_point));
+}
+bool MBProblemDomain::isPointInTriplePoint(Point a_point, BlockIndex a_block, Point a_dir) const
+{
+    if (graph().isTriplePoint(a_block, a_dir))
     {
-        if (hiDiff[di] > 0)
-        {
-            dir[di] = 1;
-        } else if (loDiff[di] > 0)
-        {
-            dir[di] = -1;
-        } else {
-            dir[di] = 0;
-        }
-    }
-    return dir;
-}
-
-bool MBProblemDomain::inTriplePoint(
-        Point     a_point,
-        BlockIndex  a_block) const
-{
-    return graph().isTriplePoint(a_block, getDirectionFromPoint(a_point, a_block));
-}
-
-bool MBProblemDomain::inBlockBoundary(
-        Point     a_point,
-        BlockIndex  a_block) const
-{
-    return graph().isBlockBoundary(a_block, getDirectionFromPoint(a_point, a_block));
-}
-
-bool MBProblemDomain::inDomainBoundary(
-        Point     a_point,
-        BlockIndex  a_block) const
-{
-    return graph().isDomainBoundary(a_block, getDirectionFromPoint(a_point, a_block));
-}
-
-bool MBProblemDomain::inInterior(
-        Point     a_point,
-        BlockIndex  a_block) const
-{
-    return getBlock(a_block).box().containsPoint(a_point);
-}
-bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block) const
-{
-    for (auto dir : Point::Directions())
-    {
-        if (onBlockBoundary(a_point, a_block, dir)) { return true; }
+        Box domainBox = getBlock(a_block).box();
+        return (domainBox.whichBoundaryContains(a_point) == a_dir);
     }
     return false;
 }
 
-bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+bool MBProblemDomain::isPointInBlockBoundary(Point a_point, BlockIndex a_block) const
+{
+    Box domainBox = getBlock(a_block).box();
+    return graph().isBlockBoundary(a_block, domainBox.whichBoundaryContains(a_point));
+}
+bool MBProblemDomain::isPointInBlockBoundary(Point a_point, BlockIndex  a_block, Point a_dir) const
+{
+    if (graph().isBlockBoundary(a_block, a_dir))
+    {
+        Box domainBox = getBlock(a_block).box();
+        return (domainBox.whichBoundaryContains(a_point) == a_dir);
+    }
+    return false;
+}
+
+bool MBProblemDomain::isPointInDomainBoundary(Point a_point, BlockIndex  a_block) const
+{
+    Box domainBox = getBlock(a_block).box();
+    return graph().isDomainBoundary(a_block, domainBox.whichBoundaryContains(a_point));
+}
+bool MBProblemDomain::isPointInDomainBoundary(Point a_point, BlockIndex  a_block, Point a_dir) const
+{
+    if (graph().isDomainBoundary(a_block, a_dir))
+    {
+        Box domainBox = getBlock(a_block).box();
+        return (domainBox.whichBoundaryContains(a_point) == a_dir);
+    }
+    return false;
+}
+
+bool MBProblemDomain::isPointInInterior(Point a_point, BlockIndex a_block) const
+{
+    return getBlock(a_block).box().containsPoint(a_point);
+}
+
+bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block) const
+{
+    for (auto dir : Point::Directions())
+    {
+        if (isPointOnBlockBoundary(a_point, a_block, dir)) { return true; }
+    }
+    return false;
+}
+bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
 {
     bool isValidBlockBoundary = graph().isBlockBoundary(a_block, a_dir);
     if (isValidBlockBoundary){
@@ -404,15 +405,16 @@ bool MBProblemDomain::onBlockBoundary(Point a_point, BlockIndex a_block, Point a
         return false;
     }
 }
-bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block) const
+
+bool MBProblemDomain::isPointOnDomainBoundary(Point a_point, BlockIndex a_block) const
 {
     for (auto dir : Point::Directions())
     {
-        if (onDomainBoundary(a_point, a_block, dir)) { return true; }
+        if (isPointOnDomainBoundary(a_point, a_block, dir)) { return true; }
     }
     return false;
 }
-bool MBProblemDomain::onDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
+bool MBProblemDomain::isPointOnDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
 {
         bool isValidDomainBoundary = graph().isDomainBoundary(a_block, a_dir);
     if (isValidDomainBoundary){
