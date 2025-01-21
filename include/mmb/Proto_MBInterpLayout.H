@@ -77,19 +77,15 @@ namespace Proto
             addTriplePointFootprint(footprint, center, boundaryDir, index);
         } else if (patchDomain.isPointInBlockBoundary(adjPatch, block))
         {
-            Point orthDir = Point::Ones() - adjPatch.abs();
-            std::vector<Point> orthDirs;
-            for (auto orth : orthDir.split())
+            for (auto orthDir : Point::DirectionsOfCodim(1))
             {
-                orthDirs.push_back(orth);
-                orthDirs.push_back(-orth);
-            }
-            for (auto orth : orthDirs)
-            {
-                if (patchDomain.isPointInTriplePoint(adjPatch + orth, block))
+                bool isOrthDir = (orthDir.dot(boundaryDir) == 0);
+                bool isTriplePointAdjacent = m_layout.domain().isPointInTriplePoint(center + orthDir, block);
+                if (isTriplePointAdjacent && isOrthDir)
                 {
-                    addTriplePointFootprint(footprint, center, boundaryDir, index);
+                    addTriplePointFootprint(footprint, center, boundaryDir + orthDir, index);
                 }
+
             }
         }
         removeDomainBoundaryPoints(footprint, center, index);
