@@ -1,28 +1,9 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
+#include "TestFunctions.H"
 
-#define XPOINT_SIZE 5
 
 using namespace Proto;
-
-namespace
-{
-    MBProblemDomain buildXPoint(int a_domainSize)
-    {
-        MBProblemDomain domain(XPOINT_SIZE);
-        auto CCW = CoordPermutation::ccw();
-        for (int ii = 0; ii < XPOINT_SIZE; ii++)
-        {
-            domain.defineBoundary(ii, (ii + 1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-        }
-        for (int bi = 0; bi < XPOINT_SIZE; bi++)
-        {
-            domain.defineDomain(bi, Point::Ones(a_domainSize));
-        }
-        domain.close();
-        return domain;
-    }
-}
 
 TEST(MBProblemDomain, ConvertSimple)
 {
@@ -56,6 +37,110 @@ TEST(MBProblemDomain, ConvertSimple)
     }
 }
 
+#if 0
+TEST(MBProblemDomain, BoundaryQueries)
+{
+    int boxSize = 4;
+    int domainSize = 2*boxSize;
+    int ghostSize = 2;
+    int numBlocks;
+
+    auto X = Point::X();
+    auto Y = Point::Y();
+
+    std::set<Point> blockBoundaries;
+    blockBoundaries.insert(X);
+    blockBoundaries.insert(Y);
+    blockBoundaries.insert(X + Y);
+    std::set<Point> domainBoundaries;
+    for (auto dir : Box::Kernel(1))
+    {
+        if (dir == Point::Zeros())
+        {
+            continue;
+        }
+        if (blockBoundaries.count(dir) > 0)
+        {
+            continue;
+        }
+        domainBoundaries.insert(dir);
+    }
+
+    for (int testNum = 0; testNum < 2; testNum++)
+    {
+        switch (testNum)
+        {
+            case 0: numBlocks = 5; break;
+            case 1: numBlocks = 3; break;
+        }
+        auto domain = buildXPoint(domainSize, numBlocks);
+
+        std::set<Point> triplePointBoundaries;
+        if (numBlocks == 3)
+        {
+            triplePointBoundaries.insert(X + Y);
+        }
+
+        Box searchBox = Box::Cube(domainSize + ghostSize);
+        Box domainBox = Box::Cube(domainSize);
+
+        for (BlockIndex block = 0; block < numBlocks; block++)
+        {
+            for (auto point : searchBox)
+            {
+                if (domainBox.containsPoint(point))
+                {
+                    EXPECT_TRUE(domain.isPointInInterior(point, block));
+                    EXPECT_FALSE(domain.isPointInBlockBoundary(point, block));
+                    EXPECT_FALSE(domain.isPointInDomainBoundary(point, block));
+                    EXPECT_FALSE(domain.isPointInTriplePoint(point, block));
+                }
+                for (auto dir : Box::Kernel(1))
+                {
+                    if (searchBox.edge(dir, ghostSize).containsPoint(point))
+                    {
+                        if (blockBoundaries.count(dir) > 0)
+                        {
+                            EXPECT_FALSE(domain.isPointInInterior(point, block));
+                            EXPECT_TRUE(domain.isPointInBlockBoundary(point, block, dir));
+                            EXPECT_FALSE(domain.isPointInDomainBoundary(point, block, dir));
+                        }
+                        else
+                        {
+                            EXPECT_FALSE(domain.isPointInBlockBoundary(point, block, dir));
+                        }
+                        if (domainBoundaries.count(dir) > 0)
+                        {
+                            EXPECT_FALSE(domain.isPointInInterior(point, block));
+                            EXPECT_FALSE(domain.isPointInBlockBoundary(point, block, dir));
+                            EXPECT_TRUE(domain.isPointInDomainBoundary(point, block, dir));
+                        }
+                        else
+                        {
+                            EXPECT_FALSE(domain.isPointInDomainBoundary(point, block, dir));
+                        }
+                        if (triplePointBoundaries.count(dir) > 0)
+                        {
+                            EXPECT_TRUE(domain.isPointInBlockBoundary(point, block, dir));
+                            EXPECT_TRUE(domain.isPointInTriplePoint(point, block, dir));
+                            EXPECT_FALSE(domain.isPointInDomainBoundary(point, block, dir));
+                        }
+                        else
+                        {
+                            EXPECT_FALSE(domain.isPointInTriplePoint(point, block, dir));
+                        }
+                    } else {
+                        EXPECT_FALSE(domain.isPointInBlockBoundary(point, block, dir));
+                        EXPECT_FALSE(domain.isPointInTriplePoint(point, block, dir));
+                        EXPECT_FALSE(domain.isPointInDomainBoundary(point, block, dir));
+                    }
+                }
+            }
+        }
+
+    }
+}
+#endif
 TEST(MBProblemDomain, OnBlockBoundary)
 {
     int domainSize = 4;
@@ -114,7 +199,8 @@ TEST(MBProblemDomain, OnBlockBoundary)
 
 TEST(MBProblemDomain, Convert) {
     int domainSize = 64;
-    auto domain = buildXPoint(domainSize);
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
     Point x = Point::X();
     Point y = Point::Y();
     Point origin = Point::Zeros();
@@ -127,8 +213,8 @@ TEST(MBProblemDomain, Convert) {
     Box xyEdge = domainBox.edge(x+y,2);
     for (BlockIndex bi = 0; bi < domain.size(); bi++)
     {
-        BlockIndex bx = (bi + 1) % XPOINT_SIZE;
-        BlockIndex by = (bi + XPOINT_SIZE - 1) % XPOINT_SIZE;
+        BlockIndex bx = (bi + 1) % numBlocks;
+        BlockIndex by = (bi + numBlocks - 1) % numBlocks;
         Point sx = x*domainSize*2;
         Point sy = y*domainSize*2;
 
@@ -138,9 +224,9 @@ TEST(MBProblemDomain, Convert) {
         EXPECT_EQ(domain.convertBox(xAdj, bi, bx), yEdge);
         EXPECT_EQ(domain.convertBox(yAdj, bi, by), xEdge);
         
-        if (XPOINT_SIZE > 3)
+        if (numBlocks > 3)
         {
-            BlockIndex bxy = (bi + 2) % XPOINT_SIZE;
+            BlockIndex bxy = (bi + 2) % numBlocks;
             EXPECT_EQ(domain.convertBox(xyAdj, bi, bxy), xyEdge);
             EXPECT_EQ(domain.convertBox(xyEdge, bi, bxy), xyAdj);
 
