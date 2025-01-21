@@ -212,6 +212,16 @@ namespace Proto
             MayDay<void>::Abort("Failed to find op at target");
         }
 
+        inline MBPointInterpOp& operator()(Point target, const MBIndex& index, const MBDisjointBoxLayout& layout) const
+        {
+            MBDataPoint targetPoint(index, target, layout);
+            for (auto& op : m_ops)
+            {
+                if (targetPoint == op->target()) {return *op;}
+            }
+            MayDay<void>::Abort("Failed to find op at target");
+        }
+
         inline void copyAxis(unsigned int a_axis, bool a_flag);
 
         void print() const;
