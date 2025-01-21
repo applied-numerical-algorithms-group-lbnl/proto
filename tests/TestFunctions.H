@@ -176,7 +176,7 @@ MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    //domain.close();
+    domain.close();
     return domain;
 }
 

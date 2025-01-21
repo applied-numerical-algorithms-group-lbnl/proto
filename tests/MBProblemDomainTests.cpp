@@ -37,13 +37,11 @@ TEST(MBProblemDomain, ConvertSimple)
     }
 }
 
-#if 0
+#if 1
 TEST(MBProblemDomain, BoundaryQueries)
 {
-    int boxSize = 4;
-    int domainSize = 2*boxSize;
+    int domainSize = 4;
     int ghostSize = 2;
-    int numBlocks;
 
     auto X = Point::X();
     auto Y = Point::Y();
@@ -68,6 +66,7 @@ TEST(MBProblemDomain, BoundaryQueries)
 
     for (int testNum = 0; testNum < 2; testNum++)
     {
+        int numBlocks;
         switch (testNum)
         {
             case 0: numBlocks = 5; break;
@@ -81,13 +80,15 @@ TEST(MBProblemDomain, BoundaryQueries)
             triplePointBoundaries.insert(X + Y);
         }
 
-        Box searchBox = Box::Cube(domainSize + ghostSize);
         Box domainBox = Box::Cube(domainSize);
+        Box searchBox = domainBox.grow(ghostSize);
 
         for (BlockIndex block = 0; block < numBlocks; block++)
         {
             for (auto point : searchBox)
             {
+                // std::cout << "\n==================================================================" << std::endl;
+                // std::cout << "checking point: " << point << " in block: " << block << std::endl;
                 if (domainBox.containsPoint(point))
                 {
                     EXPECT_TRUE(domain.isPointInInterior(point, block));
@@ -97,8 +98,10 @@ TEST(MBProblemDomain, BoundaryQueries)
                 }
                 for (auto dir : Box::Kernel(1))
                 {
-                    if (searchBox.edge(dir, ghostSize).containsPoint(point))
+                    if (dir == Point::Zeros()) { continue; }
+                    if (domainBox.adjacent(dir, ghostSize).containsPoint(point))
                     {
+                        // std::cout << "\tPoint is in boundary region with dir = " << dir << std::endl;
                         if (blockBoundaries.count(dir) > 0)
                         {
                             EXPECT_FALSE(domain.isPointInInterior(point, block));

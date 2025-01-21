@@ -403,10 +403,15 @@ bool MBGraph::isTriplePoint(
         {
             if (a_dir[ii] == 0) { continue; }
             Point dir = a_dir;
+            // check if the orthogonal arc exists
+            Point orthDir = Point::Basis(ii,1)*a_dir;
+            auto& arcMap = m_blocks[a_srcBlock]->arcs;
+            if (arcMap.find(orthDir) == arcMap.end()) {return false; }
+
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,
                     "MBGraph::isTriplePoint | Recursion Error");
-            if (isTriplePoint(a_srcBlock, dir)) { return true; }
+            return (isTriplePoint(a_srcBlock, dir));
         }
         return false;
     } else {
@@ -457,7 +462,7 @@ bool MBGraph::isDomainBoundary(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
-
+    if (a_dir == Point::Zeros()) { return false; }
     if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
     if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
     return true;
@@ -484,6 +489,7 @@ bool MBGraph::operator==(const MBGraph& a_rhs) const
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
 {
+    if (isTriplePoint(a_srcBlock, a_dir)) { return true; }
     auto& arcMap = m_blocks[a_srcBlock]->arcs;
     if (arcMap.find(a_dir) == arcMap.end()) {return false; }
     for (auto& arc : arcMap[a_dir])

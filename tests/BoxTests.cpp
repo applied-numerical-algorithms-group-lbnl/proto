@@ -129,6 +129,23 @@ TEST(Box, Adjacent) {
     EXPECT_EQ(B5, Box(L + D*x - 2*y,  H + x - D*y));
 }
 
+TEST(Box, WhichBoundaryContains)
+{
+    int ghostSize = 2;
+    Box B0 = Box::Kernel(2);
+    Box B1 = B0.grow(ghostSize);
+
+    for (auto dir : Box::Kernel(1))
+    {
+        auto boundBox = B0.adjacent(dir, ghostSize);
+        for (auto pi : boundBox)
+        {
+            auto boundDir = B0.whichBoundaryContains(pi);
+            EXPECT_EQ(boundDir, dir);
+        }
+    }
+}
+
 TEST(Box, Edge) {
 #if DIM > 3
     MayDay<void>::Warning("Box.Edge test was not designed to be run for DIM>3");

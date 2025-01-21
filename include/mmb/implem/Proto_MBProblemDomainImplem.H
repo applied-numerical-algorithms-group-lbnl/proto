@@ -93,6 +93,7 @@ Point MBProblemDomain::convertNode(
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock) const
 {
+    close();
     PROTO_ASSERT(a_srcBlock < size(),
             "MBProblemDomain::convert | Error: srcBlock is out of bounds.");
     PROTO_ASSERT(a_dstBlock < size(),
@@ -144,6 +145,7 @@ Point MBProblemDomain::convertPoint(
         BlockIndex a_dstBlock,
         Centering a_ctr) const
 {
+    close();
     Box srcBox(a_point, a_point);
     Box dstBox = convertBox(srcBox, a_srcBlock, a_dstBlock, a_ctr);
     return dstBox.low();
@@ -155,6 +157,7 @@ Box MBProblemDomain::convertBox(
         BlockIndex a_dstBlock,
         Centering a_ctr) const
 {
+    close();
     Point L, H;
     switch (a_ctr)
     {
@@ -185,6 +188,7 @@ Box MBProblemDomain::convertBox(
 MBProblemDomain
 MBProblemDomain::coarsen(Point a_refRatio) const
 {
+    close();
     PROTO_ASSERT(coarsenable(a_refRatio),
             "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable.");
     
@@ -201,6 +205,7 @@ MBProblemDomain::coarsen(Point a_refRatio) const
 MBProblemDomain
 MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 {
+    close();
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::coarsen | Error: Wrong number of refinement ratios");
     MBProblemDomain coarsened(size());
@@ -218,6 +223,7 @@ MBProblemDomain::coarsen(const std::vector<Point>& a_refRatios) const
 MBProblemDomain
 MBProblemDomain::refine(Point a_refRatio) const
 {
+    close();
     MBProblemDomain refined(size());
     for (int ii = 0; ii < size(); ii++)
     {
@@ -231,6 +237,7 @@ MBProblemDomain::refine(Point a_refRatio) const
 MBProblemDomain
 MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
 {
+    close();
     PROTO_ASSERT(size() == a_refRatios.size(),
             "MBProblemDomain::refine | Error: Wrong number of refinement ratios");
     MBProblemDomain refined(size());
@@ -245,6 +252,7 @@ MBProblemDomain::refine(const std::vector<Point>& a_refRatios) const
 
 bool MBProblemDomain::coarsenable(Point a_refRatio) const
 {
+    close();
     for (auto d : m_domains)
     {
         if (!d.coarsenable(a_refRatio)) { return false; }
@@ -254,6 +262,7 @@ bool MBProblemDomain::coarsenable(Point a_refRatio) const
 
 bool MBProblemDomain::coarsenable(BlockIndex a_block, Point a_refRatio) const
 {
+    close();
     return m_domains[a_block].coarsenable(a_refRatio);
 }
 
@@ -338,11 +347,15 @@ std::vector<MBPoint> MBProblemDomain::patches(const std::vector<Point>& a_boxSiz
 
 bool MBProblemDomain::isPointInTriplePoint(Point a_point, BlockIndex a_block) const
 {
+    close();
     Box domainBox = getBlock(a_block).box();
-    return graph().isTriplePoint(a_block, domainBox.whichBoundaryContains(a_point));
+    auto boundDir = domainBox.whichBoundaryContains(a_point);
+    if (boundDir == Point::Zeros()) { return false; }
+    return graph().isTriplePoint(a_block, boundDir);
 }
 bool MBProblemDomain::isPointInTriplePoint(Point a_point, BlockIndex a_block, Point a_dir) const
 {
+    close();
     if (graph().isTriplePoint(a_block, a_dir))
     {
         Box domainBox = getBlock(a_block).box();
@@ -353,11 +366,15 @@ bool MBProblemDomain::isPointInTriplePoint(Point a_point, BlockIndex a_block, Po
 
 bool MBProblemDomain::isPointInBlockBoundary(Point a_point, BlockIndex a_block) const
 {
+    close();
     Box domainBox = getBlock(a_block).box();
-    return graph().isBlockBoundary(a_block, domainBox.whichBoundaryContains(a_point));
+    auto boundDir = domainBox.whichBoundaryContains(a_point);
+    if (boundDir == Point::Zeros()) { return false; }
+    return graph().isBlockBoundary(a_block, boundDir);
 }
 bool MBProblemDomain::isPointInBlockBoundary(Point a_point, BlockIndex  a_block, Point a_dir) const
 {
+    close();
     if (graph().isBlockBoundary(a_block, a_dir))
     {
         Box domainBox = getBlock(a_block).box();
@@ -368,11 +385,15 @@ bool MBProblemDomain::isPointInBlockBoundary(Point a_point, BlockIndex  a_block,
 
 bool MBProblemDomain::isPointInDomainBoundary(Point a_point, BlockIndex  a_block) const
 {
+    close();
     Box domainBox = getBlock(a_block).box();
-    return graph().isDomainBoundary(a_block, domainBox.whichBoundaryContains(a_point));
+    auto boundDir = domainBox.whichBoundaryContains(a_point);
+    if (boundDir == Point::Zeros()) { return false; }
+    return graph().isDomainBoundary(a_block, boundDir);
 }
 bool MBProblemDomain::isPointInDomainBoundary(Point a_point, BlockIndex  a_block, Point a_dir) const
 {
+    close();
     if (graph().isDomainBoundary(a_block, a_dir))
     {
         Box domainBox = getBlock(a_block).box();
@@ -383,11 +404,13 @@ bool MBProblemDomain::isPointInDomainBoundary(Point a_point, BlockIndex  a_block
 
 bool MBProblemDomain::isPointInInterior(Point a_point, BlockIndex a_block) const
 {
+    close();
     return getBlock(a_block).box().containsPoint(a_point);
 }
 
 bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block) const
 {
+    close();
     for (auto dir : Point::Directions())
     {
         if (isPointOnBlockBoundary(a_point, a_block, dir)) { return true; }
@@ -396,6 +419,7 @@ bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block) 
 }
 bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
 {
+    close();
     bool isValidBlockBoundary = graph().isBlockBoundary(a_block, a_dir);
     if (isValidBlockBoundary){
         Box domainBox = getBlock(a_block).box();
@@ -408,6 +432,7 @@ bool MBProblemDomain::isPointOnBlockBoundary(Point a_point, BlockIndex a_block, 
 
 bool MBProblemDomain::isPointOnDomainBoundary(Point a_point, BlockIndex a_block) const
 {
+    close();
     for (auto dir : Point::Directions())
     {
         if (isPointOnDomainBoundary(a_point, a_block, dir)) { return true; }
@@ -416,7 +441,8 @@ bool MBProblemDomain::isPointOnDomainBoundary(Point a_point, BlockIndex a_block)
 }
 bool MBProblemDomain::isPointOnDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const
 {
-        bool isValidDomainBoundary = graph().isDomainBoundary(a_block, a_dir);
+    close();
+    bool isValidDomainBoundary = graph().isDomainBoundary(a_block, a_dir);
     if (isValidDomainBoundary){
         Box domainBox = getBlock(a_block).box();
         Box domainBoundBox = domainBox.edge(a_dir);
