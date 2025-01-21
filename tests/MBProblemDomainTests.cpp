@@ -87,8 +87,6 @@ TEST(MBProblemDomain, BoundaryQueries)
         {
             for (auto point : searchBox)
             {
-                // std::cout << "\n==================================================================" << std::endl;
-                // std::cout << "checking point: " << point << " in block: " << block << std::endl;
                 if (domainBox.containsPoint(point))
                 {
                     EXPECT_TRUE(domain.isPointInInterior(point, block));
@@ -99,9 +97,25 @@ TEST(MBProblemDomain, BoundaryQueries)
                 for (auto dir : Box::Kernel(1))
                 {
                     if (dir == Point::Zeros()) { continue; }
+                    if (domainBox.edge(dir, 1).containsPoint(point))
+                    {
+                        if (blockBoundaries.count(dir) > 0)
+                        {
+                            EXPECT_TRUE(domain.isPointOnBlockBoundary(point, block));
+                            EXPECT_TRUE(domain.isPointOnBlockBoundary(point, block, dir));
+                        }
+                        if (domainBoundaries.count(dir) > 0)
+                        {
+                            EXPECT_TRUE(domain.isPointOnDomainBoundary(point, block));
+                            EXPECT_TRUE(domain.isPointOnDomainBoundary(point, block, dir));
+                        }
+                    }
+                }
+                for (auto dir : Box::Kernel(1))
+                {
+                    if (dir == Point::Zeros()) { continue; }
                     if (domainBox.adjacent(dir, ghostSize).containsPoint(point))
                     {
-                        // std::cout << "\tPoint is in boundary region with dir = " << dir << std::endl;
                         if (blockBoundaries.count(dir) > 0)
                         {
                             EXPECT_FALSE(domain.isPointInInterior(point, block));
