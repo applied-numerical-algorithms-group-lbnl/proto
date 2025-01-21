@@ -45,7 +45,8 @@ namespace {
 TEST(MBInterpLayout, BlockBoundary) {
     int boxSize = 8;
     int domainSize = boxSize*2;
-    int numBlocks = 4;
+    int ghostSize = 3;
+    int numBlocks = 3;
 
     auto layout = testLayout(boxSize, domainSize, numBlocks);
     layout.print();
@@ -76,10 +77,11 @@ TEST(MBInterpLayout, BlockBoundary) {
             {
                 continue;
             }
-            Box boundBox = patchBox.adjacent(dir * 3);
+            Box boundBox = patchBox.adjacent(dir * ghostSize);
             for (auto center : boundBox)
             {
                 if (layout.domain().isPointInInterior(center, 0)) { continue; }
+                if (layout.domain().isPointInDomainBoundary(center, 0)) { continue; }
                 auto footprintData = printInterpLayout(interpLayout, center, dir, iter);
 #if PR_VERBOSE > 0
                 h5.writePatch(footprintData, "FOOTPRINT_%i", plotIter);

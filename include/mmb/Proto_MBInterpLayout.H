@@ -33,7 +33,17 @@ namespace Proto
         
         inline void addDomainBoundaryFootprint(
             std::set<Point>& footprint,
-            Point point,
+            Point center,
+            MBIndex index) const;
+
+        inline void removeDomainBoundaryPoints(
+            std::set<Point>& footprint,
+            Point center,
+            MBIndex index) const;
+
+        inline void removeTriplePointPoints(
+            std::set<Point>& footprint,
+            Point center,
             MBIndex index) const;
 
         MBDisjointBoxLayout m_layout;
@@ -49,7 +59,7 @@ namespace Proto
     }
 
     std::set<Point> MBInterpLayout::footprint(
-        Point point,
+        Point center,
         Point boundaryDir,
         MBIndex index) const
     {
@@ -61,10 +71,10 @@ namespace Proto
         PatchID adjPatch = patch + boundaryDir;
         Box patchBox = m_layout[index];
         std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
-        addDomainBoundaryFootprint(footprint, point, index);
+        addDomainBoundaryFootprint(footprint, center, index);
         if (patchDomain.isPointInTriplePoint(adjPatch, block))
         {
-            addTriplePointFootprint(footprint, point, boundaryDir, index);
+            addTriplePointFootprint(footprint, center, boundaryDir, index);
         } else if (patchDomain.isPointInBlockBoundary(adjPatch, block))
         {
             Point orthDir = Point::Ones() - adjPatch.abs();
@@ -78,11 +88,49 @@ namespace Proto
             {
                 if (patchDomain.isPointInTriplePoint(adjPatch + orth, block))
                 {
-                    addTriplePointFootprint(footprint, point, boundaryDir, index);
+                    addTriplePointFootprint(footprint, center, boundaryDir, index);
                 }
             }
         }
+        removeDomainBoundaryPoints(footprint, center, index);
+        removeTriplePointPoints(footprint, center, index);
         return footprint;
+    }
+
+    void MBInterpLayout::removeDomainBoundaryPoints(
+        std::set<Point>& footprint,
+        Point center,
+        MBIndex index) const 
+    {
+        BlockIndex block = m_layout.block(index);
+        std::set<Point> tmp(footprint.begin(), footprint.end());
+        footprint.clear();
+        for (auto p : tmp)
+        {
+            if (!m_layout.domain().isPointInDomainBoundary(p + center,block)) 
+            {
+                footprint.insert(p);
+            } else {
+            }
+        }
+    }
+
+    void MBInterpLayout::removeTriplePointPoints(
+        std::set<Point>& footprint,
+        Point center,
+        MBIndex index) const 
+    {
+        BlockIndex block = m_layout.block(index);
+        std::set<Point> tmp(footprint.begin(), footprint.end());
+        footprint.clear();
+        for (auto p : tmp)
+        {
+            if (!m_layout.domain().isPointInTriplePoint(p + center,block)) 
+            {
+                footprint.insert(p);
+            } else {
+            }
+        }
     }
 
     void MBInterpLayout::addDomainBoundaryFootprint(
