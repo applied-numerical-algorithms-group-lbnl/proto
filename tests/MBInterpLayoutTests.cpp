@@ -112,7 +112,6 @@ TEST(MBInterpLayout, BlockBoundary)
         }
     }
 }
-
 TEST(MBInterpLayout, DomainBoundary)
 {
     int boxSize = 8;
@@ -170,47 +169,180 @@ TEST(MBInterpLayout, DomainBoundary)
         auto localXBound = layout[iter].adjacent(X, ghostSize);
         for (auto center : xBound0 & localXBound)
         {
-            // std::cout << "checking center " << center << std::endl;
             auto footprint = interpLayout.footprint(center, X, iter);
             for (auto fi : xBoundFootprint0)
             {
-                // std::cout << "\tlooking for shift: " << fi << std::endl;
                 EXPECT_TRUE(footprint.count(fi) == 1);
             }
         }
         for (auto center : xBound1 & localXBound)
         {
-            // std::cout << "checking center " << center << std::endl;
             auto footprint = interpLayout.footprint(center, X, iter);
             for (auto fi : xBoundFootprint1)
             {
-                // std::cout << "\tlooking for shift: " << fi << std::endl;
                 EXPECT_TRUE(footprint.count(fi) == 1);
             }
         }
         auto localYBound = layout[iter].adjacent(Y, ghostSize);
         for (auto center : yBound0 & localYBound)
         {
-            // std::cout << "checking center " << center << std::endl;
             auto footprint = interpLayout.footprint(center, Y, iter);
             for (auto fi : yBoundFootprint0)
             {
-                // std::cout << "\tlooking for shift: " << fi << std::endl;
                 EXPECT_TRUE(footprint.count(fi) == 1);
             }
         }
         for (auto center : yBound1 & localYBound)
         {
-            // std::cout << "checking center " << center << std::endl;
             auto footprint = interpLayout.footprint(center, Y, iter);
             for (auto fi : yBoundFootprint1)
             {
-                // std::cout << "\tlooking for shift: " << fi << std::endl;
                 EXPECT_TRUE(footprint.count(fi) == 1);
             }
         }
     }
 }
+TEST(MBInterpLayout, TriplePointAdjacent)
+{
+    int boxSize = 8;
+    int domainSize = boxSize;
+    int ghostSize = 3;
+    int numBlocks = 3;
+
+    auto layout = testLayout(boxSize, domainSize, numBlocks);
+    MBInterpLayout interpLayout(layout);
+    std::set<Point> baseFootprint;
+    for (auto pi : Box::Kernel(2))
+    {
+        if (pi.sumAbs() <= 2)
+        {
+            interpLayout.addPoint(pi);
+            baseFootprint.insert(pi);
+        }
+    }
+    
+    auto X = Point::X(); auto Y = Point::Y();
+    Box domainBox = Box::Cube(domainSize);
+    Box yBoundBox = domainBox.adjacent(Y, ghostSize).edge(X);
+    Box xBoundBox = domainBox.adjacent(X, ghostSize).edge(Y);
+    for (int dd = 2; dd < DIM; dd++)
+    {
+        yBoundBox = yBoundBox.grow(dd,-2);
+        xBoundBox = xBoundBox.grow(dd,-2);
+    }
+
+    for (auto iter : layout)
+    {
+        Box localXBoundBox = layout[iter].adjacent(X, ghostSize);
+        for (auto center : localXBoundBox & xBoundBox)
+        {
+            auto footprint = interpLayout.footprint(center, X, iter);
+            std::set<Point> footprintSln;
+            for (auto fi : baseFootprint)
+            {
+                if (fi[1] <= 0)
+                {
+                    footprintSln.insert(fi);
+                    Point corner = (X + Y)*(domainSize - 1);
+                    Point p0 = center + fi - corner;
+                    Point p1 = p0;
+                    p1[0] = p0[1]; p1[1] = p0[0];
+                    p1 += corner;
+                    footprintSln.insert(p1 - center);
+                }
+            }
+
+            for (auto fi : footprint)
+            {
+                EXPECT_TRUE(footprintSln.count(fi) == 1);
+            }
+        }
+        Box localYBoundBox = layout[iter].adjacent(Y, ghostSize);
+        for (auto center : localYBoundBox & yBoundBox)
+        {
+            auto footprint = interpLayout.footprint(center, Y, iter);
+            std::set<Point> footprintSln;
+            for (auto fi : baseFootprint)
+            {
+                if (fi[0] <= 0)
+                {
+                    footprintSln.insert(fi);
+                    Point corner = (X + Y)*(domainSize - 1);
+                    Point p0 = center + fi - corner;
+                    Point p1 = p0;
+                    p1[0] = p0[1]; p1[1] = p0[0];
+                    p1 += corner;
+                    footprintSln.insert(p1 - center);
+                }
+            }
+
+            for (auto fi : footprint)
+            {
+                EXPECT_TRUE(footprintSln.count(fi) == 1);
+            }
+        }
+    }
+
+}
+
+TEST(MBInterpLayout, TriplePointRegion)
+{
+    int boxSize = 8;
+    int domainSize = boxSize;
+    int ghostSize = 3;
+    int numBlocks = 3;
+
+    auto layout = testLayout(boxSize, domainSize, numBlocks);
+    MBInterpLayout interpLayout(layout);
+    std::set<Point> baseFootprint;
+    for (auto pi : Box::Kernel(2))
+    {
+        if (pi.sumAbs() <= 2)
+        {
+            interpLayout.addPoint(pi);
+            baseFootprint.insert(pi);
+        }
+    }
+    
+    auto X = Point::X(); auto Y = Point::Y();
+    Box domainBox = Box::Cube(domainSize);
+    Box triplePointRegion = domainBox.adjacent(X + Y, ghostSize);
+    Box shrunkTriplePointRegion = triplePointRegion.grow(-2*(Point::Ones() - X - Y));
+
+    for (auto iter : layout)
+    {
+        Box patchBox = layout[iter];
+        Box localTriplePointRegion = shrunkTriplePointRegion & patchBox.adjacent(X+Y, ghostSize);
+        for (auto center : localTriplePointRegion)
+        {
+            auto footprint = interpLayout.footprint(center, X+Y,iter);
+            std::set<Point> footprintSln;
+            Point corner = (X+Y)*(domainSize-1) + center*(Point::Ones()-X-Y);
+            int dist = ((center-corner)*(X+Y)).abs().max();
+            Point s0 = corner + X*dist - center;
+            Point s1 = corner + Y*dist - center;
+
+            for (auto fi : baseFootprint)
+            {
+                Point f0 = fi + s0;
+                if (!triplePointRegion.containsPoint(center + f0))
+                {
+                    footprintSln.insert(f0);
+                }
+                Point f1 = fi + s1;
+                if (!triplePointRegion.containsPoint(center + f1))
+                {
+                    footprintSln.insert(f1);
+                }
+            }
+            for (auto fi : footprint)
+            {
+                EXPECT_TRUE(footprintSln.count(fi) == 1);
+            }
+        }
+    }
+}
+
 #if DIM == 2
 #if PR_VERBOSE > 0
 TEST(MBInterpLayout, Visualization) {

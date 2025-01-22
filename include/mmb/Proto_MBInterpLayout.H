@@ -171,22 +171,20 @@ namespace Proto
             "MBInterpLayout::footprint | Error: The more complex case is not implemented");
         
         // Everything past this point assumes there can only be one triple point circuit
+
         Point n0 = triplePointCircuits[0].first;
         Point n1 = triplePointCircuits[0].second;
-        Point inPlane = n0 + n1; // for DIM=2, this is the same as boundaryDir
-        Point outPlane = (Point::Ones() - inPlane.abs())*triplePointBoundary;
-        Point corner = patchBox.edge(inPlane).low()*inPlane;
-        Point posFromCorner = (center - corner)*inPlane;
-        int maxDistFromCorner = posFromCorner.abs().max();
-        Point shift0 = corner + n0*maxDistFromCorner + center*outPlane - center;
-        Point shift1 = corner + n1*maxDistFromCorner + center*outPlane - center;
+        Point inPlaneMask = (n0 + n1).abs();
+        Point outPlaneMask = Point::Ones() - inPlaneMask;
+        Point corner = patchBox.edge(n1 + n0).low()*inPlaneMask + center*outPlaneMask;
+        int maxDist = (center - corner).abs().max();
+        Point s0 = corner + n0*maxDist - center;
+        Point s1 = corner + n1*maxDist - center;
 
         for (auto fi : m_baseFootprint)
         {
-            Point f0 = fi + shift0;
-            Point f1 = fi + shift1;
-            footprint.insert(f0);
-            footprint.insert(f1);
+            footprint.insert(fi + s0);
+            footprint.insert(fi + s1);
         }
     }
 
