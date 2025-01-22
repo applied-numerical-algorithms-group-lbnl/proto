@@ -83,7 +83,7 @@ namespace Proto
             MBDataPoint                 a_dst,
             Point                       a_ghost,
             const MBLevelMap<MAP, MEM>& a_map,
-            std::vector<Point>          a_footprint,
+            std::set<Point>          a_footprint,
             unsigned int                a_order);
         
         inline MBPointInterpOp(
@@ -126,6 +126,13 @@ namespace Proto
         
         private:
 
+        template<template<MemType> typename MAP, MemType MEM>
+        inline std::vector<MBDataPoint> getSourcePoints(
+            Point center,
+            const MBIndex& index,
+            const std::set<Point>& footprint,
+            const MBDisjointBoxLayout& layout,
+            Point ghostSizes) const;
         inline void computeExponents();
         inline void validateMatrixDimensions(const std::vector<Point> &footprint) const;
         template <template <MemType> typename MAP, MemType MEM>
@@ -183,7 +190,7 @@ namespace Proto
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
-                const std::vector<Point>    a_footprint,
+                MBInterpLayout              a_interpLayout,
                 int                         a_order = 4,
                 int block = -1);
         
@@ -236,37 +243,38 @@ namespace Proto
      
         template<template<MemType> typename MAP, MemType MEM>
         void addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        template<template<MemType> typename MAP, MemType MEM>
-        void addTriplePointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        template<template<MemType> typename MAP, MemType MEM>
-        void addBlockBoundaryOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        template<template<MemType> typename MAP, MemType MEM>
-        void addTriplePointAdjacentOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        std::vector<Point> getTriplePointAdjacentFootprint(
-            Point centerPoint,
-            const MBIndex& index,
-            Point boundaryDir,
-            Point triplePointDir) const;
+        // template<template<MemType> typename MAP, MemType MEM>
+        // void addTriplePointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        // template<template<MemType> typename MAP, MemType MEM>
+        // void addBlockBoundaryOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        // template<template<MemType> typename MAP, MemType MEM>
+        // void addTriplePointAdjacentOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
+        // std::vector<Point> getTriplePointAdjacentFootprint(
+        //     Point centerPoint,
+        //     const MBIndex& index,
+        //     Point boundaryDir,
+        //     Point triplePointDir) const;
         bool containsOp(Point dataPoint, const MBIndex& index) const;
-        std::vector<Point> getTriplePointFootprint(
-            Point centerPoint,
-            const MBIndex& index,
-            Point dir) const;
+        // std::vector<Point> getTriplePointFootprint(
+        //     Point centerPoint,
+        //     const MBIndex& index,
+        //     Point dir) const;
         template<template<MemType> typename MAP, MemType MEM>
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
-            const std::vector<Point>& footprint,
+            const std::set<Point>& footprint,
             const MBLevelMap<MAP,MEM>& map);
         void addShiftedOp(
             const MBPointInterpOp& baseOp,
             Point shift);
         void copyAlongSymmetryAxes(const MBPointInterpOp& pointOp);
 
-        mutable Array<bool, DIM> m_copyAxes;
-        MBDisjointBoxLayout m_layout;
-        std::vector<Point> m_baseFootprint;
-        Point m_footprintDims;
+        MBInterpLayout m_interpLayout;
+        //mutable Array<bool, DIM> m_copyAxes;
+        //MBDisjointBoxLayout m_layout;
+        //std::vector<Point> m_baseFootprint;
+        //Point m_footprintDims;
         Point m_ghost;
         int m_order;
         std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;

@@ -9,7 +9,7 @@ namespace Proto
     class MBInterpLayout
     {
         public:
-        
+        inline MBInterpLayout(){}
         inline MBInterpLayout(MBDisjointBoxLayout& layout);
         inline bool addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
@@ -22,6 +22,7 @@ namespace Proto
             MBIndex index) const;
         inline Point footprintMask() const;
         inline Box footprintSpan() const;
+        inline const MBDisjointBoxLayout& layout() const { return m_layout; }
 
         private:
 
