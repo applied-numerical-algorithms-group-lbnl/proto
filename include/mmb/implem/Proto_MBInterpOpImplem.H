@@ -37,59 +37,48 @@ MBPointInterpOp::MBPointInterpOp(
     PR_TIME("MBPointInterpOp::constructor");
     m_order = a_order;
     m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point(), a_ghost, a_footprint, a_dst.index());
-    
+    computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
     computeExponents();
     validateMatrixDimensions(a_footprint);
     auto momentData = computeMoments(a_map);
     computeCoefficients(momentData);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
-std::vector<MBDataPoint> MBPointInterpOp::getSourcePoints(
-    Point center,
-    const MBIndex& index,
+void MBPointInterpOp::computeSourcePoints(
     const std::set<Point>& footprint,
     const MBDisjointBoxLayout& layout,
-    Point ghostSizes) const
+    Point ghostSizes)
 {
+    //std::cout << "\n==========================================================" << std::endl;
+    auto index = m_dst.index();
+    auto center = m_dst.point();
     Box patchBox = layout[index];
     patchBox = patchBox.grow(ghostSizes);
     auto block = layout.block(index);
     Box domainBox = layout.domain().getBlock(block).box();
+    m_srcs.clear();
 
-    std::vector<MBDataPoint> sources;
-
+    //std::cout << "target point: " << center << std::endl;
     for (auto fi : footprint)
     {
         Point pi = center + fi;
+        //std::cout << "\tchecking source: " << pi << std::endl;
         if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
         {
+            //std::cout << "\t\tfound inside the domain. Adding." << std::endl;
             MBDataPoint data(index, pi, layout);
-            sources.insert(data);
-        } else if (!domainBox.containsPoint(p))
+            m_srcs.push_back(data);
+        } else if (!domainBox.containsPoint(pi))
         {
             Point dir = layout[index].whichBoundaryContains(pi);
             auto adjIndices = layout.findAdjacentIndices(index, dir);
             for (auto adjIndex : adjIndices)
             {
                 BlockIndex adjBlock = layout.block(adjIndex);
+                //std::cout << "\t\tfound in boundary with " << adjBlock << ". Adding. " << std::endl;
                 MBDataPoint data(index, pi, layout, dir, adjBlock);
-                sources.insert(data);
+                m_srcs.push_back(data);
             }
-            // for (auto dir : Point::Directions())
-            // {
-            //     auto boundData = map.map().bounds(index, dir);
-            //     for (auto bound : boundData)
-            //     {
-            //         if (bound.localBox().containsPoint(p))
-            //         {
-            //             BlockIndex adjBlock = map.layout().block(bound.adjIndex);
-            //             MBDataPoint data(index, pi, map.layout(), dir, adjBlock);
-            //             sources.insert(data);
-            //         }
-            //     }
-            // }
         }
     }
 }
@@ -120,7 +109,7 @@ void MBPointInterpOp::computeExponents()
     }
 }
 void MBPointInterpOp::validateMatrixDimensions(
-    const std::vector<Point>& footprint) const
+    const std::set<Point>& footprint) const
 {
     int N = m_exponents.size();
     int M = m_srcs.size();
@@ -305,7 +294,6 @@ void MBPointInterpOp::print() const
 MBInterpOp::MBInterpOp()
 {
     PR_TIME("MBInterpOp::constructor");
-    //m_copyAxes.fill(false);
 }
 
 MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
@@ -313,92 +301,75 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
     PR_TIME("MBInterpOp::constructor");
     m_order = a_order;
     m_ghost = a_ghost;
-    //m_copyAxes.fill(false);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 MBInterpOp::MBInterpOp(
         const MBLevelMap<MAP,MEM>&    a_map,
-        int                           a_order)
+        int a_order)
 {
-    m_copyAxes.fill(false);
-    for (int bi = 0; bi < a_map.layout().numBlocks(); bi++)
-    {
-        define(a_map, a_order, bi);
-    }
+    PR_TIME("MBInterpOp::constructor");
+    define(a_map, a_order);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&    a_map,
-        int a_order,
-        int a_block)
+        int a_order)
 {
-    MBInterpLayout interpLayout(a_map.layout());
-    //std::vector<Point> footprint;
-    switch (a_order)
-    {
-        case 4:
-            for (auto pi : Box::Kernel(2))
-            {
-                if (pi.abs().sum() <= 2)
-                {
-                    interpLayout.addPoint(pi);
-                    //footprint.push_back(pi);
-                }
-            }
-            break;
-        case 5:
-            for (auto pi : Box::Kernel(2))
-            {
-                if (pi.abs().sum() <= 3)
-                {
-                    interpLayout.addPoint(pi);
-                    //footprint.push_back(pi);
-                }
-            }
-            break;
-        default:
-            MayDay<void>::Error("MBInterpOp::define | Function undefined for order %i", a_order);
-            break;
-    }
-    define(a_map, footprint, a_order, a_block);
+    MBInterpLayout interpLayout(a_map.layout(), a_order);
+    define(a_map, interpLayout, a_order);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
         MBInterpLayout              a_interpLayout,
-        int                         a_order,
-        int                         a_block)
+        int                         a_order)
 {
     PR_TIME("MBInterpOp::define");
+    PROTO_ASSERT(a_interpLayout.layout().compatible(a_map.layout()),
+        "MBInterpOp::define | Error: Incompatible layouts among inputs");
 
     m_order = a_order;
     m_ghost = a_map.ghost()[0];
     m_interpLayout = a_interpLayout;
-    //m_layout = a_map.layout();
-    //m_baseFootprint = a_footprint;
-
-    // Box spanBox;
-    // for (auto fi : a_footprint)
-    // {
-    //     spanBox &= fi;
-    // }
-    // m_footprintDims = Point::Zeros();
-    // for (int dd = 0; dd < DIM; dd++)
-    // {
-    //     if (spanBox.sizes()[dd] > 1)
-    //     {
-    //         m_footprintDims[dd] = 1;
-    //     }
-    // }
-
     for (auto iter : m_interpLayout.layout())
     {
         for (auto dir : Box::Kernel(1))
         {
            addPointOps(iter, dir, a_map);
+        }
+    }
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+void MBInterpOp::define(
+        const std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>>&  a_maps,
+        MBInterpLayout              a_interpLayout,
+        int                         a_order)
+{
+    PR_TIME("MBInterpOp::define");
+    PROTO_ASSERT(a_maps.size() == a_interpLayout.layout().numBlocks(),
+        "MBInterpOp::define | Error: Incorrect number of maps. There must be one map per block");
+    for (auto bi = 0; bi < a_interpLayout.layout().numBlocks(); bi++)
+    {
+        PROTO_ASSERT(a_interpLayout.layout().compatible(a_maps[bi]->layout()),
+            "MBInterpOp::define | Error: Incompatible layouts among inputs");
+        PROTO_ASSERT(a_maps[bi]->ghost() == a_maps[0]->ghost(),
+            "MBInterpOp::define | Error: Input maps have different ghost regions");
+    }
+
+    m_order = a_order;
+    m_ghost = a_maps[0]->ghost()[0];
+    m_interpLayout = a_interpLayout;
+    for (auto iter : m_interpLayout.layout())
+    {
+        auto block = m_interpLayout.layout().block(iter);
+        auto map = a_maps[block];
+        for (auto dir : Box::Kernel(1))
+        {
+           addPointOps(iter, dir, *map);
         }
     }
 }
@@ -556,7 +527,7 @@ void MBInterpOp::addPointOp(
     PROTO_ASSERT(!containsOp(dataPoint, index),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     
-    MBDataPoint dstDataPoint(index, dataPoint, m_layout);
+    MBDataPoint dstDataPoint(index, dataPoint, m_interpLayout.layout());
     auto op = std::make_shared<MBPointInterpOp>(
         dstDataPoint, m_ghost, map, footprint, m_order);
     
@@ -597,9 +568,9 @@ void MBInterpOp::addShiftedOp(
     const MBPointInterpOp& baseOp,
     Point shift)
 {
-    PROTO_ASSERT(!containsOp(baseOp.target().point(), baseOp.target().index()),
+    PROTO_ASSERT(containsOp(baseOp.target().point(), baseOp.target().index()),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
-
+    if (shift == Point::Zeros()) { return; }
     MBDataPoint shiftDst = baseOp.target().shift(shift);
     std::vector<MBDataPoint> shiftSrc;
     for (auto si : baseOp.sources())

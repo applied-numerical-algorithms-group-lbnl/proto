@@ -83,23 +83,18 @@ CubedSphereShell::InterpOp(
         Point a_ghost,
         int a_order)
 {
-    std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(2))
-    {
-        if (pi.abs().sum() <= 2 
-            && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
-        {
-            footprint.push_back(pi);
-        }
-    }
-    MBInterpOp op(a_ghost, a_order);
-    op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+    MBInterpLayout interpLayout(a_layout, a_order);
+    interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
+    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+
+    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>> polarMaps;
     for (int bi = 0; bi < 6; bi++)
     {
-        MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
-        polarMap.define(a_layout, a_ghost, bi);
-        op.define(polarMap, footprint, a_order, bi); 
+      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>());
+      polarMaps[bi]->define(a_layout, a_ghost, bi);
     }
+    MBInterpOp op;
+    op.define(polarMaps, interpLayout, a_order);
     return op; 
 }
     

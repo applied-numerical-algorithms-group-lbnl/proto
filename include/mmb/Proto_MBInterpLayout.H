@@ -10,8 +10,9 @@ namespace Proto
     {
         public:
         inline MBInterpLayout(){}
-        inline MBInterpLayout(MBDisjointBoxLayout& layout);
+        inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
         inline bool addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
+        inline void ignoreAxis(int dir);
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
 
         inline bool isCopied(int a_dir) const { return m_copyAxes[a_dir]; }
@@ -52,11 +53,45 @@ namespace Proto
         Array<bool, DIM> m_copyAxes;
     };
 
-    MBInterpLayout::MBInterpLayout(MBDisjointBoxLayout& layout)
+    MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
     {
         m_baseFootprint.clear();
         m_copyAxes.fill(false);
         m_layout = layout;
+        m_baseFootprint.clear();
+        switch (order)
+        {
+        case 4:
+            for (auto pi : Box::Kernel(2))
+            {
+                if (pi.abs().sum() <= 2)
+                {
+                    addPoint(pi);
+                }
+            }
+            break;
+        case 5:
+            for (auto pi : Box::Kernel(2))
+            {
+                if (pi.abs().sum() <= 3)
+                {
+                    addPoint(pi);
+                }
+            }
+            break;
+        default:
+            MayDay<void>::Error("MBInterpLayout::define | Function undefined for order %i", order);
+            break;
+        }
+    }
+    void MBInterpLayout::ignoreAxis(int dir)
+    {
+        std::vector<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
+        m_baseFootprint.clear();
+        for (auto fi : footprint)
+        {
+            if (fi[dir] == 0) { addPoint(fi); }
+        }
     }
 
     std::set<Point> MBInterpLayout::footprint(

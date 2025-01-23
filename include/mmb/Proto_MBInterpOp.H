@@ -126,15 +126,12 @@ namespace Proto
         
         private:
 
-        template<template<MemType> typename MAP, MemType MEM>
-        inline std::vector<MBDataPoint> getSourcePoints(
-            Point center,
-            const MBIndex& index,
+        inline void computeSourcePoints(
             const std::set<Point>& footprint,
             const MBDisjointBoxLayout& layout,
-            Point ghostSizes) const;
+            Point ghostSizes);
         inline void computeExponents();
-        inline void validateMatrixDimensions(const std::vector<Point> &footprint) const;
+        inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
         template <template <MemType> typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,
@@ -163,9 +160,21 @@ namespace Proto
 
         /// Initialize 
         /** This function does not create any operators. The user must call define separately */
-        inline MBInterpOp(Point a_ghost, unsigned int a_order);
+        inline MBInterpOp(Point a_ghost, unsigned int a_order = 4);
+
         template<template<MemType> typename MAP, MemType MEM>
         inline MBInterpOp(
+                const MBLevelMap<MAP, MEM>& a_map,
+                int                         a_order = 4);
+
+        /// Define Block
+        /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
+         *  implied by the input MBLevelMap and the number of ghost cells this was initialized
+         *  with (see constructor). This function only defines the operators used to interpolate
+         *  into the specified block. A user may choose to specify a different version of
+         *  physical space when building the operators for each block */
+        template<template<MemType> typename MAP, MemType MEM>
+        inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 int                         a_order = 4);
         
@@ -178,21 +187,14 @@ namespace Proto
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
-                int                         a_order = 4,
-                int                         a_block = -1);
-        
-        /// Define Block
-        /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
-         *  implied by the input MBLevelMap and the number of ghost cells this was initialized
-         *  with (see constructor). This function only defines the operators used to interpolate
-         *  into the specified block. A user may choose to specify a different version of
-         *  physical space when building the operators for each block */
+                MBInterpLayout              a_interpLayout,
+                int                         a_order = 4);
+
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
-                const MBLevelMap<MAP, MEM>& a_map,
+                const std::vector<std::shared_ptr<MBLevelMap<MAP, MEM>>>& a_maps,
                 MBInterpLayout              a_interpLayout,
-                int                         a_order = 4,
-                int block = -1);
+                int                         a_order = 4);
         
         /// Manual Operator Insertion
         /** Allows a user to build an MBInterpOp by manually constructing the point ops

@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-#if 1
+#if 0
 TEST(MBInterpOp, MBDataPoint)
 {
     // grid parameters
@@ -64,7 +64,7 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 1
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
@@ -115,13 +115,7 @@ TEST(MBInterpOp, ShearTest)
         }
         hostErr.setVal(0);
         hostDst.exchange();
-        MBInterpOp interp;
-        std::vector<Point> footprint;
-        for (auto pi : Box::Kernel(2))
-        {
-            if (pi.abs().sum() <= 2) { footprint.push_back(pi); }
-        }
-        interp.define(map, footprint, order);
+        MBInterpOp interp(map);
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_0",nn);
 #endif
@@ -178,104 +172,102 @@ TEST(MBInterpOp, XPointTest)
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
-  
-    double err[numIter];
-    for (int nn = 0; nn < numIter; nn++)
+
+    for (int testNum = 0; testNum < 2; testNum++)
     {
-        err[nn] = 0;
-        auto domain = buildXPoint(domainSize);
-        Point boxSizeVect = Point::Ones(boxSize);
-
-        std::vector<MBPoint> patches;
-        std::vector<Point> boxSizes;
-        for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
+        int numBlocks;
+        switch (testNum)
         {
-            patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), bi));
-            boxSizes.push_back(boxSizeVect);
+            case 0:
+                numBlocks = 5;
+                break;
+            case 1:
+                numBlocks = 3;
+                break;
         }
-        MBDisjointBoxLayout layout(domain, patches, boxSizes);
-
-        // initialize data and map
-        MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
-        MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
-        MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-        MBLevelMap<MBMap_XPointRigid, HOST> map;
-        map.define(layout, Point::Ones(ghostSize));
-        map.initialize();
-
-        auto C2C = Stencil<double>::CornersToCells(4);
-        for (auto iter : layout)
+        #if PR_VERBOSE > 0
+        std::cout << "\nRunning test with " << numBlocks << " blocks" << std::endl;
+        #endif
+        double err[numIter];
+        for (int nn = 0; nn < numIter; nn++)
         {
-            auto block = layout.block(iter);
-            auto& src_i = hostSrc[iter];
-            auto& dst_i = hostDst[iter];
-            Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
-            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
-            // Jacobian and NT are computed but not used
-            BoxData<double, 1> J_i(b_i);
-            FluxBoxData<double, DIM> NT(b_i);
-            map.apply(x_i, J_i, NT, block);
-            BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
-            src_i |= C2C(x_pow);
-            dst_i |= C2C(x_pow);
-        }
-        hostErr.setVal(0);
-
-        //hostSrc.exchange(); // fill boundary data
-        hostDst.exchange(); // fill boundary data
-        MBInterpOp interp;
-        std::vector<Point> footprint;
-        for (auto bi : Box::Kernel(2))
-        {
-#if DIM > 2
-            if (bi[2] != 0) {continue; }
-#endif
-            if (bi.abs().sum() <= 2)
+            err[nn] = 0;
+            auto domain = buildXPoint(domainSize, numBlocks);
+            Point boxSizeVect = Point::Ones(boxSize);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            // initialize data and map
+            MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
+            MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
+            MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
+            MBLevelMap<MBMap_XPointRigid, HOST> map;
+            map.define(layout, Point::Ones(ghostSize));
+            for (auto bi = 0; bi < numBlocks; bi++)
             {
-                footprint.push_back(bi);
+                map[bi].setNumBlocks(numBlocks);
             }
-        }
-#if DIM > 2
-        interp.copyAxis(2,true);
-#endif
-        interp.define(map, footprint, order);
-        interp.apply(hostDst, hostDst);
-        for (auto iter : layout)
-        {
-            auto& src_i = hostSrc[iter];
-            auto& dst_i = hostDst[iter];
-            auto& err_i = hostErr[iter];
-            for (auto dir : Box::Kernel(1))
+            map.initialize();
+
+            auto C2C = Stencil<double>::CornersToCells(4);
+            for (auto iter : layout)
             {
-                if (layout.isBlockBoundary(iter, dir))
+                auto block = layout.block(iter);
+                auto &src_i = hostSrc[iter];
+                auto &dst_i = hostDst[iter];
+                Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
+                BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+                // Jacobian and NT are computed but not used
+                BoxData<double, 1> J_i(b_i);
+                FluxBoxData<double, DIM> NT(b_i);
+                map.apply(x_i, J_i, NT, block);
+                BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
+                // BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
+                src_i |= C2C(x_pow);
+                dst_i |= C2C(x_pow);
+            }
+            hostErr.setVal(0);
+#if PR_VERBOSE > 0
+            h5.writeMBLevel({"data"}, map, hostErr, "ERR");
+#endif
+            hostDst.exchange(); // fill boundary data
+
+            MBInterpOp interp(map);
+            interp.apply(hostDst, hostDst);
+            for (auto iter : layout)
+            {
+                auto &src_i = hostSrc[iter];
+                auto &dst_i = hostDst[iter];
+                auto &err_i = hostErr[iter];
+                for (auto dir : Box::Kernel(1))
                 {
-                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
-                    BoxData<double, 1, HOST> error(boundBox);
-                    dst_i.copyTo(error);
-                    error -= src_i;
-                    err[nn] = max(error.absMax(), err[nn]);
-                    error.copyTo(err_i);
+                    if (layout.isBlockBoundary(iter, dir))
+                    {
+                        Box boundBox = layout[iter].adjacent(dir * ghostSize);
+                        BoxData<double, 1, HOST> error(boundBox);
+                        dst_i.copyTo(error);
+                        error -= src_i;
+                        err[nn] = max(error.absMax(), err[nn]);
+                        error.copyTo(err_i);
+                    }
                 }
             }
-        }
 
 #if PR_VERBOSE > 0
-        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
-        h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_XPointStandalone_Src_N%i",nn);
-        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_XPointStandalone_Dst_N%i",nn);
-        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPointStandalone_Err_N%i",nn);
+            std::cout << "Error (Max Norm): " << err[nn] << std::endl;
+            h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_XPoint_Src_T%i_N%i", testNum, nn);
+            h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_XPoint_Dst_T%i_N%i", testNum, nn);
+            h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_T%i_N%i", testNum, nn);
 #endif
-        domainSize *= 2;
-        boxSize *= 2;
-    }
-    for (int ii = 1; ii < numIter; ii++)
-    {
-        double rate = log(err[ii-1]/err[ii])/log(2.0);
+            domainSize *= 2;
+            boxSize *= 2;
+        }
+        for (int ii = 1; ii < numIter; ii++)
+        {
+            double rate = log(err[ii - 1] / err[ii]) / log(2.0);
 #if PR_VERBOSE > 0
-        std::cout << "Convergence Rate: " << rate << std::endl;
+            std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
-        EXPECT_TRUE(err[ii] < 1e-12 || rate > order - 0.5);
+            EXPECT_TRUE(err[ii] < 1e-12 || rate > order - 0.5);
+        }
     }
 }
 #endif

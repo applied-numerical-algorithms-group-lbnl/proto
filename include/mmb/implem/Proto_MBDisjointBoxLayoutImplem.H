@@ -377,6 +377,21 @@ bool MBDisjointBoxLayout::isPatchInTriplePointRegion(PatchID a_patch, BlockIndex
     return patchDomain().isPointInTriplePoint(a_patch, a_block, a_dir);
 }
 
+inline std::vector<MBIndex> MBDisjointBoxLayout::findAdjacentIndices(
+    MBIndex index,
+    Point dir) const
+{
+    auto allBounds = bounds(index);
+    std::vector<MBIndex> dirBounds;
+    for (auto bound : allBounds)
+    {
+        if (connectivity(index, bound) == dir)
+        {
+            dirBounds.push_back(bound);
+        }
+    }
+    return dirBounds;
+}
 
 MBIndex MBDisjointBoxLayout::findAdjacentIndex(
     PatchID a_patch,
