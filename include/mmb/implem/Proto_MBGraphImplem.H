@@ -406,7 +406,9 @@ bool MBGraph::isTriplePoint(
             // check if the orthogonal arc exists
             Point orthDir = Point::Basis(ii,1)*a_dir;
             auto& arcMap = m_blocks[a_srcBlock]->arcs;
-            if (arcMap.find(orthDir) == arcMap.end()) {return false; }
+            auto arcs = arcMap.find(orthDir);
+            if (arcs == arcMap.end()) {return false; }
+            else if ((*arcs).second.size() == 0) { return false; }
 
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,

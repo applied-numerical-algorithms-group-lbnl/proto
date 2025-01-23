@@ -6,9 +6,9 @@
 using namespace Proto;
 
 namespace {
-    MBAMRGrid testGrid(int domainSize, int boxSize, int refRatio, int numLevels)
+    MBAMRGrid testGrid(int domainSize, int boxSize, int refRatio, int numLevels, int numBlocks)
     {
-        auto domain = buildXPoint(domainSize);
+        auto domain = buildXPoint(domainSize, numBlocks);
         std::vector<Point> boxSizeVect(domain.numBlocks(), Point::Ones(boxSize));
         std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 
@@ -43,7 +43,7 @@ TEST(MBAMRData, Construction) {
     ghost.fill(Point::Ones(numGhost));
 
 
-    auto grid = testGrid(domainSize, boxSize, refRatio, numLevels);
+    auto grid = testGrid(domainSize, boxSize, refRatio, numLevels, numBlocks);
 
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     for (int li = 0; li < numLevels; li++)
@@ -91,14 +91,14 @@ TEST(MBAMRData, Interpolate) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    int numBlocks = 5;
     int numLevels = 3;
     int refRatio = 2;
     int numGhost = 4;
     //Array<Point,DIM+1> ghost;
     //ghost.fill(Point::Ones(numGhost));
     Point ghost = Point::Ones(numGhost);
-    auto grid = testGrid(domainSize, boxSize, refRatio, numLevels);
+    auto grid = testGrid(domainSize, boxSize, refRatio, numLevels, numBlocks);
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     pr_out() << "num ghost: " << ghost << std::endl;
     MBAMRData<double, 1, HOST> data(grid, ghost);
