@@ -92,14 +92,8 @@ int main(int argc, char *argv[])
       //MBInterpOp iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),
       //                                                  ghostForInterp,4);
       MBInterpOp iop;
-      if (MBInterp_define == 0)
-        {
-          iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),OP::ghost(),4);
-        }
-      else
-        {
-          iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
-        }
+      iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+
       // Set input solution.
       for (auto dit : layout)
         {
