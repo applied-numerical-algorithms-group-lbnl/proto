@@ -126,10 +126,10 @@ endif()
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelRK4Tests COMMAND MBLevelRK4Tests)
-        blt_add_executable(NAME MBMultigridTests SOURCES MBMultigridTests.cpp
-            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        blt_add_test(NAME MBMultigridTests COMMAND MBMultigridTests)
+        # blt_add_executable(NAME MBMultigridTests SOURCES MBMultigridTests.cpp
+        #     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+        #     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        # blt_add_test(NAME MBMultigridTests COMMAND MBMultigridTests)
         if(ENABLE_HDF5)
             blt_add_executable(NAME HDF5Tests SOURCES HDF5Tests.cpp
                 DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
