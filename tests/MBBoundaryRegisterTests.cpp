@@ -8,11 +8,11 @@ using namespace Proto;
 TEST(MBBoundaryRegister, Construction) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    int numBlocks = 5;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect;
     std::vector<MBPoint> patches;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -160,11 +160,11 @@ TEST(MBBoundaryRegister, Construction) {
 TEST(MBBoundaryRegister, Exchange_XPoint) {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
+    int numBlocks = 5;
     int ghostSize = 0;
     int depth = 1;
     bool bothSides = true;
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect;
     std::vector<MBPoint> patches;
     for (int bi = 0; bi < numBlocks; bi++)

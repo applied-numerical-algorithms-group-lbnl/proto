@@ -19,7 +19,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
 }
-#if 0
+#if 1
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -253,6 +253,7 @@ TEST(Operator, InitConvolve)
     }
 }
 #endif
+#if 0
 #if DIM==3
 #ifdef PR_MMB
 TEST(Operator, Cofactor)
@@ -260,7 +261,7 @@ TEST(Operator, Cofactor)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    int domainSize_0 = 32;
+    int domainSize_0 = 16;
     int thickness = 1;
     double r0 = 0.9;
     double r1 = 1.1;
@@ -300,7 +301,7 @@ TEST(Operator, Cofactor)
             }
 
             // Compute Metrics
-            FluxBoxData<double, DIM, HOST> NT;
+            FluxBoxData<double, DIM, HOST> NT(domainBox);
             Array<BoxData<double, DIM, HOST>, DIM> NT0;
             for (int dir = 0; dir < DIM; dir++)
             {
@@ -309,6 +310,18 @@ TEST(Operator, Cofactor)
             BoxData<double, 1, HOST> J;
             J = Operator::jacobian(X, NT);
             //J /= dv;
+
+            #if PR_VERBOSE > 0
+            pr_out() << "Coordinate Values: " << std::endl;
+            X.printData();
+            pr_out() << "Cofactors: " << std::endl;
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                NT[dd].printData();
+            }
+            pr_out() << "Jacobian: " << std::endl;
+            J.printData();
+            #endif
 
             auto JAvg = Operator::convolve(J0);
             JAvg *= dv;
@@ -340,6 +353,7 @@ TEST(Operator, Cofactor)
 
     }
 }
+#endif
 #endif
 #endif
 int main(int argc, char *argv[]) {

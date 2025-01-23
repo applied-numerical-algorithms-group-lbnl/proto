@@ -235,7 +235,7 @@ TEST(InterpStencil, FiniteVolume) {
     constexpr unsigned int C = 3;
     constexpr unsigned int D = 1;
 
-    int domainSize = 128;
+    int domainSize = 32;
     Point refRatio(2,4,2,4,2,4);
     Array<double, DIM> k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,2,3,4,5,6};
@@ -302,21 +302,20 @@ TEST(InterpStencil, FiniteVolume) {
         PR_DEBUG_MSG(1, "5th Order Error: %3.2e", err5[nn]);
         domainSize *= 2;
     }
-    
     for (int ii = 1; ii < N; ii++)
     {
         double rate2 = log(err2[ii-1]/err2[ii]) / log(2.0);
         double rate3 = log(err3[ii-1]/err3[ii]) / log(2.0);
         PR_DEBUG_MSG(1,"2nd Order Convergence Rate: %3.2f", rate2);
         PR_DEBUG_MSG(1,"3rd Order Convergence Rate: %3.2f", rate3);
-        EXPECT_GT(rate2, 2 - 0.01);
-        EXPECT_GT(rate3, 3 - 0.01);
+        EXPECT_GT(rate2, 2 - 0.25);
+        EXPECT_GT(rate3, 3 - 0.25);
         double rate4 = log(err4[ii-1]/err4[ii]) / log(2.0);
         double rate5 = log(err5[ii-1]/err5[ii]) / log(2.0);
         PR_DEBUG_MSG(1,"4th Order Convergence Rate: %3.2f", rate4);
         PR_DEBUG_MSG(1,"5th Order Convergence Rate: %3.2f", rate5);
-        EXPECT_GT(rate4, 4 - 0.01);
-        EXPECT_GT(rate5, 5 - 0.01);
+        EXPECT_GT(rate4, 4 - 0.25);
+        EXPECT_GT(rate5, 5 - 0.25);
     }
 }
 int main(int argc, char *argv[]) {

@@ -1258,6 +1258,15 @@ void HDF5Handler::writeFluxRegister(
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writePatch(
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    writePatch(1, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
         Array<double, DIM> a_dx,
         const BoxData<T, C, MEM>& a_data,
         std::string a_filename,

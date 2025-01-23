@@ -94,22 +94,46 @@ namespace Proto
         inline bool isInteriorBoundary(
                 const MBIndex&  a_index,
                 Point           a_dir) const;
-        inline bool onBlockBoundary(
+        inline bool isPatchOnBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
-        inline bool onBlockBoundary(
+        inline bool isPatchOnBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
-        inline bool onDomainBoundary(
+        inline bool isPatchOnDomainBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
-        inline bool onDomainBoundary(
+        inline bool isPatchOnDomainBoundary(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
+        inline bool isPatchInBlockBoundary(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInBlockBoundary(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
+        inline bool isPatchInDomainBoundary(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInDomainBoundary(
+            PatchID a_patch,
+            BlockIndex a_block,
+            Point a_dir) const;
+        inline bool isPatchInTriplePointRegion(
+            PatchID a_patch,
+            BlockIndex a_block) const;
+        inline bool isPatchInTriplePointRegion(
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
 
         /** Works even when a_patch doesn't exist in the layout */
+        inline std::vector<MBIndex> findAdjacentIndices(
+                MBIndex index,
+                Point dir) const;
         inline MBIndex findAdjacentIndex(
                 PatchID a_patch,
                 BlockIndex a_block,

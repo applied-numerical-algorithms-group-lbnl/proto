@@ -403,12 +403,17 @@ bool MBGraph::isTriplePoint(
         {
             if (a_dir[ii] == 0) { continue; }
             Point dir = a_dir;
+            // check if the orthogonal arc exists
+            Point orthDir = Point::Basis(ii,1)*a_dir;
+            auto& arcMap = m_blocks[a_srcBlock]->arcs;
+            if (arcMap.find(orthDir) == arcMap.end()) {return false; }
+
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,
                     "MBGraph::isTriplePoint | Recursion Error");
-            if (!isTriplePoint(a_srcBlock, dir)) { return false; }
+            return (isTriplePoint(a_srcBlock, dir));
         }
-        return true;
+        return false;
     } else {
         auto dirs = a_dir.split();
         auto b0 = adjacent(a_srcBlock, dirs[0]);
@@ -425,11 +430,39 @@ bool MBGraph::isTriplePoint(
 
 }
 
+std::vector<std::pair<Point, Point>>
+MBGraph::getTriplePointCircuits(
+    BlockIndex a_srcBlock,
+    Point a_dir) const
+{
+    std::vector<std::pair<Point, Point>> circuits;
+    if (a_dir.codim() == 2)
+    {
+        if (isTriplePoint(a_srcBlock, a_dir))
+        {
+            auto codim1Dirs = a_dir.split();
+            auto dirPair = std::make_pair(codim1Dirs[0], codim1Dirs[1]);
+            circuits.push_back(dirPair);
+        }
+    } else if (a_dir.codim() > 2)
+    {
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            if (a_dir[dd] == 0) { continue; }
+            Point dir = a_dir;
+            dir[dd] = 0;
+            auto tmpCircuits = getTriplePointCircuits(a_srcBlock, dir);
+            circuits.insert(circuits.end(), tmpCircuits.begin(), tmpCircuits.end());
+        }
+    }
+    return circuits;
+}
+
 bool MBGraph::isDomainBoundary(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
-
+    if (a_dir == Point::Zeros()) { return false; }
     if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
     if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
     return true;
@@ -456,6 +489,7 @@ bool MBGraph::operator==(const MBGraph& a_rhs) const
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
 {
+    if (isTriplePoint(a_srcBlock, a_dir)) { return true; }
     auto& arcMap = m_blocks[a_srcBlock]->arcs;
     if (arcMap.find(a_dir) == arcMap.end()) {return false; }
     for (auto& arc : arcMap[a_dir])

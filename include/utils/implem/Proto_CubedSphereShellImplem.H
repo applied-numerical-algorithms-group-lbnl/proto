@@ -78,75 +78,59 @@ CubedSphereShell::Operator(
 
 template<MemType MEM>
 MBInterpOp
-CubedSphereShell::InterpOpOld(
-        const MBDisjointBoxLayout& a_layout,
-        Point a_ghost,
-        int a_order)
-{
-  PR_TIMERS("CubedSphereShell::Old InterpOp");
-    std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(2))
-    {
-        if (pi.abs().sum() <= 2 
-            && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
-        {
-            footprint.push_back(pi);
-        }
-    }
-    MBInterpOp op(a_ghost, a_order);
-    op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
-    // Array<shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>,6> polarmaps;
-    // for (int bi = 0; bi < 6; bi++)
-    // {
-    //   polarmaps[bi] = make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>();
-    //   polarmaps[bi]->define(a_layout, a_ghost, bi);    
-    // }
-    // for (int bi = 0; bi < 6; bi++)
-    // {
-    //   op.define(*(polarmaps[bi]), footprint, a_order, bi); 
-    // }
-    for (int bi = 0; bi < 6; bi++)
-    {
-        MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
-        polarMap.define(a_layout, a_ghost, bi);
-        op.define(polarMap, footprint, a_order, bi); 
-    }
-    return op; 
-}
-template<MemType MEM>
-MBInterpOp
 CubedSphereShell::InterpOp(
         const MBDisjointBoxLayout& a_layout,
         Point a_ghost,
         int a_order)
 {
-  PR_TIMERS("CubedSphereShell::New InterpOp");
-    std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(2))
-    {
-        if (pi.abs().sum() <= 2 
-            && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
-        {
-            footprint.push_back(pi);
-        }
-    }
-    MBInterpOp op(a_ghost, a_order);
-    op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
-    Array<shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>,6> polarmaps;
+    MBInterpLayout interpLayout(a_layout, a_order);
+    interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
+    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+
+    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>> polarMaps;
     for (int bi = 0; bi < 6; bi++)
     {
-      polarmaps[bi] = make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>();
-      polarmaps[bi]->define(a_layout, a_ghost, bi);    
+      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>());
+      polarMaps[bi]->define(a_layout, a_ghost, bi);
     }
-    op.define(polarmaps, footprint, a_order); 
-    // for (int bi = 0; bi < 6; bi++)
-    // {
-    //     MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
-    //     polarMap.define(a_layout, a_ghost, bi);
-    //     op.define(polarMap, footprint, a_order, bi); 
-    // }
+    MBInterpOp op;
+    op.define(polarMaps, interpLayout, a_order);
     return op; 
-}    
+}
+// template<MemType MEM>
+// MBInterpOp
+// CubedSphereShell::InterpOp(
+//         const MBDisjointBoxLayout& a_layout,
+//         Point a_ghost,
+//         int a_order)
+// {
+//   PR_TIMERS("CubedSphereShell::New InterpOp");
+//     std::vector<Point> footprint;
+//     for (auto pi : Box::Kernel(2))
+//     {
+//         if (pi.abs().sum() <= 2 
+//             && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
+//         {
+//             footprint.push_back(pi);
+//         }
+//     }
+//     MBInterpOp op(a_ghost, a_order);
+//     op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+//     Array<shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>,6> polarmaps;
+//     for (int bi = 0; bi < 6; bi++)
+//     {
+//       polarmaps[bi] = make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>();
+//       polarmaps[bi]->define(a_layout, a_ghost, bi);    
+//     }
+//     op.define(polarmaps, footprint, a_order); 
+//     // for (int bi = 0; bi < 6; bi++)
+//     // {
+//     //     MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
+//     //     polarMap.define(a_layout, a_ghost, bi);
+//     //     op.define(polarMap, footprint, a_order, bi); 
+//     // }
+//     return op; 
+// }    
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBInterpOp
 CubedSphereShell::InterpOp(

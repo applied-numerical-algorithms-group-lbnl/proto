@@ -44,8 +44,7 @@ int main(int argc, char *argv[])
   
   bool cullRadialGhost = true;
   bool use2DFootprint = true;
-  auto domain =
-    CubedSphereShell::Domain(domainSize, thickness, radialDir);
+  auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   Point boxSizeVect = Point::Ones(boxSize_nonrad);
   boxSizeVect[radialDir] = boxSize_rad;
@@ -62,7 +61,7 @@ int main(int argc, char *argv[])
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   
   Array<double, DIM> dx;
-  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  //auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double dxradius = 1.0 / thickness;
   
   MBInterpOp iop;

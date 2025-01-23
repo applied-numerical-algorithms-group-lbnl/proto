@@ -156,6 +156,7 @@ bool Box::containsBox(const Box& a_rhs) const
     return (this->containsPoint(a_rhs.m_low) && this->containsPoint(a_rhs.m_high));
 }
 
+ACCEL_DECORATION
 bool Box::onBoundary(const Point& a_p) const
 {
     if (!(this->containsPoint(a_p))){return false;}
@@ -167,6 +168,27 @@ bool Box::onBoundary(const Point& a_p) const
         }
     }
     return false;
+}
+
+ACCEL_DECORATION
+Point Box::whichBoundaryContains(const Point& a_point) const
+{
+    Point hiDiff = a_point - high();
+    Point loDiff = low() - a_point;
+    Point dir = Point::Zeros();
+    for (int di = 0; di < DIM; di++)
+    {
+        if (hiDiff[di] > 0)
+        {
+            dir[di] = 1;
+        } else if (loDiff[di] > 0)
+        {
+            dir[di] = -1;
+        } else {
+            dir[di] = 0;
+        }
+    }
+    return dir;
 }
 
 ACCEL_DECORATION

@@ -35,35 +35,46 @@ void MBLevelMap<MAP,MEM>::define(
         unsigned int               a_focalBlock)
 {
     PR_TIME("MBLevelMap::define");
+    m_layout = a_layout;
     m_ghost = a_ghost;
     m_focalBlock = a_focalBlock;
-    m_c2c = Stencil<double>::CornersToCells(4);
-    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(a_layout, m_ghost);
-    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(a_layout, m_ghost);
-    m_X->setVal(0);
-    m_J->setVal(0);
-    //m_dx.resize(a_layout.numBlocks());
     m_ops.resize(a_layout.numBlocks());
-    
+    m_initialized = false;
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().getBlock(bi).box();
-        m_ops[bi].define(dx(bi), bi, a_focalBlock);
+        m_ops[bi] = std::make_shared<MAP<MEM>>(dx(bi), bi, a_focalBlock);
     }
-    
+    m_c2c = Stencil<double>::CornersToCells(4);
+    m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(m_layout, m_ghost);
+    m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(m_layout, m_ghost);
+}
 
-    for (auto iter : a_layout)
+template<template<MemType> typename MAP, MemType MEM>
+void MBLevelMap<MAP,MEM>::initialize() const
+{
+    m_X->setVal(0);
+    m_J->setVal(0);
+    
+    for (auto iter : m_layout)
     {
-        auto block = a_layout.block(iter);
-        Box b_i = a_layout[iter];
+        auto block = m_layout.block(iter);
+        Box b_i = m_layout[iter];
         auto& X_i = (*m_X)[iter];
         auto& J_i = (*m_J)[iter];
         BoxData<double, 1, MEM> J0(X_i.box());
         apply(X_i, J0, block);
         J_i |= m_c2c(J0);
     }
-    //    m_X->exchange();
-    // m_J->exchange();
+    m_X->exchange();
+    m_J->exchange();
+    m_initialized = true;
+}
+
+template<template<MemType> typename MAP, MemType MEM>
+MAP<MEM>& MBLevelMap<MAP,MEM>::operator[](BlockIndex block)
+{
+    return *m_ops[block];
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -73,7 +84,7 @@ void MBLevelMap<MAP,MEM>::apply(
         unsigned int a_block) const
 {
     PR_TIME("MBLevelMap::apply");
-    m_ops[a_block]._apply(a_X, a_J);
+    m_ops[a_block]->_apply(a_X, a_J);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -84,7 +95,7 @@ void MBLevelMap<MAP,MEM>::apply(
         unsigned int a_block) const
 {
     PR_TIME("MBLevelMap::apply");
-    m_ops[a_block]._apply(a_X, a_J, a_NT);
+    m_ops[a_block]->_apply(a_X, a_J, a_NT);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -221,7 +232,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& 
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_X->layout(); }
+const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_layout; }
     
 template<template<MemType> typename MAP, MemType MEM>
 const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
@@ -233,7 +244,7 @@ const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const
 template<template<MemType> typename MAP, MemType MEM>
 MAP<MEM>& MBLevelMap<MAP,MEM>::op(BlockIndex a_blockID) const
 {
-    return m_ops[a_blockID];
+    return *m_ops[a_blockID];
 }
 
 template<template<MemType> typename MAP, MemType MEM>
@@ -257,20 +268,28 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map()
 {
+    if (!m_initialized) { initialize(); }
     return *m_X;
 }
 template<template<MemType> typename MAP, MemType MEM>
 const MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map() const
 {
+    // PROTO_ASSERT(m_initialized,
+    //     "MBLevelMap::map() | Error: Coordinates not initialized (try calling MBLevelMap::initialize())");
+    if (!m_initialized) { initialize(); }
     return *m_X;
 }
 template<template<MemType> typename MAP, MemType MEM>
 MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian()
 {
+    if (!m_initialized) { initialize(); }
     return *m_J;
 }
 template<template<MemType> typename MAP, MemType MEM>
 const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() const
 {
+    // PROTO_ASSERT(m_initialized,
+    // "MBLevelMap::map() | Error: Coordinates not initialized (try calling MBLevelMap::initialize())");
+    if (!m_initialized) { initialize(); }
     return *m_J;
 }

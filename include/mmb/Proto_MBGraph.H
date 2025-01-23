@@ -246,6 +246,11 @@ namespace Proto
                 BlockIndex  a_srcBlock,
                 Point        a_dir) const;
 
+        std::vector<std::pair<Point, Point>>
+        getTriplePointCircuits(
+            BlockIndex a_srcBlock,
+            Point a_dir) const;
+
         inline bool isDomainBoundary(
                 BlockIndex  a_srcBlock,
                 Point       a_dir) const;

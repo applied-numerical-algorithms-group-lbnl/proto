@@ -144,6 +144,10 @@ endif()
         blt_add_test(NAME OperatorTests COMMAND OperatorTests)
     endif()
     if (MMB AND OPS)
+        blt_add_executable(NAME MBInterpLayoutTests SOURCES MBInterpLayoutTests.cpp
+                DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
+                INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBInterpLayoutTests COMMAND MBInterpLayoutTests)    
         blt_add_executable(NAME MBInterpOpTests SOURCES MBInterpOpTests.cpp
             DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

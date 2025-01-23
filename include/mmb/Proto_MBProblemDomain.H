@@ -121,15 +121,22 @@ namespace Proto
         inline std::vector<MBPoint> patches(Point a_boxSize) const;
         inline std::vector<MBPoint> patches(const std::vector<Point>& a_boxSizes) const;
 
-        inline Point getDirectionFromPoint(Point a_point, BlockIndex a_block) const;
-        inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;
-        inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inInterior(Point a_point, BlockIndex a_block) const;
-        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block) const;
-        inline bool onBlockBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
-        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block) const;
-        inline bool onDomainBoundary(Point a_patch, BlockIndex a_block, Point a_dir) const;
+        inline bool isPointInTriplePoint(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInTriplePoint(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInBlockBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInDomainBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInInterior(Point a_point, BlockIndex a_block) const;
+        
+        inline bool isPointOnBlockBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointOnBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointOnDomainBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointOnDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
 
         private:
 

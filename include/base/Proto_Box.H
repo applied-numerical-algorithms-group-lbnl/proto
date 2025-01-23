@@ -266,6 +266,10 @@ namespace Proto
           */
         inline bool onBoundary(const Point& a_p) const;
 
+        /** Returns the direction of the region adjacent to this which contains a point.
+         * Point::Zeros() is returned if a_point is contained inside of this */
+        inline Point whichBoundaryContains(const Point& a_point) const;
+
         /// Empty Query
         /**
           Check if *this contains no Points

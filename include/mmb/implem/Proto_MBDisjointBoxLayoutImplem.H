@@ -295,23 +295,23 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     return true;
 }
 
-bool MBDisjointBoxLayout::onBlockBoundary(
+bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
     PatchID a_patch,
     BlockIndex a_block) const 
 {
     for (auto dir : Point::Directions())
     {
-        if (onBlockBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnBlockBoundary(a_patch, a_block, dir)) { return true; }
     }
     return false;
 }
 
-bool MBDisjointBoxLayout::onBlockBoundary(
+bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
     PatchID a_patch,
     BlockIndex a_block,
     Point a_dir) const 
 {
-    return patchDomain().onBlockBoundary(a_patch, a_block, a_dir);
+    return patchDomain().isPointOnBlockBoundary(a_patch, a_block, a_dir);
 }
 
 bool MBDisjointBoxLayout::isDomainBoundary(
@@ -324,23 +324,23 @@ bool MBDisjointBoxLayout::isDomainBoundary(
 }
 
 
-bool MBDisjointBoxLayout::onDomainBoundary(
+bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
     PatchID a_patch,
     BlockIndex a_block) const 
 {
     for (auto dir : Point::Directions())
     {
-        if (onDomainBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnDomainBoundary(a_patch, a_block, dir)) { return true; }
     }
     return false;
 }
 
-bool MBDisjointBoxLayout::onDomainBoundary(
+bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
     PatchID a_patch,
     BlockIndex a_block,
     Point a_dir) const 
 {
-    return patchDomain().onDomainBoundary(a_patch, a_block, a_dir);
+    return patchDomain().isPointOnDomainBoundary(a_patch, a_block, a_dir);
 }
 
 bool MBDisjointBoxLayout::isInteriorBoundary(
@@ -349,6 +349,48 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
     return m_partition->isInteriorBoundary(a_index.global(), a_dir);
+}
+bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block) const
+{
+    return patchDomain().isPointInBlockBoundary(a_patch, a_block);
+}
+bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block, Point a_dir) const
+{
+    return patchDomain().isPointInBlockBoundary(a_patch, a_block, a_dir);
+}
+
+bool MBDisjointBoxLayout::isPatchInDomainBoundary(PatchID a_patch, BlockIndex a_block) const
+{
+    return patchDomain().isPointInDomainBoundary(a_patch, a_block);
+}
+bool MBDisjointBoxLayout::isPatchInDomainBoundary(PatchID a_patch, BlockIndex a_block, Point a_dir) const
+{
+    return patchDomain().isPointInDomainBoundary(a_patch, a_block, a_dir);
+}
+
+bool MBDisjointBoxLayout::isPatchInTriplePointRegion(PatchID a_patch, BlockIndex a_block) const
+{
+    return patchDomain().isPointInTriplePoint(a_patch, a_block);
+}
+bool MBDisjointBoxLayout::isPatchInTriplePointRegion(PatchID a_patch, BlockIndex a_block, Point a_dir) const
+{
+    return patchDomain().isPointInTriplePoint(a_patch, a_block, a_dir);
+}
+
+inline std::vector<MBIndex> MBDisjointBoxLayout::findAdjacentIndices(
+    MBIndex index,
+    Point dir) const
+{
+    auto allBounds = bounds(index);
+    std::vector<MBIndex> dirBounds;
+    for (auto bound : allBounds)
+    {
+        if (connectivity(index, bound) == dir)
+        {
+            dirBounds.push_back(bound);
+        }
+    }
+    return dirBounds;
 }
 
 MBIndex MBDisjointBoxLayout::findAdjacentIndex(
@@ -364,11 +406,11 @@ MBIndex MBDisjointBoxLayout::findAdjacentIndex(
         "MBDisjointBoxLayout::findAdjacentIndex | Error: Base patch is not inside the patch domain");
     MBIndex adjacentIndex = *this->end();
 
-    if (patchDomain.inInterior(adjacentPatch, a_block))
+    if (patchDomain.isPointInInterior(adjacentPatch, a_block))
     {
         // INTERIOR case (normal case)
         adjacentIndex = find(adjacentPatch, a_block);
-    } else if (patchDomain.inBlockBoundary(adjacentPatch, a_block))
+    } else if (patchDomain.isPointInBlockBoundary(adjacentPatch, a_block))
     {
         // BLOCK BOUNDARY case
         BlockIndex adjacentBlock = patchDomain.graph().adjacent(a_block, a_dir);
@@ -376,7 +418,7 @@ MBIndex MBDisjointBoxLayout::findAdjacentIndex(
             patchDomain.convertPoint(adjacentPatch, a_block, adjacentBlock, PR_CELL);
         adjacentIndex = find(adjacentPatchLocalCoords, adjacentBlock);
     }
-    else if (patchDomain.inDomainBoundary(adjacentPatch, a_block))
+    else if (patchDomain.isPointInDomainBoundary(adjacentPatch, a_block))
     {
         // EXTERIOR case (no CF boundary)
     } else {

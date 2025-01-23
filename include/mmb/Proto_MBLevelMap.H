@@ -69,6 +69,8 @@ class MBLevelMap
             Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
 
+    inline void initialize() const;
+
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
      *  The returned data has NODE centering.
@@ -220,14 +222,18 @@ class MBLevelMap
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
+    inline MAP<MEM>& operator[](BlockIndex block); 
+
     private:
         Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
-        mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators
+        mutable std::vector<std::shared_ptr<MAP<MEM>>>   m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
-        std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
-        std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
+        MBDisjointBoxLayout             m_layout;
+        mutable bool                            m_initialized; 
+        mutable std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
+        mutable std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

@@ -164,11 +164,8 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = -1)
+MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
 {
-    if (numBlocks <= 0) {
-        numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
-    }
     MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)
@@ -179,7 +176,7 @@ MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = -1)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    //domain.close();
+    domain.close();
     return domain;
 }
 
@@ -781,10 +778,10 @@ MBAMRGrid telescopingXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
-        int boxSize)
+        int boxSize,
+        int numBlocks = 5)
 {
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
@@ -819,10 +816,10 @@ MBAMRGrid refinedBlockBoundaryXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
-        int boxSize)
+        int boxSize,
+        int numBlocks = 5)
 {
-    int numBlocks = MB_MAP_XPOINT_NUM_BLOCKS;
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);

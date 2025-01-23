@@ -21,6 +21,7 @@
 #include "mmb/Proto_MBLevelBC.H"
 #include "mmb/Proto_MBLevelOp.H"
 #ifdef PR_OPS 
+#include "mmb/Proto_MBInterpLayout.H"
 #include "mmb/Proto_MBInterpOp.H"
 #endif
 #ifdef PR_AMR

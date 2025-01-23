@@ -333,8 +333,8 @@ TEST(MBLevelOp, FluxMatching) {
 TEST(MBLevelOp, CubeSphereLaplace) {
 
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 64;
+    int domainSize = 32;
+    int boxSize = 16;
     int thickness = 32;
     bool cullRadialGhost = false;
     bool use2DFootprint = true;
@@ -389,7 +389,7 @@ TEST(MBLevelOp, CubeSphereLaplace) {
             auto& src_i = hostSrc[iter];
             Box b_i = C2C.domain(layout[iter]).grow(dataGhost[0]);
             BoxData<double, DIM> x_i(b_i.grow(Point::Ones()));
-            BoxData<double, 1> J_i(layout[iter].grow(Point::Ones() + dataGhost[0]));
+            BoxData<double, 1> J_i(x_i.box());
             FluxBoxData<double, DIM> NT(layout[iter]);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> phi = forall_p<double, 1>(f_phiM, block, x_i, k, offset);

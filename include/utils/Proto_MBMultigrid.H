@@ -134,8 +134,8 @@ private:
     std::vector<std::shared_ptr<LevelStateData>>   m_residual; 
     std::vector<std::shared_ptr<LevelStateData>>   m_local; 
    
-    std::vector<MBLevelMap<MAP>>                   m_maps;
-    std::vector<std::shared_ptr<MBInterpOp>>       m_blockInterp;
+    std::vector<MBLevelMap<MAP>>                        m_maps;
+    std::vector<std::shared_ptr<MBInterpOp>>   m_blockInterp;
 
     std::vector<LOP>              m_ops;
 

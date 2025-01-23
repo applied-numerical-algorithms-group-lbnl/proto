@@ -5,7 +5,9 @@
 
 using namespace Proto;
 
+
 #if DIM == 2
+#if 1
 TEST(MBLevelMapTests, ShearMap)
 {
     int domainSize = 16;
@@ -64,20 +66,48 @@ TEST(MBLevelMapTests, ShearMap)
         EXPECT_NEAR(error_i.absMax(), 0, 1e-12);
     }
 }
-TEST(MBLevelMapTests, XPointMap)
+#endif
+TEST(MBLevelMapTests, XPointMapSmall)
 {
     int domainSize = 16;
     int boxSize = 8;
     int ghostWidth = 2;
+    int numBlocks = 5;
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
-    auto domain = buildXPoint(domainSize);
+    auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
     MBLevelMap<MBMap_XPointRigid, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
+    for (BlockIndex bi = 0; bi < numBlocks; bi++)
+    {
+        map[bi].setNumBlocks(numBlocks);
+    }
+}
+#if 1
+TEST(MBLevelMapTests, XPointMap)
+{
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostWidth = 2;
+    int numBlocks = 5;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildXPoint(domainSize, numBlocks);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+    for (BlockIndex bi = 0; bi < numBlocks; bi++)
+    {
+        map[bi].setNumBlocks(numBlocks);
+    }
+    
 
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_XPointMap_X");
@@ -97,7 +127,7 @@ TEST(MBLevelMapTests, XPointMap)
             double xCenter = 1.0 - point_j[0]*gridSpacing;
             double yCenter = 1.0 - point_j[1]*gridSpacing;
 
-            double dAngleMapped = 2.0*M_PI / MB_MAP_XPOINT_NUM_BLOCKS;
+            double dAngleMapped = 2.0*M_PI / numBlocks;
             double dAngleUnmapped = M_PI / 2.0;
             
             double radius = sqrt(xCenter*xCenter + yCenter*yCenter + 2.0*xCenter*yCenter*cos(dAngleMapped));
@@ -125,7 +155,6 @@ TEST(MBLevelMapTests, XPointMap)
         h5.writeMBLevel({"X", "Y", "Z"}, map, levelXExact, "MBLevelMapTests_XPointMap_XExact");
     #endif
 }
-
 TEST(MBLevelMapTests, InterBlockApply_Shear)
 {
     int domainSize = 8;
@@ -181,7 +210,6 @@ TEST(MBLevelMapTests, InterBlockApply_Shear)
         EXPECT_LT(EXj.absMax(), 1e-10);
     }
 }
-
 TEST(MBLevelMapTests, CellApply_Shear)
 {
     int domainSize = 8;
@@ -247,7 +275,6 @@ TEST(MBLevelMapTests, CellApply_Shear)
         }
     }
 }
-
 TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 {
     int domainSize = 8;
@@ -299,6 +326,7 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
         }
     }
 }
+#endif
 #endif
 #if DIM > 2
 TEST(MBLevelMapTests, CubeSphereShell)
