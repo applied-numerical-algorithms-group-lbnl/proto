@@ -122,6 +122,10 @@ endif()
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelMapTests COMMAND MBLevelMapTests)
+        blt_add_executable(NAME MBLevelArgsTests SOURCES MBLevelArgsTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelArgsTests COMMAND MBLevelArgsTests)
         blt_add_executable(NAME MBLevelRK4Tests SOURCES MBLevelRK4Tests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

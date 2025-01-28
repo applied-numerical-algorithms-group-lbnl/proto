@@ -17,6 +17,7 @@
 #include "mmb/Proto_MBDataPoint.H"
 #include "mmb/Proto_MBMapOp.H"
 #include "mmb/Proto_MBLevelMap.H"
+#include "mmb/Proto_MBLevelArgs.H"
 #include "mmb/Proto_MBBoxOp.H"
 #include "mmb/Proto_MBLevelBC.H"
 #include "mmb/Proto_MBLevelOp.H"
