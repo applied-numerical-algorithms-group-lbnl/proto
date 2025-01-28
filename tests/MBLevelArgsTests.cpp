@@ -37,6 +37,9 @@ TEST(MBLevelArgs, GetAndSet) {
 
     EXPECT_EQ(c0, c00);
     EXPECT_EQ(c1, c11);
+
+    d0->setVal(7);
+    EXPECT_EQ(d00.absMax(), 7);
 }
 
 int main(int argc, char *argv[]) {
