@@ -163,8 +163,7 @@ TEST(MBInterpOp, XPointTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
-    int boxSize = 8;
+
     int ghostSize = 5;
     int numIter = 3;
     double order = 4;
@@ -175,6 +174,8 @@ TEST(MBInterpOp, XPointTest)
 
     for (int testNum = 0; testNum < 2; testNum++)
     {
+        int domainSize = 16;
+        int boxSize = 8;
         int numBlocks;
         switch (testNum)
         {
