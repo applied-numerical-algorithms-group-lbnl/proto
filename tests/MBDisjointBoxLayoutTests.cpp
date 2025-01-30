@@ -146,7 +146,133 @@ TEST(MBDisjointBoxLayout, Coarsen) {
     }
 }
 
-TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
+TEST(MBDisjointBoxLayout, BoundaryQueries)
+{
+    for (int testNum = 0; testNum < 2; testNum++)
+    {
+        int domainSize = 16;
+        int boxSize = 4;
+        int numBlocks = 3+2*testNum;
+        auto domain = buildXPoint(domainSize, numBlocks);
+        Point boxSizeVect = Point::Ones(boxSize);
+        MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+        Box patchDomain = Box::Cube(domainSize / boxSize);
+        Box blockBoundaryX = patchDomain.adjacent(Point::X(), 1);
+        Box blockBoundaryY = patchDomain.adjacent(Point::Y(), 1);
+        Box blockBoundaryXY = patchDomain.adjacent(Point::X() + Point::Y(), 1);
+        for (auto iter : layout)
+        {
+            PatchID patch = layout.point(iter);
+            BlockIndex block = layout.block(iter);
+            BlockIndex adjBlockX = (block + 1) % numBlocks;
+            BlockIndex adjBlockY = (block + numBlocks - 1) % numBlocks;
+            for (auto dir : Point::Directions())
+            {
+                PatchID adjPatch = patch + dir;
+                if (patchDomain.containsPoint(adjPatch))
+                {
+                    EXPECT_FALSE(layout.isBlockBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
+                    EXPECT_TRUE(layout.isInteriorBoundary(iter, dir));
+                }
+                else if (blockBoundaryX.containsPoint(adjPatch))
+                {
+                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    for (auto bi = 0; bi < numBlocks; bi++)
+                    {
+                        EXPECT_EQ(layout.isBlockBoundary(iter, dir, bi), (bi == adjBlockX));
+                    }
+                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                }
+                else if (blockBoundaryY.containsPoint(adjPatch))
+                {
+                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    for (auto bi = 0; bi < numBlocks; bi++)
+                    {
+                        EXPECT_EQ(layout.isBlockBoundary(iter, dir, bi), (bi == adjBlockY));
+                    }
+                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                }
+                else if (blockBoundaryXY.containsPoint(adjPatch))
+                {
+                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    for (auto bi = adjBlockX+1; bi % numBlocks != adjBlockY; bi++)
+                    {
+                        EXPECT_TRUE(layout.isBlockBoundary(iter, dir, bi % numBlocks));
+                    }
+                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                }
+                else
+                {
+                    EXPECT_FALSE(layout.isBlockBoundary(iter, dir));
+                    EXPECT_TRUE(layout.isDomainBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                }
+            }
+        }
+    }
+}
+
+TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
+{
+    int domainSize = 16;
+    int boxSize = 4;
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Box patchDomain = Box::Cube(domainSize / boxSize);
+    auto X = Point::X(); auto Y = Point::Y();
+    for (auto iter : layout)
+    {
+        PatchID patch = layout.point(iter);
+        BlockIndex block = layout.block(iter);
+        BlockIndex adjBlockX = (block + 1) % numBlocks;
+        BlockIndex adjBlockY = (block + numBlocks - 1) % numBlocks;
+        if (patchDomain.grow(-1).containsPoint(patch))
+        {
+            for (BlockIndex bi = 0; bi < numBlocks; bi++)
+            {
+                EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch, block));
+                for (auto dir : Point::Directions())
+                {
+                    EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch, block, dir));
+                }
+            }
+        } else {
+            for (auto dir : Point::Directions())
+            {
+                Box boundBox = patchDomain.edge(dir,1);
+                if (!boundBox.containsPoint(patch)) { continue; }
+                if (dir == X)
+                {
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, X));
+                }
+                else if (dir == Y )
+                {
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, Y));
+                }
+                else if (dir == X+Y)
+                {
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, X+Y));
+                } else {
+                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch, block));
+                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch, block, dir));
+                }
+            }
+        } 
+    }
+}
+
+TEST(MBDisjointBoxLayout, Connectivity_XPoint)
 {
     int domainSize = 8;
     int boxSize = 4;
@@ -182,7 +308,7 @@ TEST(MBDisjointBoxLayout, BlockBoundaries_XPoint)
 }
 #if 1
 #if DIM == 3
-TEST(MBDisjointBoxLayout, BlockBoundaries_CubedSphere)
+TEST(MBDisjointBoxLayout, Connectivity_CubedSphere)
 {
     int domainSize = 8;
     int boxSize = 4;

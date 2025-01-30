@@ -128,41 +128,57 @@ void MBBoxPartition::findBoundaries()
         auto  patch_i = partitionData.first.point;
         for (auto dir : Box::Kernel(1))
         {
+            PatchBound key; key.index = ind_i; key.dir = dir;
+            bool foundBlockBoundary = false; 
             if (dir == Point::Zeros()) { continue; }
-            if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i)) { continue; } 
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {
                 // patch_j is interior to the block
                 continue; 
-            }
-            PatchBound key; key.index = ind_i; key.dir = dir;
-            bool foundBlockBoundary = false; 
-            for (BlockIndex block_j = 0; block_j < numBlocks(); block_j++)
+            } else if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i))
             {
-                if (block_j == block_i) { continue; }
-                Point conn_ij = graph.connectivity(block_i, block_j);
-                if (conn_ij.dot(dir) <= 0) { continue; }
-                Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
-                auto R = graph.rotation(block_i, conn_ij, block_j);
-
-                Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
-                Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
-
-                Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
-
-                if (!localBoundPatches.containsPoint(patch_ji)) { continue; }
-
-                PROTO_ASSERT(adjBoundPatches.containsPoint(patch_jj),
-                        "MBBoxPartition::findBoundaries | Error: Data Corruption.");
-                
-                auto ind_j = find(patch_jj, block_j);
-                if (ind_j < numBoxes())
+                m_blockBoundaries[key].push_back(numBlocks());
+                foundBlockBoundary = true;
+            }
+            else
+            {
+                for (BlockIndex block_j = 0; block_j < numBlocks(); block_j++)
                 {
-                    m_blockBoundaries[key].push_back(ind_j);
-                    foundBlockBoundary = true;
+                    if (block_j == block_i)
+                    {
+                        continue;
+                    }
+                    Point conn_ij = graph.connectivity(block_i, block_j);
+                    if (conn_ij.dot(dir) <= 0)
+                    {
+                        continue;
+                    }
+                    Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
+                    auto R = graph.rotation(block_i, conn_ij, block_j);
+
+                    Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
+                    Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
+
+                    Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
+
+                    if (!localBoundPatches.containsPoint(patch_ji))
+                    {
+                        continue;
+                    }
+
+                    PROTO_ASSERT(adjBoundPatches.containsPoint(patch_jj),
+                                 "MBBoxPartition::findBoundaries | Error: Data Corruption.");
+
+                    auto ind_j = find(patch_jj, block_j);
+                    if (ind_j < numBoxes())
+                    {
+                        m_blockBoundaries[key].push_back(ind_j);
+                        foundBlockBoundary = true;
+                    }
                 }
             }
+
             if (!foundBlockBoundary)
             {
                 m_domainBoundaries.insert(key);
@@ -262,18 +278,16 @@ bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
         Point           a_dir) const
 {
-    if (a_dir == Point::Zeros()) { return false; }
-    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
-    {
-        if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
-    }
-    return false;
+    PatchBound key;
+    key.index = a_index;
+    key.dir = a_dir;
+    return m_blockBoundaries.find(key) != m_blockBoundaries.end();
 }
 
 bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
         Point           a_dir,
-        BlockIndex      a_block) const
+        BlockIndex      a_adjBlock) const
 {
     if (a_dir == Point::Zeros()) { return false; }
     PatchBound key;
@@ -286,7 +300,7 @@ bool MBBoxPartition::isBlockBoundary(
         {
             auto& partitionData = m_partition[adjInd];
             BlockIndex block = partitionData.first.block;
-            if (block == a_block) { return true; }
+            if (block == a_adjBlock) { return true; }
         }
     }
     return false;
