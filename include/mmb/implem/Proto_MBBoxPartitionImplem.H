@@ -138,7 +138,8 @@ void MBBoxPartition::findBoundaries()
                 continue; 
             } else if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i))
             {
-                m_blockBoundaries[key].push_back(numBlocks());
+                std::vector<uint64_t> emptyVector;
+                m_blockBoundaries[key] = emptyVector;
                 foundBlockBoundary = true;
             }
             else

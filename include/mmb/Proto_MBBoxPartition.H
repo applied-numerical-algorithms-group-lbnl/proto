@@ -5,34 +5,44 @@
 #include "Proto_MBProblemDomain.H"
 #include <unordered_map>
 #include <unordered_set>
+
 namespace Proto
 {
-   
-    struct PatchBound
+    namespace
     {
-        uint64_t index;
-        Point dir;
-
-        bool operator==(const PatchBound& a_rhs) const
+        struct PatchBound
         {
-            if (index != a_rhs.index) { return false; }
-            if (dir != a_rhs.dir) { return false; }
-            return true;
-        }
-    
-        struct Hash
-        {
-            std::size_t operator()(const PatchBound& key) const {
+            uint64_t index;
+            Point dir;
 
-                std::size_t hash = std::hash<uint64_t>{}(key.index);
-                for (int ii = 0; ii < DIM; ++ii) {
-                    hash ^= std::hash<int>{}(key.dir[ii]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            bool operator==(const PatchBound &a_rhs) const
+            {
+                if (index != a_rhs.index)
+                {
+                    return false;
                 }
-                return hash;
+                if (dir != a_rhs.dir)
+                {
+                    return false;
+                }
+                return true;
             }
-        };
-    };
 
+            struct Hash
+            {
+                std::size_t operator()(const PatchBound &key) const
+                {
+
+                    std::size_t hash = std::hash<uint64_t>{}(key.index);
+                    for (int ii = 0; ii < DIM; ++ii)
+                    {
+                        hash ^= std::hash<int>{}(key.dir[ii]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    }
+                    return hash;
+                }
+            };
+        };
+    }
     class MBBoxPartition
     {
         public:
