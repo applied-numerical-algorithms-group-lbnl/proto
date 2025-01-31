@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-#if 0
+#if 1
 TEST(MBInterpOp, MBDataPoint)
 {
     // grid parameters
@@ -64,7 +64,7 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 0
+#if 1
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
@@ -157,6 +157,7 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
+
 #if 1
 TEST(MBInterpOp, XPointTest)
 {
