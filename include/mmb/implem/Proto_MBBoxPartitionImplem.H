@@ -46,6 +46,7 @@ void MBBoxPartition::define(
                 m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
+    findBoundaries();
 }
 
 void MBBoxPartition::buildLocalMaps()
@@ -112,7 +113,6 @@ void MBBoxPartition::loadBalance()
 {
     buildLocalMaps();
     buildGlobalMaps();
-    findBoundaries();
 }
 
 void MBBoxPartition::findBoundaries()
