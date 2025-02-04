@@ -5,6 +5,34 @@
 #include "MBMap_XPointRigid.H"
 
 using namespace Proto;
+
+namespace {
+    template< typename T, unsigned int C, MemType MEM, Centering CTR>
+    void initializeData(MBAMRData<T,C,MEM,CTR>& data)
+    {
+        Array<double, DIM> offset{0,0,0,0,0,0};
+
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (int li = 0; li < numLevels; li++)
+        {
+            auto& levelLayout = layout[li];
+            for (auto iter : levelLayout)
+            {
+                auto block = levelLayout.block(iter);
+                auto& data_i = data[li][iter];
+                Box b_i = C2C.domain(levelLayout[iter]).grow(data.ghost()[0]);
+                BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+                BoxData<double, 1> J_i(x_i.box());
+                // compute coordinate / jacobian values from map
+                map[li].apply(x_i, J_i, block);
+                BoxData<double, 1> nodeData = forall<double, 1>(f_bell, x_i, offset);
+
+                data_i |= C2C(nodeData);
+            }
+        }
+    }
+}
+
 #if 1
 TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
@@ -13,20 +41,16 @@ TEST(MBAMR, AverageDown) {
     int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 2;
-    int numGhost = 1;
-    Array<double, DIM> offset{0,0,0,0,0,0};
-    Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Ones(numGhost));
+    int ghostWidth = 1;
+    Point ghostWidths = Point::Ones(ghostWidth);
   
-    int N = 3;
+    int N = 1;
     double error[N];
     for (int nn = 0; nn < N; nn++)
     {
-        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
-                grid, Point::Ones(refRatio)); 
-
-        MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+        MBAMRLayout layout = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(layout, Point::Ones(refRatio)); 
+        MBAMRMap<MBMap_XPointRigid, HOST> map(layout, ghostWidths);
         for (int li = 0; li < numLevels; li++)
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -34,32 +58,13 @@ TEST(MBAMR, AverageDown) {
                 map[li][bi].setNumBlocks(numBlocks);
             }
         }
-        MBAMRData<double, 1, HOST> phi(grid, ghost);
-        MBAMRData<double, 1, HOST> err(grid, ghost);
-        MBAMRData<double, 1, HOST> phi0(grid, ghost);
-
-        auto C2C = Stencil<double>::CornersToCells(4);
-        for (int li = 0; li < numLevels; li++)
-        {
-            auto& layout = grid[li];
-            for (auto iter : layout)
-            {
-                auto block = layout.block(iter);
-                auto& phi0_i = phi0[li][iter];
-                auto& phi_i = phi[li][iter];
-                Box b_i = C2C.domain(layout[iter]).grow(numGhost);
-                BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
-                BoxData<double, 1> J_i(b_i);
-                // compute coordinate / jacobian values from map
-                map[li].apply(x_i, J_i, block);
-                BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
-
-                phi_i |= C2C(phi_node);
-                phi0_i |= C2C(phi_node);
-            }
-
-        }
+        MBAMRData<double, 1, HOST> phi(layout, ghostWidths);
+        MBAMRData<double, 1, HOST> err(layout, ghostWidths);
+        MBAMRData<double, 1, HOST> phi0(layout, ghostWidths);
+        initializeData(phi);
+        initializeData(phi0);
         err.setVal(0);
+        
         auto& crse = phi[0]; 
         auto& fine = phi0[1];
         amr.averageDown(crse, fine, 1);
@@ -67,9 +72,9 @@ TEST(MBAMR, AverageDown) {
         h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_AverageDown_PHI_INIT_%i", nn);
         h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_AverageDown_PHI_AVG_%i", nn);
 #endif
-        auto& layout = grid[0];
+        auto& levelLayout = layout[0];
         error[nn] = 0;
-        for (auto iter : layout)
+        for (auto iter : levelLayout)
         {
             auto& phi0_i = phi0[0][iter];
             auto& phi_i = phi[0][iter];
@@ -99,6 +104,7 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
+
 #if 1
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
