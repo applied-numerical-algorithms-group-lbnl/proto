@@ -11,7 +11,7 @@ namespace Proto
         public:
         inline MBInterpLayout(){}
         inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
-        inline bool addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
+        inline void addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
         inline void ignoreAxis(int dir);
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
 
