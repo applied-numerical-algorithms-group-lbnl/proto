@@ -27,7 +27,7 @@ public:
      * uniform refinement ratio
      */
     inline MBAMR(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             Point                       a_refRatio);
 
     /// Constructor
@@ -35,12 +35,12 @@ public:
      * block-dependent refinement ratio
      */
     inline MBAMR(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             const std::vector<Point>&   a_refRatios); // one refinement ratio per block
 
     /// Define
     inline void define(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             const std::vector<Point>&   a_refRatios);
     
     /// Solve
@@ -59,7 +59,7 @@ public:
      *  Run internal checks to make sure that all data holders were initialized correctly
      */
     inline bool validate(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             const std::vector<Point>&   a_refRatios);
     
     /// Interp Boundaries

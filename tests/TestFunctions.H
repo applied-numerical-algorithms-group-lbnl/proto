@@ -788,7 +788,7 @@ AMRGrid telescopingGrid(
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
 #ifdef PR_MMB
-MBAMRGrid telescopingXPointGrid(
+MBAMRLayout telescopingXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
@@ -799,7 +799,7 @@ MBAMRGrid telescopingXPointGrid(
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
 
     for (int li = 1; li < numLevels; li++)
     {
@@ -826,7 +826,7 @@ MBAMRGrid telescopingXPointGrid(
     return grid;
 }
 
-MBAMRGrid refinedBlockBoundaryXPointGrid(
+MBAMRLayout refinedBlockBoundaryXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
@@ -837,7 +837,7 @@ MBAMRGrid refinedBlockBoundaryXPointGrid(
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
 
     for (int li = 1; li < numLevels; li++)
     {

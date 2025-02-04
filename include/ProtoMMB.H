@@ -28,7 +28,7 @@
 #ifdef PR_AMR
 #include "ProtoAMR.H"
 #include "mmb/Proto_MBAMRBoxPartition.H"
-#include "mmb/Proto_MBAMRGrid.H"
+#include "mmb/Proto_MBAMRLayout.H"
 #include "mmb/Proto_MBAMRData.H"
 #include "mmb/Proto_MBAMRMap.H"
 #include "mmb/Proto_MBLevelFluxRegister.H"

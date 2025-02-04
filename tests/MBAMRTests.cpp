@@ -22,7 +22,7 @@ TEST(MBAMR, AverageDown) {
     double error[N];
     for (int nn = 0; nn < N; nn++)
     {
-        MBAMRGrid grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
+        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
                 grid, Point::Ones(refRatio)); 
 
@@ -116,7 +116,7 @@ TEST(MBAMR, InterpBounds) {
     double error[N];
     for (int nn = 0; nn < N; nn++)
     {
-        MBAMRGrid grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
+        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
                 grid, Point::Ones(refRatio)); 
 
@@ -207,7 +207,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
    
     for (int nn = 0; nn < 1; nn++)
     {
-        MBAMRGrid grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
+        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
             grid, Point::Ones(refRatio));
 

@@ -1,7 +1,7 @@
 
 template<template<MemType> typename MAP, MemType MEM>
 MBAMRMap<MAP,MEM>::MBAMRMap(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -10,7 +10,7 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
 
 template<template<MemType> typename MAP, MemType MEM>
 MBAMRMap<MAP,MEM>::MBAMRMap(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         Point                       a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -19,7 +19,7 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         Point                       a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -31,7 +31,7 @@ void MBAMRMap<MAP,MEM>::define(
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {

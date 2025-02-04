@@ -164,10 +164,10 @@ endif()
         blt_add_test(NAME CubedSphereShellTests COMMAND CubedSphereShellTests)
     endif()
     if (MMB AND AMR)
-        blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp
+        blt_add_executable(NAME MBAMRLayoutTests SOURCES MBAMRLayoutTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        blt_add_test(NAME MBAMRGridTests COMMAND MBAMRGridTests)
+        blt_add_test(NAME MBAMRLayoutTests COMMAND MBAMRLayoutTests)
         blt_add_executable(NAME MBAMRDataTests SOURCES MBAMRDataTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

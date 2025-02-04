@@ -6,7 +6,7 @@ template <
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             Point                       a_refRatio)
 {
     std::vector<Point> refRatios(a_grid.numBlocks(), a_refRatio);
@@ -20,7 +20,7 @@ template <
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             const std::vector<Point>&   a_refRatios)
 {
     define(a_grid, a_refRatios);
@@ -33,7 +33,7 @@ template <
     template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::define(
-            const MBAMRGrid&            a_grid,
+            const MBAMRLayout&            a_grid,
             const std::vector<Point>&   a_refRatios)
 {
     PROTO_ASSERT(a_refRatios.size() == a_grid.numBlocks(),

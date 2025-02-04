@@ -9,24 +9,24 @@
 namespace Proto
 {
     /// Multiblock AMR Grid
-    class MBAMRGrid
+    class MBAMRLayout
     {
         public:
 
-        inline MBAMRGrid(){}
+        inline MBAMRLayout(){}
 
-        inline MBAMRGrid(
+        inline MBAMRLayout(
             const MBProblemDomain&          a_coarseDomain,
             const std::vector<MBPoint>& a_coarsePatches,
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
         
-        inline MBAMRGrid(
+        inline MBAMRLayout(
             const MBProblemDomain&          a_coarseDomain,
             const std::vector<Point>&       a_coarseBoxSizes,
             const std::vector<Point>&       a_refRatios);
 
-        inline MBAMRGrid(
+        inline MBAMRLayout(
                 const MBProblemDomain&      a_coarseDomain,
                 Point                       a_coarseBoxSize,
                 Point                       a_refRatio,
@@ -71,6 +71,6 @@ namespace Proto
         std::vector<MBDisjointBoxLayout>    m_layouts; ///< One layout per level
     };
 
-#include "implem/Proto_MBAMRGridImplem.H"
+#include "implem/Proto_MBAMRLayoutImplem.H"
 } // end namespace Proto
 #endif //end include guard
