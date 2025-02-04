@@ -126,11 +126,10 @@ void MBBoxPartition::findBoundaries()
         auto& partitionData = m_partition[ind_i];
         int   block_i = partitionData.first.block;
         auto  patch_i = partitionData.first.point;
-        for (auto dir : Box::Kernel(1))
+        for (auto dir : Point::Directions())
         {
             PatchBound key; key.index = ind_i; key.dir = dir;
             bool foundBlockBoundary = false; 
-            if (dir == Point::Zeros()) { continue; }
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {
@@ -172,17 +171,61 @@ void MBBoxPartition::findBoundaries()
                                  "MBBoxPartition::findBoundaries | Error: Data Corruption.");
 
                     auto ind_j = find(patch_jj, block_j);
-                    if (ind_j < numBoxes())
-                    {
-                        m_blockBoundaries[key].push_back(ind_j);
-                        foundBlockBoundary = true;
-                    }
+                    m_blockBoundaries[key].push_back(ind_j);
+                    foundBlockBoundary = true;
+                    // Note that if patch_jj does not exist in the refinement, the block boundary is
+                    // still added but the associated patch index will be equal to numBoxes(). This
+                    // is the case where a block boundary is also a refinement boundary.
                 }
             }
 
             if (!foundBlockBoundary)
             {
                 m_domainBoundaries.insert(key);
+            }
+        }
+    }
+    findRefinementBoundaries();
+}
+
+void MBBoxPartition::findRefinementBoundaries()
+{
+    m_refinementBoundaries.clear();
+    for (uint64_t index = 0; index < numBoxes(); index++)
+    {
+        auto& partitionData = m_partition[index];
+        int   block = partitionData.first.block;
+        auto  patch = partitionData.first.point;
+        for (auto dir : Point::Directions())
+        {
+            PatchBound key; key.index = index; key.dir = dir;
+            if (isDomainBoundary(index, dir)) { continue; }
+
+            auto adjPatch = patch + dir;
+            Box patchDomainBox = m_patchDomain.getBlock(block).box();
+            if (patchDomainBox.containsPoint(adjPatch))
+            {
+                if (find(adjPatch, block) == numBoxes())
+                {
+                    m_refinementBoundaries.insert(key);
+                }
+            } else {
+                PROTO_ASSERT(m_blockBoundaries.count(key),
+                    "MBBoxPartition::findRefinementBoundaries | Error: Data Corruption");
+                auto adjIndices = m_blockBoundaries[key];
+                for (BlockIndex adjIndex : adjIndices)
+                {
+                    if (adjIndex == numBoxes()) 
+                    {
+                        m_refinementBoundaries.insert(key);
+                    }
+                    // For codimension 2+ boundaries, it's possible that some adjacent blocks
+                    // will constitute a refinement boundary and others will not. This function
+                    // takes the convention that if there is at least one refinement boundary, then
+                    // this (patch, dir) pair constitutes a refinement boundary. Due to the nature
+                    // of regridding and coarse / fine boundary computations, I don't believe that
+                    // this distinction will matter for now. - 2/3/2025
+                }
             }
         }
     }
@@ -277,7 +320,7 @@ bool MBBoxPartition::contains(Point a_patch, BlockIndex a_block) const
 
 bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
-        Point           a_dir) const
+        Point     a_dir) const
 {
     PatchBound key;
     key.index = a_index;
@@ -286,7 +329,7 @@ bool MBBoxPartition::isBlockBoundary(
 }
 
 bool MBBoxPartition::isBlockBoundary(
-        uint64_t  a_index,
+        uint64_t        a_index,
         Point           a_dir,
         BlockIndex      a_adjBlock) const
 {
@@ -318,11 +361,21 @@ bool MBBoxPartition::isDomainBoundary(
 
 bool MBBoxPartition::isInteriorBoundary(
         uint64_t  a_index,
-        Point           a_dir) const
+        Point     a_dir) const
 {
     if (isDomainBoundary(a_index, a_dir)) { return false; }
     if (isBlockBoundary(a_index, a_dir)) { return false; }
     return true;
+}
+
+bool MBBoxPartition::isRefinementBoundary(
+    uint64_t index,
+    Point dir) const
+{
+    PatchBound key;
+    key.index = index;
+    key.dir = dir;
+    return m_refinementBoundaries.find(key) != m_domainBoundaries.end();
 }
 
 void MBBoxPartition::print()

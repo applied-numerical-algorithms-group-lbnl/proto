@@ -3,6 +3,8 @@
 #include "TestFunctions.H"
 
 using namespace Proto;
+
+#if 1
 TEST(MBDisjointBoxLayout, Iteration)
 {
     int domainSize = 64;
@@ -343,7 +345,80 @@ TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
         }
     }
 }
+#endif
+TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
+{
+    for (int testNum = 0; testNum < 1; testNum++)
+    {
+        int domainSize = 16;
+        int boxSize = 4;
+        int numBlocks = 3 + 2 * testNum;
 
+        auto domain = buildXPoint(domainSize, numBlocks);
+        Point boxSizeVect = Point::Ones(boxSize);
+        std::vector<MBPoint> patches;
+        std::vector<Point> boxSizes;
+        int patchesPerBlock1D = domainSize / boxSize - 1;
+        Point skipPatch = (Point::X() + Point::Y())*patchesPerBlock1D;
+        for (BlockIndex block = 0; block < numBlocks; block++)
+        {
+            boxSizes.push_back(boxSizeVect);
+            for (auto patch : Box::Cube(domainSize / boxSize))
+            {
+                if (patch == skipPatch && block == 0) { continue; }
+                patches.push_back(MBPoint(patch, block));
+            }
+        }
+        MBDisjointBoxLayout layout(domain, patches, boxSizes);
+        #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        MBLevelBoxData<int, 1, HOST> data(layout, Point::Zeros());
+        MBLevelMap<MBMap_XPointRigid, HOST> map;
+        map.define(layout, Point::Zeros());
+        for (BlockIndex bi = 0; bi < numBlocks; bi++) { map[bi].setNumBlocks(numBlocks); }
+        map.initialize();
+        data.setVal(0);
+        for (auto index : layout)
+        {
+            auto patch = layout.point(index);
+            auto block = layout.block(index);
+            if (layout.isPatchOnRefinementBoundary(patch, block))
+            {
+                auto& di = data[index];
+                di.setVal(1);
+            }
+        }
+        h5.writeMBLevel(map, data, "MBDBL_TestRefBounds_T%i", testNum);
+        #endif
+        for (auto index : layout)
+        {
+            auto patch = layout.point(index);
+            auto block = layout.block(index);
+
+            for (auto dir : Point::Directions())
+            {
+                Point adjPatch = patch + dir;
+                if (layout.isDomainBoundary(index, dir))
+                {
+                    EXPECT_FALSE(layout.isRefinementBoundary(index, dir));
+                } else if (layout.isBlockBoundary(index, dir))
+                {
+                    adjPatch = layout.patchDomain().convertPoint(adjPatch, block, 0, PR_CELL);
+                    bool foundSkipPatch = (adjPatch == skipPatch);
+                    foundSkipPatch &= (block != 0);
+                    bool isRefBound = layout.isRefinementBoundary(index, dir);
+                    EXPECT_EQ(isRefBound, foundSkipPatch);
+                } else {
+                    bool foundSkipPatch = (adjPatch == skipPatch);
+                    foundSkipPatch &= (block == 0);
+                    bool isRefBound = layout.isRefinementBoundary(index, dir);
+                    EXPECT_EQ(isRefBound, foundSkipPatch);
+                }
+            }
+        }
+    }
+}
+#if 1
 TEST(MBDisjointBoxLayout, Connectivity_XPoint)
 {
     int domainSize = 8;
@@ -377,7 +452,7 @@ TEST(MBDisjointBoxLayout, Connectivity_XPoint)
         }
     }
 }
-#if 1
+
 #if DIM == 3
 TEST(MBDisjointBoxLayout, Connectivity_CubedSphere)
 {

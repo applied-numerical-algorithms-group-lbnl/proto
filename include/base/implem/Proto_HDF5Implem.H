@@ -1362,6 +1362,7 @@ void HDF5Handler::writeMBLevel(
         std::string a_filename,
         Args... a_params)
 {
+    a_map.initialize();
     Point ghostDiff = a_map.map().ghost()[0] - a_data.ghost()[0];
     if(ghostDiff.min() < 0)
     {
@@ -1379,7 +1380,7 @@ void HDF5Handler::writeMBLevel(
 #if DIM > 2
     a_mapVarNames.push_back("z");
 #endif
-    MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
+    MBLevelBoxData<double, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
     for (auto iter : a_data.layout())
     {
         a_map.map()[iter].copyTo(tmpMap[iter]);

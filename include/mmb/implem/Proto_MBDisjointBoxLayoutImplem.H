@@ -343,6 +343,19 @@ bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
     return patchDomain().isPointOnDomainBoundary(a_patch, a_block, a_dir);
 }
 
+bool MBDisjointBoxLayout::isPatchOnRefinementBoundary(
+    PatchID a_patch,
+    BlockIndex a_block) const 
+{
+    auto index = find(a_patch, a_block);
+    if (index == end()) { return false; }
+    for (auto dir : Point::Directions())
+    {
+        if (isRefinementBoundary(index, dir)) { return true; }
+    }
+    return false;
+}
+
 bool MBDisjointBoxLayout::isInteriorBoundary(
         const MBIndex&  a_index,
         Point           a_dir) const
@@ -350,6 +363,14 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
     return m_partition->isInteriorBoundary(a_index.global(), a_dir);
 }
+bool MBDisjointBoxLayout::isRefinementBoundary(
+    const MBIndex&  a_index,
+    Point           a_dir) const
+{
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
+    return m_partition->isRefinementBoundary(a_index.global(), a_dir);
+}
+
 bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block) const
 {
     return patchDomain().isPointInBlockBoundary(a_patch, a_block);
