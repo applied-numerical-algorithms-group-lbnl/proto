@@ -6,14 +6,14 @@
 using namespace Proto;
 
 namespace {
-    MBAMRGrid testGrid(int domainSize, int boxSize, int refRatio, int numLevels, int numBlocks)
+    MBAMRLayout testGrid(int domainSize, int boxSize, int refRatio, int numLevels, int numBlocks)
     {
         auto domain = buildXPoint(domainSize, numBlocks);
         std::vector<Point> boxSizeVect(domain.numBlocks(), Point::Ones(boxSize));
         std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 
         auto coarsePatches = domain.patches(Point::Ones(boxSize));
-        MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+        MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
         for (int li = 1; li < numLevels; li++)
         {
             auto domain = grid[li].domain();
@@ -39,26 +39,8 @@ TEST(MBAMRData, Construction) {
     int numLevels = 3;
     int refRatio = 2;
     int numGhost = 1;
-    Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Ones(numGhost));
-
-    
-    auto coarsePatches = domain.patches(Point::Ones(boxSize));
-    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
-    for (int li = 1; li < numLevels; li++)
-    {
-        auto domain = grid[li].domain();
-        std::vector<MBPoint> patches;
-        Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
-        Point patch = patchDomain.high();
-        for (int bi = 0; bi < domain.size(); bi++)
-        {
-            patches.push_back(MBPoint(patch, bi));
-        }
-        grid[li].define(domain, patches, boxSizeVect);
-    }
-
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+    MBAMRLayout grid = testGrid(domainSize, boxSize, refRatio, numLevels, numBlocks);
+    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, Point::Ones(numGhost));
     for (int li = 0; li < numLevels; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -67,7 +49,7 @@ TEST(MBAMRData, Construction) {
         }
     }
     
-    MBAMRData<double, 1, HOST> data(grid, ghost);
+    MBAMRData<double, 1, HOST> data(grid, Point::Ones(numGhost));
     data.setRandom(0,1);
 #if PR_VERBOSE > 0
     h5.writeMBAMRData({"data"}, map, data, "MBAMRData_Construction");
