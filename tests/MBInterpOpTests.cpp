@@ -285,7 +285,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #endif
     int domainSize = 16;
     int boxSize = 8;
-    int thickness = 8;
+    int thickness = 16;
     int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;

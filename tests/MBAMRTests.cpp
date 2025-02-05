@@ -7,13 +7,15 @@
 using namespace Proto;
 
 namespace {
-    template< typename T, unsigned int C, MemType MEM, Centering CTR>
-    void initializeData(MBAMRData<T,C,MEM,CTR>& data)
+    template< typename T, unsigned int C, MemType MEM, Centering CTR, template<MemType> typename MAP>
+    void initializeData(
+        MBAMRData<T,C,MEM,CTR>& data,
+        MBAMRMap<MAP,MEM>& map)
     {
         Array<double, DIM> offset{0,0,0,0,0,0};
-
+        auto& layout = data.grid();
         auto C2C = Stencil<double>::CornersToCells(4);
-        for (int li = 0; li < numLevels; li++)
+        for (int li = 0; li < layout.numLevels(); li++)
         {
             auto& levelLayout = layout[li];
             for (auto iter : levelLayout)
@@ -61,8 +63,8 @@ TEST(MBAMR, AverageDown) {
         MBAMRData<double, 1, HOST> phi(layout, ghostWidths);
         MBAMRData<double, 1, HOST> err(layout, ghostWidths);
         MBAMRData<double, 1, HOST> phi0(layout, ghostWidths);
-        initializeData(phi);
-        initializeData(phi0);
+        initializeData(phi, map);
+        initializeData(phi0, map);
         err.setVal(0);
         
         auto& crse = phi[0]; 
