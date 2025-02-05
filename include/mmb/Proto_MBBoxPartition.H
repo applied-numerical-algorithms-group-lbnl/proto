@@ -5,34 +5,44 @@
 #include "Proto_MBProblemDomain.H"
 #include <unordered_map>
 #include <unordered_set>
+
 namespace Proto
 {
-   
-    struct PatchBound
+    namespace
     {
-        uint64_t index;
-        Point dir;
-
-        bool operator==(const PatchBound& a_rhs) const
+        struct PatchBound
         {
-            if (index != a_rhs.index) { return false; }
-            if (dir != a_rhs.dir) { return false; }
-            return true;
-        }
-    
-        struct Hash
-        {
-            std::size_t operator()(const PatchBound& key) const {
+            uint64_t index;
+            Point dir;
 
-                std::size_t hash = std::hash<uint64_t>{}(key.index);
-                for (int ii = 0; ii < DIM; ++ii) {
-                    hash ^= std::hash<int>{}(key.dir[ii]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            bool operator==(const PatchBound &a_rhs) const
+            {
+                if (index != a_rhs.index)
+                {
+                    return false;
                 }
-                return hash;
+                if (dir != a_rhs.dir)
+                {
+                    return false;
+                }
+                return true;
             }
-        };
-    };
 
+            struct Hash
+            {
+                std::size_t operator()(const PatchBound &key) const
+                {
+
+                    std::size_t hash = std::hash<uint64_t>{}(key.index);
+                    for (int ii = 0; ii < DIM; ++ii)
+                    {
+                        hash ^= std::hash<int>{}(key.dir[ii]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+                    }
+                    return hash;
+                }
+            };
+        };
+    }
     class MBBoxPartition
     {
         public:
@@ -49,7 +59,6 @@ namespace Proto
         inline void define(
                 const std::vector<MBPoint>& a_patches);
         inline void loadBalance();
-        inline void findBoundaries();
         inline bool compatible(const MBBoxPartition& a_rhs);
         const MBProblemDomain& domain() const {return m_patchDomain; }
         inline unsigned int numProcs() const;
@@ -77,6 +86,9 @@ namespace Proto
         inline bool isInteriorBoundary(
                 uint64_t  a_index,
                 Point           a_dir) const;
+        inline bool isRefinementBoundary(
+                uint64_t  a_index,
+                Point           a_dir) const;
 
         inline const std::vector<std::pair<MBPoint, unsigned int>>& partition() const
         { return m_partition; }
@@ -93,6 +105,8 @@ namespace Proto
 
         inline void buildLocalMaps();
         inline void buildGlobalMaps();
+        inline void findBoundaries();
+        inline void findRefinementBoundaries();
 
         MBProblemDomain m_patchDomain;
         mutable std::map<MBPoint, uint64_t> m_indexMap; ///< Maps local to global
@@ -101,6 +115,7 @@ namespace Proto
         std::vector<std::pair<MBPoint, unsigned int>> m_partition;
         mutable std::unordered_map<PatchBound, std::vector<uint64_t>, PatchBound::Hash> m_blockBoundaries;
         mutable std::unordered_set<PatchBound, PatchBound::Hash> m_domainBoundaries;
+        mutable std::unordered_set<PatchBound, PatchBound::Hash> m_refinementBoundaries;
     };
 #include "implem/Proto_MBBoxPartitionImplem.H"
 } // end namespace Proto

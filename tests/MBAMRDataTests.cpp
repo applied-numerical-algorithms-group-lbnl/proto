@@ -42,8 +42,21 @@ TEST(MBAMRData, Construction) {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
 
-
-    auto grid = testGrid(domainSize, boxSize, refRatio, numLevels, numBlocks);
+    
+    auto coarsePatches = domain.patches(Point::Ones(boxSize));
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
+    for (int li = 1; li < numLevels; li++)
+    {
+        auto domain = grid[li].domain();
+        std::vector<MBPoint> patches;
+        Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
+        Point patch = patchDomain.high();
+        for (int bi = 0; bi < domain.size(); bi++)
+        {
+            patches.push_back(MBPoint(patch, bi));
+        }
+        grid[li].define(domain, patches, boxSizeVect);
+    }
 
     MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
     for (int li = 0; li < numLevels; li++)

@@ -179,6 +179,20 @@ MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
     domain.close();
     return domain;
 }
+template<MemType MEM>
+std::shared_ptr<MBLevelMap<MBMap_XPointRigid, MEM>> XPointMap(int domainSize, int boxSize, int numBlocks, int ghostSize)
+{
+    auto domain = buildXPoint(domainSize, numBlocks);
+    auto layout = MBDisjointBoxLayout(domain, Point::Ones(boxSize));
+    auto map = std::make_shared<MBLevelMap<MBMap_XPointRigid, MEM>>();
+    map->define(layout, Point::Ones(ghostSize));
+    for (BlockIndex bi = 0; bi < numBlocks; bi++)
+    {
+        (*map)[bi].setNumBlocks(numBlocks);
+    }
+    map->initialize();
+    return map;
+}
 
 MBProblemDomain buildShear(int a_domainSize)
 {
@@ -774,7 +788,7 @@ AMRGrid telescopingGrid(
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
 #ifdef PR_MMB
-MBAMRGrid telescopingXPointGrid(
+MBAMRLayout telescopingXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
@@ -785,7 +799,7 @@ MBAMRGrid telescopingXPointGrid(
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
 
     for (int li = 1; li < numLevels; li++)
     {
@@ -812,7 +826,7 @@ MBAMRGrid telescopingXPointGrid(
     return grid;
 }
 
-MBAMRGrid refinedBlockBoundaryXPointGrid(
+MBAMRLayout refinedBlockBoundaryXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
@@ -823,7 +837,7 @@ MBAMRGrid refinedBlockBoundaryXPointGrid(
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
 
     for (int li = 1; li < numLevels; li++)
     {

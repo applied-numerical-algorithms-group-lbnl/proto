@@ -94,6 +94,9 @@ namespace Proto
         inline bool isInteriorBoundary(
                 const MBIndex&  a_index,
                 Point           a_dir) const;
+        inline bool isRefinementBoundary(
+                const MBIndex&  a_index,
+                Point           a_dir) const;
         inline bool isPatchOnBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
@@ -108,6 +111,9 @@ namespace Proto
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
+        inline bool isPatchOnRefinementBoundary(
+            PatchID a_patch,
+            BlockIndex a_block) const;
         inline bool isPatchInBlockBoundary(
             PatchID a_patch,
             BlockIndex a_block) const;
@@ -129,11 +135,10 @@ namespace Proto
             PatchID a_patch,
             BlockIndex a_block,
             Point a_dir) const;
-
-        /** Works even when a_patch doesn't exist in the layout */
         inline std::vector<MBIndex> findAdjacentIndices(
                 MBIndex index,
                 Point dir) const;
+         /** Works even when a_patch doesn't exist in the layout */
         inline MBIndex findAdjacentIndex(
                 PatchID a_patch,
                 BlockIndex a_block,

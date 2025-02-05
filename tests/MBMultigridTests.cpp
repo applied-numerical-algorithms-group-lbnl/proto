@@ -6,27 +6,57 @@
 
 using namespace Proto;
 
-PROTO_KERNEL_START
-void f_linearF(Var<double>& a_data, Var<double, DIM>& a_X, double a_slope, int a_comp)
+namespace
 {
-    a_data(0) = a_X(a_comp)*a_slope;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+
+    PROTO_KERNEL_START
+    void f_linearF(Var<double> &a_data, Var<double, DIM> &a_X, double a_slope, int a_comp)
+    {
+        a_data(0) = a_X(a_comp) * a_slope;
+    }
+    PROTO_KERNEL_END(f_linearF, f_linear)
+
+    template <typename T, unsigned int C, MemType MEM, Centering CTR, template<MemType> typename MAP>
+    void initializeData(
+        MBLevelBoxData<T, C, MEM, CTR> &phi,
+        MBLevelBoxData<T, C, MEM, CTR> &lphi,
+        MBLevelMap<MAP, MEM>& map)
+    {
+        auto& layout = phi.layout();
+        Array<double, DIM> offset{0,0,0,0,0,0};
+        auto C2C = Stencil<double>::CornersToCells(4);
+        for (auto iter : layout)
+        {
+            auto block = layout.block(iter);
+            auto &phi_i = phi[iter];
+            auto &rhs_i = lphi[iter];
+            Box b_i = C2C.domain(layout[iter]).grow(OP::ghost());
+            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+            BoxData<double, 1> J_i(b_i);
+            // compute coordinate / jacobian values from map
+            map.apply(x_i, J_i, block);
+            BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
+            BoxData<double, 1> lphi_node = forall<double, 1>(f_Lbell, x_i, offset);
+
+            phi_i |= C2C(phi_node);
+            rhs_i |= C2C(lphi_node);
+        }
+    }
 }
-PROTO_KERNEL_END(f_linearF, f_linear)
 
 #if 1
 TEST(MBMultigridTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+    
     int domainSize = 16;
     int boxSize = 8;
     int numBlocks = 5;
-    int numLevels = 1;
+    int numLevels = log(domainSize)/log(2.0);
     double slope = 1.0;
     int comp = 0;
-    Array<double, DIM> exp{4,4,0,0,0,0};
-    Array<double, DIM> offset{0,0,0,0,0,0};
     Point refRatio = Point::Ones(2);
     std::vector<Point> refRatios;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -59,30 +89,9 @@ TEST(MBMultigridTests, LaplaceXPoint) {
         {
             map[bi].setNumBlocks(numBlocks);
         }
-        
-        // Initialize Data
-        auto C2C = Stencil<double>::CornersToCells(4);
-        double J0 = 0;
-        for (auto iter : layout)
-        {
-            auto block = layout.block(iter);
-            auto& phi_i = phi[iter];
-            auto& rhs_i = rhs[iter];
-            Box b_i = C2C.domain(layout[iter]).grow(OP::ghost());
-            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
-            BoxData<double, 1> J_i(b_i);
-            // compute coordinate / jacobian values from map
-            map.apply(x_i, J_i, block);
-            BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
-            BoxData<double, 1> lphi_node = forall<double, 1>(f_Lbell, x_i, offset);
-            //BoxData<double, 1> phi_node = forall<double, 1>(f_poly, x_i, exp, offset);
-            //BoxData<double, 1> lphi_node = forall<double, 1>(f_Lpoly, x_i, exp, offset);
-            
-            phi_i |= C2C(phi_node);
-            rhs_i |= C2C(lphi_node);
-            J0 = J_i.absMax();
-        }
 
+        initializeData(phi, rhs, map);
+        
         mg.op(numLevels-1)(rhs, phi);
         phi.setVal(0);
 #if PR_VERBOSE > 0

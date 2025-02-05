@@ -236,7 +236,7 @@ namespace {
         MBLevelFluxRegister<T,C,MEM>& coarseFluxRegister,
         MBLevelFluxRegister<T,C,MEM>& fineFluxRegister,
         MBLevelFluxRegister<T,C,MEM>& refluxFluxRegister,
-        MBAMRGrid& grid)
+        MBAMRLayout& grid)
     {
         for (auto iter : grid[0])
         {
@@ -411,7 +411,7 @@ namespace {
         return patches;
     }
 
-    MBAMRGrid testCubedSphereGrid(
+    MBAMRLayout testCubedSphereGrid(
         int domainSize,
         int thickness,
         int boxSize, 
@@ -422,7 +422,7 @@ namespace {
         Point boxSizeVect(boxSize, boxSize, thickness);
         std::vector<Point> boxSizes(numBlocks, boxSizeVect);
         auto coarsePatches = domain.patches(boxSizeVect);
-        MBAMRGrid grid(domain, boxSizeVect, refRatio, 2);
+        MBAMRLayout grid(domain, boxSizeVect, refRatio, 2);
 
         for (int li = 1; li < 2; li++)
         {
@@ -822,7 +822,7 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
     Array<double, DIM> gridSpacing;
     gridSpacing.fill(1.0/domainSize);
 
-    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
+    MBAMRLayout grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
 
     auto& fineLayout = grid[1];
     auto& crseLayout = grid[0];
@@ -933,7 +933,7 @@ TEST(MBLevelFluxRegister, CubedSphereIncrement) {
     refRatios[2] = 1;
     ghostWidths[2] = 0;
 
-    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
+    MBAMRLayout grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
 
     Array<double, DIM> gridSpacing = Point::Ones();
     gridSpacing /= domainSize;

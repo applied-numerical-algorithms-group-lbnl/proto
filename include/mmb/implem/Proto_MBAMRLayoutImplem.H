@@ -1,4 +1,4 @@
-MBAMRGrid::MBAMRGrid(
+MBAMRLayout::MBAMRLayout(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
@@ -6,7 +6,7 @@ MBAMRGrid::MBAMRGrid(
     define(a_coarseDomain, a_coarseBoxSizes, a_refRatios);
 }
 
-MBAMRGrid::MBAMRGrid(
+MBAMRLayout::MBAMRLayout(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<MBPoint>& a_coarsePatches,
         const std::vector<Point>&       a_coarseBoxSizes,
@@ -15,7 +15,7 @@ MBAMRGrid::MBAMRGrid(
     define(a_coarseDomain, a_coarsePatches, a_coarseBoxSizes, a_refRatios);
 }
 
-MBAMRGrid::MBAMRGrid(
+MBAMRLayout::MBAMRLayout(
         const MBProblemDomain&      a_coarseDomain,
         Point                       a_coarseBoxSize,
         Point                       a_refRatio,
@@ -33,7 +33,7 @@ MBAMRGrid::MBAMRGrid(
     }
     define(a_coarseDomain, coarseBoxSizes, refRatios);
 }
-void MBAMRGrid::define(
+void MBAMRLayout::define(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<Point>&       a_coarseBoxSizes,
         const std::vector<Point>&       a_refRatios)
@@ -50,7 +50,7 @@ void MBAMRGrid::define(
     define(a_coarseDomain, patches, a_coarseBoxSizes, a_refRatios);
 }
 
-void MBAMRGrid::define(
+void MBAMRLayout::define(
         const MBProblemDomain&          a_coarseDomain,
         const std::vector<MBPoint>& a_coarsePatches,
         const std::vector<Point>&       a_coarseBoxSizes,
@@ -84,7 +84,7 @@ void MBAMRGrid::define(
 
 }
 
-void MBAMRGrid::setPatches(
+void MBAMRLayout::setPatches(
         const std::vector<MBPoint>& a_patches)
 {
     std::vector<MBPoint> patches = a_patches;
@@ -109,7 +109,7 @@ void MBAMRGrid::setPatches(
     }
 }
 
-void MBAMRGrid::setPatches(
+void MBAMRLayout::setPatches(
         int a_level,
         const std::vector<MBPoint>& a_patches)
 {
@@ -119,52 +119,52 @@ void MBAMRGrid::setPatches(
 }
 
 
-const AMRGrid& MBAMRGrid::getBlock(BlockIndex a_block) const
+const AMRGrid& MBAMRLayout::getBlock(BlockIndex a_block) const
 {
     PROTO_ASSERT(a_block < numBlocks(),
-        "MBAMRGrid::block | Error: block index out of bounds");
+        "MBAMRLayout::block | Error: block index out of bounds");
     return m_grids[a_block];
 }
-AMRGrid& MBAMRGrid::getBlock(BlockIndex a_block)
+AMRGrid& MBAMRLayout::getBlock(BlockIndex a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
-        "MBAMRGrid::block | Error: block index out of bounds");
+        "MBAMRLayout::block | Error: block index out of bounds");
     return m_grids[a_block];
 }
-const MBDisjointBoxLayout& MBAMRGrid::getLevel(int a_level) const
+const MBDisjointBoxLayout& MBAMRLayout::getLevel(int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
-        "MBAMRGrid::level | Error: level index out of bounds");
+        "MBAMRLayout::level | Error: level index out of bounds");
     return m_layouts[a_level];
 }
 
-MBDisjointBoxLayout& MBAMRGrid::getLevel(int a_level)
+MBDisjointBoxLayout& MBAMRLayout::getLevel(int a_level)
 {
     PROTO_ASSERT(a_level < numLevels(),
-        "MBAMRGrid::level | Error: level index out of bounds");
+        "MBAMRLayout::level | Error: level index out of bounds");
     return m_layouts[a_level];
 }
 
-MBIterator MBAMRGrid::begin(int a_level) const
+MBIterator MBAMRLayout::begin(int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
-        "MBAMRGrid::level | Error: level index out of bounds");
+        "MBAMRLayout::level | Error: level index out of bounds");
     return m_layouts[a_level].begin();    
 
 }
 
-MBIterator MBAMRGrid::end(int a_level) const
+MBIterator MBAMRLayout::end(int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
-        "MBAMRGrid::level | Error: level index out of bounds");
+        "MBAMRLayout::level | Error: level index out of bounds");
     return m_layouts[a_level].end();    
 
 }
 
-MBIndex MBAMRGrid::find(Point a_point, BlockIndex a_block, int a_level) const
+MBIndex MBAMRLayout::find(Point a_point, BlockIndex a_block, int a_level) const
 {
     PROTO_ASSERT(a_level < numLevels(),
-        "MBAMRGrid::level | Error: level index out of bounds");
+        "MBAMRLayout::level | Error: level index out of bounds");
 
     return m_layouts[a_level].find(a_point, a_block);
 }

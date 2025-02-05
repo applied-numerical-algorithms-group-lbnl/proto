@@ -46,6 +46,7 @@ void MBBoxPartition::define(
                 m_patchDomain.getBlock(bi), blockPatches[bi], 0, numProc());
     }
     loadBalance();
+    findBoundaries();
 }
 
 void MBBoxPartition::buildLocalMaps()
@@ -112,7 +113,6 @@ void MBBoxPartition::loadBalance()
 {
     buildLocalMaps();
     buildGlobalMaps();
-    findBoundaries();
 }
 
 void MBBoxPartition::findBoundaries()
@@ -126,46 +126,106 @@ void MBBoxPartition::findBoundaries()
         auto& partitionData = m_partition[ind_i];
         int   block_i = partitionData.first.block;
         auto  patch_i = partitionData.first.point;
-        for (auto dir : Box::Kernel(1))
+        for (auto dir : Point::Directions())
         {
-            if (dir == Point::Zeros()) { continue; }
-            if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i)) { continue; } 
+            PatchBound key; key.index = ind_i; key.dir = dir;
+            bool foundBlockBoundary = false; 
             auto patch_ji = patch_i + dir;
             if (m_patchDomain.getBlock(block_i).box().containsPoint(patch_ji))
             {
                 // patch_j is interior to the block
                 continue; 
-            }
-            PatchBound key; key.index = ind_i; key.dir = dir;
-            bool foundBlockBoundary = false; 
-            for (BlockIndex block_j = 0; block_j < numBlocks(); block_j++)
+            } else if (m_patchDomain.isPointInTriplePoint(patch_i + dir, block_i))
             {
-                if (block_j == block_i) { continue; }
-                Point conn_ij = graph.connectivity(block_i, block_j);
-                if (conn_ij.dot(dir) <= 0) { continue; }
-                Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
-                auto R = graph.rotation(block_i, conn_ij, block_j);
-
-                Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
-                Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
-
-                Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
-
-                if (!localBoundPatches.containsPoint(patch_ji)) { continue; }
-
-                PROTO_ASSERT(adjBoundPatches.containsPoint(patch_jj),
-                        "MBBoxPartition::findBoundaries | Error: Data Corruption.");
-                
-                auto ind_j = find(patch_jj, block_j);
-                if (ind_j < numBoxes())
+                std::vector<uint64_t> emptyVector;
+                m_blockBoundaries[key] = emptyVector;
+                foundBlockBoundary = true;
+            }
+            else
+            {
+                for (BlockIndex block_j = 0; block_j < numBlocks(); block_j++)
                 {
+                    if (block_j == block_i)
+                    {
+                        continue;
+                    }
+                    Point conn_ij = graph.connectivity(block_i, block_j);
+                    if (conn_ij.dot(dir) <= 0)
+                    {
+                        continue;
+                    }
+                    Point conn_ji = graph.reverseDir(block_i, block_j, conn_ij);
+                    auto R = graph.rotation(block_i, conn_ij, block_j);
+
+                    Box localBoundPatches = m_patchDomain.getBlock(block_i).box().adjacent(conn_ij);
+                    Box adjBoundPatches = m_patchDomain.getBlock(block_j).box().edge(conn_ji);
+
+                    Point patch_jj = R.rotateCell(patch_ji, localBoundPatches, adjBoundPatches);
+
+                    if (!localBoundPatches.containsPoint(patch_ji))
+                    {
+                        continue;
+                    }
+
+                    PROTO_ASSERT(adjBoundPatches.containsPoint(patch_jj),
+                                 "MBBoxPartition::findBoundaries | Error: Data Corruption.");
+
+                    auto ind_j = find(patch_jj, block_j);
                     m_blockBoundaries[key].push_back(ind_j);
                     foundBlockBoundary = true;
+                    // Note that if patch_jj does not exist in the refinement, the block boundary is
+                    // still added but the associated patch index will be equal to numBoxes(). This
+                    // is the case where a block boundary is also a refinement boundary.
                 }
             }
+
             if (!foundBlockBoundary)
             {
                 m_domainBoundaries.insert(key);
+            }
+        }
+    }
+    findRefinementBoundaries();
+}
+
+void MBBoxPartition::findRefinementBoundaries()
+{
+    m_refinementBoundaries.clear();
+    for (uint64_t index = 0; index < numBoxes(); index++)
+    {
+        auto& partitionData = m_partition[index];
+        int   block = partitionData.first.block;
+        auto  patch = partitionData.first.point;
+        for (auto dir : Point::Directions())
+        {
+            PatchBound key; key.index = index; key.dir = dir;
+            if (isDomainBoundary(index, dir)) { continue; }
+
+            auto adjPatch = patch + dir;
+            Box patchDomainBox = m_patchDomain.getBlock(block).box();
+            if (patchDomainBox.containsPoint(adjPatch))
+            {
+                if (find(adjPatch, block) == numBoxes())
+                {
+                    m_refinementBoundaries.insert(key);
+                }
+            } else {
+                PROTO_ASSERT(m_blockBoundaries.count(key),
+                    "MBBoxPartition::findRefinementBoundaries | Error: Data Corruption");
+                auto adjIndices = m_blockBoundaries[key];
+                for (BlockIndex adjIndex : adjIndices)
+                {
+                    if (adjIndex == numBoxes()) 
+                    {
+                        m_refinementBoundaries.insert(key);
+                    }
+                    // For codimension 2+ boundaries, it's possible that some adjacent blocks
+                    // will constitute a refinement boundary and others will not. This function
+                    // takes the convention that if there is at least one refinement boundary, then
+                    // this (patch, dir) pair constitutes a refinement boundary. Due to the nature
+                    // of regridding and coarse / fine boundary computations, I don't believe that
+                    // this distinction will matter for now. - 2/3/2025
+                }
             }
         }
     }
@@ -260,20 +320,18 @@ bool MBBoxPartition::contains(Point a_patch, BlockIndex a_block) const
 
 bool MBBoxPartition::isBlockBoundary(
         uint64_t  a_index,
-        Point           a_dir) const
+        Point     a_dir) const
 {
-    if (a_dir == Point::Zeros()) { return false; }
-    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
-    {
-        if (isBlockBoundary(a_index, a_dir, bi)) { return true; }
-    }
-    return false;
+    PatchBound key;
+    key.index = a_index;
+    key.dir = a_dir;
+    return m_blockBoundaries.find(key) != m_blockBoundaries.end();
 }
 
 bool MBBoxPartition::isBlockBoundary(
-        uint64_t  a_index,
+        uint64_t        a_index,
         Point           a_dir,
-        BlockIndex      a_block) const
+        BlockIndex      a_adjBlock) const
 {
     if (a_dir == Point::Zeros()) { return false; }
     PatchBound key;
@@ -286,7 +344,7 @@ bool MBBoxPartition::isBlockBoundary(
         {
             auto& partitionData = m_partition[adjInd];
             BlockIndex block = partitionData.first.block;
-            if (block == a_block) { return true; }
+            if (block == a_adjBlock) { return true; }
         }
     }
     return false;
@@ -303,11 +361,21 @@ bool MBBoxPartition::isDomainBoundary(
 
 bool MBBoxPartition::isInteriorBoundary(
         uint64_t  a_index,
-        Point           a_dir) const
+        Point     a_dir) const
 {
     if (isDomainBoundary(a_index, a_dir)) { return false; }
     if (isBlockBoundary(a_index, a_dir)) { return false; }
     return true;
+}
+
+bool MBBoxPartition::isRefinementBoundary(
+    uint64_t index,
+    Point dir) const
+{
+    PatchBound key;
+    key.index = index;
+    key.dir = dir;
+    return m_refinementBoundaries.find(key) != m_domainBoundaries.end();
 }
 
 void MBBoxPartition::print()

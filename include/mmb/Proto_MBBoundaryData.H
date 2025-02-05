@@ -133,6 +133,7 @@ namespace Proto
 				return Face(ii, localDir[ii] < 0 ? Side::Lo : Side::Hi);
 			}
 		}
+        return Face(0,Side::Lo); // dummy return to suppress a compilation warning
 	}
  	 
 	template<typename T, unsigned int C, MemType MEM>
@@ -147,6 +148,7 @@ namespace Proto
 				return Face(ii, adjDir[ii] < 0 ? Side::Lo : Side::Hi);
 			}
 		}
+        return Face(0,Side::Lo); // dummy return to suppress a compilation warning
 	}
 	
     template<typename T, unsigned int C, MemType MEM>

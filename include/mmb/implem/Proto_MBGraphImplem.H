@@ -314,7 +314,7 @@ inline CoordPermutation& MBGraph::rotation(
     PROTO_ASSERT(a_dstBlock < size(),
             "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
     PROTO_ASSERT(a_dir.codim() > 0,
-            "MBGraph::rotation | Error: Directional input has invalid codimension.");
+            "MBGraph::rotation | Error: Directional input has invalid codimension: %i", a_dir.codim());
     PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
             "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
             a_srcBlock);

@@ -5,7 +5,7 @@
 using namespace Proto;
 
 #if 1
-TEST(MBAMRGrid, Construction) {
+TEST(MBAMRLayout, Construction) {
     int domainSize = 16;
     int boxSize = 16;
     int numBlocks = 5;
@@ -16,7 +16,7 @@ TEST(MBAMRGrid, Construction) {
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 
     auto coarsePatches = domain.patches(Point::Ones(boxSize));
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
     int numBoxes = domainSize / boxSize * numBlocks;
     for (int li = 0; li < numLevels; li++)
     {

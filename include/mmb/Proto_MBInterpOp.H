@@ -250,22 +250,7 @@ namespace Proto
      
         template<template<MemType> typename MAP, MemType MEM>
         void addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        // template<template<MemType> typename MAP, MemType MEM>
-        // void addTriplePointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        // template<template<MemType> typename MAP, MemType MEM>
-        // void addBlockBoundaryOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        // template<template<MemType> typename MAP, MemType MEM>
-        // void addTriplePointAdjacentOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
-        // std::vector<Point> getTriplePointAdjacentFootprint(
-        //     Point centerPoint,
-        //     const MBIndex& index,
-        //     Point boundaryDir,
-        //     Point triplePointDir) const;
         bool containsOp(Point dataPoint, const MBIndex& index) const;
-        // std::vector<Point> getTriplePointFootprint(
-        //     Point centerPoint,
-        //     const MBIndex& index,
-        //     Point dir) const;
         template<template<MemType> typename MAP, MemType MEM>
         void addPointOp(
             Point dataPoint,
@@ -278,10 +263,6 @@ namespace Proto
         void copyAlongSymmetryAxes(const MBPointInterpOp& pointOp);
 
         MBInterpLayout m_interpLayout;
-        //mutable Array<bool, DIM> m_copyAxes;
-        //MBDisjointBoxLayout m_layout;
-        //std::vector<Point> m_baseFootprint;
-        //Point m_footprintDims;
         Point m_ghost;
         int m_order;
         std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;

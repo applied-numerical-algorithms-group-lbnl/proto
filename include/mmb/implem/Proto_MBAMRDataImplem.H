@@ -3,7 +3,7 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(){}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBAMRData<T,C,MEM,CTR>::MBAMRData(
-        const MBAMRGrid& a_grid,
+        const MBAMRLayout& a_grid,
         Array<Point, DIM+1> a_ghost,
         Point a_boundGhost)
 {
@@ -12,7 +12,7 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBAMRData<T,C,MEM,CTR>::MBAMRData(
-        const MBAMRGrid& a_grid,
+        const MBAMRLayout& a_grid,
         Point a_ghost,
         Point a_boundGhost)
 {
@@ -24,7 +24,7 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBAMRData<T,C,MEM,CTR>::MBAMRData(
-        const MBAMRGrid& a_grid,
+        const MBAMRLayout& a_grid,
         std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData)
 {
     define(a_grid, a_levelData);
@@ -32,7 +32,7 @@ MBAMRData<T,C,MEM,CTR>::MBAMRData(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::define(
-        const MBAMRGrid& a_grid,
+        const MBAMRLayout& a_grid,
         Array<Point, DIM+1> a_ghost,
         Point a_boundGhost)
 {
@@ -74,7 +74,7 @@ bool MBAMRData<T,C,MEM,CTR>::validate() const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBAMRData<T,C,MEM,CTR>::define(
-        const MBAMRGrid& a_grid,
+        const MBAMRLayout& a_grid,
         std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData)
 {
     PROTO_ASSERT(a_grid.numLevels() > 0,

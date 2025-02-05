@@ -1,10 +1,8 @@
 
-# blt_add_executable(NAME BCDemo SOURCES BCDemo.cpp
-#     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
-#     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-# blt_add_test(NAME BCDemo COMMAND BCDemo)
-
-
+blt_add_executable(NAME ValgrindTest SOURCES ValgrindTest.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME ValgrindTest COMMAND ValgrindTest)
 blt_add_executable(NAME PointTests SOURCES PointTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -122,6 +120,10 @@ endif()
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelMapTests COMMAND MBLevelMapTests)
+        blt_add_executable(NAME MBLevelArgsTests SOURCES MBLevelArgsTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelArgsTests COMMAND MBLevelArgsTests)
         blt_add_executable(NAME MBLevelRK4Tests SOURCES MBLevelRK4Tests.cpp
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -162,10 +164,10 @@ endif()
         blt_add_test(NAME CubedSphereShellTests COMMAND CubedSphereShellTests)
     endif()
     if (MMB AND AMR)
-        blt_add_executable(NAME MBAMRGridTests SOURCES MBAMRGridTests.cpp
+        blt_add_executable(NAME MBAMRLayoutTests SOURCES MBAMRLayoutTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-        blt_add_test(NAME MBAMRGridTests COMMAND MBAMRGridTests)
+        blt_add_test(NAME MBAMRLayoutTests COMMAND MBAMRLayoutTests)
         blt_add_executable(NAME MBAMRDataTests SOURCES MBAMRDataTests.cpp
             DEPENDS_ON Headers_AMR Headers_MMB ${LIB_DEP} gtest
           INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

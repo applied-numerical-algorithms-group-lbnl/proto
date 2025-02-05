@@ -158,14 +158,14 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
+
 #if 1
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
-    int boxSize = 8;
+
     int ghostSize = 5;
     int numIter = 3;
     double order = 4;
@@ -176,8 +176,9 @@ TEST(MBInterpOp, XPointTest)
     int numBlocks;
     for (int testNum = 0; testNum < 2; testNum++)
     {
-        domainSize = 16;
-        boxSize = 8;
+        int domainSize = 16;
+        int boxSize = 8;
+        int numBlocks;
         switch (testNum)
         {
             case 0:
@@ -286,7 +287,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
 
     int boxSize = 8;
-    int thickness = 8;
+    int thickness = 16;
     int ghostSize = 1;
     bool cullRadialGhost = false;
     double order = 4.0;
