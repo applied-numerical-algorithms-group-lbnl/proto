@@ -123,6 +123,62 @@ TEST(MBMultigridTests, Residual)
 #endif
 }
 
+TEST(MBMultigridTests, Relax)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    int domainSize = 16;
+    int boxSize = 8;
+    int numBlocks = 5;
+    int numLevels = 1;
+    Point refRatio = Point::Ones(2);
+
+    auto domain = buildXPoint(domainSize, numBlocks);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    for (int lvl = 0; lvl < numLevels; lvl++)
+    {
+        for (BlockIndex bi = 0; bi < numBlocks; bi++)
+        {
+            mg.map(lvl)[bi].setNumBlocks(numBlocks);
+        }
+        mg.map(lvl).initialize();
+    }
+
+    MBLevelBoxData<double, 1, HOST> phi(layout, OP::ghost());
+    MBLevelBoxData<double, 1, HOST> err(layout, Point::Zeros());
+    MBLevelBoxData<double, 1, HOST> rhs(layout, Point::Zeros());
+    MBLevelBoxData<double, 1, HOST> res(layout, Point::Zeros());
+
+    initializeData(phi, rhs, mg.map());
+    phi.setVal(0);
+    res.setVal(0);
+
+    mg.residual(res, phi, rhs);
+    mg.relax(phi, rhs, 1);
+
+    err.setVal(0);
+    for (auto index : layout)
+    {
+        // error is phi1 - (-lambda*res)
+        res[index] *= mg.lambda();
+        err[index] += res[index];
+        err[index] += phi[index];
+    }
+
+    EXPECT_LT(err.absMax(), 1e-12);
+
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"phi"}, mg.map(), phi, "TEST_RELAX_PHI");
+    h5.writeMBLevel({"lambda*res"}, mg.map(), res, "TEST_RELAX_LAMBDA_RES");
+    h5.writeMBLevel({"err"}, mg.map(), err, "TEST_RELAX_ERR");
+#endif
+
+}
+
 #if 1
 TEST(MBMultigridTests, LaplaceXPoint) {
     #if PR_VERBOSE > 0
@@ -162,9 +218,9 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     mg.op(numLevels-1)(rhs, phi);
     phi.setVal(0);
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_0");
-    h5.writeMBLevel({"phi"}, map, phi, "PHI_0");
-    h5.writeMBLevel({"residual"}, map, res, "RES_0");
+    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE");
+    h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE");
+    h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE");
 #endif
     mg.solve(phi, rhs, 20, 1e-10);
 

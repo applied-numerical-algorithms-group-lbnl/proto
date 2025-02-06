@@ -80,6 +80,8 @@ public:
     inline LOP& op() { return op(m_numLevels-1); }
     inline MBInterpOp& interpOp(int a_level) { return *m_blockInterp[a_level]; }
     inline MBInterpOp& interpOp() { return interpOp(m_numLevels-1); }
+    inline double lambda(int a_level) const { return m_lambda[a_level]; }
+    inline double lambda() const { return lambda(m_numLevels-1); }
     inline MBLevelMap<MAP>& map(int a_level) { return m_maps[a_level]; }
     inline MBLevelMap<MAP>& map() { return map(m_numLevels-1); }
     inline void relax(
