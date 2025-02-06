@@ -310,11 +310,8 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::crseForce(
         LevelStateData&         a_crseState,
         int                     a_level)
 {
-    // fill ghost cells on state data
-    a_state.exchange();
-    m_blockInterp[a_level]->apply(a_state, a_state);
-    a_crseState.exchange();
-    m_blockInterp[a_level-1]->apply(a_crseState, a_crseState);
+    interpBlockBoundaries(a_state, a_level);
+    interpBlockBoundaries(a_crseState, a_level-1);
 
     for (auto iter : a_state.layout())
     {
@@ -358,8 +355,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
 #endif
     for (int ii = 0; ii < a_numIter; ii++)
     {
-        a_state.exchange();
-        m_blockInterp[a_level]->apply(a_state, a_state);
+        interpBlockBoundaries(a_state, a_level);
         LevelStateData Lphi(m_residual[a_level]->layout(), Point::Zeros());
         for (auto iter : a_state.layout())
         {
@@ -446,8 +442,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
         const LevelStateData&   a_force,
         int                     a_level)
 {
-    a_state.exchange();
-    m_blockInterp[a_level]->apply(a_state, a_state);
+    interpBlockBoundaries(a_state, a_level);
     for (auto iter : a_residual.layout())
     {
         auto& res_i = a_residual[iter];
@@ -472,8 +467,7 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
         int                     a_level)
 {
     LevelStateData LPhi(a_state.layout(), Point::Zeros());
-    a_state.exchange();
-    m_blockInterp[a_level]->apply(a_state, a_state);
+    interpBlockBoundaries(a_state, a_level);
     Reduction<T,Abs> rxn;
     for (auto iter : a_residual.layout())
     {

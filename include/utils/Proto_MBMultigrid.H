@@ -94,6 +94,12 @@ public:
     {
         relax(a_state, a_force, a_numIter, m_numLevels-1);
     }
+    inline void interpBlockBoundaries(LevelStateData& a_data, int a_level)
+    {
+        a_data.exchange();
+        m_blockInterp[a_level]->apply(a_data, a_data);
+    }
+
 private:
 
     // V Cycle subroutines

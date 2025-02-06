@@ -40,14 +40,19 @@ void f_LbellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X
     a_data(0) = 0;
     if (s*r < M_PI/2.0)
     {
-        for (int dir = 0; dir < DIM; dir++)
+        a_data(0) += p*(p-1)*s*s*pow(cr,p-2)*sr*sr; // 0
+        a_data(0) -= p*s*s*pow(cr,p); // - p*s*s
+        if (s*r > 1e-8)
         {
-            double x = (a_X(dir) - a_X0[dir]);
-            a_data(0) -= p*s*s*x*x*pow(cr,p)/(r*r);
-            a_data(0) += p*(p-1)*s*s*x*x*pow(sr,2)*pow(cr,p-2)/(r*r);
-            a_data(0) -= p*s*sr*pow(cr,p-1)/r;
-            a_data(0) += p*s*x*x*sr*pow(cr,p-1)/(r*r*r);
+            a_data(0) -= p*s/r*pow(cr,p-1)*sr;
+        } else {
+            a_data(0) -= p*s*s*pow(cr,p-1); // - p*s
         }
+        if (std::isnan(a_data(0)))
+        {
+            std::cout << "found nan: r = " << r << std::endl;
+        }
+        
     }
 }
 PROTO_KERNEL_END(f_LbellF, f_Lbell)
