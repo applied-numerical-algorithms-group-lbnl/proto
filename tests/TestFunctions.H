@@ -171,6 +171,8 @@ MBProblemDomain buildIdentity(int a_domainSize)
 
 MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
 {
+    PROTO_ASSERT(numBlocks > 2,
+        "buildXPoint | Error: Map is not valide for 2 or fewer blocks");
     MBProblemDomain domain(numBlocks);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < numBlocks; ii++)

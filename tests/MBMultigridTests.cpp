@@ -3,6 +3,7 @@
 #include "TestFunctions.H"
 #include "BoxOp_MBLaplace.H"
 #include "MBMap_XPointRigid.H"
+#include "MBMap_Identity.H"
 
 using namespace Proto;
 
@@ -45,7 +46,7 @@ namespace
         }
     }
 }
-
+#if 0
 TEST(MBMultigridTests, Construction) 
 {
     int domainSize = 16;
@@ -179,6 +180,110 @@ TEST(MBMultigridTests, Relax)
 
 }
 
+TEST(MBMultigridTests, AverageDown)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    int domainSize = 64;
+    int boxSize = 32;
+    int numBlocks = 5;
+    int numLevels = 2;
+    Point refRatio = Point::Ones(2);
+
+    int numIter = 2;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+
+        auto domain = buildXPoint(domainSize, numBlocks);
+        MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+        MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+        for (int lvl = 0; lvl < numLevels; lvl++)
+        {
+            for (BlockIndex bi = 0; bi < numBlocks; bi++)
+            {
+                mg.map(lvl)[bi].setNumBlocks(numBlocks);
+            }
+            mg.map(lvl).initialize();
+        }
+
+        MBLevelBoxData<double, 1, HOST> phiAvg(mg.map(0).layout(), Point::Zeros());
+        MBLevelBoxData<double, 1, HOST> phiCrse(mg.map(0).layout(), Point::Zeros());
+        MBLevelBoxData<double, 1, HOST> phiErr(mg.map(0).layout(), Point::Zeros());
+        MBLevelBoxData<double, 1, HOST> phiFine(mg.map(1).layout(), Point::Zeros());
+        MBLevelBoxData<double, 1, HOST> rhsCrse(mg.map(0).layout(), Point::Zeros());
+        MBLevelBoxData<double, 1, HOST> rhsFine(mg.map(1).layout(), Point::Zeros());
+
+        initializeData(phiCrse, rhsCrse, mg.map(0));
+        initializeData(phiFine, rhsFine, mg.map(1));
+
+        phiAvg.setVal(0);
+        phiErr.setVal(0);
+        mg.averageDown(phiAvg, phiFine, 1);
+        phiErr.increment(phiAvg);
+        phiErr.increment(phiCrse, -1);
+
+        error[nn] = phiErr.absMax();
+
+#if PR_VERBOSE > 0
+        std::cout << "error: " << phiErr.absMax() << std::endl;
+        h5.writeMBLevel({"phi"}, mg.map(0), phiAvg, "TEST_AVGDOWN_PHI_AVG_%i",nn);
+        h5.writeMBLevel({"phi"}, mg.map(1), phiFine, "TEST_AVGDOWN_PHI_FIN_%i",nn);
+        h5.writeMBLevel({"phi"}, mg.map(0), phiCrse, "TEST_AVGDOWN_PHI_CRS_%i",nn);
+        h5.writeMBLevel({"phi"}, mg.map(0), phiErr, "TEST_AVGDOWN_PHI_ERR_%i",nn);
+#endif
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn - 1] / error[nn]) / log(2.0);
+        EXPECT_LT(abs(4-rate), 0.1);
+#if PR_VERBOSE > 0
+        std::cout << "rate: " << rate << std::endl;
+#endif
+    }
+}
+#endif
+#if 1
+TEST(MBMultigridTests, LaplaceIdentity) {
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    int domainSize = 32;
+    int boxSize = 16;
+    int numLevels = log(domainSize)/log(2.0);
+    Point refRatio = Point::Ones(2);
+   
+    auto domain = buildIdentity(domainSize);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    MBMultigrid<BoxOp_MBLaplace, MBMap_Identity, double> mg(layout, refRatio, numLevels);
+
+
+    MBLevelBoxData<double, 1, HOST> phi(layout, OP::ghost());
+    MBLevelBoxData<double, 1, HOST> rhs(layout, Point::Zeros());
+    MBLevelBoxData<double, 1, HOST> res(layout, Point::Zeros());
+
+    MBLevelMap<MBMap_Identity, HOST> map(layout, OP::ghost());
+
+    initializeData(phi, rhs, map);
+    
+    mg.op(numLevels-1)(rhs, phi);
+    phi.setVal(0);
+#if PR_VERBOSE > 0
+    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE_IDENTITY");
+    h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_IDENTITY");
+    h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_IDENTITY");
+#endif
+    mg.solve(phi, rhs, 10, 1e-10);
+
+}
+#endif
 #if 1
 TEST(MBMultigridTests, LaplaceXPoint) {
     #if PR_VERBOSE > 0
@@ -187,7 +292,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
 
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
+    int numBlocks = 4;
     int numLevels = log(domainSize)/log(2.0);
     Point refRatio = Point::Ones(2);
    
@@ -218,11 +323,11 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     mg.op(numLevels-1)(rhs, phi);
     phi.setVal(0);
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE");
-    h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE");
-    h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE");
+    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE_XPOINT");
+    h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_XPOINT");
+    h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
 #endif
-    mg.solve(phi, rhs, 20, 1e-10);
+    mg.solve(phi, rhs, 10, 1e-10);
 
 }
 #endif

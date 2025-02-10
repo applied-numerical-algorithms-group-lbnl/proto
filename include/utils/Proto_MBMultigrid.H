@@ -102,8 +102,6 @@ public:
         m_blockInterp[a_level]->apply(a_data, a_data);
     }
 
-private:
-
     // V Cycle subroutines
     inline void fineCorrect(
             LevelStateData&         a_fine,
@@ -134,6 +132,8 @@ private:
     {
         vCycle(a_state, a_force, m_numLevels-1);
     }
+
+    private:
 
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
