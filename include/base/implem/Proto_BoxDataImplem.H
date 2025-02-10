@@ -483,7 +483,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
-    PROTO_ASSERT(containsInfOrNAN(),
+    PROTO_ASSERT(!containsInfOrNAN(a_srcBox),
         "Detected Inf or NAN values in source data of copyTo operation");
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "BoxData::copyTo | Error: source and destination components are restricted to \
@@ -1824,9 +1824,26 @@ bool BoxData<T,C,MEM,D,E>::containsInfOrNAN() const
 {
     // NAN only applies to floating point data
     if (!std::is_floating_point<T>::value) { return false; }
+    if (MEM != HOST) { return false; }
     for (int ii = 0; ii < numValues(); ii++)
     {
         if (std::isnan(m_rawPtr[ii]) || std::isinf(m_rawPtr[ii])) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsInfOrNAN(Box domain) const
+{
+    // NAN only applies to floating point data
+    if (!std::is_floating_point<T>::value) { return false; }
+    if (MEM != HOST) { return false; }
+    for (auto pi : domain)
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        for (int ee = 0; ee < E; ee++)
+            if (std::isnan((*this)(pi, cc, dd, ee)) || std::isinf((*this)(pi, cc, dd, ee))) { return true; }
     }
     return false;
 }
