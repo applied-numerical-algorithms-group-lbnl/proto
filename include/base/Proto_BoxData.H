@@ -22,10 +22,11 @@
 #include <iomanip>  // for pretty printing
 #include <limits>   // for max / min functions
 #include <cstdlib>  // for size_t
-#include <cmath>    // floating point abs
+#include <cmath>    // floating point abs, isnan
 #include <map>
 #include <random>   // random initialization
 #include <unordered_map>
+#include <type_traits> // used in containsNAN
 
 
 // This is to facilitate automated testing.
@@ -726,7 +727,7 @@ namespace Proto
           */
 
         inline std::size_t size() const {return m_box.size()*C*D*E;};
-
+        inline std::size_t numValues() const { return m_box.size()*C*D*E; }
         /// Defined Query
         /**
           Returns true if this is defined (e.g., it has memory allocated to it).
@@ -1351,6 +1352,8 @@ namespace Proto
           \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2
         */    
         void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
+        
+        bool containsInfOrNAN() const;
         ///@}
         
         ///////////////////////////////////////////////////////////////////////////////////////
@@ -1400,6 +1403,8 @@ namespace Proto
             return a_bx.size()*sizeof(T)*a_numcomps;
         }
         
+        
+
         // TODO: Chombo Compatibility?
         static int preAllocatable()
         {

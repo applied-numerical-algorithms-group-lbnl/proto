@@ -112,6 +112,8 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+    PROTO_ASSERT(!containsInfOrNAN(),
+        "A Stencil output generated values of inf or nan");
 }
 
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -121,6 +123,8 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyInterpStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+    PROTO_ASSERT(!containsInfOrNAN(),
+        "An InterpStencil output generated values of inf or nan");
 }
 
 
@@ -479,6 +483,8 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
+    PROTO_ASSERT(containsInfOrNAN(),
+        "Detected Inf or NAN values in source data of copyTo operation");
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "BoxData::copyTo | Error: source and destination components are restricted to \
             be the same pending a bug fix in boxDataIndexer.");
@@ -1003,6 +1009,8 @@ BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
     BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+    PROTO_ASSERT(!containsInfOrNAN(),
+        "A division generated values of inf or nan");
     return ret;
 }
 
@@ -1051,6 +1059,8 @@ BoxData<T,C,MEM,D,E>::operator/=(const BoxData<T,C,MEM,D,E>& a_rhs)
 {
     PR_TIME("BoxData::operator/=");
     this->operatorT<BoxDataOp::Divide>(a_rhs);
+    PROTO_ASSERT(!containsInfOrNAN(),
+    "A division generated values of inf or nan");
     return *this;
 }
 
@@ -1118,6 +1128,8 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
 {
     PR_TIME("BoxData::operator/=(scale)");
     this->operatorT<BoxDataOp::Divide>(a_scale);
+    PROTO_ASSERT(!containsInfOrNAN(),
+    "A division generated values of inf or nan");
     return *this;
 }
 
@@ -1179,6 +1191,8 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
         auto data = slice(*this,cc,dd,ee);
         data.template operatorT<BoxDataOp::Divide>(scale);
     }
+    PROTO_ASSERT(!containsInfOrNAN(),
+    "A division generated values of inf or nan");
     return *this;
 }
 
@@ -1803,6 +1817,18 @@ void BoxData<T,C,MEM,D,E>::printData(
 #endif
             }
     out << endl;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsInfOrNAN() const
+{
+    // NAN only applies to floating point data
+    if (!std::is_floating_point<T>::value) { return false; }
+    for (int ii = 0; ii < numValues(); ii++)
+    {
+        if (std::isnan(m_rawPtr[ii]) || std::isinf(m_rawPtr[ii])) { return true; }
+    }
+    return false;
 }
 
 //=================================================================================================

@@ -80,6 +80,8 @@ public:
     inline LOP& op() { return op(m_numLevels-1); }
     inline MBInterpOp& interpOp(int a_level) { return *m_blockInterp[a_level]; }
     inline MBInterpOp& interpOp() { return interpOp(m_numLevels-1); }
+    inline double lambda(int a_level) const { return m_lambda[a_level]; }
+    inline double lambda() const { return lambda(m_numLevels-1); }
     inline MBLevelMap<MAP>& map(int a_level) { return m_maps[a_level]; }
     inline MBLevelMap<MAP>& map() { return map(m_numLevels-1); }
     inline void relax(
@@ -94,7 +96,11 @@ public:
     {
         relax(a_state, a_force, a_numIter, m_numLevels-1);
     }
-private:
+    inline void interpBlockBoundaries(LevelStateData& a_data, int a_level)
+    {
+        a_data.exchange();
+        m_blockInterp[a_level]->apply(a_data, a_data);
+    }
 
     // V Cycle subroutines
     inline void fineCorrect(
@@ -126,6 +132,8 @@ private:
     {
         vCycle(a_state, a_force, m_numLevels-1);
     }
+
+    private:
 
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
