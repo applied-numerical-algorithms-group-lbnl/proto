@@ -184,15 +184,19 @@ TEST(BoxData, MoveConstructor) {
 
 TEST(BoxData, ContainsNAN) {
     Box B = Box::Cube(8);
+    Point p = Point::Ones(3);
+    Box b = (B & B.shift(p + Point::Ones()));
     BoxData<double, 3> data(B);
     data.setVal(1.0);
     EXPECT_FALSE(data.containsInfOrNAN());
-    data(Point::Ones(3)) = 1.0/0.0;
+    data(p) = 1.0/0.0;
     EXPECT_TRUE(data.containsInfOrNAN());
+    EXPECT_FALSE(data.containsInfOrNAN(b));
     data.setVal(1.0);
     EXPECT_FALSE(data.containsInfOrNAN());
-    data(Point::Ones(3)) = std::nan("");
+    data(p) = std::nan("");
     EXPECT_TRUE(data.containsInfOrNAN());
+    EXPECT_FALSE(data.containsInfOrNAN(b));
 }
 
 TEST(BoxData, Arithmetic) {

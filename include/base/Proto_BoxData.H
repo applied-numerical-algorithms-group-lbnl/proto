@@ -1354,6 +1354,7 @@ namespace Proto
         void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
         
         bool containsInfOrNAN() const;
+        bool containsInfOrNAN(Box domain) const;
         ///@}
         
         ///////////////////////////////////////////////////////////////////////////////////////
