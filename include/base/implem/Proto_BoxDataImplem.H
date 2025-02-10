@@ -483,6 +483,8 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
+    PROTO_ASSERT(containsInfOrNAN(),
+        "Detected Inf or NAN values in source data of copyTo operation");
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "BoxData::copyTo | Error: source and destination components are restricted to \
             be the same pending a bug fix in boxDataIndexer.");
