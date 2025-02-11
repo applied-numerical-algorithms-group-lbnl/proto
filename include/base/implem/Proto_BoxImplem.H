@@ -760,9 +760,17 @@ BoxIterator Box::rend() const
     return BoxIterator(*this, -1);
 }
 
+std::string Box::str() const
+{
+    std::stringstream oss;
+    oss << "[" << low().str() << "," << high().str() << "]";
+    return oss.str();
+}
+
 void Box::print() const 
 {
-    std::cout<<*this<<std::endl;
+    std::cout << str() << std::endl;
+    //std::cout<<*this<<std::endl;
 }
 
 size_t Box::linearSize() const
