@@ -121,7 +121,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     // VALIDATION
     PROTO_ASSERT(a_data.layout().compatible(layout),
         "HDF5Handler::readLevel | Error: input data has incompatible layout");
-    PROTO_ASSERT(a_data.layout().boxSize() == boxSize,:q
+    PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
         "HDF5Handler::readLevel | Error: input data has incorrect box size. Input: %s | Read: %s",
         a_data.layout().boxSize().str(), boxSize.str());
     PROTO_ASSERT(a_data.layout().domain().box() == domainBox,
