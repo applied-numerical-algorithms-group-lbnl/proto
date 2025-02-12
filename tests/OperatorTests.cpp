@@ -28,6 +28,21 @@ TEST(Operator, Convolve) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+    {
+        ConvolveOp<double> convolveOp;
+        int size2 = 8;
+        int size4 = 10;
+        int rangeSize = 8;
+        Box domain2ndOrder = Box::Cube(size2);
+        Box domain4thOrder = Box::Cube(size4);
+        auto rangeBox = convolveOp.getRange(domain4thOrder, domain2ndOrder);
+        EXPECT_EQ(rangeBox, domain2ndOrder.grow(-1));
+        auto domainBoxes = convolveOp.domains(Box::Cube(rangeSize));
+        EXPECT_EQ(domainBoxes.size(), 2);
+        EXPECT_EQ(domainBoxes[0], Box::Cube(rangeSize));
+        EXPECT_EQ(domainBoxes[1], Box::Cube(rangeSize).grow(1));
+    }
+
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif

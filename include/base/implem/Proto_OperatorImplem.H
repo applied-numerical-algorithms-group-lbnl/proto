@@ -7,16 +7,16 @@ _convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
-    PR_TIME("Operator::convolve");
+    ConvolveOp<T> op;
+    op(a_avg, a_ctr, a_2nd);
+    // PR_TIME("Operator::convolve");
 
-    auto L = Stencil<T>::Laplacian();
-    Stencil<T> I = 1.0*Shift::Zeros();
-    Box range = L.range(a_2nd.box());
+    // auto L = Stencil<T>::Laplacian();
+    // Stencil<T> I = 1.0*Shift::Zeros();
+    // Box range = L.range(a_2nd.box());
     
-    a_avg |= L(a_2nd, range, 1.0/24.0);
-    a_avg += I(a_ctr, range);
-    //a_avg |= Stencil<T>::Laplacian()(a_2nd, 1.0/24.0);
-    //a_avg += a_ctr;
+    // a_avg |= L(a_2nd, range, 1.0/24.0);
+    // a_avg += I(a_ctr, range);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
