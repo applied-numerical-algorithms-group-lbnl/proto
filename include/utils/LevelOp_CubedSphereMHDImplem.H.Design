@@ -1,0 +1,121 @@
+template<
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
+inline void
+LevelOp_CubedSphere<T,MAP,MEM>::LevelOp_CubedSphere<T,MAP,MEM>
+(
+ MBDisjointBoxLayout& a_layout,
+ MBDisjointBoxLayout& a_layoutC,
+ Point a_ghost,
+ int a_nref,
+ int a_nrefTime,
+ int a_lev,
+ int a_maxlev
+ )
+{
+  m_layout = a_layout;
+  m_layoutC = a_layoutC;
+  m_ghost = a_ghost;
+  m_nref = a_nref;
+  m_nrefTime = a_nrefTime;
+  m_lev = a_lev;
+  m_maxlev = a_maxlev;
+  MAP m_map =  CubedSphereShell::Map(layout, m_ghost);
+  m_iop = CubedSphereShell::InterpOpNew<MEM>(m_layout, m_ghost,4);
+  m_iopC = CubedSphereShell::InterpOpNew<MEM>(m_layoutC,Point::Ones(2),4);
+}
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::
+StageLevel(
+           LevelStateData& a_k,
+           LevelStateData& a_rhsTotal,
+           MBBlockRegister<T,NUMCOMPS,MEM>& a_bReg,
+           MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfReg,
+           MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfRegFine,
+           const LevelStateData& a_JU,
+           const LevelStateData& a_JUCoarsened,         
+           int a_refratio,
+           T a_dt,
+           T a_time,
+           int a_stage)
+{
+  auto layoutC = a_JUCoarsened.layout();
+  auto layout = a_JU.layout();
+  PR_ASSERT(layout == m_layout);
+  LevelStateData USph(layout,a_JU.ghost());
+  if (m_level > 0)
+    {
+      // Transform JU, JUCoarse to SemiSph variables.
+      MBLevelBoxData<T,NUMCOMPS+2,MEM> USemiSphC(layoutC,a_JUCoarsened.ghost());
+      JUToUSemiSph(USemiSphC,JUCoarsened);
+
+      MBLevelBoxData<T,NUMCOMPS+2,MEM> USemiSph(layout,a_JU.ghost());
+      JUToUSemiSph(USemiSph,a_JU); // Member function of LevelOp.
+
+      // Construct ghost cell values for coarsened data.
+      USemiSphC.exchange();
+      m_iopCoarsened.apply(USemiSphC,USemiSphC);
+      
+      // Interpolate USemiSphCoarse to fine grid and copy to ghost cells on USemiSph.
+      Interpolate(USemiSph,USemiSphC); // Member function of LevelOp
+  
+      // Exchange, Interpolate boundary ghost cells to USemiSph;
+      USemiSph.exchange();
+      m_iop.apply(USemiSph,USemiSph);
+      
+      // Transform to Spherical variables.
+      USemiSphToUSph(USph,USemiSph); // Member function of LevelOp.
+    }
+  else
+    {
+      // Transform to Semispherical variables.
+      MBLevelBoxData<T,NUMCOMPS+2,MEM> USemiSph(layout,a_JU.ghost());
+      JUToUSemiSph(USemiSph,a_JU); //Member function of LevelOp.
+      
+      // Interpolate block boundary ghost cells for semispherical variable.
+      USemiSph.exchange();
+      m_iop.apply(USemiSph,USemiSph);
+      
+      // Transform to Spherical variables.
+      USemiSphToUSph(USph,USemiSph); // Member function of LevelOp.
+    }
+      
+  // Setup for physical BCs.
+  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+  int thetaCoord = (rCoord + 1) % DIM;
+  int phiCoord = (rCoord + 2) % DIM;
+  Point ghost =
+    Point::Basis(rCoord)
+    + NGHOST*Point::Basis(thetaCoord)
+    + NGHOST*Point::Basis(phiCoord);
+  MBLevelBoxData<double, NUMCOMPS, MEM> dstData(layout,ghost);
+  if (m_init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
+  // Increment rhsTotal with artificial viscosity, divergence cleaning terms
+  // if a_stage = 0.
+  artificialViscosity(a_rhsTotal,USph,a_bReg,a_lfReg,a_lfRegFine,a_level); // Member function of LevelOp.
+
+  // Apply operator.
+  T wgtxdt = m_weight[a_stage]*a_level;
+  MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
+  op.define(a_map);
+  for (auto dit : a_USph.layout())
+  {
+    PROTO_ASSERT(a_k[dit].box() == a_k.layout()[dit],"k_i isn't exactly the size of a rhs");
+    auto &k_i = a_k[dit];
+    auto &USph_i = USph[dit];
+    Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
+    fluxes[0].define(k_i.box().extrude(0));
+    fluxes[1].define(k_i.box().extrude(1));
+    fluxes[2].define(k_i.box().extrude(2));    
+    fluxes[0].setToZero();
+    fluxes[1].setToZero();
+    fluxes[2].setToZero();
+    
+    op[dit](k_i, fluxes, USph_i, 1.0);
+    
+    a_bReg.increment(fluxes,dit,wgtxdt);
+    if (a_level < m_maxlev-1) a_lfrFine.incrementCoarse(fluxes,1.0);
+    if (a_level > 0) a_lfr.incrementFine(fluxes,1.0);
+  } 
+}

@@ -1,6 +1,6 @@
 
-#ifndef _PROTO_AMR_RK4__
-#define _PROTO_AMR_RK4__
+#ifndef _PROTO_MBAMR_RK4__
+#define _PROTO_MBAMR_RK4__
 #define RKORDER 4
 #define RKNUMSTAGES 4
 #include "Proto.H"
@@ -59,13 +59,13 @@ class AMRRK4
     std::vector<InterpStencil<T> > m_cfInterp;
   
     std::vector<std::shared_ptr<LevelStateData>> m_UStage;
-    std::vector<std::shared_ptr<LevelStateData>> m_RHSTotal;
     std::vector<std::shared_ptr<MBLevelBoxData<T, OP::numState()*RKNUMSTAGES, MEM>>> m_UTaylor;
     std::vector<std::shared_ptr<MBLevelBoxData<T, OP::numState()*RKNUMSTAGES, MEM>>> m_UTaylorC;
    std::vector<std::shared_ptr<MBLevelFluxRegister<T, OP::numState(), MEM>>> m_fluxRegisters;
     std::vector<std::shared_ptr<MBLevelFluxRegister<T, OP::numState(), MEM>>> m_blockRegisters;
+  // We also want member data that hold the MBInterpOps for each level,
+  // and the MBInterpOps used to generate data on the next coarser level for
+  // interpolation.
 };
-
-
 #include "AMRRK4Implem.H"
 #endif //end include guard
