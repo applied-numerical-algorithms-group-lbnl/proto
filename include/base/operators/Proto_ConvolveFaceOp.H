@@ -1,36 +1,36 @@
 
 #pragma once
-#ifndef _PROTO_CONVOLVE_OP_
-#define _PROTO_CONVOLVE_OP_
+#ifndef _PROTO_CONVOLVE_FACE_OP_
+#define _PROTO_CONVOLVE_FACE_OP_
 
 namespace Proto
 {
     template <class T>
-    class ConvolveOp : public CompositeOp
+    class ConvolveFaceOp : public CompositeOp
     {
 
     private:
-        Stencil<T> m_L;
+        Stencil<T> m_Lf;
 
     public:
-        inline ConvolveOp()
+        inline ConvolveFaceOp(int dir)
         {
-            m_L = Stencil<T>::Laplacian();
+            m_Lf = Stencil<T>::LaplacianFace(dir);
         }
 
         inline std::vector<Box> domains(const Box &rangeBox) const
         {
             std::vector<Box> domainBoxes;
             domainBoxes.push_back(rangeBox);
-            domainBoxes.push_back(m_L.domain(rangeBox));
+            domainBoxes.push_back(m_Lf.domain(rangeBox));
             return domainBoxes;
         }
 
         inline Box range(const std::vector<Box> &domainBoxes) const
         {
             PROTO_ASSERT(domainBoxes.size() == 2,
-                         "ConvolveOp::range | Error: ConvolveOp requires two input domains for the 4th order and 2nd order cell centered data respectively");
-            return m_L.range(domainBoxes[1]) & domainBoxes[0];
+                         "ConvolveFaceOp::range | Error: ConvolveFaceOp requires two input domains for the 4th order and 2nd order cell centered data respectively");
+            return (m_Lf.range(domainBoxes[1]) & domainBoxes[0]);
         }
 
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
@@ -40,8 +40,8 @@ namespace Proto
             const BoxData<T, C, MEM, D, E> &cellCentered_4thOrder,
             const BoxData<T, C, MEM, D, E> &cellCentered_2ndOrder)
         {
-            PR_TIME("ConvolveOp::operator()");
-            cellAveraged_4thOrder |= m_L(cellCentered_2ndOrder, 1.0 / 24.0);
+            PR_TIME("ConvolveFaceOp::operator()");
+            cellAveraged_4thOrder |= m_Lf(cellCentered_2ndOrder, 1.0 / 24.0);
             cellAveraged_4thOrder += cellCentered_4thOrder;
         }
 

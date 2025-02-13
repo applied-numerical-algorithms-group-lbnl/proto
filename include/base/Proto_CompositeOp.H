@@ -33,4 +33,7 @@ namespace Proto
     };
 }
 #include "operators/Proto_ConvolveOp.H"
+#include "operators/Proto_DeconvolveOp.H"
+#include "operators/Proto_ConvolveFaceOp.H"
+#include "operators/Proto_DeconvolveFaceOp.H"
 #endif

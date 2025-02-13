@@ -80,6 +80,24 @@ TEST(Operator, ConvolveFace) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        int s2 = 8;
+        int s4 = 10;
+        ConvolveFaceOp<double> op(dd);
+        std::vector<Box> domains;
+        Box b2 = Box::Cube(s2);
+        Box b4 = Box::Cube(s4);
+        domains.push_back(b4);
+        domains.push_back(b2);
+        Box range = op.range(domains);
+        Point ghost = Point::Ones() - Point::Basis(dd);
+        EXPECT_EQ(range, b2.grow(-ghost));
+        auto computedDomains = op.domains(range);
+        EXPECT_EQ(computedDomains[0], range);
+        EXPECT_EQ(computedDomains[1], range.grow(ghost));
+    }
+
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
@@ -130,6 +148,21 @@ TEST(Operator, Deconvolve) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+    {
+        DeconvolveOp<double> op;
+        int size2 = 8;
+        int size4 = 10;
+        int rangeSize = 8;
+        Box domain2ndOrder = Box::Cube(size2);
+        Box domain4thOrder = Box::Cube(size4);
+        auto rangeBox = op.getRange(domain4thOrder, domain2ndOrder);
+        EXPECT_EQ(rangeBox, domain2ndOrder.grow(-1));
+        auto domainBoxes = op.domains(Box::Cube(rangeSize));
+        EXPECT_EQ(domainBoxes.size(), 2);
+        EXPECT_EQ(domainBoxes[0], Box::Cube(rangeSize));
+        EXPECT_EQ(domainBoxes[1], Box::Cube(rangeSize).grow(1));
+    }
+
     double errNorm[numIter];
     for (int n = 0; n < numIter; n++)
     {
@@ -164,6 +197,24 @@ TEST(Operator, DeconvolveFace) {
     int numIter = 3;
     double errTol = 1e-5;
     double rateTol = 0.1;
+
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        int s2 = 8;
+        int s4 = 10;
+        DeconvolveFaceOp<double> op(dd);
+        std::vector<Box> domains;
+        Box b2 = Box::Cube(s2);
+        Box b4 = Box::Cube(s4);
+        domains.push_back(b4);
+        domains.push_back(b2);
+        Box range = op.range(domains);
+        Point ghost = Point::Ones() - Point::Basis(dd);
+        EXPECT_EQ(range, b2.grow(-ghost));
+        auto computedDomains = op.domains(range);
+        EXPECT_EQ(computedDomains[0], range);
+        EXPECT_EQ(computedDomains[1], range.grow(ghost));
+    }
 
 #ifdef PR_HDF5
     HDF5Handler h5;
