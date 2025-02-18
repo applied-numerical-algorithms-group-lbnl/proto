@@ -20,6 +20,7 @@ TEST(InterpStencil, BoxInference)
     Box b2 = B2.grow(-1);
 
     BoxData<double> hostSrcData(B);
+    hostSrcData.setVal(1.0);
     
     BoxData<double> hostDstData_0 = I0(hostSrcData);
     BoxData<double> hostDstData_1 = I1(hostSrcData);

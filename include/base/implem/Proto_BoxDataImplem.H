@@ -66,6 +66,7 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
+    setVal(proto_unallocated<T>());
     m_alias = false;
 }
 
@@ -112,8 +113,12 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(),
+                 "A Stencil output generated uninitialized values");
     PROTO_ASSERT(!containsInfOrNAN(),
-        "A Stencil output generated values of inf or nan");
+                 "A Stencil output generated values of inf or nan");
+#endif
 }
 
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -123,8 +128,12 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyInterpStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(),
+                 "A InterpStencil output generated uninitialized values");
     PROTO_ASSERT(!containsInfOrNAN(),
-        "An InterpStencil output generated values of inf or nan");
+                 "An InterpStencil output generated values of inf or nan");
+#endif
 }
 
 
@@ -483,8 +492,12 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(a_srcBox),
+                 "Detected uninitialized values in source data of copyTo operation");
     PROTO_ASSERT(!containsInfOrNAN(a_srcBox),
-        "Detected Inf or NAN values in source data of copyTo operation");
+                 "Detected Inf or NAN values in source data of copyTo operation");
+#endif
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "BoxData::copyTo | Error: source and destination components are restricted to \
             be the same pending a bug fix in boxDataIndexer.");
@@ -1844,6 +1857,32 @@ bool BoxData<T,C,MEM,D,E>::containsInfOrNAN(Box domain) const
         for (int dd = 0; dd < D; dd++)
         for (int ee = 0; ee < E; ee++)
             if (std::isnan((*this)(pi, cc, dd, ee)) || std::isinf((*this)(pi, cc, dd, ee))) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsUninitialized() const
+{
+    if constexpr (std::is_same_v<T,bool>) { return false; }
+    if (MEM != HOST) { return false; }
+    for (int ii = 0; ii < numValues(); ii++)
+    {
+        if (m_rawPtr[ii] == proto_unallocated<T>()) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsUninitialized(Box domain) const
+{
+    if (MEM != HOST) { return false; }
+    for (auto pi : domain)
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        for (int ee = 0; ee < E; ee++)
+            if ((*this)(pi, cc, dd, ee) == proto_unallocated<T>()) { return true; }
     }
     return false;
 }
