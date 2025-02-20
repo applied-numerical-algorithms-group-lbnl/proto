@@ -1222,13 +1222,18 @@ void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
     if (box().empty()) { return; }
     PR_TIME("BoxData::setVal");
-    forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
-                  {
-                    for (int ee = 0; ee < E; ee++)
-                      for (int dd = 0; dd < D; dd++)
-                        for (int cc = 0; cc < C; cc++)
-                          a_out(cc,dd,ee) = a_in;
-                  },*this,a_val);
+    if (MEM == HOST)
+    {
+        std::fill(data(), data()+numValues(), a_val);
+    } else {
+        forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
+        {
+          for (int ee = 0; ee < E; ee++)
+            for (int dd = 0; dd < D; dd++)
+              for (int cc = 0; cc < C; cc++)
+                a_out(cc,dd,ee) = a_in;
+        },*this,a_val);
+    }
 }
 // Set To Zero
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
