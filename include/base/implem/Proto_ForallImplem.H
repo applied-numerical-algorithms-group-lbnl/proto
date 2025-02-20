@@ -205,11 +205,7 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
   forallInPlaceBase(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
 #ifndef PR_DISABLE_INIT_CHECKS
   PROTO_ASSERT(!ret.containsInfOrNAN(),
-<<<<<<< HEAD
-    "A forall generated values of inf or nan");
-=======
                "A forall generated values of inf or nan");
->>>>>>> amrmmb
 #endif
   return ret;
 }
@@ -234,17 +230,10 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,MEMTYPE,D,E> ret(a_box);
   forallInPlaceBase(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
-<<<<<<< HEAD
-#ifndef PR_DISABLE_INIT_CHECKS
-  PROTO_ASSERT(!ret.containsInfOrNAN(),
-  "A forall generated values of inf or nan");
-#endif
-=======
   #ifndef PR_DISABLE_INIT_CHECKS
   PROTO_ASSERT(!ret.containsInfOrNAN(),
   "A forall generated values of inf or nan");
   #endif
->>>>>>> amrmmb
   return ret;
 }
 
