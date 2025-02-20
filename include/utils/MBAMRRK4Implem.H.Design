@@ -126,14 +126,12 @@ void AMRRK4<OpType,T,MEM>::define(
         int numLevels = a_data.grid().numLevels();
         
         m_UStage.clear();
-        m_RHSTotal.clear();
         m_UTaylor.clear();
         m_UTaylorC.clear();
         m_fluxRegisters.clear();
         m_ops.clear();
         
         m_UStage.resize(numLevels);
-        m_RHSTotal.resize(numLevels);
         m_UTaylor.resize(numLevels - 1);
         m_UTaylorC.resize(numLevels - 1);
         m_fluxRegisters.resize(numLevels - 1);       
@@ -160,9 +158,6 @@ void AMRRK4<OpType,T,MEM>::define(
             m_UStage[lvl] = std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
                     layout, OP::ghost());
             m_UStage[lvl]->setToZero();
-            m_RHSTotal[lvl] = std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
-                    layout, Point::Zeros());
-            m_RHSTotal[lvl]->setToZero();
             if (lvl < numLevels-1)
             {
                 auto& fineLayout = a_data.grid()[lvl+1];
@@ -203,7 +198,6 @@ void AMRRK4<OpType,T,MEM>::define(
     {
         int numLevels = a_data.grid().numLevels();
         trimVector(m_UStage,        a_level);
-        trimVector(m_RHSTotal,      a_level);
         trimVector(m_UTaylor,       a_level);
         trimVector(m_UTaylorC,      a_level);
         trimVector(m_fluxRegisters, a_level);
@@ -227,9 +221,6 @@ void AMRRK4<OpType,T,MEM>::define(
             m_UStage.push_back(
                     std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
                         layout, OP::ghost()));
-            m_RHSTotal.push_back(
-                    std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
-                        layout, Point::Zeros()));
             //m_numSteps[lvl] = 0;
             if (lvl < numLevels-1)
             {
@@ -262,8 +253,6 @@ void AMRRK4<OpType,T,MEM>::define(
                 }
             }
         }
-        PROTO_ASSERT(m_UStage.size() == numLevels, 
-                "AMRRK4::define | Error: Wrong number of elements.");
         PROTO_ASSERT(m_RHSTotal.size() == numLevels, 
                 "AMRRK4::define | Error: Wrong number of elements.");
         PROTO_ASSERT(m_UTaylor.size() == numLevels - 1, 
@@ -313,55 +302,49 @@ void AMRRK4<OpType,T,MEM>::advance(T a_dt,T a_time,int a_level)
 {
   // manages the refinement in time evolution. Calls AMRRK4::StageLevel to compute
   // stage RHS using LOP member functions and AMRRK4 Interpolation functions.
-    T sixth = 1, third=1, half = 1;
-    sixth/=6; third/=3; half/=2;
-    Array<int,RKNUMSTAGES > weights;
-    weights[0] = sixth;
-    weights[1] = third;
-    weights[2] = third;
-    weights[3] = sixth;
-    Array<int,RKNUMSTAGES > chi;
-    chi[0] = 0.;
-    chi[1] = half;
-    chi[2] = half;
-    chi[3] = 1.0;
+   
     LevelStateData delta(m_layout[a_level],Point::Zeros());
     LevelStateData UStage(m_layout[a_level],OP:ghost());
     delta.setVal(0.);
-    m_blockreg[a_level].clear();
+    m_blockRegisters[a_level].clear();
     
     if (a_level < m_maxlev)
       {
-        m_levelfr[a_level]->clear();
+        m_fluxRegisters[a_level]->clear();
       }
     // Begin RK4 time stepping.
     m_data[a_level].copyTo(UStage);
     for (int stage = 0; stage < RKNUMSTAGES; stage++)
     {
-      StageLevel(kstage,U0,a_time, a_dt, weight[stage],chi[stage], stage);
-      m_delta[a_level].increment(m_k, weight*a_dt);
+      StageLevel(kstage,U0,a_time, a_dt, stage);
+      m_delta[a_level].increment(m_k, stageWeight[stage]*a_dt);
       m_data->copyTo(m_U0);
       if (kstage < RKSTAGES - 1)
         {
-          U0.increment(kstage,a_dt*chi[a_level+1]);
+          m_data[a_level]->copyTo(UStage);
+          UStage.increment(kstage,a_dt*chi[a_level+1]);
         }
     }    
     // recursive call to next finer level
     
     for (int timeIter = 0; timeIter < m_timeRefRatio[a_level];timeIter++)
       {
-        T dtFine = a_dt/m_timeRefRatio[a_level];
-        T timeFine = timeIter*dtFine + a_time;
-        advanceLevel(dtFine,timeFine,a_level+1);
+        dtFine = m_dt[a_level+1];
+        T timeFine = timeIter*dtFine + m_time[a_level];
+        advance(dtFine,timeFine,a_level+1);
       }
-    m_blockreg[a_level].reflux(delta);
+    // Update registers on a_level. We could update the blockRegister earlier, but
+    // I'm anticipating that the block register may end up being modified by the
+    // contents of the flux register.
+    m_blockRegisters[a_level].reflux(delta);
     if (a_level < m_maxlev)
       {
         m_levelfr.reflux(delta);
       }
     m_data[a_level]->increment(delta,1.0);
+    // We're done with the a_level time step. update m_numSteps, m_time.
     m_numSteps[a_level]++;
-    
+    m_time[a_lev] += m_dt[a_level];
     // Do Regridding
     if (a_level < m_data->numLevels() - 1)
       {
@@ -388,7 +371,6 @@ void AMRRK4<OpType,T,MEM>::UTimeInterp(LevelStateData& a_UCoarsened,
                                        int a_stage,
                                        T a_chi)
 {
-    chi = 
     LevelStateData UTimeInterp(m_layout[a_level-1],Point::Zeros());
     // Interpolate from next coarser level.
     for (auto iter : m_layout[a_level-1])
@@ -396,7 +378,7 @@ void AMRRK4<OpType,T,MEM>::UTimeInterp(LevelStateData& a_UCoarsened,
       auto& UTimeInterp_i   = UTimeInterp[iter];
       auto& UTaylorC_i = *UTaylorC[iter];           
       // interpolate in time
-      forall<T, OP::numState()>(f_RKTimeInterp, UTimeInterp_i, UTaylorC_i, chi);
+      forall<T, OP::numState()>(f_RKTimeInterp, UTimeInterp_i, UTaylorC_i, a_chi);
     }
     // copy to coarsend fine data.
     UTimeInterp.copyTo(a_UCoarsened);

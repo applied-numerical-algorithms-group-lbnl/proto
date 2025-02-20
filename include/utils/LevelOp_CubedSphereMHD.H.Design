@@ -1,0 +1,81 @@
+#pragma once
+#ifndef _LEVEL_OP_MHD_
+#define _LEVEL_OP_MHD_
+
+#include "BoxOp_CubedSphereEuler.H"
+
+using namespace Proto;
+typedef MBLevelBoxData<double> LevelScalar;
+typedef MBLevelBoxData<double, NUMCOMPS> LevelState;
+typedef MBLevelBoxData<double, DIM> LevelVector;
+template<typename T,
+         template<MemType> typename MAP,
+         MemType MEM = MEMTYPE_DEFAULT>
+class LevelOp_CubedSphereMHD
+{
+ public:
+  inline LevelOp_CubedSphereMHD(){};
+  inline LevelOp_CubedSphereMHD(
+                                MBDisjointBoxLayout& a_layout,
+                                MBDisjointBoxLayout& a_layoutC,
+                                Point a_ghost,
+                                int a_nref,
+                                int a_nrefTime,
+                                int a_lev,
+                                int a_maxlev);
+  
+  inline void define(
+                     MBDisjointBoxLayout& a_layout,
+                     MBDisjointBoxLayout& a_layoutC,
+                     Point a_ghost,
+                     int a_nref,
+                     int a_nrefTime,
+                     int a_lev,
+                     int a_maxlev);
+  
+  /// Evaluate rhs (a_k) for this level at stage a_stage.
+  
+  inline void StageLevel(
+                         LevelStateData& a_k,
+                         LevelStateData& a_rhsTotal,
+                         MBBlockRegister<T,NUMCOMPS,MEM>& a_bReg,
+                         MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfReg,
+                         const LevelStateData& a_JU,
+                         const LevelStateData& a_JUCoarsened,         
+                         int a_refratio,
+                         T a_dt,
+                         T a_time,
+                         int a_stage);
+  
+
+  inline void JUToUSemiSph(
+                           MBLevelBoxData& a_USemiSph,
+                           const MBLevelBoxData& a_JU);
+
+  inline void USemiSphToUSph(
+                             MBLevelBoxData& a_USph,
+                             const MBLevelBoxData& a_USemiSph);
+  
+  inline void Interpolate(
+                          MBLevelBoxData& a_USemiSph,
+                          const MBLevelBoxData& a_USemiSphC);
+
+  inline void artificialViscosity(LevelStateData& a_rhsTotal,
+                                  LevelStateData& USph,
+                                  a_bReg,a_lfReg,a_level);
+    
+  inline void tags(LevelTagData& a_tags,
+                   LevelBoxData& a_U);
+  
+  inline void getVolr(LevelScalar& a_dVolr
+                      MBDisjointBoxLayout a_layout);
+                     
+  
+ private:
+  m_MBDisjointBoxLayout m_layout;
+  
+  MBInterpOp m_iop,m_iopC;
+  Point m_ghost;
+  int m_nref,m_nrefTime,m_lev,m_maxlev;
+
+#endif //end include guard
