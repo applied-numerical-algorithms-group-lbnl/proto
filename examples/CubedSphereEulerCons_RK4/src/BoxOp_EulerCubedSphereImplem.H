@@ -70,7 +70,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
 
       //Required mapping variables.
-      Box bxface = WFace_L.box().grow(-2);
+      Box bxface = WFace_L.box().grow(-2);     
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
       BoxData<T,DIM,MEM,DIM> deta_a = CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir); 
@@ -150,7 +150,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           h5.writePatch(dxiPerp,physFlux_R,",physFlux_R_"+to_string(dir) + "_"+to_string(procID()));
         }
 #endif
-      State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface),fluxdir_Rus(bxface);
+      Box bxface0 = a_fluxes[dir].box();
+      State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface0),fluxdir_Rus(bxface);
       primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
       primToMappedFlux(fluxdir_R,physFlux_R,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,ntrow,a_block,dir);
       primToMappedRusanovFlux(fluxdir_Rus,WFace_L,WFaceBar_L,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,A_matrix,ntrow,a_block,dir);
@@ -165,6 +166,15 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       fluxdir.copyTo(a_fluxes[dir]);
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
       T dxInv = -a_scale/(this->dx()[dir]);
+      //DEBUG
+      bool infOrNanBlock =fluxdir.containsInfOrNAN();
+      if (infOrNanBlock)
+      {
+        h5.writePatch(1.0,fluxdir,"MHD_IO_InfOrNAN_"+to_string(dir) + "_" +to_string(a_block));
+        cout << "Inf or Nan at Point " << fluxdir.findInfOrNAN()
+             << ", block = " << a_block
+             << ", dir = " << dir << endl;
+      }
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
@@ -494,10 +504,12 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
   for (auto dit : layout)
     {
       int block = layout.block(dit);
-      BoxData<T,NUMCOMPS,MEM> W(JUTemp[dit].box().grow(Point::Ones(-1)));
-      BoxData<T,NUMCOMPS,MEM> WBar(JUTemp[dit].box());                        
-       BoxData<T,NUMCOMPS,MEM>& sph_i = JUTemp[dit];
-      eulerOp[dit].sphToPrim(W,WBar,sph_i,block);
+      BoxData<T,NUMCOMPS,MEM> W(layout[dit]);
+      //BoxData<T,NUMCOMPS,MEM> WBar(JUTemp[dit].box());
+      BoxData<T,NUMCOMPS,MEM>& sph_i = JUTemp[dit];
+      BoxData<T,NUMCOMPS,MEM> sphTemp(layout[dit]);
+      sph_i.copyTo(sphTemp);
+      eulerOp[dit].sphToPrim_2O(W,sphTemp,block);
       eulerOp[dit].dtInv(dtinv,W);
     }
   return 1.0/dtinv.fetch(); 

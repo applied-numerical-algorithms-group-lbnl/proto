@@ -27,7 +27,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
-  MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
   for (auto dit : layout)
@@ -38,10 +38,11 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   Point size = layout.domain().getBlock(0).sizes();
   double dxiPerp = 1.0/size[1];
+  bool infOrNan = false;
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
-    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Ones(2)));
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
     auto& Wout_i = Wout[dit];
     USemiSph.setToZero();
     unsigned int block = layout.block(dit);
@@ -84,7 +85,15 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(8) = a_Wout(8)/1e5; // km/s;
       a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
     }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
-    Array<std::string,NUMCOMPS+3> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2","e^entropy"};
+    Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+    bool infOrNanBlock = Wout[dit].containsInfOrNAN();
+    if (infOrNanBlock)
+      {
+        h5.writePatch(1.0,Wout[dit],"MHD_IO_InfOrNAN"+to_string(block));
+        infOrNan = infOrNan || infOrNanBlock;
+        cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
+             << ", block = " << block << endl;
+      }
 #if 0
     if (procID() == 0)
     {
@@ -125,7 +134,10 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
+  
   h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"}, map, Wout, output_file);
+cout << infOrNan << endl;
+if (infOrNan) abort();
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
   // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }

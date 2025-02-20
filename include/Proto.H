@@ -25,7 +25,7 @@
 #include "base/Proto_Array.H"
 #include "base/Proto_Box.H"
 #include "base/Proto_CoordPermutation.H"
-#include "base/Proto_DistributedSet.H"
+//#include "base/Proto_DistributedSet.H"
 #include "base/Proto_PowerItoI.H"
 #include "base/Proto_Taylor.H"
 #include "base/Proto_BoxData.H"
