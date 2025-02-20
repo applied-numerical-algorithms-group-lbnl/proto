@@ -117,6 +117,7 @@ TEST(BoxData, DefaultConstructor) {
 TEST(BoxData, BoxConstructor) {
     Box B = Box(Point(1,2,3,4,5,6,7));
     BoxData<int,3,HOST,4,5> BD(B);
+    EXPECT_TRUE(BD.containsUninitialized());
     EXPECT_TRUE(BD.box()==B);
     EXPECT_EQ(BD.size(),B.size()*3*4*5);
     EXPECT_EQ(BD.linearSize(),BD.size()*sizeof(int));

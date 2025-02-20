@@ -7,6 +7,7 @@
 #include "Proto_PAssert.H"
 
 #include <iostream>
+#include <sstream>
 #include <array>
 #include <set>
 
@@ -489,7 +490,7 @@ namespace Proto
              Output is formatted: <code>(p1,p2,...)</code>
         */
         inline void print() const;
-
+        inline std::string str() const;
         ///@}
 
 

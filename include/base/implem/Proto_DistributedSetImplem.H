@@ -41,6 +41,14 @@ template <typename DATA>
 void DistributedSet<DATA>::exchange()
 {
 #ifdef PR_MPI
+    if (numProc() == 1)
+    {
+        for (auto item : m_localBuffer)
+        {
+            m_globalSet.insert(item);
+        }
+        return;
+    }
     MPI_Barrier(MPI_COMM_WORLD);
 
     // GET BUFFER SIZES

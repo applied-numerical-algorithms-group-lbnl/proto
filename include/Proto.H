@@ -36,6 +36,7 @@
 #include "base/Proto_Stencil.H"
 #include "base/Proto_InterpStencil.H"
 #include "base/Proto_BoundaryCondition.H"
+#include "base/Proto_CompositeOp.H"
 #include "base/Proto_Operator.H"
 #include "base/Proto_BoxOp.H"
 #include "base/Proto_ProblemDomain.H"

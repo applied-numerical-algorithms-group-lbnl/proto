@@ -111,16 +111,33 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     Array<bool, DIM> periodicity;
     for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
     ProblemDomain domain(domainBox, periodicity);
-    DisjointBoxLayout layout(domain, boxSize);
+    DistributedSet<Point> patchSet;
+    for (int ii = 0; ii < numPatches_local; ii++)
+    {
+        patchSet.insert(boxData[ii].coarsen(boxSize).low());
+    }
+    patchSet.exchange();
+    auto patchSetData = patchSet.data();
+    std::vector<Point> patches(patchSetData.begin(), patchSetData.end());
+    DisjointBoxLayout layout(domain, patches, boxSize);
+
+    // VALIDATION
+    PROTO_ASSERT(a_data.layout().compatible(layout),
+        "HDF5Handler::readLevel | Error: input data has incompatible layout");
+    PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
+        "HDF5Handler::readLevel | Error: input data has incorrect box size. Input: %s | Read: %s",
+        a_data.layout().boxSize().str(), boxSize.str());
+    PROTO_ASSERT(a_data.layout().domain().box() == domainBox,
+        "HDF5Handler::readLevel | Error: input data has incorrect domain box. ");
+    PROTO_ASSERT(a_data.ghost() == ghost,
+        "HDF5Handler::readLevel | Error: input data has incorrect ghost size");
 
     // DEFINE LEVEL DATA
-    a_data.define(layout, ghost);
     a_data.linearIn(rawData);
    
     // EXCESS CLEANUP 
     free(rawData);
     free(boxData);
-
     barrier();
     assert(H5Fclose(file) >= 0);
 }
