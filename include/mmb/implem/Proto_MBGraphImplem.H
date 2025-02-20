@@ -204,6 +204,7 @@ unsigned int MBGraph::numBoundaries(BlockIndex a_index, Point& a_dir) const
 
 std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
 {
+    PR_TIME("MBGraph::fullConnectivity(block, block)");
     auto& srcNode = *m_blocks[a_srcBlock];
     std::set<Point> ret;
     Box K = Box::Kernel(1);
@@ -223,6 +224,7 @@ std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a
 
 Point MBGraph::connectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
 {
+    PR_TIME("MBGraph::connectivity(block, block)");
     if (a_srcBlock == a_dstBlock) { return Point::Zeros(); }
     auto conns = fullConnectivity(a_srcBlock, a_dstBlock);
     unsigned int minCodim = DIM+1;
@@ -294,6 +296,7 @@ Point MBGraph::reverseDir(
 
 inline CoordPermutation& MBGraph::rotation(BlockIndex a_block, Point a_dir) const
 {
+    PR_TIME("MBGraph::rotation(block, dir)");
     PROTO_ASSERT(a_block < size(),
             "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
     PROTO_ASSERT(a_dir.codim() == 1,
@@ -309,19 +312,25 @@ inline CoordPermutation& MBGraph::rotation(
         Point a_dir,
         BlockIndex a_dstBlock) const
 {
-    PROTO_ASSERT(a_srcBlock < size(),
-            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_srcBlock);
-    PROTO_ASSERT(a_dstBlock < size(),
-            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
-    PROTO_ASSERT(a_dir.codim() > 0,
-            "MBGraph::rotation | Error: Directional input has invalid codimension: %i", a_dir.codim());
-    PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
-            "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
-            a_srcBlock);
+    PR_TIME("MBGraph::rotation(block, dir, block)");
+    {
+        PR_TIME("asserts");
+        PROTO_ASSERT(a_srcBlock < size(),
+                     "MBGraph::rotation | Error: Block index %u is out of bounds.", a_srcBlock);
+        PROTO_ASSERT(a_dstBlock < size(),
+                     "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
+        PROTO_ASSERT(a_dir.codim() > 0,
+                     "MBGraph::rotation | Error: Directional input has invalid codimension: %i", a_dir.codim());
+        PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
+                     "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
+                     a_srcBlock);
+    }
     if (a_dir.codim() == 1)
     {
+        PR_TIME("codim1 block");
         return rotation(a_srcBlock, a_dir);
     } else {
+        PR_TIME("codim>1 block");
         return m_blocks[a_srcBlock]->rotation(a_dir, a_dstBlock);
     }
 }

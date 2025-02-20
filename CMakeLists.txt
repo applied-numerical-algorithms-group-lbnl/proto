@@ -62,6 +62,8 @@ if (NOT DEFINED CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
         options are: Debug Release RelWithDebInfo" FORCE)
     else()
+        add_compile_definitions(NDEBUG)
+        add_compile_definitions(PR_DISABLE_INIT_CHECKS)
         set(VERBOSE 0 CACHE STRING "Verbosity of output")
         set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type, \
         options are: Debug Release RelWithDebInfo" FORCE)

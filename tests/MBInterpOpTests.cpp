@@ -9,6 +9,7 @@ using namespace Proto;
 #if 1
 TEST(MBInterpOp, MBDataPoint)
 {
+
     // grid parameters
     int domainSize = 32;
     int boxSize = 16;
@@ -165,7 +166,7 @@ TEST(MBInterpOp, XPointTest)
     HDF5Handler h5;
 #endif
 
-    int ghostSize = 5;
+    int ghostSize = 2;
     int numIter = 3;
     double order = 4;
     Array<double, DIM> exp{1.0,1.0,0,0,0,0};
@@ -286,7 +287,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     int domainSize = 16;
     int boxSize = 8;
     int thickness = 16;
-    int ghostSize = 1;
+    int ghostSize = 2;
     bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
