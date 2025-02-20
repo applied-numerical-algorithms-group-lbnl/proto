@@ -161,8 +161,6 @@ CoordPermutation CoordPermutation::inverse() const
 
 Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
-    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
     Point src0 = a_srcBox.low();
     Point dst0 = a_dstBox.low();
     Box B0 = a_srcBox.shift(-src0);
@@ -180,8 +178,6 @@ Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Bo
 
 Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
-    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
     Point src0 = a_srcBox.low();
     Point dst0 = a_dstBox.low();
     Box B0 = a_srcBox.shift(-src0);
@@ -202,6 +198,7 @@ void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
         const Box& srcBox, const Box& dstBox) const
 {
+    PR_TIME("CoordPermutation::rotateBuffer");
     MemType srcMem = pointerMemType(srcData);
     MemType dstMem = pointerMemType(srcData);
     PROTO_ASSERT(srcMem == HOST,

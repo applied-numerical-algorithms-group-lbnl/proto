@@ -198,6 +198,7 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
+    PR_TIME("MBDisjointBoxLayout::block");
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::block | Error: Index not compatible with layout");
@@ -402,6 +403,7 @@ inline std::vector<MBIndex> MBDisjointBoxLayout::findAdjacentIndices(
     MBIndex index,
     Point dir) const
 {
+    PR_TIME("MBDisjointBoxLayout::findAdjacentIndices");
     auto allBounds = bounds(index);
     std::vector<MBIndex> dirBounds;
     for (auto bound : allBounds)
@@ -452,6 +454,7 @@ MBIndex MBDisjointBoxLayout::findAdjacentIndex(
 std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         const MBIndex& a_index) const
 {
+    PR_TIME("MBDisjointBoxLayout::bounds");
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::bounds | Error: Layout is not defined");
     std::vector<MBIndex> ret;
     auto b0 = block(a_index);
@@ -476,6 +479,8 @@ Point MBDisjointBoxLayout::connectivity(
         const MBIndex& a_i1,
         const MBIndex& a_i2) const
 {
+    PR_TIME("MBDisjointBoxLayout::connectivity(index, index)");
+
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::connectivity | Error: Layout is not defined");
     BlockIndex b1 = block(a_i1);
     BlockIndex b2 = block(a_i2);
@@ -490,23 +495,39 @@ Point MBDisjointBoxLayout::connectivity(
             return (p2 - p1);
         }
     }
-    
     // patches on different blocks
 
-    Point conn12 = domain().graph().connectivity(b1, b2);
-    if (conn12 == Point::Zeros()) { return Point::Zeros(); }
-    Point conn21 = domain().graph().connectivity(b2, b1);
-    PROTO_ASSERT(conn21 != Point::Zeros(),
-            "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
-    Box adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
-    Box adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
-    auto R = domain().graph().rotation(b1,conn12,b2);
+    Point conn12, conn21;
+    Box adjPatch1, adjPatch2, dirs;
+    CoordPermutation R;
+    {
+        PR_TIME("setup");
+        {
+            PR_TIME("block A");
+            conn12 = domain().graph().connectivity(b1, b2);
+            if (conn12 == Point::Zeros())
+            {
+                return Point::Zeros();
+            }
+            conn21 = domain().graph().connectivity(b2, b1);
+        }
+        PROTO_ASSERT(conn21 != Point::Zeros(),
+                     "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
+        {
+            PR_TIME("block B");
+            adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
+            adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
+        }
+        {
+            PR_TIME("block C");
+            R = domain().graph().rotation(b1, conn12, b2);
+            dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
+        }
+    }
 
-    Box dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
-    //std::cout << "checking " << p1 << " -> " << p2 << " | conn12: " << conn12 << " | conn21: " << conn21;
-    //std::cout << " | dirs: " << dirs << " | adjPatch1: " << adjPatch1 << " | adjPatch2: " << adjPatch2 << std::endl;
     for (auto dir : dirs)
     {
+        PR_TIME("loop");
         Point n1 = p1 + dir;
         if (!adjPatch1.containsPoint(n1)){ continue; }
         Point n2 = R.rotateCell(

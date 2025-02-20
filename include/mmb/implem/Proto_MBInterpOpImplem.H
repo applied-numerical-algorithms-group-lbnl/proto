@@ -49,7 +49,7 @@ void MBPointInterpOp::computeSourcePoints(
     const MBDisjointBoxLayout& layout,
     Point ghostSizes)
 {
-    //std::cout << "\n==========================================================" << std::endl;
+    PR_TIME("MBPointInterpOp::computeSourcePoints");
     auto index = m_dst.index();
     auto center = m_dst.point();
     Box patchBox = layout[index];
@@ -58,14 +58,11 @@ void MBPointInterpOp::computeSourcePoints(
     Box domainBox = layout.domain().getBlock(block).box();
     m_srcs.clear();
 
-    //std::cout << "target point: " << center << std::endl;
     for (auto fi : footprint)
     {
         Point pi = center + fi;
-        //std::cout << "\tchecking source: " << pi << std::endl;
         if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
         {
-            //std::cout << "\t\tfound inside the domain. Adding." << std::endl;
             MBDataPoint data(index, pi, layout);
             m_srcs.push_back(data);
         } else if (!domainBox.containsPoint(pi))
@@ -75,7 +72,6 @@ void MBPointInterpOp::computeSourcePoints(
             for (auto adjIndex : adjIndices)
             {
                 BlockIndex adjBlock = layout.block(adjIndex);
-                //std::cout << "\t\tfound in boundary with " << adjBlock << ". Adding. " << std::endl;
                 MBDataPoint data(index, pi, layout, dir, adjBlock);
                 m_srcs.push_back(data);
             }
@@ -85,6 +81,7 @@ void MBPointInterpOp::computeSourcePoints(
 
 void MBPointInterpOp::computeExponents()
 {
+    PR_TIME("MBPointInterpOp::computeExponents");
     Box sourceSpanBox;
     for (auto si : m_srcs)
     {
@@ -111,6 +108,7 @@ void MBPointInterpOp::computeExponents()
 void MBPointInterpOp::validateMatrixDimensions(
     const std::set<Point>& footprint) const
 {
+    PR_TIME("MBPointInterpOp::validateMatrixDimensions");
     int N = m_exponents.size();
     int M = m_srcs.size();
     if (N == 0)
@@ -164,6 +162,7 @@ std::unordered_map<BlockIndex, std::vector<BoxData<double>>>
 MBPointInterpOp::computeMoments(
     const MBLevelMap<MAP, MEM>& map) const
 {
+    PR_TIME("MBPointInterpOp::computeMoments");
     // the radius in physical space of the neighborhood containing
     // the source data points
     auto xCenter = map.apply(m_dst);
@@ -213,6 +212,7 @@ double MBPointInterpOp::computeSourceDataRadius(
     const MBLevelMap<MAP, MEM>& map,
     Array<double, DIM>& xCenter) const
 {
+    PR_TIME("MBPointInterpOp::computeSourceDataRadius");
     double radius = 0.0;
     
     for (auto& src : m_srcs)
@@ -228,6 +228,7 @@ double MBPointInterpOp::computeSourceDataRadius(
 void MBPointInterpOp::computeCoefficients(
     std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData)
 {
+    PR_TIME("MBPointInterpOp::computeCoefficients");
     int N = m_exponents.size();
     int M = m_srcs.size();
     Matrix<double> C(M,N);
@@ -264,6 +265,7 @@ void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
+    PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
     
     for (int ii = 0; ii < size(); ii++)
@@ -377,6 +379,7 @@ void MBInterpOp::define(
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map)
 {
+    PR_TIME("MBInterpOp::addPointOps");
     auto& layout = m_interpLayout.layout();
     PatchID patch = layout.point(index);
     PatchID adjPatch = patch + dir;
@@ -402,6 +405,7 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
 
 bool MBInterpOp::containsOp(Point dataPoint, const MBIndex& index) const
 {
+    PR_TIME("MBInterpOp::containsOp");
     MBPointID key(dataPoint, index.global());
     return (m_points.count(key) > 0);
 }
@@ -413,6 +417,7 @@ void MBInterpOp::addPointOp(
     const std::set<Point>& footprint,
     const MBLevelMap<MAP,MEM>& map)
 {
+    PR_TIME("MBInterpOp::addPointOp");
     PROTO_ASSERT(!containsOp(dataPoint, index),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     
@@ -429,6 +434,7 @@ void MBInterpOp::addPointOp(
 
 void MBInterpOp::copyAlongSymmetryAxes(const MBPointInterpOp& pointOp)
 {
+    PR_TIME("MBInterpOp::copyAlongSymmetryAxis");
     Point dataPoint = pointOp.target().point();
     MBIndex index = pointOp.target().index();
     Box patchBox = m_interpLayout.layout()[index];
@@ -460,6 +466,7 @@ void MBInterpOp::addShiftedOp(
     const MBPointInterpOp& baseOp,
     Point shift)
 {
+    PR_TIME("MBInterpOp::addShiftedOp");
     PROTO_ASSERT(containsOp(baseOp.target().point(), baseOp.target().index()),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     if (shift == Point::Zeros()) { return; }
@@ -479,6 +486,7 @@ void MBInterpOp::addShiftedOp(
 
 void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 {
+    PR_TIME("MBInterpOp::insert");
     Point dst = a_op->target().point();
     int globalIndex = a_op->target().index();
     MBPointID key(dst, globalIndex);
