@@ -198,7 +198,6 @@ void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
         const Box& srcBox, const Box& dstBox) const
 {
-    PR_TIME("CoordPermutation::rotateBuffer");
     MemType srcMem = pointerMemType(srcData);
     MemType dstMem = pointerMemType(srcData);
     PROTO_ASSERT(srcMem == HOST,

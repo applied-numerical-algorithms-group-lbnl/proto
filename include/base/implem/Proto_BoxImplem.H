@@ -667,7 +667,6 @@ Box Box::flatten(const int a_dir, bool a_upper) const
 
 Box Box::adjacent(const Point& a_dir) const
 {
-    PR_TIME("Box::adjacent(Point)");
     Point L = low();
     Point H = high();
     for (int ii = 0; ii < DIM; ii++)
@@ -687,7 +686,6 @@ Box Box::adjacent(const Point& a_dir) const
 }
 Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
-    PR_TIME("Box::adjacent(Point, int)");
     Point L = low();
     Point H = high();
     if (a_dist == 0) {return Box(); }

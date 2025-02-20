@@ -239,7 +239,6 @@ BlockIndex MBBoxPartition::block(uint64_t a_index) const
 
 bool MBBoxPartition::compatible(const MBBoxPartition& a_rhs)
 {
-    PR_TIME("MBBoxPartition::compatible");
     if (this == &a_rhs) { return true; }
     if (numBlocks() != a_rhs.numBlocks()) { return false; }
     for (BlockIndex bi = 0; bi < numBlocks(); bi++)
