@@ -7,7 +7,8 @@
 #include "Proto_LoHiSide.H"
 #include "Proto_Centering.H"
 #include <cstdlib> //for size_t
-#include <iostream>
+#include <iostream> //pretty printing
+#include <sstream> //pretty printing
 #include <cmath>
 
 namespace Proto 
@@ -932,6 +933,8 @@ namespace Proto
           Prints *this using the format <code>[low, high]</code>
           */ 
         inline void print() const; 
+
+        inline std::string str() const;
         ///@}
 
         //private:  // these should be treated as private.  Some wise guy needs access.
@@ -947,7 +950,8 @@ namespace Proto
      /// OStream Operator 
     inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
-        a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        //a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        a_os << a_box.str();
         return a_os;
     }
 

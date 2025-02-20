@@ -7,7 +7,7 @@ import subprocess
 import shutil
 import sys
 
-home_dir = os.getcwd();
+home_dir = os.getcwd()
 dash = '-' *100
 
 # Parse Arguments
@@ -26,6 +26,7 @@ parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]
 parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
 parser.add_argument('-n', '--NPROC', type=int, help='Number of CPUS [1]', default='1')
 parser.add_argument('--RESTART', type=int, help="Restart test suite from this test", default='0')
+parser.add_argument('--DISABLE_INIT_CHECKS', help="Disable the automatic checks for uninitialized data", default='0')
 args = parser.parse_args()
 
 # Retrieve Targets
@@ -105,6 +106,7 @@ CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
 CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
 CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
 CMAKE_FLAGS += "-D ENABLE_ALL_TESTS=ON" + " "
+CMAKE_FLAGS += "-D DISABLE_INIT_CHECKS=" + args.DISABLE_INIT_CHECKS + " "
 #CMAKE_FLAGS += "-D CMAKE_VERBOSE_MAKEFILE:BOOL=ON"
 
 CMAKE_COMMAND = "cmake -B build " + CMAKE_FLAGS

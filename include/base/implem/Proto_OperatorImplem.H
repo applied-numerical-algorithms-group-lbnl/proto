@@ -7,16 +7,16 @@ _convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
-    PR_TIME("Operator::convolve");
+    ConvolveOp<T> op;
+    op(a_avg, a_ctr, a_2nd);
+    // PR_TIME("Operator::convolve");
 
-    auto L = Stencil<T>::Laplacian();
-    Stencil<T> I = 1.0*Shift::Zeros();
-    Box range = L.range(a_2nd.box());
+    // auto L = Stencil<T>::Laplacian();
+    // Stencil<T> I = 1.0*Shift::Zeros();
+    // Box range = L.range(a_2nd.box());
     
-    a_avg |= L(a_2nd, range, 1.0/24.0);
-    a_avg += I(a_ctr, range);
-    //a_avg |= Stencil<T>::Laplacian()(a_2nd, 1.0/24.0);
-    //a_avg += a_ctr;
+    // a_avg |= L(a_2nd, range, 1.0/24.0);
+    // a_avg += I(a_ctr, range);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -126,12 +126,14 @@ _deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
-    PR_TIME("Operator::deconvolve");
-    PROTO_ASSERT(a_avg.box().containsBox(a_2nd.box().grow(-1)),
-            "error Operator::convolve | centered data defined on too small a box.");
+    // PR_TIME("Operator::deconvolve");
+    // PROTO_ASSERT(a_avg.box().containsBox(a_2nd.box().grow(-1)),
+    //         "error Operator::convolve | centered data defined on too small a box.");
 
-    a_ctr |= Stencil<T>::Laplacian()(a_2nd, -1.0/24);
-    a_ctr += a_avg;
+    // a_ctr |= Stencil<T>::Laplacian()(a_2nd, -1.0/24);
+    // a_ctr += a_avg;
+    DeconvolveOp<T> op;
+    op(a_ctr, a_avg, a_2nd);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -200,11 +202,13 @@ _convolveFace(
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
 {
-    PR_TIME("Operator::convolveFace");
-    PROTO_ASSERT(a_ctr.box().containsBox(a_2nd.box().grow(-1).grow(a_dir,1)),
-    "Error in Operator::convolveFace | Insufficient source data.");
-    a_avg |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, 1.0/24.0);
-    a_avg += a_ctr;
+    ConvolveFaceOp<T> op(a_dir);
+    op(a_avg, a_ctr, a_2nd);
+    // PR_TIME("Operator::convolveFace");
+    // PROTO_ASSERT(a_ctr.box().containsBox(a_2nd.box().grow(-1).grow(a_dir,1)),
+    // "Error in Operator::convolveFace | Insufficient source data.");
+    // a_avg |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, 1.0/24.0);
+    // a_avg += a_ctr;
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -250,12 +254,14 @@ _deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
 {
-    PR_TIME("Operator::deconvolveFace");
-    PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).containsBox(a_ctr.box()) &&
-                 a_avg.box().containsBox(a_ctr.box()),
-    "Error in Operator::convolveFace | Insufficient source data.");
-    a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
-    a_ctr += a_avg;
+    // PR_TIME("Operator::deconvolveFace");
+    // PROTO_ASSERT((a_2nd.box().grow(-1).grow(a_dir,1)).containsBox(a_ctr.box()) &&
+    //              a_avg.box().containsBox(a_ctr.box()),
+    // "Error in Operator::convolveFace | Insufficient source data.");
+    // a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
+    // a_ctr += a_avg;
+    DeconvolveFaceOp<T> op(a_dir);
+    op(a_ctr, a_avg, a_2nd);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>

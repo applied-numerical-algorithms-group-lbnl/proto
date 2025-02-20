@@ -79,6 +79,8 @@ void* proto_malloc(size_t a_size)
     if (MEM == HOST)
     {
         buffer = std::malloc(a_size);
+        //std::memset(buffer, PR_UNALLOCATED, a_size);
+
     } else if (MEM == DEVICE)
     {
 #ifdef PROTO_ACCEL
