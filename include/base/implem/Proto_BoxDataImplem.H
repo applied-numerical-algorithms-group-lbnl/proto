@@ -1022,8 +1022,10 @@ BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
     BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
         "A division generated values of inf or nan");
+#endif
     return ret;
 }
 
@@ -1072,8 +1074,10 @@ BoxData<T,C,MEM,D,E>::operator/=(const BoxData<T,C,MEM,D,E>& a_rhs)
 {
     PR_TIME("BoxData::operator/=");
     this->operatorT<BoxDataOp::Divide>(a_rhs);
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
     "A division generated values of inf or nan");
+#endif
     return *this;
 }
 
@@ -1141,8 +1145,10 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
 {
     PR_TIME("BoxData::operator/=(scale)");
     this->operatorT<BoxDataOp::Divide>(a_scale);
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
     "A division generated values of inf or nan");
+#endif
     return *this;
 }
 
@@ -1204,8 +1210,10 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
         auto data = slice(*this,cc,dd,ee);
         data.template operatorT<BoxDataOp::Divide>(scale);
     }
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
     "A division generated values of inf or nan");
+#endif
     return *this;
 }
 
@@ -1836,6 +1844,7 @@ template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool BoxData<T,C,MEM,D,E>::containsInfOrNAN() const
 {
     // NAN only applies to floating point data
+  PR_TIMERS("BoxData::containsInfOrNAN()");
     if (!std::is_floating_point<T>::value) { return false; }
     if (MEM != HOST) { return false; }
     for (int ii = 0; ii < numValues(); ii++)
@@ -1849,6 +1858,7 @@ template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool BoxData<T,C,MEM,D,E>::containsInfOrNAN(Box domain) const
 {
     // NAN only applies to floating point data
+  PR_TIMERS("BoxData::containsInfOrNAN(Box domain)");
     if (!std::is_floating_point<T>::value) { return false; }
     if (MEM != HOST) { return false; }
     for (auto pi : domain)

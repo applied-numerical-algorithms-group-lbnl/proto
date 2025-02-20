@@ -86,6 +86,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
     }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
     Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+#ifndef PR_DISABLE_INIT_CHECKS
     bool infOrNanBlock = Wout[dit].containsInfOrNAN();
     if (infOrNanBlock)
       {
@@ -94,6 +95,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
         cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
              << ", block = " << block << endl;
       }
+#endif
 #if 0
     if (procID() == 0)
     {

@@ -167,6 +167,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
       T dxInv = -a_scale/(this->dx()[dir]);
       //DEBUG
+#ifndef PR_DISABLE_INIT_CHECKS
       bool infOrNanBlock =fluxdir.containsInfOrNAN();
       if (infOrNanBlock)
       {
@@ -175,6 +176,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
              << ", block = " << a_block
              << ", dir = " << dir << endl;
       }
+#endif
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
