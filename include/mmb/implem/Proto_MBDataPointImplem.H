@@ -102,12 +102,12 @@ bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
 }
 BlockIndex MBDataPoint::srcBlock() const
 {
-    return m_block >= 0 ? m_block : m_partition->block(m_index); 
+    return m_block >= 0 ? m_block : m_partition->getBlock(m_index); 
 }
 
 BlockIndex MBDataPoint::dstBlock() const
 {
-    return m_partition->block(m_index); 
+    return m_partition->getBlock(m_index); 
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

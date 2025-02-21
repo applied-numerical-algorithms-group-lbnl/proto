@@ -66,6 +66,7 @@ namespace Proto
         inline Array<double, DIM> dx(MBIndex a_index) const;
         inline Box blockDomainBox(BlockIndex a_block) const { return getBlock(a_block).domain().box(); }
         inline unsigned int block(const MBIndex& a_index) const; 
+        inline MBPoint patch(const MBIndex& a_index) const;
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
         inline MBIndex find(Point a_point, BlockIndex a_block) const;
@@ -151,6 +152,7 @@ namespace Proto
         inline Point boxSize(BlockIndex a_block) const;
         MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+        void validateIndex(const MBIndex& index, std::string methodName) const;
         inline void print() const;
         inline bool defined() const {return m_defined; }
         private:

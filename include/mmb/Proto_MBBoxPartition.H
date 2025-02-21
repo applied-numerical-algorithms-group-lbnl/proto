@@ -78,7 +78,6 @@ namespace Proto
             std::map<Point, MBPatchBoundInfo> boundaries;
         };
 
-
     }
     class MBBoxPartition
     {
@@ -100,7 +99,6 @@ namespace Proto
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc);
-        inline BlockIndex block(uint64_t a_globalIndex) const;
         inline BlockIndex numBlocks() const;
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
@@ -110,24 +108,29 @@ namespace Proto
         inline bool contains(Point a_patch, BlockIndex a_block) const;
         
         inline void validatePatch(const MBPoint& patch, std::string methodName) const;
+        inline void validateIndex(uint64_t index, std::string methodName) const;
         inline Point connectivity(const MBPoint& src, const MBPoint& dst) const;
+        unsigned int getProc(uint64_t globalIndex) const;
+        inline MBPoint getPatch(uint64_t globalIndex) const;
+        inline BlockIndex getBlock(uint64_t globalIndex) const;
+        inline Point getPoint(uint64_t globalIndex) const; 
         inline std::set<MBPoint> adjacentPatches(const MBPoint& patch) const;
         inline bool isBlockBoundary(
-                uint64_t  a_index,
-                Point           a_dir) const;
+                MBPoint patch,
+                Point dir) const;
         inline bool isBlockBoundary(
-                uint64_t  a_index,
-                Point           a_dir,
-                BlockIndex    a_block) const;
+                MBPoint patch,
+                Point dir,
+                BlockIndex adjBlock) const;
         inline bool isDomainBoundary(
-                uint64_t  a_index,
-                Point           a_dir) const;
+                MBPoint patch,
+                Point dir) const;
         inline bool isInteriorBoundary(
-                uint64_t  a_index,
-                Point           a_dir) const;
+                MBPoint patch,
+                Point dir) const;
         inline bool isRefinementBoundary(
-                uint64_t  a_index,
-                Point           a_dir) const;
+                MBPoint patch,
+                Point dir) const;
 
         inline const std::vector<std::pair<MBPoint, unsigned int>>& partition() const
         { return m_partition; }
@@ -144,8 +147,6 @@ namespace Proto
 
         inline void buildLocalMaps();
         inline void buildGlobalMaps();
-        inline void findBoundaries();
-        inline void findRefinementBoundaries();
         inline void findAdjacencies();
         inline void getBoundaryInfo(MBPatchInfo& patchInfo);
         inline void updateRefinementBoundaries();
@@ -155,10 +156,6 @@ namespace Proto
         mutable std::unordered_map<unsigned int, std::pair<uint64_t, uint64_t>> m_procMap; ///< Maps proc to global indices
         std::vector<std::shared_ptr<BoxPartition>> m_blockPartitions;
         std::vector<std::pair<MBPoint, unsigned int>> m_partition;
-        mutable std::unordered_map<PatchBound, std::vector<uint64_t>, PatchBound::Hash> m_blockBoundaries;
-        mutable std::unordered_set<PatchBound, PatchBound::Hash> m_domainBoundaries;
-        mutable std::unordered_set<PatchBound, PatchBound::Hash> m_refinementBoundaries;
-
         mutable std::unordered_map<MBPoint, MBPatchInfo, MBPoint::Hash> m_patchAdjacencies;
 
     };

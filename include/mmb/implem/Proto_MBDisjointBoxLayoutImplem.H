@@ -161,24 +161,15 @@ MBIterator MBDisjointBoxLayout::end() const
 
 Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::point | Error: Layout is not defined");
-    PROTO_ASSERT(compatible(a_index),
-        "MBDisjointBoxLayout::point | Error: Index not compatible with layout");
-    auto data = m_partition->partition()[a_index.global()];
-    auto block = data.first.block;
-    auto patch = data.first.point;
-    return patch;
+    validateIndex(a_index, "MBDisjointBoxLayout::point");
+    return m_partition->getPoint(a_index.global());
 }
 
 Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::box | Error: Layout is not defined");
-    PROTO_ASSERT(compatible(a_index),
-        "MBDisjointBoxLayout::box | Error: Index not compatible with layout");
-    auto& data = m_partition->partition()[a_index.global()];
-    auto block = data.first.block;
-    auto patch = data.first.point;
-    auto boxSize = m_layouts[block].boxSize();
+    validateIndex(a_index, "MBDisjointBoxLayout::box");
+    auto patch = point(a_index);
+    auto boxSize = m_layouts[block(a_index)].boxSize();
     return Box(patch, patch).refine(boxSize);
 }
 
@@ -198,14 +189,14 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
-    #ifndef NDEBUG
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
-    PROTO_ASSERT(compatible(a_index),
-        "MBDisjointBoxLayout::block | Error: Index not compatible with layout");
-    #endif
-    auto& data = m_partition->partition()[a_index.global()];
-    auto block = data.first.block;
-    return block;
+    validateIndex(a_index, "MBDisjointBoxLayout::block");
+    return m_partition->getBlock(a_index.global());
+}
+
+MBPoint MBDisjointBoxLayout::patch(const MBIndex& index) const
+{
+    validateIndex(index, "MBDisjointBoxLayout::patch");
+    return m_partition->getPatch(index.global());
 }
 
 DisjointBoxLayout& MBDisjointBoxLayout::getBlock(BlockIndex a_block)
@@ -234,21 +225,6 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex
     auto globalIndex = m_partition->find(a_point, a_block);
     if (globalIndex == numBoxes()) { return *end(); }
     else { return MBIndex(m_partition, globalIndex); }
-    /*
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::find | Error: Layout is not defined");
-    auto patchDomain = m_layouts[a_block].patchDomain();
-    if (!patchDomain.contains(a_point))
-    {
-        return *end();
-    }
-    auto globalIndex = m_partition->find(a_point, a_block);
-    if (globalIndex == numBoxes())
-    {
-        return *end();
-    } else {
-        return MBIndex(m_partition, globalIndex);
-    }
-    */
 }
 
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
@@ -277,7 +253,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
     PR_TIME("MBLevelBoxData::isBlockBoundary");
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    return m_partition->isBlockBoundary(a_index.global(), a_dir, a_block);
+    return m_partition->isBlockBoundary(patch(a_index), a_dir, a_block);
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
@@ -286,7 +262,7 @@ bool MBDisjointBoxLayout::isBlockBoundary(
 {
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    return m_partition->isBlockBoundary(a_index.global(), a_dir);
+    return m_partition->isBlockBoundary(patch(a_index), a_dir);
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
@@ -324,7 +300,7 @@ bool MBDisjointBoxLayout::isDomainBoundary(
 {
     PROTO_ASSERT(m_defined,
             "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
-    return m_partition->isDomainBoundary(a_index, a_dir);
+    return m_partition->isDomainBoundary(patch(a_index), a_dir);
 }
 
 
@@ -365,14 +341,14 @@ bool MBDisjointBoxLayout::isInteriorBoundary(
         Point           a_dir) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
-    return m_partition->isInteriorBoundary(a_index.global(), a_dir);
+    return m_partition->isInteriorBoundary(patch(a_index), a_dir);
 }
 bool MBDisjointBoxLayout::isRefinementBoundary(
     const MBIndex&  a_index,
     Point           a_dir) const
 {
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
-    return m_partition->isRefinementBoundary(a_index.global(), a_dir);
+    return m_partition->isRefinementBoundary(patch(a_index), a_dir);
 }
 
 bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block) const
@@ -613,6 +589,13 @@ MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
     auto crseDomain = m_domain.coarsen(a_refRatios);
     MBDisjointBoxLayout crseLayout(crseDomain, patches(), crseBoxSize);
     return crseLayout;
+}
+
+void MBDisjointBoxLayout::validateIndex(const MBIndex& index, std::string methodName) const
+{
+    #ifndef NDEBUG
+    PROTO_ASSERT(compatible(index), "%s | Error: Incompatible index", methodName);
+    #endif
 }
 
 void MBDisjointBoxLayout::print() const
