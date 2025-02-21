@@ -198,10 +198,11 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
-    PR_TIME("MBDisjointBoxLayout::block");
+    #ifndef NDEBUG
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::block | Error: Index not compatible with layout");
+    #endif
     auto& data = m_partition->partition()[a_index.global()];
     auto block = data.first.block;
     return block;
@@ -209,10 +210,12 @@ unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 
 DisjointBoxLayout& MBDisjointBoxLayout::getBlock(BlockIndex a_block)
 {
+    #ifndef NDEBUG
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
             (numBlocks() = %u)", numBlocks());
+    #endif
     return m_layouts[a_block];
 }
 
