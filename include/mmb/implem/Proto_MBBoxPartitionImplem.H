@@ -47,6 +47,7 @@ void MBBoxPartition::define(
     }
     loadBalance();
     findBoundaries();
+    findAdjacencies();
 }
 
 void MBBoxPartition::buildLocalMaps()
@@ -231,6 +232,80 @@ void MBBoxPartition::findRefinementBoundaries()
     }
 }
 
+void MBBoxPartition::findAdjacencies() {
+    
+    m_patchAdjacencies.clear();
+    for (BlockIndex block = 0; block < numBlocks(); block++)
+    {
+        for (PatchID pi : m_patchDomain.getBlock(block).box())
+        {
+            MBPoint patch(pi, block);
+            bool exists = contains(pi, block);
+            MBPatchInfo patchInfo(patch, exists);
+
+            getBoundaryInfo(patchInfo);
+            
+            m_patchAdjacencies[patch] = patchInfo;
+        }
+    }
+    updateRefinementBoundaries();
+}
+
+void MBBoxPartition::getBoundaryInfo(MBPatchInfo& patchInfo)
+{
+    BlockIndex block = patchInfo.patch.block;
+    Point pi = patchInfo.patch.point;
+    Box blockDomainBox = m_patchDomain.getBlock(block).box();
+    auto& graph = m_patchDomain.graph();
+    for (auto dir : Point::Directions())
+    {
+        MBPatchBoundInfo boundInfo;
+        PatchID pjLocal = pi + dir;
+        if (blockDomainBox.containsPoint(pjLocal))
+        {
+            MBPoint adjPatch(pjLocal, block);
+            boundInfo.adjacentPatches.insert(adjPatch);
+            boundInfo.boundaryType = PR_INTERIOR_BOUNDARY;
+        } else {
+            Point boundaryDir = blockDomainBox.whichBoundaryContains(pjLocal);
+            if (graph.isBlockBoundary(block, boundaryDir))
+            {
+                for (BlockIndex adjBlock : graph.adjacentBlocks(block, boundaryDir))
+                {
+                    PatchID pjAdjacent = m_patchDomain.convertPoint(pjLocal, block, adjBlock, PR_CELL);
+                    MBPoint adjPatch(pjAdjacent, adjBlock);
+                    boundInfo.adjacentPatches.insert(adjPatch);
+                }
+                boundInfo.boundaryType = PR_BLOCK_BOUNDARY;
+            } else if (graph.isDomainBoundary(block, boundaryDir))
+            {
+                boundInfo.boundaryType = PR_DOMAIN_BOUNDARY;
+            }
+        }
+        boundInfo.isRefinementBoundary = false; //this information is updated in updateRefinementBoundaries
+        patchInfo.boundaries[dir] = boundInfo;
+    }
+    
+}
+
+void MBBoxPartition::updateRefinementBoundaries()
+{
+    for (auto& [patch, patchInfo] : m_patchAdjacencies)
+    {
+        bool patchExists = contains(patch.point, patch.block);
+        for (auto& [dir, boundInfo] : patchInfo.boundaries)
+        {
+            for (auto adjPatch : boundInfo.adjacentPatches)
+            {
+                bool adjPatchExists = contains(adjPatch.point, adjPatch.block);
+                boundInfo.isRefinementBoundary = (patchExists ^ adjPatchExists);
+
+            }
+        }
+        patchInfo.exists = patchExists;
+    }
+}
+
 BlockIndex MBBoxPartition::block(uint64_t a_index) const
 {
     auto& partitionData = m_partition[a_index];
@@ -316,6 +391,40 @@ uint64_t MBBoxPartition::find(Point a_patch, BlockIndex a_block) const
 bool MBBoxPartition::contains(Point a_patch, BlockIndex a_block) const
 {
     return (find(a_patch, a_block) < numBoxes());
+}
+
+void MBBoxPartition::validatePatch(const MBPoint& patch, std::string methodName) const
+{
+#ifndef NDEBUG
+    PROTO_ASSERT(m_patchDomain.getBlock(patch.block).box().containsPoint(patch.point),
+                 "%s | Error: %s is not a valid patch in block %i",
+                 methodName, patch.point.str(), patch.block);
+#endif
+}
+
+Point MBBoxPartition::connectivity(const MBPoint& src, const MBPoint& dst) const
+{
+    validatePatch(src, "MBBoxPartition::connectivity");
+    validatePatch(dst, "MBBoxPartition::connectivity");
+    for (auto& [dir, boundInfo] : m_patchAdjacencies[src].boundaries)
+    {
+        if (boundInfo.adjacentPatches.count(dst) > 0)
+        {
+            return dir;
+        }
+    }
+    return Point::Zeros();
+}
+
+std::set<MBPoint> MBBoxPartition::adjacentPatches(const MBPoint& patch) const {
+    validatePatch(patch, "MBBoxPartition::adjacentPatches");
+    std::set<MBPoint> adjacent;
+    for (auto& [dir, boundInfo] : m_patchAdjacencies[patch].boundaries)
+    {
+        for (auto adjPatch : boundInfo.adjacentPatches)
+        adjacent.insert(adjPatch);
+    }
+    return adjacent;
 }
 
 bool MBBoxPartition::isBlockBoundary(

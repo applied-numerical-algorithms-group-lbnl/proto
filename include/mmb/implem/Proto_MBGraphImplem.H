@@ -353,6 +353,18 @@ BlockIndex MBGraph::adjacent(
     return m_blocks[a_srcBlock]->arcs[a_dir][0].dstBlock;
 }
 
+std::set<BlockIndex> MBGraph::adjacentBlocks(
+    BlockIndex srcBlock,
+    Point dir) const
+    {
+        std::set<BlockIndex> adjBlocks;
+        for (auto arc : boundaries(srcBlock, dir))
+        {
+            adjBlocks.insert(arc.dstBlock);
+        }
+        return adjBlocks;
+    }
+
 std::vector<MBGraphArc> MBGraph::boundaries(BlockIndex a_block, Point a_dir) const
 {
     auto arcs = m_blocks[a_block]->arcs[a_dir];

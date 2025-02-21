@@ -42,12 +42,48 @@ namespace Proto
                 }
             };
         };
+        
+        enum BoundaryType 
+        {
+            PR_DOMAIN_BOUNDARY,
+            PR_BLOCK_BOUNDARY,
+            PR_INTERIOR_BOUNDARY
+        };
+        
+        struct MBPatchBoundInfo {
+            MBPatchBoundInfo()
+            {
+                adjacentPatches.clear();
+                boundaryType = PR_INTERIOR_BOUNDARY;
+                isRefinementBoundary = false;
+            }
+            std::set<MBPoint> adjacentPatches;
+            BoundaryType boundaryType;
+            bool isRefinementBoundary;
+        };
+        struct MBPatchInfo {
+            MBPatchInfo() : patch(Point::Zeros(), 0) {}
+            MBPatchInfo(const MBPoint& _patch, bool _exists)
+            : patch(_patch), exists(_exists)
+            {
+                boundaries.clear();
+                for (auto dir : Point::Directions())
+                {
+                    boundaries[dir] = MBPatchBoundInfo();
+                }
+            }
+
+            MBPoint patch;
+            bool exists;
+            std::map<Point, MBPatchBoundInfo> boundaries;
+        };
+
+
     }
     class MBBoxPartition
     {
         public:
 
-        //inline MBBoxPartition(){}
         inline MBBoxPartition(
                 const MBProblemDomain& a_domain);
         inline MBBoxPartition(
@@ -73,6 +109,9 @@ namespace Proto
         inline uint64_t find(Point a_patch, BlockIndex a_block) const;
         inline bool contains(Point a_patch, BlockIndex a_block) const;
         
+        inline void validatePatch(const MBPoint& patch, std::string methodName) const;
+        inline Point connectivity(const MBPoint& src, const MBPoint& dst) const;
+        inline std::set<MBPoint> adjacentPatches(const MBPoint& patch) const;
         inline bool isBlockBoundary(
                 uint64_t  a_index,
                 Point           a_dir) const;
@@ -107,6 +146,9 @@ namespace Proto
         inline void buildGlobalMaps();
         inline void findBoundaries();
         inline void findRefinementBoundaries();
+        inline void findAdjacencies();
+        inline void getBoundaryInfo(MBPatchInfo& patchInfo);
+        inline void updateRefinementBoundaries();
 
         MBProblemDomain m_patchDomain;
         mutable std::map<MBPoint, uint64_t> m_indexMap; ///< Maps local to global
@@ -116,6 +158,9 @@ namespace Proto
         mutable std::unordered_map<PatchBound, std::vector<uint64_t>, PatchBound::Hash> m_blockBoundaries;
         mutable std::unordered_set<PatchBound, PatchBound::Hash> m_domainBoundaries;
         mutable std::unordered_set<PatchBound, PatchBound::Hash> m_refinementBoundaries;
+
+        mutable std::unordered_map<MBPoint, MBPatchInfo, MBPoint::Hash> m_patchAdjacencies;
+
     };
 #include "implem/Proto_MBBoxPartitionImplem.H"
 } // end namespace Proto

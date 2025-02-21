@@ -457,6 +457,17 @@ std::vector<MBIndex> MBDisjointBoxLayout::bounds(
     PR_TIME("MBDisjointBoxLayout::bounds");
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::bounds | Error: Layout is not defined");
     std::vector<MBIndex> ret;
+    auto adjacent = m_partition->adjacentPatches(MBPoint(point(a_index), block(a_index)));
+    for (auto& adj : adjacent)
+    {
+        auto index = find(adj.point, adj.block);
+        if (index != end())
+        {
+            ret.push_back(index);
+        }
+    }
+    return ret;
+    #if 0
     auto b0 = block(a_index);
     for (BlockIndex bi = 0; bi < numBlocks(); bi++)
     {
@@ -473,6 +484,7 @@ std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         }
     }
     return ret;
+    #endif
 }
 
 Point MBDisjointBoxLayout::connectivity(
@@ -482,6 +494,10 @@ Point MBDisjointBoxLayout::connectivity(
     PR_TIME("MBDisjointBoxLayout::connectivity(index, index)");
 
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::connectivity | Error: Layout is not defined");
+    MBPoint p1(point(a_i1), block(a_i1));
+    MBPoint p2(point(a_i2), block(a_i2));
+    return m_partition->connectivity(p1, p2);
+    #if 0
     BlockIndex b1 = block(a_i1);
     BlockIndex b2 = block(a_i2);
     Point p1 = point(a_i1);
@@ -535,6 +551,7 @@ Point MBDisjointBoxLayout::connectivity(
         if (n2 == p2) {return dir; }
     }
     return Point::Zeros();
+    #endif
 }
 
 

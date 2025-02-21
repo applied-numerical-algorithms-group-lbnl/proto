@@ -24,6 +24,32 @@ namespace Proto
                 return (block < a_rhs.block);
             }
         }
+        inline bool operator==(const MBPoint a_rhs) const{
+            return point == a_rhs.point && block == a_rhs.block;
+        }
+
+        struct Hash
+        {
+            std::size_t operator()(const MBPoint &key) const
+            {
+                std::size_t seed = 0;
+
+                // Hash combine function
+                auto hash_combine = [](std::size_t& seed, std::size_t value) {
+                    seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                };
+        
+                // Hash the vector elements
+                for (int dd = 0; dd < DIM; dd++) {
+                    hash_combine(seed, std::hash<int>{}(key.point[dd]));
+                }
+        
+                // Hash the unsigned int
+                hash_combine(seed, std::hash<int>{}(key.block));
+        
+                return seed;
+            }
+        };
         
     };
     /// Mapped Multi-Block Problem Domain
