@@ -135,6 +135,8 @@ int main(int argc, char *argv[])
           if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
           if (ParseInputs::get_CME_type() == 1){
             if (procID() == 0) cout << "Inserting CME" << endl;
+            MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
+            
             for (auto dit : layout)
             {
               dx = eulerOp[dit].dx();
@@ -144,6 +146,42 @@ int main(int argc, char *argv[])
               eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
               auto block = layout.block(dit);
               auto &JU_i = JU[dit];
+
+              double dxiPerp = dx[2];
+              BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
+              auto& Wout_i = Wout[dit];
+              USemiSph.setToZero();
+              Box blockBox = layout.getBlock(block).domain().box();
+              auto& dVolr_i = dVolrLev[dit];
+              Box bx_i = layout[dit];
+              CubedSphereShell::
+              consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
+                                  blockBox,dxiPerp,block,4);
+              forallInPlace([ ] PROTO_LAMBDA
+                (Var<double,NUMCOMPS+2,HOST>& a_Wout,
+                  const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
+                  double a_gamma,
+                  const Var<double,1,HOST>& a_radius)
+                {
+                  a_Wout(0) = a_USemiSph(0);
+                  a_Wout(1) = a_USemiSph(1) / a_Wout(0);
+                  a_Wout(2) = a_USemiSph(2) / a_Wout(0);
+                  a_Wout(3) = a_USemiSph(3) / a_Wout(0);
+                  a_Wout(5) = a_USemiSph(5);
+                  a_Wout(6) = a_USemiSph(6);
+                  a_Wout(7) = a_USemiSph(7);
+                  a_Wout(8) = a_USemiSph(8) / a_Wout(0);
+                  a_Wout(9) = a_USemiSph(9);
+                  double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
+                                      + a_Wout(2)*a_Wout(2)
+                                      + a_Wout(3)*a_Wout(3) + a_Wout(8)*a_Wout(8))*.5;
+                  double me = (a_Wout(5)*a_Wout(5)
+                          + a_Wout(6)*a_Wout(6)
+                          + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
+                  a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
+                }, Wout[dit], USemiSph, gamma, radius);
+
+
               BoxData<double, NUMCOMPS, HOST> JU_CME;
               BoxData<double, NUMCOMPS, HOST> W_CME(JU_i.box());
               W_CME.setVal(0.);
@@ -154,7 +192,7 @@ int main(int argc, char *argv[])
 
               // Calculate A_matrix
               Box bx = W_CME.box();
-              double dxiPerp = dx[2];
+              
               Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
               Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
               Point high = bx.high();
@@ -199,19 +237,24 @@ int main(int argc, char *argv[])
               forallInPlace([ ] PROTO_LAMBDA
                           (Var<double, NUMCOMPS, HOST> &a_JU,
                           Var<double, NUMCOMPS, HOST> &a_JU_CME,
-                          Var<double, NUMCOMPS, HOST> &a_W_CME)
+                          Var<double, NUMCOMPS, HOST> &a_W_CME,
+                          Var<double, NUMCOMPS+2, HOST> &a_Wout,
+                          double a_gamma)
               { 
                 if (a_W_CME(iRHO) != 0){
+                  double p = a_Wout(iP);
+                  double J = a_JU(iRHO)/a_Wout(iRHO);
                   a_JU(iRHO) += a_JU_CME(iRHO); 
                   a_JU(iMOMX) = a_JU(iRHO)*a_JU_CME(iMOMX)/a_JU_CME(iRHO);
                   a_JU(iMOMY) = a_JU(iRHO)*a_JU_CME(iMOMY)/a_JU_CME(iRHO);
                   a_JU(iMOMZ) = a_JU(iRHO)*a_JU_CME(iMOMZ)/a_JU_CME(iRHO);
-                  a_JU(iE) += a_JU_CME(iE);
                   a_JU(iBX) = a_JU_CME(iBX);
                   a_JU(iBY) = a_JU_CME(iBY);
                   a_JU(iBZ) = a_JU_CME(iBZ);
+                  // e = p_from_JU/(gamma-1) + rho*(v^2)/2 + B^2/8pi
+                  a_JU(iE) = J*p/(a_gamma-1) + 0.5*(a_JU(iMOMX)*a_JU(iMOMX) + a_JU(iMOMY)*a_JU(iMOMY) + a_JU(iMOMZ)*a_JU(iMOMZ))/a_JU(iRHO) + (a_JU(iBX)*a_JU(iBX) + a_JU(iBY)*a_JU(iBY) + a_JU(iBZ)*a_JU(iBZ))/J/8/c_PI;
                 }
-              },JU_i, JU_CME, W_CME);
+              },JU_i, JU_CME, W_CME, Wout[dit],gamma);
             }
           }
         }
