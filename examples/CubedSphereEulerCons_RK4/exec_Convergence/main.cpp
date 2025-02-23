@@ -124,6 +124,7 @@ int main(int argc, char *argv[])
             eulerOp[dit].initialize(WPoint_i, dstData[dit], radius, XCart, gamma, thickness, dx[2], block);
             eulerOp[dit].dtInv(dtinv,WPoint_i);
             eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
+            if (procID()==5) h5.writePatch(1,WPoint_i,"W_CME0");
             JU_i.setVal(0.);
             JUTemp.copyTo(JU_i, layout[dit]);
           }
@@ -135,61 +136,39 @@ int main(int argc, char *argv[])
           if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
           if (ParseInputs::get_CME_type() == 1){
             if (procID() == 0) cout << "Inserting CME" << endl;
-            MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
-            
+
+
+
+            MBLevelBoxData<double, NUMCOMPS, HOST> USph_CME(layout, OP::ghost());
+            JU.copyTo(USph_CME);
+            CubedSphereShell::consToSphInterpEuler(USph_CME,iop,dVolrLev, 4); // Transform JU -> USph.
+            int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+            int thetaCoord = (rCoord + 1) % DIM;
+            int phiCoord = (rCoord + 2) % DIM;
+            MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+            if (init_condition_type == 3) BC_global.BoxData_to_BC<double,HOST>(dstData, map, time);
             for (auto dit : layout)
             {
+              auto block = layout.block(dit);
+              Box blockBox = layout.getBlock(block).domain().box();
+              eulerOp[dit].PreStagePatch(USph_CME[dit],dstData[dit],dVolrLev[dit],blockBox,time,dt,0);
               dx = eulerOp[dit].dx();
+              double dxiPerp = dx[2];
               BoxData<double> radius(dVolrLev[dit].box());
               BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
               BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
               eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
-              auto block = layout.block(dit);
-              auto &JU_i = JU[dit];
-
-              double dxiPerp = dx[2];
-              BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
-              auto& Wout_i = Wout[dit];
-              USemiSph.setToZero();
-              Box blockBox = layout.getBlock(block).domain().box();
-              auto& dVolr_i = dVolrLev[dit];
-              Box bx_i = layout[dit];
-              CubedSphereShell::
-              consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
-                                  blockBox,dxiPerp,block,4);
-              forallInPlace([ ] PROTO_LAMBDA
-                (Var<double,NUMCOMPS+2,HOST>& a_Wout,
-                  const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
-                  double a_gamma,
-                  const Var<double,1,HOST>& a_radius)
-                {
-                  a_Wout(0) = a_USemiSph(0);
-                  a_Wout(1) = a_USemiSph(1) / a_Wout(0);
-                  a_Wout(2) = a_USemiSph(2) / a_Wout(0);
-                  a_Wout(3) = a_USemiSph(3) / a_Wout(0);
-                  a_Wout(5) = a_USemiSph(5);
-                  a_Wout(6) = a_USemiSph(6);
-                  a_Wout(7) = a_USemiSph(7);
-                  a_Wout(8) = a_USemiSph(8) / a_Wout(0);
-                  a_Wout(9) = a_USemiSph(9);
-                  double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
-                                      + a_Wout(2)*a_Wout(2)
-                                      + a_Wout(3)*a_Wout(3) + a_Wout(8)*a_Wout(8))*.5;
-                  double me = (a_Wout(5)*a_Wout(5)
-                          + a_Wout(6)*a_Wout(6)
-                          + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
-                  a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
-                }, Wout[dit], USemiSph, gamma, radius);
-
-
-              BoxData<double, NUMCOMPS, HOST> JU_CME;
-              BoxData<double, NUMCOMPS, HOST> W_CME(JU_i.box());
+              
+              BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
+              BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
+              eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
+              BoxData<double, NUMCOMPS, HOST> W_CME(USph_CME[dit].box());
               W_CME.setVal(0.);
               double half = 0.5;
               BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
                 (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
               define_CME_calc(W_CME, XCart); // Set CME values in cartesian coordinates
-
+              if (procID()==5) h5.writePatch(1,W_CME,"W_CME1");
               // Calculate A_matrix
               Box bx = W_CME.box();
               
@@ -231,30 +210,51 @@ int main(int argc, char *argv[])
                 a_a_W(iBY) = a_B_sph(1);
                 a_a_W(iBZ) = a_B_sph(2);
               },W_CME, V_CME_sph, B_CME_sph);
-
-              eulerOp[dit].primToCons(JU_CME, W_CME, dVolrLev[dit], gamma, dx[2], block);
-
+              if (procID()==5) h5.writePatch(1,W_CME,"W_CME2");
+              if (procID()==5) h5.writePatch(1,W,"W_CME3");
               forallInPlace([ ] PROTO_LAMBDA
-                          (Var<double, NUMCOMPS, HOST> &a_JU,
-                          Var<double, NUMCOMPS, HOST> &a_JU_CME,
+                          (Var<double, NUMCOMPS, HOST> &a_W,
                           Var<double, NUMCOMPS, HOST> &a_W_CME,
-                          Var<double, NUMCOMPS+2, HOST> &a_Wout,
                           double a_gamma)
               { 
                 if (a_W_CME(iRHO) != 0){
-                  double p = a_Wout(iP);
-                  double J = a_JU(iRHO)/a_Wout(iRHO);
-                  a_JU(iRHO) += a_JU_CME(iRHO); 
-                  a_JU(iMOMX) = a_JU(iRHO)*a_JU_CME(iMOMX)/a_JU_CME(iRHO);
-                  a_JU(iMOMY) = a_JU(iRHO)*a_JU_CME(iMOMY)/a_JU_CME(iRHO);
-                  a_JU(iMOMZ) = a_JU(iRHO)*a_JU_CME(iMOMZ)/a_JU_CME(iRHO);
-                  a_JU(iBX) = a_JU_CME(iBX);
-                  a_JU(iBY) = a_JU_CME(iBY);
-                  a_JU(iBZ) = a_JU_CME(iBZ);
-                  // e = p_from_JU/(gamma-1) + rho*(v^2)/2 + B^2/8pi
-                  a_JU(iE) = J*p/(a_gamma-1) + 0.5*(a_JU(iMOMX)*a_JU(iMOMX) + a_JU(iMOMY)*a_JU(iMOMY) + a_JU(iMOMZ)*a_JU(iMOMZ))/a_JU(iRHO) + (a_JU(iBX)*a_JU(iBX) + a_JU(iBY)*a_JU(iBY) + a_JU(iBZ)*a_JU(iBZ))/J/8/c_PI;
+                  a_W(iRHO) += a_W_CME(iRHO); 
+                  a_W(iVX) = a_W_CME(iVX);
+                  a_W(iVY) = a_W_CME(iVY);
+                  a_W(iVZ) = a_W_CME(iVZ);
+                  a_W(iBX) = a_W_CME(iBX);
+                  a_W(iBY) = a_W_CME(iBY);
+                  a_W(iBZ) = a_W_CME(iBZ);
+                  // a_W(iP) = 0;
                 }
-              },JU_i, JU_CME, W_CME, Wout[dit],gamma);
+              },W, W_CME,gamma);
+              MPI_Barrier(MPI_COMM_WORLD);
+              if (procID()==5) h5.writePatch(1,W,"W_CME4");
+
+              BoxData<double, NUMCOMPS, HOST> JUTemp;
+              eulerOp[dit].primToCons(JUTemp, W, dVolrLev[dit], gamma, dx[2], block);
+              if (procID()==5) h5.writePatch(1,JUTemp,"JUTemp");
+              JUTemp.copyTo(JU[dit]);
+
+            }
+            JU.copyTo(USph_CME);
+            CubedSphereShell::consToSphInterpEuler(USph_CME,iop,dVolrLev, 4); // Transform JU -> USph.
+            for (auto dit : layout)
+            {
+              auto block = layout.block(dit);
+              Box blockBox = layout.getBlock(block).domain().box();
+              eulerOp[dit].PreStagePatch(USph_CME[dit],dstData[dit],dVolrLev[dit],blockBox,time,dt,0);
+              dx = eulerOp[dit].dx();
+              double dxiPerp = dx[2];
+              BoxData<double> radius(dVolrLev[dit].box());
+              BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+              BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+              eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
+              
+              BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
+              BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
+              eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
+              if (procID()==5) h5.writePatch(1,W,"W_CME5");
             }
           }
         }
