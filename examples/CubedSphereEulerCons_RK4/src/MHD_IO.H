@@ -42,7 +42,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
-    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Ones(2)));
     auto& Wout_i = Wout[dit];
     USemiSph.setToZero();
     unsigned int block = layout.block(dit);
