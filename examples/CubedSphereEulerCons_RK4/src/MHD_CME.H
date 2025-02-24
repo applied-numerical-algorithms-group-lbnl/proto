@@ -312,15 +312,15 @@ void define_CMEF(const Point& a_pt,
         V_z_dom=rot_z_inv[6]*x_temp2+rot_z_inv[7]*y_temp2+rot_z_inv[8]*z_temp2;
         
         //If a simple radial velocity is needed
-        //V_x_dom=VCME*x_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
-        //V_y_dom=VCME*y_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
-        //V_z_dom=VCME*z_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
+        // V_x_dom=ParseInputs::get_CME_apex_speed()*x_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
+        // V_y_dom=ParseInputs::get_CME_apex_speed()*y_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
+        // V_z_dom=ParseInputs::get_CME_apex_speed()*z_cm_dom/sqrt(x_cm_dom*x_cm_dom + y_cm_dom*y_cm_dom + z_cm_dom*z_cm_dom);
 
         a_CME(0) = ParseInputs::get_CME_density();
         a_CME(1) = V_x_dom*1.0e5;
         a_CME(2) = V_y_dom*1.0e5;
         a_CME(3) = V_z_dom*1.0e5;
-        a_CME(4) = 0.0;//ParseInputs::get_CME_energy_control()*e0TD;
+        a_CME(4) = ParseInputs::get_CME_energy_control()*e0TD;
         a_CME(5) = B_x_dom;
         a_CME(6) = B_y_dom;
         a_CME(7) = B_z_dom;        

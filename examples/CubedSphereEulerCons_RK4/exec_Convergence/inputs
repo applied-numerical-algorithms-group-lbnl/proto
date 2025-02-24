@@ -7,6 +7,7 @@
 -boxSize_rad                     100
 -max_iter                        100
 -CFL                             0.5
+-limiter                         1
 -strength                        100.
 -write_cadence                   10
 -checkpoint_cadence              10

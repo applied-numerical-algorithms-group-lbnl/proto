@@ -94,8 +94,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
                       dxiPerp,offseta,offsetb);
       spreadSlice(A_matrix);
       if (dir == 0) A_matrix.copyTo(A_matrix0);
- 
-      int limiter = 1;
+      
+      int limiter = ParseInputs::get_limiter();
+      if (limiter != 1 && limiter != 2)
+      {
+        limiter = 1;
+      }
 
       if (limiter == 1){
         PR_TIMERS("BoxOp_Euler::operator()::limiters");

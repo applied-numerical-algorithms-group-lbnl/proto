@@ -27,6 +27,7 @@ private:
     int boxSize_rad; // Size of the box for domain decomposition
     int max_iter; 
     double CFL;
+    int limiter; // 1:4th order, 2: Minmod
     double strength; // Strength of perturbation for test problems.
     int write_cadence; 
     int checkpoint_cadence;
@@ -93,6 +94,7 @@ public:
     static int get_boxSize_rad() {return getInstance().boxSize_rad;}
     static int get_max_iter() {return getInstance().max_iter;}
     static double get_CFL() {return getInstance().CFL;}
+    static int get_limiter() {return getInstance().limiter;}
     static double get_strength() {return getInstance().strength;}
     static int get_write_cadence() {return getInstance().write_cadence;}
     static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
@@ -146,6 +148,7 @@ public:
         args.add("boxSize_rad", boxSize_rad);
         args.add("max_iter", max_iter);
         args.add("CFL", CFL);
+        args.add("limiter", limiter);
         args.add("strength", strength);
         args.add("write_cadence", write_cadence);
         args.add("checkpoint_cadence", checkpoint_cadence);
@@ -201,6 +204,7 @@ public:
             cout << "boxSize_rad: " << boxSize_rad << endl;
             cout << "max_iter: " << max_iter << endl;
             cout << "CFL: " << CFL << endl;
+            cout << "limiter: " << limiter << endl;
             cout << "strength: " << strength << endl;
             cout << "write_cadence: " << write_cadence << endl;
             cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
