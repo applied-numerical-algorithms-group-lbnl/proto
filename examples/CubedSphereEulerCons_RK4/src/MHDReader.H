@@ -15,6 +15,8 @@ public:
 	std::vector<double> theta;
 	std::vector<double> phi;
 	Box Box_BC;
+        Array<double,NUMCOMPS> m_scalevars =
+                  {RHO00,VEL00*RHO00,VEL00*RHO00,VEL00*RHO00,P00,B00,B00,B00};
 
 	inline void file_to_BoxData_vec(std::string a_filename)
 	{
@@ -38,7 +40,7 @@ public:
 		CoordPermutation R{{t, p}, {p, t}};
 		BC_data_extended.clear();
 		BC_data_extended.resize(BC_data.size());
-
+                
 		for (int i = 0; i < BC_data.size(); i++)
 		{
 			BC_data[i].rotate(BT, R);
@@ -50,6 +52,11 @@ public:
 			low[phiCoord] = -1;
 			Box bx2(low, high);
 			BC_data_extended[i].define(bx2);
+                        for (int comp = 0; comp < 8; comp++)
+                          {
+                            BC_data_extended[i].setVal
+                              (m_scalevars[comp],BC_data_extended[i].box(),comp);
+                          }
 			BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
 			BC_data[i].copyTo(BC_data_extended[i]);
 		}
@@ -81,7 +88,8 @@ public:
 		{
 
 			BoxData<double, 8, HOST> data_a(bx2);
-
+                        for (int comp = 0; comp < 8; comp++)
+                          data_a.setVal(m_scalevars[comp],bx2,comp);
 			// Rotate the data
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
@@ -114,7 +122,11 @@ public:
 
 			BoxData<double, 8, HOST> data_a(bx2);
 			BoxData<double, 8, HOST> data_b(bx2);
-
+                        for (int comp = 0;comp < 8;comp++)
+                          {
+                            data_a.setVal(m_scalevars[comp],bx2,comp);
+                            data_b.setVal(m_scalevars[comp],bx2,comp);
+                          }                          
 			// Rotate the data
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.

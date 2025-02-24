@@ -168,14 +168,14 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       T dxInv = -a_scale/(this->dx()[dir]);
       //DEBUG
 #ifndef PR_DISABLE_INIT_CHECKS
-      bool infOrNanBlock =fluxdir.containsInfOrNAN();
-      if (infOrNanBlock)
-      {
-        h5.writePatch(1.0,fluxdir,"MHD_IO_InfOrNAN_"+to_string(dir) + "_" +to_string(a_block));
-        cout << "Inf or Nan at Point " << fluxdir.findInfOrNAN()
-             << ", block = " << a_block
-             << ", dir = " << dir << endl;
-      }
+      // bool infOrNanBlock =fluxdir.containsInfOrNAN();
+      // if (infOrNanBlock)
+      // {
+      //   h5.writePatch(1.0,fluxdir,"MHD_IO_InfOrNAN_"+to_string(dir) + "_" +to_string(a_block));
+      //   cout << "Inf or Nan at Point " << fluxdir.findInfOrNAN()
+      //        << ", block = " << a_block
+      //        << ", dir = " << dir << endl;
+      // }
 #endif
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;

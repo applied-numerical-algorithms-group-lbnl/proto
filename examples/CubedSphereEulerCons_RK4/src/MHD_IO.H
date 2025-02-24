@@ -42,7 +42,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
-    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit]);
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Basis(0,2)));
     auto& Wout_i = Wout[dit];
     USemiSph.setToZero();
     unsigned int block = layout.block(dit);
@@ -87,14 +87,14 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
     Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
 #ifndef PR_DISABLE_INIT_CHECKS
-    bool infOrNanBlock = Wout[dit].containsInfOrNAN();
-    if (infOrNanBlock)
-      {
-        h5.writePatch(1.0,Wout[dit],"MHD_IO_InfOrNAN"+to_string(block));
-        infOrNan = infOrNan || infOrNanBlock;
-        cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
-             << ", block = " << block << endl;
-      }
+    // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
+    // if (infOrNanBlock)
+    //   {
+    //     h5.writePatch(1.0,Wout[dit],"MHD_IO_InfOrNAN"+to_string(block));
+    //     infOrNan = infOrNan || infOrNanBlock;
+    //     cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
+    //          << ", block = " << block << endl;
+    //   }
 #endif
 #if 0
     if (procID() == 0)

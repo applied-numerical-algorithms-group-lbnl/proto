@@ -27,7 +27,10 @@
 	#define iLAMBDA 8
 #endif
 #endif
-
+#define VEL00 1.E5
+#define RHO00 67262192E-24
+#define P00 1.E12
+#define B00 1.E6
 #if DIM == 3
 #define iRHO 0
 #define iVX 1
