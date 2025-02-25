@@ -329,58 +329,147 @@ void define_CMEF(const Point& a_pt,
 }
 PROTO_KERNEL_END(define_CMEF, define_CME)
 
-
-
-template <typename T, MemType MEM>
-PROTO_KERNEL_START
-void superimpose_CMEF(const Point& a_pt,
-                      Var<T, NUMCOMPS, MEM> &a_U,
-                      Var<T, NUMCOMPS, MEM> &a_CME)
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
+    MBLevelBoxData<T, 1, MEM> &a_dVolrLev,
+    MBInterpOp &a_iop,
+    MBDisjointBoxLayout &a_layout,
+    double a_time,
+    double a_dt,
+    double a_gamma)
 {
-    if (abs(a_CME(1)) != 0){
-        a_U(0) = a_U(0) + a_CME(0);			
-        a_U(1) = a_U(0)*a_CME(1);			
-        a_U(2) = a_U(0)*a_CME(2);			
-        a_U(3) = a_U(0)*a_CME(3);	
-        a_U(4) = a_U(4) + a_CME(4);	
-        a_U(5) = a_CME(5);			
-        a_U(6) = a_CME(6);			
-        a_U(7) = a_CME(7);		
-    }
+    if (ParseInputs::get_CME_type() == 1){
+        if (procID() == 0) cout << "Inserting CME" << endl;
+        HDF5Handler h5;
+        auto map = CubedSphereShell::Map(a_JU.layout(), ghost());
+        auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+        MBLevelBoxData<double, NUMCOMPS, HOST> USph_CME(a_layout, ghost());
+        MBLevelBoxData<double, NUMCOMPS, HOST> Wout(a_layout, Point::Zeros());
+        a_JU.exchange();
+        a_JU.copyTo(USph_CME);
+        CubedSphereShell::consToSphInterpEuler(USph_CME,a_iop,a_dVolrLev, 4); // Transform a_JU -> USph.
+        int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        int thetaCoord = (rCoord + 1) % DIM;
+        int phiCoord = (rCoord + 2) % DIM;
+        MBLevelBoxData<double, 8, HOST> dstData(a_layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+        if (ParseInputs::get_init_condition_type() == 3) BC_global.BoxData_to_BC<double,HOST>(dstData, map, a_time);
+        for (auto dit : a_layout)
+        {
+            auto block = a_layout.block(dit);
+            Box blockBox = a_layout.getBlock(block).domain().box();
+            eulerOp[dit].PreStagePatch(USph_CME[dit],dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,0);
+            Array<double, DIM> dx = eulerOp[dit].dx();
+            double dxiPerp = dx[2];
+            BoxData<double> radius(a_dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> Dr(a_dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> adjDr(a_dVolrLev[dit].box());
+            eulerOp[dit].radialMetrics(radius, Dr, adjDr, a_dVolrLev[dit], Dr.box());
+            
+            BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
+            BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
+            eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
+            BoxData<double, NUMCOMPS, HOST> W_CME(USph_CME[dit].box());
+            W_CME.setVal(0.);
+            double half = 0.5;
+            BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+                (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);  
+            forallInPlace_p(define_CME,W_CME,XCart); // Set CME values in cartesian coordinates
+            // Calculate A_matrix
+            Box bx = W_CME.box();
+            
+            Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+            Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+            Point high = bx.high();
+            Point low = bx.low();
+            high[0] = low[0];
+            Box bx0(low,high);
+            BoxData<double ,DIM,HOST,DIM> A_matrix(bx);
+            double offseta = half;
+            double offsetb = half;
+            forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[block],sign[block],
+                            dxiPerp,offseta,offsetb);
+            spreadSlice(A_matrix);
+
+            BoxData<double,DIM,HOST,DIM> A_matrix_inv(bx);
+            A_matrix_inv.setToZero();
+            forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
+
+            BoxData<double,DIM,HOST> V_CME_sph(bx);
+            BoxData<double,DIM,HOST> B_CME_sph(bx);
+
+            BoxData<double,DIM,HOST> V_CME_cart = slice<double,NUMCOMPS,DIM,HOST>(W_CME,iVX);
+            BoxData<double,DIM,HOST> B_CME_cart = slice<double,NUMCOMPS,DIM,HOST>(W_CME,iBX);
+            double one = 1.0;  
+            forallInPlace(f_matVecProd,V_CME_sph,A_matrix_inv,V_CME_cart,one);
+            forallInPlace(f_matVecProd,B_CME_sph,A_matrix_inv,B_CME_cart,one);
+
+            forallInPlace([ ] PROTO_LAMBDA
+                        (Var<double, NUMCOMPS, HOST> &a_a_W,
+                        Var<double, DIM, HOST> &a_V_sph,
+                        Var<double, DIM, HOST> &a_B_sph)
+            {  
+                a_a_W(iVX) = a_V_sph(0);
+                a_a_W(iVY) = a_V_sph(1);
+                a_a_W(iVZ) = a_V_sph(2);
+                a_a_W(iBX) = a_B_sph(0);
+                a_a_W(iBY) = a_B_sph(1);
+                a_a_W(iBZ) = a_B_sph(2);
+            },W_CME, V_CME_sph, B_CME_sph);
+            W.copyTo(Wout[dit]);
+            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME1");
+            W_CME.copyTo(Wout[dit]);
+            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME2");
+            forallInPlace([ ] PROTO_LAMBDA
+                        (Var<double, NUMCOMPS, HOST> &a_W,
+                        Var<double, NUMCOMPS, HOST> &a_W_CME,
+                        double a_gamma)
+            { 
+                if (a_W_CME(iRHO) != 0){
+                a_W(iRHO) += a_W_CME(iRHO); 
+                a_W(iVX) = a_W_CME(iVX);
+                a_W(iVY) = a_W_CME(iVY);
+                a_W(iVZ) = a_W_CME(iVZ);
+                a_W(iBX) = a_W_CME(iBX);
+                a_W(iBY) = a_W_CME(iBY);
+                a_W(iBZ) = a_W_CME(iBZ);
+                // a_W(iP) = 0;
+                }
+            },W, W_CME,a_gamma);
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            W.copyTo(Wout[dit]);
+            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME3");
+
+            BoxData<double, NUMCOMPS, HOST> JUTemp;
+            eulerOp[dit].primToCons(JUTemp, W, a_dVolrLev[dit], a_gamma, dx[2], block);
+            if (procID()==5) h5.writePatch(1,JUTemp,"JUTemp");
+            JUTemp.copyTo(a_JU[dit]);
+
+        }
+        a_JU.copyTo(USph_CME);
+        CubedSphereShell::consToSphInterpEuler(USph_CME,a_iop,a_dVolrLev, 4); // Transform a_JU -> USph.
+        for (auto dit : a_layout)
+        {
+            auto block = a_layout.block(dit);
+            Box blockBox = a_layout.getBlock(block).domain().box();
+            eulerOp[dit].PreStagePatch(USph_CME[dit],dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,0);
+            Array<double, DIM> dx = eulerOp[dit].dx();
+            double dxiPerp = dx[2];
+            BoxData<double> radius(a_dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> Dr(a_dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> adjDr(a_dVolrLev[dit].box());
+            eulerOp[dit].radialMetrics(radius, Dr, adjDr, a_dVolrLev[dit], Dr.box());
+            
+            BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
+            BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
+            eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
+            W.copyTo(Wout[dit]);
+            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME4");
+        }
+      }
 }
-PROTO_KERNEL_END(superimpose_CMEF, superimpose_CME)
-
-
-void define_CME_calc(State& a_CME,
-                     const Vector& a_x)
-{
-    forallInPlace_p(define_CME,a_CME,a_x);
-}
-
-// void Insert_CME(MHDLevelDataState& a_state,
-//             const int a_k,
-//             const double a_time,
-//             const double a_dt)
-// {
-//     double physical_time = getPhysTime(a_time);
-
-//     double a_dx = a_state.m_dx;
-//     double a_dy = a_state.m_dy;
-//     double a_dz = a_state.m_dz;
-//     double a_gamma = a_state.m_gamma;
-
-//     if (!a_state.m_CME_inserted && (physical_time >= ParseInputs::get_CME_Enter_Time())) {
-//         if (procID() == 0) cout << "Inserting CME" << endl;
-//         for (auto dit : a_state.m_CME){	
-//             a_state.m_CME[dit].setVal(0.0);	  
-//             Box dbx1 = a_state.m_CME[dit].box();
-//             BoxData<double,DIM> x(dbx1);		
-//             MHD_Mapping::get_sph_coords_cc(x, dbx1, a_dx, a_dy, a_dz);
-//             forallInPlace_p(define_CME,a_state.m_CME[dit],x);
-//             forallInPlace_p(superimpose_CME,a_state.m_U[dit],a_state.m_CME[dit]);
-//         }
-//         a_state.m_CME_inserted = true;
-//         MHD_Output_Writer::Write_data(a_state, a_k-1, physical_time, a_dt, true);
-//     }
-// }
-

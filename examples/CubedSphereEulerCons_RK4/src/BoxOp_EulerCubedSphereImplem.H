@@ -29,19 +29,22 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   Box bx = a_USph.box();
   State W;
   State WBar;
-  //cout << "inputbox = " << bx << endl;
+  // cout << "inputbox = " << bx << endl;
   
   sphToPrim(W,WBar,a_USph,a_block);
+  // State Wtemp(bx.grow(-NGHOST));
+  // W.copyTo(Wtemp);
+  // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
   T dxiPerp = this->dx()[1];
 #if 0
-  if (procID() == 0)
+  if (procID() == 5)
     {
       HDF5Handler h5;
       //Box bx0 = a_Rhs.box();
       //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-      h5.writePatch(dxiPerp,a_USp,"USph_"+to_string(procID()));
+      h5.writePatch(dxiPerp,a_USph,"USph_"+to_string(procID()));
       h5.writePatch(dxiPerp,W,"W_"+to_string(procID()));
       h5.writePatch(dxiPerp,WBar,"WBar_"+to_string(procID()));
     }

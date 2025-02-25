@@ -443,7 +443,18 @@ public:
                   const int a_d) const;                   
 
   // End Limiter.
-  
+
+// Begin CME
+  static inline void
+  Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
+    MBLevelBoxData<T, 1, MEM> &a_dVolrLev,
+    MBInterpOp &a_iop,
+    MBDisjointBoxLayout &a_layout,
+    double a_time,
+    double a_dt,
+    double a_gamma);
+// End CME
+
   /// Local boundary conditions here. 
   inline void
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,
