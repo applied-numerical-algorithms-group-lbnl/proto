@@ -16,6 +16,8 @@
 #include "base/Proto_Centering.H"
 #include "base/Proto_Memory.H"
 #include "base/Proto_Stack.H"
+#include "ops/Proto_Matrix.H"
+#include "ops/Proto_Lapack.H"
 
 #ifdef PR_OPS
 #include "ProtoOps.H"

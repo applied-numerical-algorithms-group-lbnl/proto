@@ -673,6 +673,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                                   T a_gamma)
                 {
                   a_w(iP) = (a_w(iP) - a_ke(0) - a_me(0))*(a_gamma - 1.0);
+                  if (a_w(iP) < 0) a_w(iP) = 0.0;
                 },a_W,kePoint,mePoint,m_gamma);
   forallInPlace([ ] PROTO_LAMBDA
                 (Var<T,NUMCOMPS>& a_w,
@@ -681,9 +682,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                  T a_gamma)
                 {
                   a_w(iP) = (a_w(iP) - a_ke(0) - a_me(0))*(a_gamma - 1.0);
+                  if (a_w(iP) < 0) a_w(iP) = 0.0;
                 },a_WBar,keBar,meBar,m_gamma);
   T coef = 1.0/24.0;
   a_W += Stencil<T>::Laplacian()(a_WBar,coef);
+  
 }
 
 template<
@@ -710,5 +713,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim_2O(
                                   T a_gamma)
                 {
                   a_w(iP) = (a_w(iP) - a_ke(0) - a_me(0))*(a_gamma - 1.0);
+                  if (a_w(iP) < 0) a_w(iP) = 0.0;
                 },a_W,kePoint,mePoint,m_gamma);
 }
