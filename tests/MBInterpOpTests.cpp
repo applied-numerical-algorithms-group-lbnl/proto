@@ -128,7 +128,7 @@ TEST(MBInterpOp, ShearTest)
             auto& err_i = hostErr[iter];
             for (auto dir : Box::Kernel(1))
             {
-                if (layout.isBlockBoundary(iter, dir))
+                if (layout.isBlockBoundary(layout.patch(iter), dir))
                 {
                     Box boundBox = layout[iter].adjacent(dir*ghostSize);
                     BoxData<double, 1, HOST> error(boundBox);
@@ -242,7 +242,7 @@ TEST(MBInterpOp, XPointTest)
                 auto &err_i = hostErr[iter];
                 for (auto dir : Box::Kernel(1))
                 {
-                    if (layout.isBlockBoundary(iter, dir))
+                    if (layout.isBlockBoundary(layout.patch(iter), dir))
                     {
                         Box boundBox = layout[iter].adjacent(dir * ghostSize);
                         BoxData<double, 1, HOST> error(boundBox);

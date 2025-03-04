@@ -54,8 +54,8 @@ void MBPointInterpOp::computeSourcePoints(
     auto center = m_dst.point();
     Box patchBox = layout[index];
     patchBox = patchBox.grow(ghostSizes);
-    auto block = layout.block(index);
-    Box domainBox = layout.domain().getBlock(block).box();
+    auto patch = layout.patch(index);
+    Box domainBox = layout.domain().getBlock(patch.block).box();
     m_srcs.clear();
 
     for (auto fi : footprint)
@@ -68,7 +68,7 @@ void MBPointInterpOp::computeSourcePoints(
         } else if (!domainBox.containsPoint(pi))
         {
             Point dir = layout[index].whichBoundaryContains(pi);
-            auto adjIndices = layout.findAdjacentIndices(index, dir);
+            auto adjIndices = layout.adjacentIndices(patch, dir);
             for (auto adjIndex : adjIndices)
             {
                 BlockIndex adjBlock = layout.block(adjIndex);

@@ -188,9 +188,9 @@ namespace {
         Point dir,
         MBDisjointBoxLayout fineLayout)
     {
-        PatchID finePatch = fineLayout.point(fineIndex);
         BlockIndex block = fineLayout.block(fineIndex);
-        bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, block, dir);
+        auto finePatch = fineLayout.patch(fineIndex);
+        bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, dir);
         if (patchOnBlockBoundary)
         {
             BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);
@@ -200,15 +200,8 @@ namespace {
 
             PatchID adjPatch = rotatedDomain.coarsen(fineLayout.boxSizes()[adjBlock]).low();
             auto adjIndex = fineLayout.find(adjPatch, adjBlock);
-            if (adjIndex == *fineLayout.end())
-            {
-                std::cout << "Couldn't find adjacent index" << std::endl;
-                std::cout << "source data: " << finePatch << " | " << block << std::endl;
-                std::cout << "dir: " << dir << std::endl;
-                std::cout << "adj data: " << adjPatch << " | " << adjBlock << std::endl;
-            }
         }
-        return fineLayout.find(finePatch, block);
+        return fineLayout.find(finePatch.point, block);
     }
 
     std::tuple<Point, Box, BlockIndex> getFineRegisterArgsFromCoarse(

@@ -72,7 +72,8 @@ TEST(MBBoundaryRegister, Construction) {
             unsigned int xBlock = (blockID+1) % numBlocks;
             unsigned int yBlock = (blockID-1+numBlocks) % numBlocks;
             auto blockLayout = layout.getBlock(blockID);
-            Box patchBox = layout[iter]; 
+            Box patchBox = layout[iter];
+            auto patch = layout.patch(iter);
             for (auto dir : K)
             {
                 Point neighbor = patchID + dir;
@@ -123,7 +124,7 @@ TEST(MBBoundaryRegister, Construction) {
                 } else if (patchDomain.adjacent(nx,1).containsPoint(neighbor))
                 {
                     EXPECT_EQ(bounds.size(), 1);
-                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir, xBlock));
+                    EXPECT_TRUE(layout.isBlockBoundary(patch, dir, xBlock));
                     EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  xBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));
@@ -132,7 +133,7 @@ TEST(MBBoundaryRegister, Construction) {
                 {
                     if (neighbor == Point::Y()*(domainSize/boxSize)){continue;} //we manually removed this patch. 
                     EXPECT_EQ(bounds.size(),  1);
-                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir, yBlock));
+                    EXPECT_TRUE(layout.isBlockBoundary(patch, dir, yBlock));
                     EXPECT_EQ(layout.block(bounds[0].localIndex),  blockID);
                     EXPECT_EQ(layout.block(bounds[0].adjIndex),  yBlock);
                     EXPECT_EQ(bounds[0].localData->box(),  patchBoundary.grow(ghost));

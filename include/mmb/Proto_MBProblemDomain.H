@@ -27,7 +27,6 @@ namespace Proto
         inline bool operator==(const MBPoint a_rhs) const{
             return point == a_rhs.point && block == a_rhs.block;
         }
-
         struct Hash
         {
             std::size_t operator()(const MBPoint &key) const
@@ -52,6 +51,22 @@ namespace Proto
         };
         
     };
+
+    inline MBPoint operator+(const MBPoint& mbpoint, const Point& p)
+    {
+        return MBPoint(mbpoint.point + p, mbpoint.block);
+    }
+    inline MBPoint operator+(const Point& p, const MBPoint& mbpoint)
+    {
+        return mbpoint + p;
+    }
+    inline MBPoint operator+(const MBPoint& p1, const MBPoint& p2)
+    {
+        PROTO_ASSERT(p1.block == p2.block,
+            "MBPoint::operator+ | Error: MBPoint objects are in different blocks (%i and %i)",
+            p1.block, p2.block);
+        return MBPoint(p1.point + p2.point, p1.block);
+    }
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the

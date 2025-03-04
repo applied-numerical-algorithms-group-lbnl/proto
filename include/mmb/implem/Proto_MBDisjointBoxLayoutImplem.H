@@ -161,13 +161,13 @@ MBIterator MBDisjointBoxLayout::end() const
 
 Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 {
-    validateIndex(a_index, "MBDisjointBoxLayout::point");
+    validateIndex(a_index, "point");
     return m_partition->getPoint(a_index.global());
 }
 
 Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 {
-    validateIndex(a_index, "MBDisjointBoxLayout::box");
+    validateIndex(a_index, "box");
     auto patch = point(a_index);
     auto boxSize = m_layouts[block(a_index)].boxSize();
     return Box(patch, patch).refine(boxSize);
@@ -189,13 +189,13 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
-    validateIndex(a_index, "MBDisjointBoxLayout::block");
+    validateIndex(a_index, "block");
     return m_partition->getBlock(a_index.global());
 }
 
 MBPoint MBDisjointBoxLayout::patch(const MBIndex& index) const
 {
-    validateIndex(index, "MBDisjointBoxLayout::patch");
+    validateIndex(index, "patch");
     return m_partition->getPatch(index.global());
 }
 
@@ -213,10 +213,8 @@ DisjointBoxLayout& MBDisjointBoxLayout::getBlock(BlockIndex a_block)
 const DisjointBoxLayout&
 MBDisjointBoxLayout::getBlock(BlockIndex a_block) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::getBlock | Error: Layout is not defined");
-    PROTO_ASSERT(a_block < numBlocks(),
-            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
-            (numBlocks() = %u)", numBlocks());
+    validateSelf("getBlock");
+    validateBlock(a_block, "getBlock");
     return m_layouts[a_block];
 }
 
@@ -229,155 +227,245 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, BlockIndex
 
 size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::offset | Error: Layout is not defined");
+    validateSelf("offset");
     return m_partition->procStartIndex(a_proc);
 }
 
 bool MBDisjointBoxLayout::compatible(const MBDisjointBoxLayout& a_rhs) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::compatible | Error: Layout is not defined");
+    validateSelf("compatible");
     return m_partition->compatible(*a_rhs.m_partition);
 }
 
 bool MBDisjointBoxLayout::compatible(const MBIndex& a_index) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::compatible | Error: Layout is not defined");
+    validateSelf("compatible");
     return m_partition->compatible(a_index.partition());
 }
 
-bool MBDisjointBoxLayout::isBlockBoundary(
-        const MBIndex&  a_index,
-        Point           a_dir,
-        unsigned int    a_block) const
+Point MBDisjointBoxLayout::connectivity(
+    const MBPoint &patch_1,
+    const MBPoint &patch_2) const
 {
-    PR_TIME("MBLevelBoxData::isBlockBoundary");
-    PROTO_ASSERT(m_defined,
-            "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    return m_partition->isBlockBoundary(patch(a_index), a_dir, a_block);
+    validateSelf("connectivity(patch, patch)");
+    return m_partition->connectivity(patch_1, patch_2);
+}
+
+Point MBDisjointBoxLayout::connectivity(
+    const MBIndex &i1,
+    const MBIndex &i2) const
+{
+    auto p1 = patch(i1);
+    auto p2 = patch(i2);
+    return connectivity(p1, p2);
 }
 
 bool MBDisjointBoxLayout::isBlockBoundary(
-        const MBIndex&  a_index,
-        Point           a_dir) const
+    const MBPoint &patch_1,
+    const MBPoint &patch_2) const
 {
-    PROTO_ASSERT(m_defined,
-            "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    return m_partition->isBlockBoundary(patch(a_index), a_dir);
-}
-
-bool MBDisjointBoxLayout::isBlockBoundary(
-        const MBIndex& a_i1,
-        const MBIndex& a_i2) const
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isBlockBoundary | Error: Layout is not defined");
-    if (block(a_i1) == block(a_i2)) {return false;}
-    if (connectivity(a_i1, a_i2) == Point::Zeros()) {return false;}
+    validateSelf("isBlockBoundary(patch, patch)");
+    if (patch_1.block == patch_2.block)
+    {
+        return false;
+    }
+    if (connectivity(patch_1, patch_2) == Point::Zeros())
+    {
+        return false;
+    }
     return true;
 }
 
-bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
-    PatchID a_patch,
-    BlockIndex a_block) const 
+bool MBDisjointBoxLayout::isBlockBoundary(
+    const MBIndex &patch_1,
+    const MBIndex &patch_2) const
 {
+    return isBlockBoundary(patch(patch_1), patch(patch_2));
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+    const MBPoint& patch,
+    Point          dir) const
+{
+    validateSelf("isBlockBoundary");
+    return m_partition->isBlockBoundary(patch, dir);
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+    const MBIndex& patch,
+    Point          dir) const
+{
+    return isBlockBoundary(this->patch(patch), dir);
+}
+
+bool MBDisjointBoxLayout::isBlockBoundary(
+        const MBPoint&  patch,
+        Point           dir,
+        BlockIndex      adjBlock) const
+{
+    validateSelf("isBlockBoundary");
+    return m_partition->isBlockBoundary(patch, dir, adjBlock);
+}
+
+
+
+bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
+    const MBPoint& patch) const 
+{
+    validateSelf("isPatchOnBlockBoundary");
     for (auto dir : Point::Directions())
     {
-        if (isPatchOnBlockBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnBlockBoundary(patch, dir)) { return true; }
     }
     return false;
 }
 
 bool MBDisjointBoxLayout::isPatchOnBlockBoundary(
-    PatchID a_patch,
-    BlockIndex a_block,
+    const MBPoint& patch,
     Point a_dir) const 
 {
-    return patchDomain().isPointOnBlockBoundary(a_patch, a_block, a_dir);
+    validateSelf("isPatchOnBlockBoundary");
+    return patchDomain().isPointOnBlockBoundary(patch.point, patch.block, a_dir);
+}
+
+bool MBDisjointBoxLayout::isPatchInBlockBoundary(
+    const MBPoint& patch) const
+{
+    validateSelf("isPatchInBlockBoundary");
+    return patchDomain().isPointInBlockBoundary(patch.point, patch.block);
+}
+
+bool MBDisjointBoxLayout::isPatchInBlockBoundary(
+    const MBPoint& patch,
+    Point dir) const
+{
+    validateSelf("isPatchInBlockBoundary");
+    return patchDomain().isPointInBlockBoundary(patch.point, patch.block, dir);
 }
 
 bool MBDisjointBoxLayout::isDomainBoundary(
-        const MBIndex&  a_index,
-        Point           a_dir) const
+        const MBPoint& patch,
+        Point          dir) const
 {
-    PROTO_ASSERT(m_defined,
-            "MBDisjointBoxLayout::isDomainBoundary | Error: Layout is not defined");
-    return m_partition->isDomainBoundary(patch(a_index), a_dir);
+    validateSelf("isDomainBoundary");
+    return m_partition->isDomainBoundary(patch, dir);
 }
 
+bool MBDisjointBoxLayout::isDomainBoundary(
+    const MBIndex& patch,
+    Point          dir) const
+{
+    return isDomainBoundary(this->patch(patch), dir);
+}
 
 bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
-    PatchID a_patch,
-    BlockIndex a_block) const 
+    const MBPoint& patch) const 
 {
+    validateSelf("isPatchOnDomainBoundary");
     for (auto dir : Point::Directions())
     {
-        if (isPatchOnDomainBoundary(a_patch, a_block, dir)) { return true; }
+        if (isPatchOnDomainBoundary(patch, dir)) { return true; }
     }
     return false;
 }
 
 bool MBDisjointBoxLayout::isPatchOnDomainBoundary(
-    PatchID a_patch,
-    BlockIndex a_block,
-    Point a_dir) const 
+    const MBPoint& patch,
+    Point          dir) const 
 {
-    return patchDomain().isPointOnDomainBoundary(a_patch, a_block, a_dir);
+    validateSelf("isPatchOnDomainBoundary");
+    return patchDomain().isPointOnDomainBoundary(patch.point, patch.block, dir);
 }
 
-bool MBDisjointBoxLayout::isPatchOnRefinementBoundary(
-    PatchID a_patch,
-    BlockIndex a_block) const 
+bool MBDisjointBoxLayout::isPatchInDomainBoundary(
+    const MBPoint& patch) const
 {
-    auto index = find(a_patch, a_block);
-    if (index == end()) { return false; }
+    validateSelf("isPatchInDomainBoundary");
+    return patchDomain().isPointInDomainBoundary(patch.point, patch.block);
+}
+bool MBDisjointBoxLayout::isPatchInDomainBoundary(
+    const MBPoint& patch,
+    Point dir) const
+{
+    validateSelf("isPatchInDomainBoundary");
+    return patchDomain().isPointInDomainBoundary(patch.point, patch.block, dir);
+}
+
+bool MBDisjointBoxLayout::isRefinementBoundary(
+    const MBPoint& patch,
+    Point          dir) const
+{
+    validateSelf("isRefinementBoundary");
+    return m_partition->isRefinementBoundary(patch, dir);
+}
+bool MBDisjointBoxLayout::isPatchOnRefinementBoundary(
+    const MBPoint& patch) const 
+{
+    validateSelf("isPatchOnRefinementBoundary");
     for (auto dir : Point::Directions())
     {
-        if (isRefinementBoundary(index, dir)) { return true; }
+        if (isRefinementBoundary(patch, dir)) { return true; }
     }
     return false;
 }
 
 bool MBDisjointBoxLayout::isInteriorBoundary(
-        const MBIndex&  a_index,
-        Point           a_dir) const
+        const MBPoint&  patch,
+        Point           dir) const
 {
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
-    return m_partition->isInteriorBoundary(patch(a_index), a_dir);
-}
-bool MBDisjointBoxLayout::isRefinementBoundary(
-    const MBIndex&  a_index,
-    Point           a_dir) const
-{
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::isInteriorBoundary | Error: Layout is not defined");
-    return m_partition->isRefinementBoundary(patch(a_index), a_dir);
+    validateSelf("isInteriorBoundary");
+    return m_partition->isInteriorBoundary(patch, dir);
 }
 
-bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block) const
+bool MBDisjointBoxLayout::isPatchInTriplePointRegion(
+    const MBPoint& patch) const
 {
-    return patchDomain().isPointInBlockBoundary(a_patch, a_block);
+    validateSelf("isPatchInTriplePointRegion");
+    return patchDomain().isPointInTriplePoint(patch.point, patch.block);
 }
-bool MBDisjointBoxLayout::isPatchInBlockBoundary(PatchID a_patch, BlockIndex a_block, Point a_dir) const
+bool MBDisjointBoxLayout::isPatchInTriplePointRegion(
+    const MBPoint& patch,
+    Point dir) const
 {
-    return patchDomain().isPointInBlockBoundary(a_patch, a_block, a_dir);
+    validateSelf("isPatchInTriplePointRegion");
+    return patchDomain().isPointInTriplePoint(patch.point, patch.block, dir);
+}
+std::vector<MBIndex> MBDisjointBoxLayout::adjacentIndices( const MBPoint& patch) const
+{
+    validateSelf("adjacentIndices");
+    std::vector<MBIndex> indices;
+    auto adjacentPatches = m_partition->adjacentPatches(patch);
+    for (auto& adjPatch : adjacentPatches)
+    {
+        auto index = find(adjPatch.point, adjPatch.block);
+        if (index != end())
+        {
+            indices.push_back(index);
+        }
+    }
+    return indices;
 }
 
-bool MBDisjointBoxLayout::isPatchInDomainBoundary(PatchID a_patch, BlockIndex a_block) const
+std::vector<MBIndex> MBDisjointBoxLayout::adjacentIndices(
+        const MBPoint& patch,
+        Point dir) const
 {
-    return patchDomain().isPointInDomainBoundary(a_patch, a_block);
-}
-bool MBDisjointBoxLayout::isPatchInDomainBoundary(PatchID a_patch, BlockIndex a_block, Point a_dir) const
-{
-    return patchDomain().isPointInDomainBoundary(a_patch, a_block, a_dir);
+    validateSelf("adjacentIndices");
+    std::vector<MBIndex> indices;
+    auto adjacentPatches = m_partition->adjacentPatches(patch);
+    for (auto& adjPatch : adjacentPatches)
+    {
+        if (connectivity(patch, adjPatch) != dir) { continue; }
+        auto index = find(adjPatch.point, adjPatch.block);
+        if (index != end())
+        {
+            indices.push_back(index);
+        }
+    }
+    return indices;
 }
 
-bool MBDisjointBoxLayout::isPatchInTriplePointRegion(PatchID a_patch, BlockIndex a_block) const
-{
-    return patchDomain().isPointInTriplePoint(a_patch, a_block);
-}
-bool MBDisjointBoxLayout::isPatchInTriplePointRegion(PatchID a_patch, BlockIndex a_block, Point a_dir) const
-{
-    return patchDomain().isPointInTriplePoint(a_patch, a_block, a_dir);
-}
-
+#if 0
 inline std::vector<MBIndex> MBDisjointBoxLayout::findAdjacentIndices(
     MBIndex index,
     Point dir) const
@@ -446,92 +534,9 @@ std::vector<MBIndex> MBDisjointBoxLayout::bounds(
         }
     }
     return ret;
-    #if 0
-    auto b0 = block(a_index);
-    for (BlockIndex bi = 0; bi < numBlocks(); bi++)
-    {
-        auto conn = domain().graph().connectivity(b0, bi);
-        if (bi != b0 && conn == Point::Zeros()) { continue; }
-        Box patchDomain = getBlock(bi).patchDomain().box();
-        for (auto pi : patchDomain)
-        {
-            auto index = find(pi, bi);
-            if (index != *end() && (connectivity(a_index, index) != Point::Zeros()))
-            {
-                ret.push_back(index);
-            }
-        }
-    }
-    return ret;
-    #endif
 }
+#endif
 
-Point MBDisjointBoxLayout::connectivity(
-        const MBIndex& a_i1,
-        const MBIndex& a_i2) const
-{
-    PR_TIME("MBDisjointBoxLayout::connectivity(index, index)");
-
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::connectivity | Error: Layout is not defined");
-    MBPoint p1(point(a_i1), block(a_i1));
-    MBPoint p2(point(a_i2), block(a_i2));
-    return m_partition->connectivity(p1, p2);
-    #if 0
-    BlockIndex b1 = block(a_i1);
-    BlockIndex b2 = block(a_i2);
-    Point p1 = point(a_i1);
-    Point p2 = point(a_i2);
-
-    // patches on same block
-    if (b1 == b2)
-    {
-        if (Box::Kernel(1).shift(p1).containsPoint(p2))
-        {
-            return (p2 - p1);
-        }
-    }
-    // patches on different blocks
-
-    Point conn12, conn21;
-    Box adjPatch1, adjPatch2, dirs;
-    CoordPermutation R;
-    {
-        PR_TIME("setup");
-        {
-            PR_TIME("block A");
-            conn12 = domain().graph().connectivity(b1, b2);
-            if (conn12 == Point::Zeros())
-            {
-                return Point::Zeros();
-            }
-            conn21 = domain().graph().connectivity(b2, b1);
-        }
-        PROTO_ASSERT(conn21 != Point::Zeros(),
-                     "MBDisjointBoxLayout::connectivity | Error: Data corruption.");
-        {
-            PR_TIME("block B");
-            adjPatch1 = getBlock(b1).patchDomain().box().adjacent(conn12);
-            adjPatch2 = getBlock(b2).patchDomain().box().edge(conn21);
-        }
-        {
-            PR_TIME("block C");
-            R = domain().graph().rotation(b1, conn12, b2);
-            dirs = Box::Kernel(1).grow(-conn12.abs()).shift(conn12);
-        }
-    }
-
-    for (auto dir : dirs)
-    {
-        PR_TIME("loop");
-        Point n1 = p1 + dir;
-        if (!adjPatch1.containsPoint(n1)){ continue; }
-        Point n2 = R.rotateCell(
-                n1, adjPatch1, adjPatch2);
-        if (n2 == p2) {return dir; }
-    }
-    return Point::Zeros();
-    #endif
-}
 
 
 unsigned int MBDisjointBoxLayout::size() const
@@ -591,10 +596,26 @@ MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
     return crseLayout;
 }
 
+void MBDisjointBoxLayout::validateSelf(std::string methodName) const
+{
+    #ifndef NDEBUG
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName);
+    #endif
+}
+
 void MBDisjointBoxLayout::validateIndex(const MBIndex& index, std::string methodName) const
 {
     #ifndef NDEBUG
-    PROTO_ASSERT(compatible(index), "%s | Error: Incompatible index", methodName);
+    PROTO_ASSERT(compatible(index), "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName);
+    #endif
+}
+
+void MBDisjointBoxLayout::validateBlock(const BlockIndex& block, std::string methodName) const
+{
+    #ifndef NDEBUG
+    PROTO_ASSERT(block < numBlocks(),
+        "MBDisjointBoxLayout::%s | Error: Block index %i is out of bounds (numBlocks = %i)",
+        methodName, block, numBlocks());
     #endif
 }
 

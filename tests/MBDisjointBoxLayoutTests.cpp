@@ -78,33 +78,31 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
     {
         for (auto i2 : layout)
         {
-            auto b1 = layout.block(i1);
-            auto b2 = layout.block(i2);
-            auto p1 = layout.point(i1);
-            auto p2 = layout.point(i2);
+            auto p1 = layout.patch(i1);
+            auto p2 = layout.patch(i2);
             Point q2 = Point::Zeros();
 
-            Point p = layout.connectivity(i1, i2);
-            if (b1 == b2)
+            Point p = layout.connectivity(p1, p2);
+            if (p1.block == p2.block)
             {
-                q2 = p2;
+                q2 = p2.point;
             }
-            else if (b2 == (b1 + 1) % layout.numBlocks())
+            else if (p2.block == (p1.block + 1) % layout.numBlocks())
             {
-                q2 = CW.rotateCell(p2, edgY, adjX);
+                q2 = CW.rotateCell(p2.point, edgY, adjX);
             }
-            else if (b2 == (b1 + layout.numBlocks() - 1) % layout.numBlocks())
+            else if (p2.block == (p1.block + layout.numBlocks() - 1) % layout.numBlocks())
             {
-                q2 = CCW.rotateCell(p2, edgX, adjY);
+                q2 = CCW.rotateCell(p2.point, edgX, adjY);
             }
             else
             {
-                q2 = R.rotateCell(p2, edgXY, adjXY);
+                q2 = R.rotateCell(p2.point, edgXY, adjXY);
             }
 
-            if (Box::Kernel(1).shift(p1).containsPoint(q2))
+            if (Box::Kernel(1).shift(p1.point).containsPoint(q2))
             {
-                EXPECT_EQ(p, q2 - p1);
+                EXPECT_EQ(p, q2 - p1.point);
             }
             else
             {
@@ -174,54 +172,54 @@ TEST(MBDisjointBoxLayout, BoundaryQueries)
         Box blockBoundaryXY = patchDomain.adjacent(Point::X() + Point::Y(), 1);
         for (auto iter : layout)
         {
-            PatchID patch = layout.point(iter);
+            MBPoint patch = layout.patch(iter);
             BlockIndex block = layout.block(iter);
             BlockIndex adjBlockX = (block + 1) % numBlocks;
             BlockIndex adjBlockY = (block + numBlocks - 1) % numBlocks;
             for (auto dir : Point::Directions())
             {
-                PatchID adjPatch = patch + dir;
-                if (patchDomain.containsPoint(adjPatch))
+                MBPoint adjPatch(patch.point + dir, patch.block);
+                if (patchDomain.containsPoint(adjPatch.point))
                 {
-                    EXPECT_FALSE(layout.isBlockBoundary(iter, dir));
-                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
-                    EXPECT_TRUE(layout.isInteriorBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isBlockBoundary(patch, dir));
+                    EXPECT_FALSE(layout.isDomainBoundary(patch, dir));
+                    EXPECT_TRUE(layout.isInteriorBoundary(patch, dir));
                 }
-                else if (blockBoundaryX.containsPoint(adjPatch))
+                else if (blockBoundaryX.containsPoint(adjPatch.point))
                 {
-                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    EXPECT_TRUE(layout.isBlockBoundary(patch, dir));
                     for (auto bi = 0; bi < numBlocks; bi++)
                     {
-                        EXPECT_EQ(layout.isBlockBoundary(iter, dir, bi), (bi == adjBlockX));
+                        EXPECT_EQ(layout.isBlockBoundary(patch, dir, bi), (bi == adjBlockX));
                     }
-                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
-                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isDomainBoundary(patch, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(patch, dir));
                 }
-                else if (blockBoundaryY.containsPoint(adjPatch))
+                else if (blockBoundaryY.containsPoint(adjPatch.point))
                 {
-                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    EXPECT_TRUE(layout.isBlockBoundary(patch, dir));
                     for (auto bi = 0; bi < numBlocks; bi++)
                     {
-                        EXPECT_EQ(layout.isBlockBoundary(iter, dir, bi), (bi == adjBlockY));
+                        EXPECT_EQ(layout.isBlockBoundary(patch, dir, bi), (bi == adjBlockY));
                     }
-                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
-                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isDomainBoundary(patch, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(patch, dir));
                 }
-                else if (blockBoundaryXY.containsPoint(adjPatch))
+                else if (blockBoundaryXY.containsPoint(adjPatch.point))
                 {
-                    EXPECT_TRUE(layout.isBlockBoundary(iter, dir));
+                    EXPECT_TRUE(layout.isBlockBoundary(patch, dir));
                     for (auto bi = adjBlockX + 1; bi % numBlocks != adjBlockY; bi++)
                     {
-                        EXPECT_TRUE(layout.isBlockBoundary(iter, dir, bi % numBlocks));
+                        EXPECT_TRUE(layout.isBlockBoundary(patch, dir, bi % numBlocks));
                     }
-                    EXPECT_FALSE(layout.isDomainBoundary(iter, dir));
-                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isDomainBoundary(patch, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(patch, dir));
                 }
                 else
                 {
-                    EXPECT_FALSE(layout.isBlockBoundary(iter, dir));
-                    EXPECT_TRUE(layout.isDomainBoundary(iter, dir));
-                    EXPECT_FALSE(layout.isInteriorBoundary(iter, dir));
+                    EXPECT_FALSE(layout.isBlockBoundary(patch, dir));
+                    EXPECT_TRUE(layout.isDomainBoundary(patch, dir));
+                    EXPECT_FALSE(layout.isInteriorBoundary(patch, dir));
                 }
             }
         }
@@ -242,18 +240,18 @@ TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
     auto Y = Point::Y();
     for (auto iter : layout)
     {
-        PatchID patch = layout.point(iter);
+        MBPoint patch = layout.patch(iter);
         BlockIndex block = layout.block(iter);
         BlockIndex adjBlockX = (block + 1) % numBlocks;
         BlockIndex adjBlockY = (block + numBlocks - 1) % numBlocks;
-        if (patchDomain.grow(-1).containsPoint(patch))
+        if (patchDomain.grow(-1).containsPoint(patch.point))
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)
             {
-                EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch, block));
+                EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch));
                 for (auto dir : Point::Directions())
                 {
-                    EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch, block, dir));
+                    EXPECT_FALSE(layout.isPatchOnBlockBoundary(patch, dir));
                 }
             }
         }
@@ -262,29 +260,29 @@ TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
             for (auto dir : Point::Directions())
             {
                 Box boundBox = patchDomain.edge(dir, 1);
-                if (!boundBox.containsPoint(patch))
+                if (!boundBox.containsPoint(patch.point))
                 {
                     continue;
                 }
                 if (dir == X)
                 {
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, X));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, X));
                 }
                 else if (dir == Y)
                 {
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, Y));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, Y));
                 }
                 else if (dir == X + Y)
                 {
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block));
-                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, block, X + Y));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch));
+                    EXPECT_TRUE(layout.isPatchOnBlockBoundary(patch, X + Y));
                 }
                 else
                 {
-                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch, block));
-                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch, block, dir));
+                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch));
+                    EXPECT_TRUE(layout.isPatchOnDomainBoundary(patch, dir));
                 }
             }
         }
@@ -308,37 +306,39 @@ TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
 
         for (BlockIndex block = 0; block < numBlocks; block++)
         {
-            for (auto patch : patchDomain)
+            for (auto pi : patchDomain)
             {
-                EXPECT_FALSE(layout.isPatchInBlockBoundary(patch, block));
-                EXPECT_FALSE(layout.isPatchInDomainBoundary(patch, block));
-                EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch, block));
+                MBPoint patch(pi, block);
+                EXPECT_FALSE(layout.isPatchInBlockBoundary(patch));
+                EXPECT_FALSE(layout.isPatchInDomainBoundary(patch));
+                EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch));
             }
             for (auto dir : Point::Directions())
             {
                 Box boundBox = patchDomain.adjacent(dir, 1);
-                for (auto patch : boundBox)
+                for (auto pi : boundBox)
                 {
+                    MBPoint patch(pi, block);
                     if (dir == X || dir == Y)
                     {
-                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, block));
-                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, block, dir));
-                        EXPECT_FALSE(layout.isPatchInDomainBoundary(patch, block));
-                        EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch, block));
+                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch));
+                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, dir));
+                        EXPECT_FALSE(layout.isPatchInDomainBoundary(patch));
+                        EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch));
                     }
                     else if (dir == X + Y)
                     {
-                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, block));
-                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, block, dir));
-                        EXPECT_FALSE(layout.isPatchInDomainBoundary(patch, block));
-                        EXPECT_EQ(layout.isPatchInTriplePointRegion(patch, block), (numBlocks == 3));
+                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch));
+                        EXPECT_TRUE(layout.isPatchInBlockBoundary(patch, dir));
+                        EXPECT_FALSE(layout.isPatchInDomainBoundary(patch));
+                        EXPECT_EQ(layout.isPatchInTriplePointRegion(patch), (numBlocks == 3));
                     }
                     else
                     {
-                        EXPECT_FALSE(layout.isPatchInBlockBoundary(patch, block));
-                        EXPECT_TRUE(layout.isPatchInDomainBoundary(patch, block));
-                        EXPECT_TRUE(layout.isPatchInDomainBoundary(patch, block, dir));
-                        EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch, block));
+                        EXPECT_FALSE(layout.isPatchInBlockBoundary(patch));
+                        EXPECT_TRUE(layout.isPatchInDomainBoundary(patch));
+                        EXPECT_TRUE(layout.isPatchInDomainBoundary(patch, dir));
+                        EXPECT_FALSE(layout.isPatchInTriplePointRegion(patch));
                     }
                 }
             }
@@ -380,9 +380,8 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
         data.setVal(0);
         for (auto index : layout)
         {
-            auto patch = layout.point(index);
-            auto block = layout.block(index);
-            if (layout.isPatchOnRefinementBoundary(patch, block))
+            auto patch = layout.patch(index);
+            if (layout.isPatchOnRefinementBoundary(patch))
             {
                 auto& di = data[index];
                 di.setVal(1);
@@ -392,26 +391,25 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
         #endif
         for (auto index : layout)
         {
-            auto patch = layout.point(index);
-            auto block = layout.block(index);
+            auto patch = layout.patch(index);
 
             for (auto dir : Point::Directions())
             {
-                Point adjPatch = patch + dir;
-                if (layout.isDomainBoundary(index, dir))
+                Point adjPatch = patch.point + dir;
+                if (layout.isDomainBoundary(patch, dir))
                 {
-                    EXPECT_FALSE(layout.isRefinementBoundary(index, dir));
-                } else if (layout.isBlockBoundary(index, dir))
+                    EXPECT_FALSE(layout.isRefinementBoundary(patch, dir));
+                } else if (layout.isBlockBoundary(patch, dir))
                 {
-                    adjPatch = layout.patchDomain().convertPoint(adjPatch, block, 0, PR_CELL);
+                    adjPatch = layout.patchDomain().convertPoint(adjPatch, patch.block, 0, PR_CELL);
                     bool foundSkipPatch = (adjPatch == skipPatch);
-                    foundSkipPatch &= (block != 0);
-                    bool isRefBound = layout.isRefinementBoundary(index, dir);
+                    foundSkipPatch &= (patch.block != 0);
+                    bool isRefBound = layout.isRefinementBoundary(patch, dir);
                     EXPECT_EQ(isRefBound, foundSkipPatch);
                 } else {
                     bool foundSkipPatch = (adjPatch == skipPatch);
-                    foundSkipPatch &= (block == 0);
-                    bool isRefBound = layout.isRefinementBoundary(index, dir);
+                    foundSkipPatch &= (patch.block == 0);
+                    bool isRefBound = layout.isRefinementBoundary(patch, dir);
                     EXPECT_EQ(isRefBound, foundSkipPatch);
                 }
             }
@@ -435,15 +433,13 @@ TEST(MBDisjointBoxLayout, Connectivity_XPoint)
     {
         for (auto iter_j : layout)
         {
-            auto pi = layout.point(iter_i);
-            auto bi = layout.block(iter_i);
-            auto pj = layout.point(iter_j);
-            auto bj = layout.block(iter_j);
+            auto pi = layout.patch(iter_i);
+            auto pj = layout.patch(iter_j);
 
-            if (bi == 0 && bi != bj)
+            if (pi.block == 0 && pi.block != pj.block)
             {
-                auto dij = layout.connectivity(iter_i, iter_j);
-                auto dji = layout.connectivity(iter_j, iter_i);
+                auto dij = layout.connectivity(pi, pj);
+                auto dji = layout.connectivity(pj, pi);
                 if (dij == Point::Zeros())
                 {
                     EXPECT_EQ(dji, Point::Zeros());
@@ -473,15 +469,13 @@ TEST(MBDisjointBoxLayout, Connectivity_CubedSphere)
     {
         for (auto iter_j : layout)
         {
-            auto pi = layout.point(iter_i);
-            auto bi = layout.block(iter_i);
-            auto pj = layout.point(iter_j);
-            auto bj = layout.block(iter_j);
+            auto pi = layout.patch(iter_i);
+            auto pj = layout.patch(iter_j);
 
-            if (bi == 0 && bi != bj)
+            if (pi.block == 0 && pi.block != pj.block)
             {
-                auto dij = layout.connectivity(iter_i, iter_j);
-                auto dji = layout.connectivity(iter_j, iter_i);
+                auto dij = layout.connectivity(pi, pj);
+                auto dji = layout.connectivity(pj, pi);
                 if (dij == Point::Zeros())
                 {
                     EXPECT_EQ(dji, Point::Zeros());
