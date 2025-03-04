@@ -34,6 +34,7 @@ test_files = glob.glob('./tests/*Tests.cpp')
 example_dirs = os.listdir('./examples')
 tests = []
 examples = []
+
 targets = ['ALL (build everything)', 'TEST (build everything and run all tests)']
 if (args.OPS == 'ON'):
     for e in example_dirs:
@@ -114,10 +115,41 @@ print(CMAKE_COMMAND)
 os.system(CMAKE_COMMAND)
 
 # Build Targets
-if ['ALL', 'TEST'].count(args.TARGET) > 0:
-    os.system('cmake --build build/')
-    if args.TARGET == 'TEST':
-        os.system('cmake --build build/ --target test -j 22')
+# if ['ALL', 'TEST'].count(args.TARGET) > 0:
+#     os.system('cmake --build build/')
+#     if args.TARGET == 'TEST':
+#         os.system('cmake --build build/ --target test -j 22')
+# else:
+# 	os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
+# 	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
+
+# If TARGET is TEST, build and run tests selectively
+failed_tests = []
+successful_tests = []
+if args.TARGET == 'TEST':
+    #os.system('cmake --build build/')  # General build step
+    for i, test in enumerate(tests):
+        if i < args.RESTART:
+            print(f"Skipping {test} (before restart index {args.RESTART})")
+            continue
+        print(f"\nBuilding {test}...")
+        result = subprocess.run(f'cmake --build build/ --target {test}', shell=True)
+        if result.returncode != 0:
+            print(f"Error: Failed to build {test}!")
+            failed_tests.append(test)
+        else:
+            successful_tests.append(test)
+    
+    if successful_tests:
+        print("Running tests...")
+        test_regex = "|".join(successful_tests)  # Run only successfully built tests
+        test_command = f'ctest --test-dir build --output-on-failure --tests-regex "{test_regex}"'
+        subprocess.run(test_command, shell=True)
+    
+    if failed_tests:
+        print("The following tests failed to build:")
+        for test in failed_tests:
+            print(f" - {test}")
 else:
-	os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
-	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
+    os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
+    os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
