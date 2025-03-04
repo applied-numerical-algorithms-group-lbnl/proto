@@ -341,6 +341,8 @@ namespace Proto
           */
         inline void operator&=(const Box& a_rhs); 
 
+        inline Box operator+(const Box& box) const;
+        inline void operator+=(const Box& box);
         /// Add Point Operator
         /**
           Returns a new Box which has been grown such that it contains a_pt. 
@@ -370,7 +372,7 @@ namespace Proto
           */
         inline void operator&=(const Point& a_pt);
 
-        //inline void operator&=(const Box& a_rightBox);
+        
 
         /// Equality Operator
         /**

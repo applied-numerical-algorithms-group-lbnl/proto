@@ -6,7 +6,7 @@ using namespace Proto;
 using namespace std;
 
 // TODO: Split this up...
-TEST(Base, Box) {
+TEST(Box, Base) {
     if (DIM > 6)
     {
         MayDay<void>::Warning("Some tests may not pass with DIM > 6");
@@ -164,6 +164,17 @@ TEST(Box, Edge) {
     EXPECT_EQ(B1,Box(L + x*(D-1), H));
     EXPECT_EQ(B2,Box(L + Point::Ones()*(D-2), H));
     EXPECT_EQ(B3,Box(L + x*(D-2), H - y*(D-2)));
+}
+
+TEST(Box, UnionOperator) {
+    Box B0 = Box::Cube(8);
+    Box B1 = Box::Cube(8).shift(Point::Ones());
+    Box U0 = B0 + B1;
+    EXPECT_EQ(U0, Box::Cube(9));
+
+    Box B2 = Box::Cube(8).shift(-Point::Ones());
+    B2 += B1;
+    EXPECT_EQ(B2, Box::Cube(10).shift(-Point::Ones()));
 }
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

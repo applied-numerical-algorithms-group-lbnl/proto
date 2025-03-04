@@ -277,6 +277,19 @@ void Box::operator&=(const Box& a_rhs)
     *this = intersect;
 }
 
+Box Box::operator+(const Box& a_rhs) const
+{
+    Box combined = *this;
+    combined &= a_rhs.low();
+    combined &= a_rhs.high();
+    return combined;
+}
+
+void Box::operator+=(const Box& a_rhs)
+{
+    *this = (*this) + a_rhs;
+}
+
 Box Box::operator&(const Point& a_pt) const
 {
     if (containsPoint(a_pt)){ return *this; }
