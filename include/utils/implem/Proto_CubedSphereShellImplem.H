@@ -694,7 +694,8 @@ consToSphInterpEuler(
                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                      MBInterpOp& a_iop,
                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                     unsigned int a_order)
+                     unsigned int a_order,
+                     int a_counter)
 {
   PR_TIMERS("CubedSphereShell::consToSphInterpEuler");
   auto layout = a_JU.layout();
@@ -758,7 +759,7 @@ consToSphInterpEuler(
     MBLevelBoxData<T,C+2,MEM> dummy(layout,Point::Zeros());
     USemiSph.copyTo(dummy);
     // h5.writeMBLevel(dummy,"USemiSph_PreInterp"+to_string(size[0]));
-    h5.writeMBLevel({},map,dummy,"USemiSph_PreInterp"+to_string(size[0]));
+    h5.writeMBLevel({},map,dummy,"USemiSph_PreInterp_"+to_string(a_counter));
   }
 #endif
   USemiSph.exchange();  
@@ -787,13 +788,13 @@ consToSphInterpEuler(
   for (auto dit : USemiSph.layout())
     {
 #if 0
-      if (procID() == 0)
+      //if (procID() == 0)
         {
           HDF5Handler h5;
-          cout << "In Interp: USemiSph Box = " << USemiSph[dit].box() << endl;
+          //cout << "In Interp: USemiSph Box = " << USemiSph[dit].box() << endl;
           //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
           // comp=3 good.
-          h5.writePatch(dxiPerp,USemiSph[dit],"USemiSphPost_Interp"+to_string(procID()));
+          h5.writePatch(1.0,USemiSph[dit],"USemiSphPost_Interp"+to_string(a_counter)+"_"+to_string(procID()));
         }
 #endif
       PR_TIMERS("CubedSphereShell::consToSphInterpEuler post-exchange");

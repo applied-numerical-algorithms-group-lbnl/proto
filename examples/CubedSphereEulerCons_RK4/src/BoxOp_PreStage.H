@@ -321,16 +321,32 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   //
   // Transform JU -> USph.
   PR_TIMERS("BoxOp_Euler::PreStageLevel");
-  auto layout = a_UStage.layout();
-  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4);
- 
   int init_condition_type = ParseInputs::get_init_condition_type();
   int opswitchiv = ParseInputs::get_operator_switchiv();
   int opswitchln = ParseInputs::get_operator_switchln();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
-
+  // Begin DEBUG
+  HDF5Handler h5;
+  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
+  auto layout = a_UStage.layout();
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, a_kstage);
+  MBLevelBoxData<T,NUMCOMPS,MEM> primvars(layout,a_UStage.ghost());
+  for (auto dit : layout)
+    {
+      unsigned int block = layout.block(dit);
+      State& prim_i = primvars[dit];
+      State& sph_i = a_UStage[dit];
+      eulerOp[dit].sphToPrim_2O(prim_i,sph_i,block);
+      //h5.writePatch(1.0,prim_i,"primpatch_"
+      //           +to_string(a_kstage) + "_" + to_string(block));
+      //h5.writePatch(1.0,sph_i,"sphpatch_"
+      //           +to_string(a_kstage) + "_" + to_string(block));
+    }
+  //h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map, primvars, "primStage" + to_string(a_kstage));
+  //h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map, a_UStage, "sphStage" + to_string(a_kstage));
+  
   // initialize a_k to zero. This
   a_k.setVal(0.);
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;

@@ -28,7 +28,7 @@
 #endif
 #endif
 #define VEL00 1.E5
-#define RHO00 67262192E-24
+#define RHO00  1.67262192e-24/100.
 #define P00 1.E12
 #define B00 1.E6
 #if DIM == 3
@@ -71,13 +71,14 @@ void f_sphToPrim_F(
                    Var<T,NUMCOMPS,MEM>& a_upoint)                           
 {
   Var<T,NUMCOMPS,MEM> wpoint;
-  a_wpoint(iRHO) = a_upoint(iRHO);
+  
+  a_wpoint(iRHO) = max(a_upoint(iRHO),RHO00);
   a_wpoint(iVX) =
-    a_upoint(iMOMX)/a_upoint(iRHO);
+    a_upoint(iMOMX)/a_wpoint(iRHO);
   a_wpoint(iVY) =
-    a_upoint(iMOMY)/a_upoint(iRHO);
+    a_upoint(iMOMY)/a_wpoint(iRHO);
   a_wpoint(iVZ) =
-    a_upoint(iMOMZ)/a_upoint(iRHO);
+    a_upoint(iMOMZ)/a_wpoint(iRHO);
   a_wpoint(iE) = a_upoint(iP);  
   a_wpoint(iBX) = a_upoint(iBX);
   a_wpoint(iBY) = a_upoint(iBY);
@@ -253,7 +254,8 @@ public:
    Array<State, DIM>&              a_fluxes,
    const State&                    a_USph,
    T                               a_dt,
-   T                               a_scale = 1.0) const;
+   T                               a_scale = 1.0,
+   int                             a_counter = -1) const;
   inline void primToFlux(
                          State& a_physFlux,
                          const State& a_WFace,

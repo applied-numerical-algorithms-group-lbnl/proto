@@ -12,7 +12,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
    Array<State, DIM>&              a_fluxes,
    const State&                    a_USph,
    T                               a_dt,
-   T                               a_scale) const
+   T                               a_scale,
+   int                             a_counter) const
 {
   PR_TIMERS("BoxOp_Euler::operator()");
   int a_block = this->block();
@@ -38,17 +39,16 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
   T dxiPerp = this->dx()[1];
-#if 0
-  if (procID() == 5)
+  if (a_counter >= 0)
     {
+      string suffix = to_string(a_counter)+"_"+to_string(procID());
       HDF5Handler h5;
       //Box bx0 = a_Rhs.box();
       //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-      h5.writePatch(dxiPerp,a_USph,"USph_"+to_string(procID()));
-      h5.writePatch(dxiPerp,W,"W_"+to_string(procID()));
-      h5.writePatch(dxiPerp,WBar,"WBar_"+to_string(procID()));
+      h5.writePatch(1.0,a_USph,"USph_"+suffix);
+      h5.writePatch(1.0,W,"W_"+suffix);
+      h5.writePatch(1.0,WBar,"WBar_"+suffix);
     }
-#endif
   Box outputbox = bx;
   // Loop over directions.
   T one = 1.0;
@@ -147,16 +147,16 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       BoxData<T,NUMCOMPS> physFlux_L,physFlux_R;
       primToFlux(physFlux_L,WFace_L,WFaceBar_L,adjDrDir,a_block,dir);
       primToFlux(physFlux_R,WFace_R,WFaceBar_R,adjDrDir,a_block,dir);
-#if 0
-      if (procID() == 0)
+      if (a_counter >= 0)
         {
+          string suffix =
+            to_string(dir) + "_"+to_string(a_counter)+"_"+to_string(procID());
           HDF5Handler h5;
           //Box bx0 = a_Rhs.box();
           //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-          h5.writePatch(dxiPerp,physFlux_L,"physFlux_L_"+to_string(dir) + "_"+to_string(procID()));
-          h5.writePatch(dxiPerp,physFlux_R,",physFlux_R_"+to_string(dir) + "_"+to_string(procID()));
+          h5.writePatch(1.0,physFlux_L,"physFlux_L_"+suffix);
+          h5.writePatch(1.0,physFlux_R,"physFlux_R_"+suffix);
         }
-#endif
       Box bxface0 = a_fluxes[dir].box();
       State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface0),fluxdir_Rus(bxface);
       primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
@@ -187,18 +187,19 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
       a_Rhs += rhsIncr;
       outputbox &= rhsIncr.box();
-#if 0
-      {
-        HDF5Handler h5;
-        Box bx0 = a_Rhs.box();
-        bxface = bx0.extrude(dir);
-        BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-        a_fluxes[dir].copyTo(dummyface);
-        rhsIncr.copyTo(dummy);
-        h5.writePatch(dxiPerp,dummyface,"fluxes_"+to_string(dir)+"_"+to_string(procID()));
-        h5.writePatch(dxiPerp,dummy,"rhsIncr_"+to_string(dir)+"_"+to_string(procID()));
-      }
-#endif
+      if (a_counter >= 0)
+        {
+          string suffix =
+            to_string(dir) + "_"+to_string(a_counter)+"_"+to_string(procID());
+          HDF5Handler h5;
+          Box bx0 = a_Rhs.box();
+          bxface = bx0.extrude(dir);
+          BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
+          a_fluxes[dir].copyTo(dummyface);
+          rhsIncr.copyTo(dummy);
+          h5.writePatch(1.0,dummyface,"fluxes_"+suffix);
+          h5.writePatch(1.0,dummy,"rhsIncr_"+suffix);
+        }
     }
   // a_dt_next = 1.0/speedMax.absMax();
   // if (a_block == BLOCKTEST)
@@ -565,6 +566,11 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
     CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,wgtxdt);
+    
+  }
+  {
+    //HDF5Handler h5;
+    //h5.writeMBLevel({},map, a_k, "stageRhs"+to_string(a_kstage));
   }
 }
 template<
