@@ -74,11 +74,12 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
               + a_Wout(6)*a_Wout(6)
               + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
       a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
-      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_MP; // /cm^3 , scaled by r^2;
+
+      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
       a_Wout(1) = a_Wout(1)/1e5; // km/s;
       a_Wout(2) = a_Wout(2)/1e5; // km/s;
       a_Wout(3) = a_Wout(3)/1e5; // km/s;
-      a_Wout(4) = a_Wout(4)*pow(a_radius(0),a_gamma*2)*1e12; // picodyne/cm*2
+      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12; 
       // scaled by r*(2*gamma)
       if (a_Wout(4) < 0.) a_Wout(4) = 0.;
       a_Wout(5) = a_Wout(5)*1e6; // microGauss
