@@ -319,6 +319,69 @@ TEST(Operator, InitConvolve)
     }
 }
 #endif
+
+TEST(Operator, FaceDiff)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    int domainSize = 32;
+    Box rangeBox = Box::Cube(domainSize);
+    Box domainBox;
+    std::vector<FaceDiff<double>> faceDiff;
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        faceDiff.push_back(FaceDiff<double>(dd, 4));
+        Box domain_i = faceDiff[dd].domains(rangeBox)[0];
+        domainBox += domain_i;
+    }
+    
+
+    int numIter = 3;
+    double err[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        err[nn] = 0.0;
+        double dx = 1.0/domainSize;
+        BoxData<double, 2> phi(domainBox);
+
+        Point offset(1,2,3,4,5,6);
+        Point k(1,2,3,4,5,6);
+        forallInPlace_p(f_phi_avg,  phi, dx, k, offset);
+
+        for (int norm = 0; norm < DIM; norm++)
+        {
+            BoxData<double, 2, HOST, DIM> gradPhi = faceDiff[norm](phi);
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                BoxData<double, 2> D0(rangeBox);
+                forallInPlace_p(f_Dphi_avg_face,  D0, dx, k, offset, dd, norm);
+                BoxData<double, 2> gradComponent = plane(gradPhi, dd);
+                gradComponent /= dx;
+                BoxData<double, 2> errorComponent(rangeBox);
+                gradComponent.copyTo(errorComponent);
+                errorComponent -= D0;
+                #if PR_VERBOSE > 0
+                h5.writePatch(D0, "SolnDPhiDX%i_N%i", dd, norm);
+                h5.writePatch(gradComponent, "TestDPhiDX%i_N%i", dd, norm);
+                h5.writePatch(errorComponent, "ErrDPhiDX%i_N%i", dd, norm);
+                #endif
+                err[nn] = max(err[nn], errorComponent.absMax());
+            }
+        }
+        domainSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double rate = log(err[ii-1]/err[ii])/log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << err[ii] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        EXPECT_NEAR(rate, 4.0, 0.1);
+    }
+}
+
 #if 0
 #if DIM==3
 #ifdef PR_MMB

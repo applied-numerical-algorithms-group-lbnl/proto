@@ -17,6 +17,7 @@ namespace Proto
         {
         }
 
+        // Mandatory
         inline std::vector<Box> domains(const Box &rangeBox) const
         {
             std::vector<Box> domainBoxes;
@@ -24,12 +25,14 @@ namespace Proto
             return domainBoxes;
         }
 
+        // Mandatory
         inline Box range(const std::vector<Box> &domainBoxes) const
         {
             // compute the range from the domains of all inputs of operator()
            return domainBoxes[0];
         }
 
+        // Mandatory
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
         inline void
         operator()(
@@ -40,6 +43,7 @@ namespace Proto
             // implement operator logic
         }
 
+        // Optional, but easy to implement
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
         inline BoxData<T, C, MEM, D, E>
         operator()(
@@ -51,6 +55,7 @@ namespace Proto
             return output;
         }
 
+        // Optional
         template <unsigned int C, MemType MEM, Centering CTR>
         inline void
         operator()(

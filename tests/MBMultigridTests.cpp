@@ -281,7 +281,6 @@ TEST(MBMultigridTests, LaplaceIdentity) {
     h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_IDENTITY");
 #endif
     mg.solve(phi, rhs, 10, 1e-10);
-
 }
 #endif
 #if 1

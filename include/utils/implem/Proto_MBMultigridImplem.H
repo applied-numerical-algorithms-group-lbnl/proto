@@ -372,35 +372,35 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
 {
     HDF5Handler h5;
     m_solveLevel = a_level;
-    h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
+    //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
     if (a_level > 0)
     {
         //pre relax
         relax(a_state, a_force, m_numPreRelax, a_level);
         //average down state
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
         averageDown(*m_state[a_level-1], a_state, a_level);
-        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //save copy of coarse state
         m_state[a_level-1]->copyTo(*m_state_0[a_level-1]);
-        h5.writeMBLevel(m_maps[a_level-1], *m_state_0[a_level-1], "MBMultigrid_vCycle_PhiC0_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state_0[a_level-1], "MBMultigrid_vCycle_PhiC0_S%i_L%i_0", m_solveIter, m_solveLevel);
         //compute coarse RHS
         crseForce(*m_force[a_level-1], a_state, a_force, *m_state[a_level-1], a_level);
-        h5.writeMBLevel(m_maps[a_level-1], *m_force[a_level-1], "MBMultigrid_vCycle_FC_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_force[a_level-1], "MBMultigrid_vCycle_FC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //recursive vcycle on coarse state/RHS
         vCycle(*m_state[a_level-1], *m_force[a_level-1], a_level-1);
         m_solveLevel = a_level;
-        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_1", m_solveIter, m_solveLevel);
         //correct this level's state
         fineCorrect(a_state, *m_state[a_level-1], *m_state_0[a_level-1], a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_2", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_2", m_solveIter, m_solveLevel);
         //post relax
         relax(a_state, a_force, m_numPostRelax, a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_3", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_3", m_solveIter, m_solveLevel);
     } else {
         // bottom relax
         relax(a_state, a_force, m_numBottomRelax, a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
     }
 }
 

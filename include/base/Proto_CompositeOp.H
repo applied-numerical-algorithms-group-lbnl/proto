@@ -24,7 +24,7 @@ namespace Proto
     protected:
         
         template<typename... Srcs>
-        inline std::vector<Box> getDomains(Srcs... sources)
+        inline std::vector<Box> getDomains(Srcs&... sources)
         {
             std::vector<Box> domains;
             (domains.push_back(sources.box()), ...); //C++17 fold expression
@@ -36,4 +36,5 @@ namespace Proto
 #include "operators/Proto_DeconvolveOp.H"
 #include "operators/Proto_ConvolveFaceOp.H"
 #include "operators/Proto_DeconvolveFaceOp.H"
+#include "operators/Proto_FaceDiffOp.H"
 #endif

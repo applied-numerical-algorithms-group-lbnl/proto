@@ -572,6 +572,74 @@ PROTO_KERNEL_END(f_phi_faceF, f_phi_face);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
+void f_DphiF(const Point& a_pt, Var<double, C, MEM>& a_data,
+        Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset, int a_dir)
+{
+    double x[DIM];
+    double k[DIM];
+    double phi = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = a_pt[dir]*a_dx[dir] + a_dx[dir]/2.0 + a_offset[dir];
+        k[dir] = (a_k[dir]*M_PI*2);
+        if (dir == a_dir)
+        {
+            phi *= k[dir]*cos(k[dir]*x[dir]);
+        } else {
+            phi *= sin(k[dir]*x[dir]);
+        }
+    }
+    
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_DphiF, f_Dphi);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_Dphi_avg_faceF(const Point& a_pt, Var<double, C, MEM>& a_data,
+        Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset, int a_dir, int a_face)
+{
+    double x[DIM];
+    double k[DIM];
+    
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = a_pt[dir]*a_dx[dir] + a_dx[dir]/2.0 + a_offset[dir];
+        k[dir] = (a_k[dir]*M_PI*2);
+
+        if (dir == a_face)
+        {
+            x[dir] -= a_dx[dir]/2.0;
+        }
+    }
+
+    double phi = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (dir == a_dir)
+        {
+            phi *= k[dir]*cos(k[dir]*x[dir]);
+        } else {
+            phi *= sin(k[dir]*x[dir]);
+        }
+        if (dir != a_face)
+        {
+            phi *= 2.0*sin(k[dir]*a_dx[dir]/2.0)/(k[dir]*a_dx[dir]);
+        }
+    }
+
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_Dphi_avg_faceF, f_Dphi_avg_face);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
 void f_phi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data,
         Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset)
 {
