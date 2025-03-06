@@ -337,6 +337,81 @@ TEST(BoxData, ArrayArithmetic) {
     }
 }
 
+TEST(BoxData, Increment)
+{
+    constexpr int C = 2;
+    constexpr int D = 3;
+    constexpr int E = 4;
+    double scale = 17;
+
+    Box BDst = Box::Cube(8).shift(-Point::Ones());
+    Box BSrc = BDst.shift(Point::X());
+    BoxData<double, C, HOST, D, E> hostDst(BDst);
+    BoxData<double, C, HOST, D, E> hostSrc(BSrc);
+    BoxData<double, C, HOST, D, E> hostSln(BDst);
+
+    hostDst.setVal(7);
+    hostSln.setVal(7);
+    for (int cc = 0; cc < C; cc++)
+    for (int dd = 0; dd < D; dd++)
+    for (int ee = 0; ee < E; ee++)
+    for (auto p : BSrc)
+    {
+        hostSrc(p,cc,dd,ee) = p.sum() + cc*10000 + dd*1000 + ee*100;
+    }
+    
+    hostDst.increment(hostSrc, scale);
+    BoxData<double, C, HOST, D, E> tmp1(BSrc);
+    hostSrc.copyTo(tmp1);
+    tmp1 *= scale;
+    hostSln += tmp1;
+
+    BoxData<double, C, HOST, D, E> hostErr(BDst);
+    hostDst.copyTo(hostErr);
+    hostErr -= hostSln;
+    double error = hostErr.absMax();
+
+    EXPECT_LT(error, 1e-12);
+}
+
+TEST(BoxData, IncrementProduct)
+{
+    constexpr int C = 2;
+    constexpr int D = 3;
+    constexpr int E = 4;
+    double scale = 17;
+
+    Box BDst = Box::Cube(8).shift(-Point::Ones());
+    Box BSrc = BDst.shift(Point::X());
+    BoxData<double, C, HOST, D, E> hostDst(BDst);
+    BoxData<double, C, HOST, D, E> hostSrc(BSrc);
+    BoxData<double, C, HOST, D, E> hostSln(BDst);
+
+    hostDst.setVal(7);
+    hostSln.setVal(7);
+    for (int cc = 0; cc < C; cc++)
+    for (int dd = 0; dd < D; dd++)
+    for (int ee = 0; ee < E; ee++)
+    for (auto p : BSrc)
+    {
+        hostSrc(p,cc,dd,ee) = p.sum() + cc*10000 + dd*1000 + ee*100;
+    }
+    
+    hostDst.incrementProduct(hostSrc, hostSrc, scale);
+    BoxData<double, C, HOST, D, E> tmp1(BSrc);
+    hostSrc.copyTo(tmp1);
+    tmp1 *= hostSrc;
+    tmp1 *= scale;
+    hostSln += tmp1;
+
+    BoxData<double, C, HOST, D, E> hostErr(BDst);
+    hostDst.copyTo(hostErr);
+    hostErr -= hostSln;
+    double error = hostErr.absMax();
+
+    EXPECT_LT(error, 1e-12);
+}
+
 TEST(BoxData, Reduction) {
     constexpr unsigned int C = 3;
     typedef int T;
@@ -536,6 +611,7 @@ TEST(BoxData, Alias) {
     }
 #endif
 }
+
 TEST(BoxData, SliceBasic) {
     int domainSize = 8;
     Box domainBox = Box::Cube(domainSize).grow(1);

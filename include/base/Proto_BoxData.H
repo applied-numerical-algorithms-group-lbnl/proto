@@ -913,6 +913,10 @@ namespace Proto
           */
         inline BoxData<T,C,MEM,D,E>& operator/=(const Array<T, C*D*E>& a_array);
 
+        inline void increment(const BoxData<T,C,MEM,D,E>& rhs, T scale = 1);
+
+        inline void incrementProduct(const BoxData<T,C,MEM,D,E>& A, const BoxData<T,C,MEM,D,E>& B, T scale = 1);
+
         ///@}
 
         ///////////////////////////////////////////////////////////////////////////////////////

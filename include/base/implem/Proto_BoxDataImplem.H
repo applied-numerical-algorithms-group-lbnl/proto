@@ -1211,6 +1211,42 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
     return *this;
 }
 
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::increment(const BoxData<T,C,MEM,D,E>& rhs, T scale)
+{
+    forallInPlace([] PROTO_LAMBDA (
+        Var<T,C,MEM,D,E>& v_out,
+        Var<T,C,MEM,D,E>& v_in,
+        T& v_scale)
+    {
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            v_out(cc,dd,ee) += (v_in(cc,dd,ee)*v_scale);
+        }
+    },*this,rhs,scale);
+}
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::incrementProduct(
+    const BoxData<T,C,MEM,D,E>& A,
+    const BoxData<T,C,MEM,D,E>& B,
+    T scale)
+{
+    forallInPlace([] PROTO_LAMBDA (
+        Var<T,C,MEM,D,E>& v_out,
+        Var<T,C,MEM,D,E>& v_A,
+        Var<T,C,MEM,D,E>& v_B,
+        T& v_scale)
+    {
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            v_out(cc,dd,ee) += (v_A(cc,dd,ee)*v_B(cc,dd,ee)*v_scale);
+        }
+    },*this ,A, B, scale);
+}
 
 //=============================================================================================
 // Utility Functions ||
