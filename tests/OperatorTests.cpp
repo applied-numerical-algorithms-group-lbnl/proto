@@ -19,7 +19,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
 }
-#if 1
+
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -116,6 +116,7 @@ TEST(Operator, ConvolveFace) {
             soln[dir].define(B);
             err[dir].define(B);
         
+            auto side = Side::Hi;
             forallInPlace_p(f_phi_face, data[dir], dx, k, offset, dir);
             forallInPlace_p(f_phi_face_avg, soln[dir], dx, k, offset, dir);
             err[dir].setVal(0);
@@ -138,7 +139,6 @@ TEST(Operator, ConvolveFace) {
         }
     }
 }
-
 
 TEST(Operator, Deconvolve) {
     int domainSize = 64;
@@ -257,7 +257,6 @@ TEST(Operator, DeconvolveFace) {
     }
 }
 
-
 TEST(Operator, InitConvolve)
 {
     int domainSize = 32;
@@ -318,7 +317,6 @@ TEST(Operator, InitConvolve)
 #endif
     }
 }
-#endif
 
 TEST(Operator, FaceDiff)
 {
@@ -379,6 +377,88 @@ TEST(Operator, FaceDiff)
         std::cout << "Error (Max Norm): " << err[ii] << " | Convergence Rate: " << rate << std::endl;
         #endif
         EXPECT_NEAR(rate, 4.0, 0.1);
+    }
+}
+
+TEST(Operator, FaceAverageProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int C = 2;
+    int domainSize = 32;
+    int numIter = 3;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        Box rangeBox = Box::Cube(domainSize);
+        Point offset_A(1,2,3,4,5,6);
+        Point offset_B(2,1,4,3,6,5);
+        Point k_A(1,2,3,4,5,6);
+        Point k_B(2,1,4,3,6,5);
+        auto side = Side::Lo;
+        error[nn] = 0;
+        for (int normDir = 0; normDir < DIM; normDir++)
+        {
+            auto productOp = FaceAverageProductOp<double>(normDir);
+            auto domainBoxes = productOp.domains(rangeBox);
+            
+            auto AVG = ConvolveFaceOp<double>(normDir);
+
+            Box avgDomain = AVG.domainUnion(rangeBox);
+            BoxData<double, C> A(avgDomain);
+            BoxData<double, C> B(avgDomain);
+            BoxData<double, C> AB(avgDomain);
+            BoxData<double, C> solnData(rangeBox);
+
+            
+            forallInPlace_p(f_phi_face,  A, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face,  B, dx, k_B, offset_B, normDir, side);
+
+            AB.setVal(0);
+            AB.incrementProduct(A, B);
+            AVG(solnData, AB, AB);
+
+            BoxData<double, C> A4_avg(domainBoxes[0]);
+            BoxData<double, C> B4_avg(domainBoxes[1]);
+            BoxData<double, C> A2_avg(domainBoxes[2]);
+            BoxData<double, C> B2_avg(domainBoxes[3]);
+            BoxData<double, C> testData(rangeBox);
+
+            forallInPlace_p(f_phi_face_avg,  A4_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  B4_avg, dx, k_B, offset_B, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  A2_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  B2_avg, dx, k_B, offset_B, normDir, side);
+
+            productOp(testData, A4_avg, B4_avg, A2_avg, B2_avg);
+            
+            BoxData<double, C> errData(rangeBox);
+            errData.setVal(0);
+            errData += testData;
+            errData -= solnData;
+
+            #if PR_VERBOSE > 0
+            h5.writePatch(testData, "TEST_PROD_FACE_DAT_D%i_N%i", normDir, nn);
+            h5.writePatch(A, "TEST_PROD_FACE_A_D%i_N%i", normDir, nn);
+            h5.writePatch(B, "TEST_PROD_FACE_B_D%i_N%i", normDir, nn);
+            h5.writePatch(AB, "TEST_PROD_FACE_AB_D%i_N%i", normDir, nn);
+            h5.writePatch(solnData, "TEST_PROD_FACE_SLN_D%i_N%i", normDir, nn);
+            h5.writePatch(errData, "TEST_PROD_FACE_ERR_D%i_N%i", normDir, nn);
+            #endif
+
+            error[nn] = max(error[nn], errData.absMax());
+        }
+        domainSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn-1]/error[nn])/ log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        EXPECT_NEAR(rate, 4.0, 0.25);
     }
 }
 

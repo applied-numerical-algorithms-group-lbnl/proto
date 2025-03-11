@@ -20,6 +20,15 @@ namespace Proto
             (domains.push_back(boxes), ...);
             return range(domains);
         }
+        inline Box domainUnion(const Box& rangeBox) const
+        {
+            Box unionBox;
+            for (auto B : domains(rangeBox))
+            {
+                unionBox += B;
+            }
+            return unionBox;
+        }
 
     protected:
         
@@ -37,4 +46,5 @@ namespace Proto
 #include "operators/Proto_ConvolveFaceOp.H"
 #include "operators/Proto_DeconvolveFaceOp.H"
 #include "operators/Proto_FaceDiffOp.H"
+#include "operators/Proto_FaceAverageProductOp.H"
 #endif

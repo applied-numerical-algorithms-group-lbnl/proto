@@ -550,7 +550,7 @@ PROTO_KERNEL_END(f_phi_cornerF, f_phi_corner);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phi_faceF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir)
+void f_phi_faceF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir, Side::LoHiSide a_side = Side::Lo)
 {
     double x[DIM];
     double k[DIM];
@@ -558,7 +558,14 @@ void f_phi_faceF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Po
     for (int dir = 0; dir < DIM; dir++)
     {
         x[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
-        if (dir != a_dir) { x[dir] += (a_dx/2.0);}
+        if (dir != a_dir) { x[dir] += (a_dx/2.0); }
+        else {
+            if (a_side == Side::Hi)
+            {
+                x[dir] += a_dx;
+            }
+        }
+        
         k[dir] = (a_k[dir]*M_PI*2);
         phi *= sin(k[dir]*x[dir]);
     }
@@ -670,7 +677,7 @@ PROTO_KERNEL_END(f_phi_avgF, f_phi_avg);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phi_face_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir)
+void f_phi_face_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir, Side::LoHiSide a_side = Side::Lo)
 {
     double x0[DIM];
     double x1[DIM];
@@ -695,7 +702,13 @@ void f_phi_face_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx
             if (d == a_dir) {continue;}
             a_data(ii)  *= (-cos(k[d]*x1[d]) + cos(k[d]*x0[d]));
         }
-        a_data(ii) *= sin(k[a_dir]*x0[a_dir])/kdx;
+        if (a_side == Side::Hi)
+        {
+            a_data(ii) *= sin(k[a_dir]*x1[a_dir])/kdx;
+        } else {
+            a_data(ii) *= sin(k[a_dir]*x0[a_dir])/kdx;
+        }
+        
     }
 }
 PROTO_KERNEL_END(f_phi_face_avgF, f_phi_face_avg);

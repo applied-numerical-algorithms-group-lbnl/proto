@@ -403,45 +403,8 @@ _faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_q2nd,
         int a_dir)
 {
-    PR_TIME("Operator::faceProduct");
-    bool do_replace = true;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        if (ii == a_dir){continue;}
-        auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
-        BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
-        BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
-        forallInPlace(
-            [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq, bool v_replace)
-            {
-                for (int cc = 0; cc < C; cc++)
-                {
-                for (int dd = 0; dd < D; dd++)
-                {
-                for (int ee = 0; ee < E; ee++)
-                {
-                    if (v_replace)
-                    {
-                        v_out(cc,dd,ee) = v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
-                    } else {
-                        v_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
-                    }
-                }
-                }
-                }
-            }, a_dest, Dp, Dq, do_replace);
-        do_replace = false;
-    }
-    forallInPlace(
-        [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
-        {
-            for (int cc = 0; cc < C; cc++)
-            for (int dd = 0; dd < D; dd++)
-            for (int ee = 0; ee < E; ee++)
-            {
-                v_out(cc,dd,ee) += v_p(cc,dd,ee)*v_q(cc,dd,ee);
-            }
-        }, a_dest, a_pavg, a_qavg);
+    FaceAverageProductOp<T> op(a_dir);
+    op(a_dest, a_pavg, a_qavg, a_p2nd, a_q2nd);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
