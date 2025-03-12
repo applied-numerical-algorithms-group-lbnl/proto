@@ -68,6 +68,9 @@ TEST(Operator, Convolve) {
     {
         double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);
         double rateErr = abs(4.0-rate);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << errNorm[ii] << " | Convergence Rate: " << rate << std::endl;
+        #endif
         EXPECT_LT(rateErr, rateTol);
     }
 }
@@ -135,6 +138,9 @@ TEST(Operator, ConvolveFace) {
         {
             double rate = log(errNorm[ii-1][dir]/errNorm[ii][dir])/log(2.0);
             double rateErr = abs(4.0-rate);
+            #if PR_VERBOSE > 0
+            std::cout << "Dir: " << dir << " | Error (Max Norm): " << errNorm[ii][dir] << " | Convergence Rate: " << rate << std::endl;
+            #endif
             EXPECT_LT(rateErr, rateTol);
         }
     }
@@ -186,7 +192,11 @@ TEST(Operator, Deconvolve) {
     {
         double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);
         double rateErr = abs(4-rate);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << errNorm[ii] << " | Convergence Rate: " << rate << std::endl;
+        #endif
         EXPECT_LT(rateErr, rateTol);
+        
     }
 }
 
@@ -252,6 +262,9 @@ TEST(Operator, DeconvolveFace) {
         {
             double rate = log(errNorm[ii-1][dir]/errNorm[ii][dir])/log(2.0);
             double rateErr = abs(4.0-rate);
+            #if PR_VERBOSE > 0
+            std::cout << "Dir: " << dir << " | Error (Max Norm): " << errNorm[ii][dir] << " | Convergence Rate: " << rate << std::endl;
+            #endif
             EXPECT_LT(rateErr, rateTol);
         }
     }
@@ -459,6 +472,75 @@ TEST(Operator, FaceAverageProduct)
         std::cout << "Error (Max Norm): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
         #endif
         EXPECT_NEAR(rate, 4.0, 0.25);
+    }
+}
+
+TEST(Operator, FaceAverageMatrixProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int CL = 2;
+    constexpr int DL = 4;
+    constexpr int CR = 4;
+    constexpr int DR = 1;
+    int domainSize = 32;
+    int numIter = 3;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        Box rangeBox = Box::Cube(domainSize);
+        Point offset_A(1,2,3,4,5,6);
+        Point offset_B(2,1,4,3,6,5);
+        Point k_A(1,2,3,4,5,6);
+        Point k_B(2,1,4,3,6,5);
+        auto side = Side::Lo;
+        error[nn] = 0;
+        for (int normDir = 0; normDir < DIM; normDir++)
+        {
+            auto matProductOp = FaceAverageMatrixProductOp<double>(normDir);
+            auto domainBoxes = matProductOp.domains(rangeBox);
+        
+            BoxData<double, CL, HOST, DL> A4_avg(domainBoxes[0]);
+            BoxData<double, CR, HOST, DR> B4_avg(domainBoxes[1]);
+            BoxData<double, CL, HOST, DL> A2_avg(domainBoxes[2]);
+            BoxData<double, CR, HOST, DR> B2_avg(domainBoxes[3]);
+
+            forallInPlace_p(f_phi_face_avg,  A4_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  B4_avg, dx, k_B, offset_B, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  A2_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  B2_avg, dx, k_B, offset_B, normDir, side);
+
+            auto testData = matProductOp(A4_avg, B4_avg, A2_avg, B2_avg);
+            auto solnData = Operator::_faceMatrixProductAB(A4_avg, B4_avg, A2_avg, B2_avg, normDir);
+            
+            BoxData<double, CL, HOST, DR> errData(rangeBox);
+            errData.setVal(0);
+            errData += testData;
+            errData -= solnData;
+
+            #if PR_VERBOSE > 0
+            h5.writePatch(testData, "TEST_MAT_PROD_FACE_DAT_D%i_N%i", normDir, nn);
+            h5.writePatch(solnData, "TEST_MAT_PROD_FACE_SLN_D%i_N%i", normDir, nn);
+            h5.writePatch(errData, "TEST_MAT_PROD_FACE_ERR_D%i_N%i", normDir, nn);
+            #endif
+
+            error[nn] = max(error[nn], errData.absMax());
+        }
+        domainSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn-1]/error[nn])/ log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (w.r.t original implementation): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        if (error[nn] > 1e-12)
+        {
+            EXPECT_NEAR(rate, 4.0, 0.25);
+        }
     }
 }
 
