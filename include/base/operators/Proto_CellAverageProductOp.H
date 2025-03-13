@@ -1,32 +1,25 @@
 
 #pragma once
-#ifndef _PROTO_PRODUCT_OF_FACE_AVG_OP_
-#define _PROTO_PRODUCT_OF_FACE_AVG_OP_
+#ifndef _PROTO_CELL_AVERAGE_PRODUCT_OP_
+#define _PROTO_CELL_AVERAGE_PRODUCT_OP_
 
 #include "Proto.H"
 
 namespace Proto
 {
     template <class T>
-    class FaceAverageProductOp : public CompositeOp
+    class CellAverageProductOp : public CompositeOp
     {
 
     private:
-        int _normDir;
         Array<Stencil<T>, DIM> _diffs;
 
     public:
-        inline FaceAverageProductOp(int normDir)
+        inline CellAverageProductOp()
         {
-            _normDir = normDir;
             for (int dd = 0; dd < DIM; dd++)
             {
-                if (dd == normDir)
-                {
-                    _diffs[dd] = 1.0*Shift::Zeros();
-                } else {
-                    _diffs[dd] = 0.5*Shift::Basis(dd, 1) - 0.5*Shift::Basis(dd, -1);
-                }
+                _diffs[dd] = 0.5*Shift::Basis(dd,1) - 0.5*Shift::Basis(dd,-1);
             }
         }
 
@@ -52,7 +45,7 @@ namespace Proto
         inline Box range(const std::vector<Box> &domainBoxes) const
         {
             PROTO_ASSERT(domainBoxes.size() == 4,
-                "FaceAverageProduct::range | Error: Incorrect input size (%i). Should be 4.",
+                "CellAverageProduct::range | Error: Incorrect input size (%i). Should be 4.",
                 domainBoxes.size());
             
             Box rangeBox = domainBoxes[0];
@@ -74,11 +67,10 @@ namespace Proto
             const BoxData<T, C, MEM, D, E> &A_2ndOrder,
             const BoxData<T, C, MEM, D, E> &B_2ndOrder)
         {
-            PR_TIME("FaceAverageProductOp::operator()");
+            PR_TIME("CellAverageProductOp::operator()");
             AB_4thOrder.setVal(0);
             for (int dd = 0; dd < DIM; dd++)
             {
-                if (dd == _normDir) { continue; }
                 BoxData<T,C,MEM,D,E> dA = _diffs[dd](A_2ndOrder);
                 BoxData<T,C,MEM,D,E> dB = _diffs[dd](B_2ndOrder);
                 AB_4thOrder.incrementProduct(dA, dB, 1.0/12.0);

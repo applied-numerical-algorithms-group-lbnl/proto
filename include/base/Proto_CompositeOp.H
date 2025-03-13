@@ -46,6 +46,7 @@ namespace Proto
 #include "operators/Proto_ConvolveFaceOp.H"
 #include "operators/Proto_DeconvolveFaceOp.H"
 #include "operators/Proto_FaceDiffOp.H"
+#include "operators/Proto_CellAverageProductOp.H"
 #include "operators/Proto_FaceAverageProductOp.H"
 #include "operators/Proto_FaceAverageMatrixProduct.H"
 #endif
