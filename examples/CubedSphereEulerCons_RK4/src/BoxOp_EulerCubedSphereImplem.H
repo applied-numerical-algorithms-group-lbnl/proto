@@ -33,9 +33,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // cout << "inputbox = " << bx << endl;
   
   sphToPrim(W,WBar,a_USph,a_block);
-  // State Wtemp(bx.grow(-NGHOST));
-  // W.copyTo(Wtemp);
-  // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
+  State Wtemp(bx.grow(-NGHOST));
+  W.copyTo(Wtemp);
+  if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
   T dxiPerp = this->dx()[1];
