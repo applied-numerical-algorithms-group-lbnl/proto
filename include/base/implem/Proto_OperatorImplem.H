@@ -1902,65 +1902,6 @@ _faceGradient(
 
     FaceDiff<T> diffOp(a_dirNorm, a_order);
     return diffOp(a_phi);
-
-//     // This is an operator, not a stencil, since there are different stencils used to
-//     // Compute different components of the gradient.
-//     PROTO_ASSERT((a_order == 2) || (a_order == 4),
-//             "_faceGradient defined only for orders = 2 and 4");
-//     Array<Stencil<T>,DIM> faceDerivs; 
-//     for (int dir = 0;dir < DIM;dir++)
-//     {
-//         if (dir == a_dirNorm)
-//         {
-//             faceDerivs[dir] = Stencil<T>::DiffCellToFace(a_dirNorm,Side::Lo,a_order);
-//         }
-//         else
-//         {
-//             faceDerivs[dir] =           
-//                 Stencil<T>::CellToFace(dir,Side::Lo,a_order)*
-//                 Stencil<T>::FluxDivergence(dir)*
-//                 Stencil<T>::CellToFace(a_dirNorm,Side::Lo,a_order);
-//         }
-//     }
-//     Array<BoxData<T,C,MEM>,DIM> gradComps;
-//     for (int dir = 0; dir < DIM; dir++)
-//     {
-//         gradComps[dir] = faceDerivs[dir](a_phi);
-//     }
-// #if DIM==2
-//     auto retval =
-//         forall<T,C,MEM,DIM,1>
-//         ([ ] PROTO_LAMBDA(
-//                           Var<T,C,MEM,DIM>& a_retval,
-//                           const Var<T,C,MEM>& a_dphidx0,
-//                           const Var<T,C,MEM>& a_dphidx1)
-//          {
-//          for (int cc = 0;cc < C;cc++)
-//          {
-//          a_retval(cc,0) = a_dphidx0(cc);
-//          a_retval(cc,1) = a_dphidx1(cc);
-//          }
-//          },
-//          gradComps[0],gradComps[1]); 
-// #elif DIM==3
-//     auto retval =
-//         forall<T,C,MEM,DIM,1>
-//         ([ ] PROTO_LAMBDA(
-//                           Var<T,C,MEM,DIM>& a_retval,
-//                           const Var<T,C,MEM>& a_dphidx0,
-//                           const Var<T,C,MEM>& a_dphidx1,
-//                           const Var<T,C,MEM>& a_dphidx2)
-//          {
-//          for (int cc = 0; cc < C;cc++)
-//          {
-//          a_retval(cc,0) = a_dphidx0(cc);
-//          a_retval(cc,1) = a_dphidx1(cc);
-//          a_retval(cc,2) = a_dphidx2(cc);
-//          }
-//          },
-//          gradComps[0],gradComps[1],gradComps[2]);
-// #endif
-    //return retval;
 }
 
 template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>

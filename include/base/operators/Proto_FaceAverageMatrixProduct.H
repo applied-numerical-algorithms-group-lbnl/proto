@@ -13,8 +13,6 @@ namespace Proto
 
     private:
         int _normDir;
-        bool _transposeLeft;
-        bool _transposeRight;
         std::shared_ptr<FaceAverageProductOp<T>> _productOp;
 
     public:
