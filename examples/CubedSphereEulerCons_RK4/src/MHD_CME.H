@@ -320,7 +320,7 @@ void define_CMEF(const Point& a_pt,
         a_CME(1) = V_x_dom*1.0e5;
         a_CME(2) = V_y_dom*1.0e5;
         a_CME(3) = V_z_dom*1.0e5;
-        a_CME(4) = ParseInputs::get_CME_energy_control()*e0TD;
+        a_CME(4) = 0.0;//ParseInputs::get_CME_energy_control()*e0TD;
         a_CME(5) = B_x_dom;
         a_CME(6) = B_y_dom;
         a_CME(7) = B_z_dom;        
@@ -373,6 +373,9 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
             BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
             BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
             eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
+            BoxData<double, NUMCOMPS, HOST> W_point(USph_CME[dit].box());
+            W.copyTo(W_point);
+            W_point += Stencil<double>::Laplacian()(W,-1./24.);  
             BoxData<double, NUMCOMPS, HOST> W_CME(USph_CME[dit].box());
             W_CME.setVal(0.);
             double half = 0.5;
@@ -420,7 +423,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_a_W(iBY) = a_B_sph(1);
                 a_a_W(iBZ) = a_B_sph(2);
             },W_CME, V_CME_sph, B_CME_sph);
-            W.copyTo(Wout[dit]);
+            W_point.copyTo(Wout[dit]);
             if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME1");
             W_CME.copyTo(Wout[dit]);
             if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME2");
@@ -430,7 +433,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                         double a_gamma)
             { 
                 if (a_W_CME(iRHO) != 0){
-                a_W(iRHO) += a_W_CME(iRHO); 
+                // a_W(iRHO) += a_W_CME(iRHO); 
                 a_W(iVX) = a_W_CME(iVX);
                 a_W(iVY) = a_W_CME(iVY);
                 a_W(iVZ) = a_W_CME(iVZ);
@@ -439,14 +442,14 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_W(iBZ) = a_W_CME(iBZ);
                 // a_W(iP) = 0;
                 }
-            },W, W_CME,a_gamma);
+            },W_point, W_CME,a_gamma);
             MPI_Barrier(MPI_COMM_WORLD);
 
-            W.copyTo(Wout[dit]);
+            W_point.copyTo(Wout[dit]);
             if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME3");
 
             BoxData<double, NUMCOMPS, HOST> JUTemp;
-            eulerOp[dit].primToCons(JUTemp, W, a_dVolrLev[dit], a_gamma, dx[2], block);
+            eulerOp[dit].primToCons(JUTemp, W_point, a_dVolrLev[dit], a_gamma, dx[2], block);
             if (procID()==5) h5.writePatch(1,JUTemp,"JUTemp");
             JUTemp.copyTo(a_JU[dit]);
 
