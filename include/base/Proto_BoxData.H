@@ -1568,6 +1568,30 @@ namespace Proto
     
 ///@}
 
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, DR, E>
+    matrixProduct(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, DL, MEM, DR, E>
+    matrixProductLeftTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, CR, E>
+    matrixProductRightTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
 #include "implem/Proto_BoxDataImplem.H"
 } //end Proto namespace
 #endif //end include guard

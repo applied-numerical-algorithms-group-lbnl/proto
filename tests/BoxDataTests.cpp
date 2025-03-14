@@ -813,6 +813,65 @@ TEST(BoxData, Rotate)
     }
 }
 
+TEST(BoxData, MatrixProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int CL = 2;
+    constexpr int DL = 4;
+    constexpr int CR = 4;
+    constexpr int DR = 1;
+    int domainSize = 32;
+
+    double dx = 1.0/domainSize;
+    Box domainBox = Box::Cube(domainSize);
+    Point offset_A(1,2,3,4,5,6);
+    Point offset_B(2,1,4,3,6,5);
+    Point k_A(1,2,3,4,5,6);
+    Point k_B(2,1,4,3,6,5);
+
+    BoxData<double, CL, HOST, DL> A(domainBox);
+    BoxData<double, CR, HOST, DR> B(domainBox);
+    BoxData<double, DL, HOST, CL> AT(domainBox);
+    BoxData<double, DR, HOST, CR> BT(domainBox);
+
+    forallInPlace_p(f_phi,  A, dx, k_A, offset_A);
+    forallInPlace_p(f_phi,  B, dx, k_B, offset_B);
+    forallInPlace_p(f_phi,  AT, dx, k_A, offset_A);
+    forallInPlace_p(f_phi,  BT, dx, k_B, offset_B);
+
+    auto ABTest = matrixProduct(A, B);
+    auto ABTTest = matrixProductRightTranspose(A, BT);
+    auto ATBTest = matrixProductLeftTranspose(AT, B);
+    auto ABSoln = Operator::_matrixProductAB2(A, B);
+    auto ABTSoln = Operator::_matrixProductABT2(A, BT);
+    auto ATBSoln = Operator::_matrixProductATB2(AT, B);
+    BoxData<double, CL, HOST, DR> ABError(domainBox);
+    BoxData<double, CL, HOST, DR> ATBError(domainBox);
+    BoxData<double, CL, HOST, DR> ABTError(domainBox);
+    ABError.setToZero();
+    ABError += ABTest;
+    ABError -= ABSoln;
+    ABTError.setToZero();
+    ABTError += ABTTest;
+    ABTError -= ABTSoln;
+    ATBError.setToZero();
+    ATBError += ATBTest;
+    ATBError -= ATBSoln;
+    
+    #if PR_VERBOSE > 0
+    std::cout << "AB Error (Max Norm): " << ABError.absMax() << std::endl;
+    std::cout << "ATB Error (Max Norm): " << ATBError.absMax() << std::endl;
+    std::cout << "ABT Error (Max Norm): " << ABTError.absMax() << std::endl;
+    #endif
+
+    EXPECT_LT(ABError.absMax(), 1e-12);
+    EXPECT_LT(ATBError.absMax(), 1e-12);
+    EXPECT_LT(ABTError.absMax(), 1e-12);
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

@@ -2007,3 +2007,69 @@ BoxData<T,C,MEM,1> plane(
     BoxData<T,C,MEM,1> rtn(a_src.m_data, ptr, b);
     return rtn;
 }
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E>
+BoxData<T, CL, MEM, DR, E> matrixProduct(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,CL,MEM,DR,E> AB(A.box() & B.box());
+    AB.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < CL; ii++)
+    for (int jj = 0; jj < DR; jj++)
+    for (int kk = 0; kk < DL; kk++)
+    {
+        auto ABij = slice(AB, ii, jj, ee);
+        const auto Aik = slice(A,  ii, kk, ee);
+        const auto Bkj = slice(B,  kk, jj, ee);
+        ABij.incrementProduct(Aik, Bkj, scale);
+    }
+    return AB;
+}
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E>
+BoxData<T, DL, MEM, DR, E> matrixProductLeftTranspose(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,DL,MEM,DR,E> ATB(A.box() & B.box());
+    ATB.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < DL; ii++)
+    for (int jj = 0; jj < DR; jj++)
+    for (int kk = 0; kk < CL; kk++)
+    {
+        auto ATBij = slice(ATB, ii, jj, ee);
+        const auto Aki = slice(A,  kk, ii, ee);
+        const auto Bkj = slice(B,  kk, jj, ee);
+        ATBij.incrementProduct(Aki, Bkj, scale);
+    }
+    return ATB;
+}
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E = 1>
+BoxData<T, CL, MEM, CR, E> matrixProductRightTranspose(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,CL,MEM,CR,E> ABT(A.box() & B.box());
+    ABT.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < CL; ii++)
+    for (int jj = 0; jj < CR; jj++)
+    for (int kk = 0; kk < DL; kk++)
+    {
+        auto ABTij = slice(ABT, ii, jj, ee);
+        const auto Aik = slice(A,  ii, kk, ee);
+        const auto Bjk = slice(B,  jj, kk, ee);
+        ABTij.incrementProduct(Aik, Bjk, scale);
+    }
+    return ABT;
+}

@@ -504,9 +504,9 @@ void f_LphiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_blo
 }
 PROTO_KERNEL_END(f_LphiMF, f_LphiM);
 
-template<unsigned int C, MemType MEM>
+template<unsigned int C, MemType MEM, unsigned int D=1, unsigned int E=1>
 PROTO_KERNEL_START
-void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data,
+void f_phiF(const Point& a_pt, Var<double, C, MEM, D, E>& a_data,
         Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset)
 {
     double x[DIM];
@@ -520,8 +520,10 @@ void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data,
     }
     
     for (int ii = 0; ii < C; ii++)
+    for (int jj = 0; jj < D; jj++)
+    for (int kk = 0; kk < E; kk++)
     {
-        a_data(ii) = phi;
+        a_data(ii, jj, kk) = phi;
     }
 }
 PROTO_KERNEL_END(f_phiF, f_phi);
