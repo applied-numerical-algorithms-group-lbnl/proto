@@ -18,6 +18,7 @@ class AMRRK4
     typedef BCType<T,OP::numState(), MEM, PR_CELL> BC;
     typedef LevelOp<OpType, double, BCType, MEM> LOP;
     typedef MBLevelBoxData<T, OP::numState(), MEM> LevelStateData;
+    typedef MBLevelBoxData<T, 1, MEM> LevelScalarData;
     typedef AMRData<T, OP::numState(), MEM> AMRStateData;
   
     inline AMRRK4(){}
@@ -56,9 +57,10 @@ class AMRRK4
     std::vector<int> m_numSteps;
     std::vector<int>  m_regridInterval;
     std::vector<int>  m_bufferSize;
-    std::vector<InterpStencil<T> > m_cfInterp;
+  
   
     std::vector<std::shared_ptr<LevelStateData>> m_UStage;
+    std::vector<std::shared_ptr<LevelScalarData>> m_dVolr;
     std::vector<std::shared_ptr<MBLevelBoxData<T, OP::numState()*RKNUMSTAGES, MEM>>> m_UTaylor;
     std::vector<std::shared_ptr<MBLevelBoxData<T, OP::numState()*RKNUMSTAGES, MEM>>> m_UTaylorC;
    std::vector<std::shared_ptr<MBLevelFluxRegister<T, OP::numState(), MEM>>> m_fluxRegisters;

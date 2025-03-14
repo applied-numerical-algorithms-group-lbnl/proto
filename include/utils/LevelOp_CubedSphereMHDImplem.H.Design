@@ -24,6 +24,9 @@ LevelOp_CubedSphere<T,MAP,MEM>::LevelOp_CubedSphere<T,MAP,MEM>
   MAP m_map =  CubedSphereShell::Map(layout, m_ghost);
   m_iop = CubedSphereShell::InterpOpNew<MEM>(m_layout, m_ghost,4);
   m_iopC = CubedSphereShell::InterpOpNew<MEM>(m_layoutC,Point::Ones(2),4);
+  m_cfInterp = InterpStencil<T>::FiniteVolume(m_nrefSpace, OP::order());
+  Point interpGhost = OP::ghost() / spaceRefRatio + Point::Ones();
+  interpGhost += m_cfInterp[lvl].ghost();
 }
 template<typename T,template<MemType> typename MAP,MemType MEM>
 inline void LevelOp_CubedSphere<T,MAP,MEM>::
@@ -54,22 +57,27 @@ StageLevel(
       JUToUSemiSph(USemiSph,a_JU); // Member function of LevelOp.
 
       // Construct ghost cell values for coarsened data.
-      USemiSphC.exchange();
-      m_iopCoarsened.apply(USemiSphC,USemiSphC);
+      {
+        PR_TIMER("LevelOp::StageLevel coarsened MBBoundaryInterp");
+        USemiSphC.exchange();
+        m_iopCoarsened.apply(USemiSphC,USemiSphC);
+      }
       
-      // Interpolate USemiSphCoarse to fine grid and copy to ghost cells on USemiSph.
-      Interpolate(USemiSph,USemiSphC); // Member function of LevelOp
-  
+      // Interpolate USemiSphC to USemiSph.    
+      InterpBoundaries(USemiSph,USEmiSphC); // member function of LevelOp.
+      
       // Exchange, Interpolate boundary ghost cells to USemiSph;
-      USemiSph.exchange();
-      m_iop.apply(USemiSph,USemiSph);
-      
+      {
+        PR_TIMER("LevelOp::StageLevel current MBBoundaryInterp");
+        USemiSph.exchange();
+        m_iop.apply(USemiSph,USemiSph);
+      }    
       // Transform to Spherical variables.
       USemiSphToUSph(USph,USemiSph); // Member function of LevelOp.
     }
   else
     {
-      // Transform to Semispherical variables.
+      // Transform to SemiSpherical variables.
       MBLevelBoxData<T,NUMCOMPS+2,MEM> USemiSph(layout,a_JU.ghost());
       JUToUSemiSph(USemiSph,a_JU); //Member function of LevelOp.
       
@@ -81,20 +89,17 @@ StageLevel(
       USemiSphToUSph(USph,USemiSph); // Member function of LevelOp.
     }
       
-  // Setup for physical BCs.
-  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
-  int thetaCoord = (rCoord + 1) % DIM;
-  int phiCoord = (rCoord + 2) % DIM;
-  Point ghost =
-    Point::Basis(rCoord)
-    + NGHOST*Point::Basis(thetaCoord)
-    + NGHOST*Point::Basis(phiCoord);
-  MBLevelBoxData<double, NUMCOMPS, MEM> dstData(layout,ghost);
-  if (m_init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
+  // Apply physical BCs at the inner and outer radial boundaries.
+  PhysBCs(UStage,a_time,a_dt,a_stage);
+  
   // Increment rhsTotal with artificial viscosity, divergence cleaning terms
   // if a_stage = 0.
-  artificialViscosity(a_rhsTotal,USph,a_bReg,a_lfReg,a_lfRegFine,a_level); // Member function of LevelOp.
-
+  if (a_stage == 0)
+    {
+      artificialViscosity(a_rhsTotal,USph,a_bReg,a_lfReg,a_lfRegFine,a_level);
+      // Member function of LevelOp.
+    }
+  
   // Apply operator.
   T wgtxdt = m_weight[a_stage]*a_level;
   MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
@@ -118,4 +123,221 @@ StageLevel(
     if (a_level < m_maxlev-1) a_lfrFine.incrementCoarse(fluxes,1.0);
     if (a_level > 0) a_lfr.incrementFine(fluxes,1.0);
   } 
+}
+
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::
+PhysBCs(
+        LevelStateData& a_U,
+        T a_time,
+        T a_dt,
+        int a_stage)
+{
+  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+  int thetaCoord = (rCoord + 1) % DIM;
+
+  int phiCoord = (rCoord + 2) % DIM;
+  Point ghost =
+    Point::Basis(rCoord)
+    + NGHOST*Point::Basis(thetaCoord)
+    + NGHOST*Point::Basis(phiCoord);
+  MBLevelBoxData<double, NUMCOMPS, MEM> dstData(layout,ghost);
+  if (m_init_condition_type == 3) BC_global.BoxData_to_BC<T,MEM>(dstData, map, a_time);
+  for (auto dit : a_UStage.layout())
+    {
+      unsigned int block = layout.block(dit);
+      Box blockBox = layout.getBlock(block).domain().box();
+      auto &rhs_i = a_k[dit];
+      auto &USph_i =a_UStage[dit];
+    
+      eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
+    }
+}
+
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::
+artificialViscosity(LevelStateData& a_rhsTotal,
+                    const LevelStateData& a_USph,
+                    MBBlockRegister<T,NUMCOMPS,MEM>& a_bReg,
+                    MBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfReg,
+                    MBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfRegFine)
+{
+  for (auto dit : a_UStage.layout())
+  {
+    unsigned int block = layout.block(dit);
+    Box blockBox = layout.getBlock(block).domain().box();
+    auto &rhs_i = a_k[dit];
+    auto &USph_i =a_UStage[dit];
+    
+    eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
+    auto dx = eulerOp[dit].dx();    
+    int linear_visc = ParseInputs::get_linear_viscosity();
+    int divBcleaning = ParseInputs::get_divergence_cleaning();
+    if (linear_visc == 1 && a_kstage == 0)
+      {
+        PR_TIMERS("artificial viscosity");
+        unsigned int block = layout.block(dit);
+        Box blockBox = layout.getBlock(block).domain().box();
+        auto mbdata = a_blockreg.bounds(dit);
+        Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
+        fluxes[0].define(rhs_i.box().extrude(0));
+        fluxes[0].setToZero();
+        fluxes[1].define(rhs_i.box().extrude(1));
+        fluxes[1].setToZero();
+        fluxes[2].define(rhs_i.box().extrude(2));
+        fluxes[2].setToZero();
+        
+          {
+            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0, a_dt);
+            //dt is not used in viscFlux. dt is multiplied in RK4
+            T one = 1.0;
+            // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
+            a_blockreg.increment(fluxes, dit, a_dt);
+            CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
+          }
+      }
+    if (divBcleaning == 1 && a_kstage == 0)
+      eulerOp[dit].DivBPowell(rhs_i, USph_i, 1.0);
+}
+
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::
+inline void JUToUSemiSph(
+                         MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_USemiSph,
+                         const LevelStateData& a_JU)
+{
+  PR_TIMERS("CubedSphereShell::consToSphInterpEuler");
+  auto layout = a_JU.layout();
+  auto ghost = a_JU.ghost();
+  
+  // copy input a_JU into temp variables, with the temp have 1 cell wide
+  // ghost cells, and no interblock ghost points. This is just enough data
+  // perform the transform to semispherical variables without having
+  // the result depend on the decomposition of the domain into patches.
+  
+  Array<Point,DIM+1> ghostTemp =
+    {Point::Ones(2),Point::Zeros(),Point::Zeros(),Point::Zeros()};
+  MBLevelBoxData<T,C,MEM> JUTemp(layout,ghostTemp);  
+  // Transform JU to USemiSph.
+  JUTemp.setVal(0.);
+  a_JU.copyTo(JUTemp);
+  JUTemp.exchange();
+  MBLevelBoxData<T,C+2,MEM> USemiSph(layout,ghost);
+  
+  Point size = layout.domain().getBlock(0).sizes();
+  T dxiPerp = 1.0/size[1];
+
+  for (auto dit : JUTemp.layout())
+    {
+      PR_TIMERS("CubedSphereShell::consToSphInterpEuler pre-exchange");
+      // Transform JU -> USemiSph on valid cells in layout.
+      unsigned int block = JUTemp.layout().block(dit);
+      Box blockBox = JUTemp.layout().getBlock(block).domain().box();
+      auto& JU_i = JUTemp[dit];
+      auto& USemiSph_i = USemiSph[dit];
+      USemiSph_i.setToZero();
+      auto& dVolr_i = a_dVolr[dit];
+      Box bx_i = JUTemp.layout()[dit]; 
+      CubedSphereShell::
+        consToSemiSphNGEuler(USemiSph_i,JU_i,dVolr_i,bx_i,
+                             blockBox,dxiPerp,block,4);
+      
+    }
+}
+
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::
+inline void USemiSphToUSph(
+                           LevelStateData& a_USph,
+                           MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_USemiSph)
+{
+  PR_TIMERS("USemiSphToSph");
+  for (auto dit : USemiSph.layout())
+    {
+      P
+      BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
+      Box bxOut = a_JU[dit].box();     
+      Box bxIn = USemiSph_i.box();
+      auto& USphere_i = a_JU[dit];     
+      
+      unsigned int block = a_JU.layout().block(dit);
+      Box bxMetric = bxIn;
+      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxMetric,dxiPerp,0);
+      
+      BoxData<T,1,MEM> invDetA = forall<T,1,MEM>
+        ([ ] PROTO_LAMBDA
+         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+         {
+           a_output(0) = 1.0/a_deta(0);
+         }
+         ,deta);
+      BoxData<T,DIM,MEM,DIM> ADetA =
+        CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
+      BoxData<T,DIM,MEM,DIM> invADetA(bxMetric);
+      invADetA.setToZero();
+      forallInPlace(f_matinv3by3,invADetA,ADetA);
+      CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,deta,
+                                       invDetA,1,2*DIM+2);
+      CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,
+                                       deta,invDetA,DIM+2,2*DIM+3);
+
+      BoxData<T,1,MEM> rhoSph = slice(USemiSph_i,0);
+      BoxData<T,1,MEM> rhoOut = slice(USphere_i,0);
+      rhoSph.copyTo(rhoOut);
+
+      BoxData<T,1,MEM> rhoESph = slice(USemiSph_i,DIM+1);
+      BoxData<T,1,MEM> rhoEOut = slice(USphere_i,DIM+1);
+      rhoESph.copyTo(rhoEOut);
+    }
+}
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::    
+InterpBoundaries(
+                 MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_UStage,
+                 MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_UStageC)
+{
+   PROTO_ASSERT(a_level > 0,
+                "AMRRK4::interpBoundaries | Error: Interpolation is only done for level > 0.");
+   
+#ifdef PR_HDF5
+   //HDF5Handler h5;
+#endif
+   PR_TIMERS("AMRRK4::interpBoundaries");
+   
+   for (auto iter : layout)
+     {
+       PR_STACK_ON;
+       if (layout.onLevelBoundary(layout.point(iter)))
+       {
+         // get data
+         auto& UStage_i   = UStage[iter];
+         auto& UStageC_i = UStageC[iter];
+         BoxData<T,NUMCOMPS+2,MEM> UStageTemp(layout[dit]);
+            
+         // save copy of interior
+         UStageTemp |= I(UStage_i);
+
+         // interpolate boundary conditions
+         {
+           PR_TIMERS("InterpBoundaries single patch");
+           UStage_i |= cfInterp(UStageC_i);
+         }       
+         // copy back the interior
+         UStage_i |= I(UStageTemp);
+       }
+       PR_STACK_OFF;
+     }
+ }
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::    
+tags(MBLevelTagData& a_tags,
+     const LevelStateData& a_U)
+{
+}
+
+template<typename T,template<MemType> typename MAP,MemType MEM>
+inline void LevelOp_CubedSphere<T,MAP,MEM>::  
+getVolr(LevelScalar& a_dVolr
+        MBDisjointBoxLayout a_layout)
+{
 }
