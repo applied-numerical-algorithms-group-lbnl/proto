@@ -125,9 +125,9 @@ namespace Proto
             const BoxData<T,CL,MEM,DL,E>& A_2ndOrder,
             const BoxData<T,CR,MEM,DR,E>& B_2ndOrder)
         {
-            PROTO_ASSERT(CL == CR,
+            PROTO_ASSERT(DL == DR,
                 "FaceAverageMatrixProductOp::transposeLeft | Error: Matrix inner dimensions must be equal (%u != %u)",
-                CL, CR);
+                DL, DR);
             PR_TIME("FaceAverageMatrixProductOp::transposeLeft");
             AB_4thOrder.setToZero();
             for (int ee = 0; ee < E;  ee++)

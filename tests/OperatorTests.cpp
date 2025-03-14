@@ -555,6 +555,73 @@ TEST(Operator, FaceAverageProduct)
     }
 }
 
+TEST(Operator, CellAverageMatrixProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int CL = 2;
+    constexpr int DL = 4;
+    constexpr int CR = 4;
+    constexpr int DR = 1;
+    int domainSize = 32;
+    int numIter = 3;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        Box rangeBox = Box::Cube(domainSize);
+        Point offset_A(1,2,3,4,5,6);
+        Point offset_B(2,1,4,3,6,5);
+        Point k_A(1,2,3,4,5,6);
+        Point k_B(2,1,4,3,6,5);
+        auto side = Side::Lo;
+
+        CellAverageMatrixProductOp<double> matProductOp;
+        auto domainBoxes = matProductOp.domains(rangeBox);
+    
+        BoxData<double, CL, HOST, DL> A4_avg(domainBoxes[0]);
+        BoxData<double, CR, HOST, DR> B4_avg(domainBoxes[1]);
+        BoxData<double, CL, HOST, DL> A2_avg(domainBoxes[2]);
+        BoxData<double, CR, HOST, DR> B2_avg(domainBoxes[3]);
+
+        forallInPlace_p(f_phi_avg,  A4_avg, dx, k_A, offset_A);
+        forallInPlace_p(f_phi_avg,  B4_avg, dx, k_B, offset_B);
+        forallInPlace_p(f_phi_avg,  A2_avg, dx, k_A, offset_A);
+        forallInPlace_p(f_phi_avg,  B2_avg, dx, k_B, offset_B);
+
+        auto testAB = matProductOp(A4_avg, B4_avg, A2_avg, B2_avg);
+        auto solnAB = Operator::_cellMatrixProductAB(A4_avg, B4_avg, A2_avg, B2_avg);
+        
+        BoxData<double, CL, HOST, DR> errData(rangeBox);
+        errData.setVal(0);
+        errData += testAB;
+        errData -= solnAB;
+
+        #if PR_VERBOSE > 0
+        h5.writePatch(testAB, "TEST_MAT_PROD_CELL_DAT_N%i", nn);
+        h5.writePatch(solnAB, "TEST_MAT_PROD_CELL_SLN_N%i", nn);
+        h5.writePatch(errData, "TEST_MAT_PROD_CELL_ERR_N%i", nn);
+        #endif
+
+        error[nn] = max(error[nn], errData.absMax());
+
+        domainSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn-1]/error[nn])/ log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (w.r.t original implementation): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        if (error[nn] > 1e-12)
+        {
+            EXPECT_NEAR(rate, 4.0, 0.25);
+        }
+    }
+}
+
 TEST(Operator, FaceAverageMatrixProduct)
 {
     #if PR_VERBOSE > 0
@@ -588,26 +655,56 @@ TEST(Operator, FaceAverageMatrixProduct)
             BoxData<double, CL, HOST, DL> A2_avg(domainBoxes[2]);
             BoxData<double, CR, HOST, DR> B2_avg(domainBoxes[3]);
 
+            BoxData<double, DL, HOST, CL> AT4_avg(domainBoxes[0]);
+            BoxData<double, DR, HOST, CR> BT4_avg(domainBoxes[1]);
+            BoxData<double, DL, HOST, CL> AT2_avg(domainBoxes[2]);
+            BoxData<double, DR, HOST, CR> BT2_avg(domainBoxes[3]);
+
             forallInPlace_p(f_phi_face_avg,  A4_avg, dx, k_A, offset_A, normDir, side);
             forallInPlace_p(f_phi_face_avg,  B4_avg, dx, k_B, offset_B, normDir, side);
             forallInPlace_p(f_phi_face_avg,  A2_avg, dx, k_A, offset_A, normDir, side);
             forallInPlace_p(f_phi_face_avg,  B2_avg, dx, k_B, offset_B, normDir, side);
-
-            auto testData = matProductOp(A4_avg, B4_avg, A2_avg, B2_avg);
-            auto solnData = Operator::_faceMatrixProductAB(A4_avg, B4_avg, A2_avg, B2_avg, normDir);
             
-            BoxData<double, CL, HOST, DR> errData(rangeBox);
-            errData.setVal(0);
-            errData += testData;
-            errData -= solnData;
+            forallInPlace_p(f_phi_face_avg,  AT4_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  BT4_avg, dx, k_B, offset_B, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  AT2_avg, dx, k_A, offset_A, normDir, side);
+            forallInPlace_p(f_phi_face_avg,  BT2_avg, dx, k_B, offset_B, normDir, side);
+
+            auto testAB = matProductOp(A4_avg, B4_avg, A2_avg, B2_avg);
+            auto solnAB = Operator::_faceMatrixProductAB(A4_avg, B4_avg, A2_avg, B2_avg, normDir);
+            auto testATB = matProductOp.transposeLeft(AT4_avg, B4_avg, AT2_avg, B2_avg);
+            auto solnATB = Operator::_faceMatrixProductATB(AT4_avg, B4_avg, AT2_avg, B2_avg, normDir);
+            auto testABT = matProductOp.transposeRight(A4_avg, BT4_avg, A2_avg, BT2_avg);
+            auto solnABT = Operator::_faceMatrixProductABT(A4_avg, BT4_avg, A2_avg, BT2_avg, normDir);
+            
+            BoxData<double, CL, HOST, DR> errAB(rangeBox);
+            errAB.setVal(0);
+            errAB += testAB;
+            errAB -= solnAB;
+            BoxData<double, CL, HOST, DR> errATB(rangeBox);
+            errATB.setVal(0);
+            errATB += testATB;
+            errATB -= solnATB;
+            BoxData<double, CL, HOST, DR> errABT(rangeBox);
+            errABT.setVal(0);
+            errABT += testABT;
+            errABT -= solnABT;
 
             #if PR_VERBOSE > 0
-            h5.writePatch(testData, "TEST_MAT_PROD_FACE_DAT_D%i_N%i", normDir, nn);
-            h5.writePatch(solnData, "TEST_MAT_PROD_FACE_SLN_D%i_N%i", normDir, nn);
-            h5.writePatch(errData, "TEST_MAT_PROD_FACE_ERR_D%i_N%i", normDir, nn);
+            h5.writePatch(testAB, "TEST_MAT_PROD_FACE_AB_DAT_D%i_N%i", normDir, nn);
+            h5.writePatch(solnAB, "TEST_MAT_PROD_FACE_AB_SLN_D%i_N%i", normDir, nn);
+            h5.writePatch(errAB, "TEST_MAT_PROD_FACE_AB_ERR_D%i_N%i", normDir, nn);
+            h5.writePatch(testATB, "TEST_MAT_PROD_FACE_ATB_DAT_D%i_N%i", normDir, nn);
+            h5.writePatch(solnATB, "TEST_MAT_PROD_FACE_ATB_SLN_D%i_N%i", normDir, nn);
+            h5.writePatch(errATB, "TEST_MAT_PROD_FACE_ATB_ERR_D%i_N%i", normDir, nn);
+            h5.writePatch(testABT, "TEST_MAT_PROD_FACE_ABT_DAT_D%i_N%i", normDir, nn);
+            h5.writePatch(solnABT, "TEST_MAT_PROD_FACE_ABT_SLN_D%i_N%i", normDir, nn);
+            h5.writePatch(errABT, "TEST_MAT_PROD_FACE_ABT_ERR_D%i_N%i", normDir, nn);
             #endif
 
-            error[nn] = max(error[nn], errData.absMax());
+            error[nn] = max(error[nn], errAB.absMax());
+            error[nn] = max(error[nn], errATB.absMax());
+            error[nn] = max(error[nn], errABT.absMax());
         }
         domainSize *= 2;
     }

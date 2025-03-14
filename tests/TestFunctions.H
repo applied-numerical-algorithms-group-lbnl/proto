@@ -647,9 +647,9 @@ void f_Dphi_avg_faceF(const Point& a_pt, Var<double, C, MEM>& a_data,
 }
 PROTO_KERNEL_END(f_Dphi_avg_faceF, f_Dphi_avg_face);
 
-template<unsigned int C, MemType MEM>
+template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 PROTO_KERNEL_START
-void f_phi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data,
+void f_phi_avgF(const Point& a_pt, Var<double, C, MEM, D, E>& a_data,
         Array<double, DIM> a_dx, Array<double, DIM> a_k, Array<double, DIM> a_offset)
 {
     double x0[DIM];
@@ -666,13 +666,15 @@ void f_phi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data,
     
 
     for (int ii = 0; ii < C; ii++)
+    for (int jj = 0; jj < D; jj++)
+    for (int kk = 0; kk < E; kk++)
     {
-        a_data(ii) = 1.0;
+        a_data(ii, jj, kk) = 1.0;
         for (int d = 0; d < DIM; d++)
         {
-            a_data(ii) *= (-cos(k[d]*x1[d]) + cos(k[d]*x0[d]));
+            a_data(ii, jj, kk) *= (-cos(k[d]*x1[d]) + cos(k[d]*x0[d]));
         }
-        a_data(ii) *= 1.0/kdx;
+        a_data(ii, jj, kk) *= 1.0/kdx;
     }
 }
 PROTO_KERNEL_END(f_phi_avgF, f_phi_avg);
@@ -766,9 +768,9 @@ void f_Lphi_cornerF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx,
 }
 PROTO_KERNEL_END(f_Lphi_cornerF, f_Lphi_corner);
 
-template<unsigned int C, MemType MEM>
+template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 PROTO_KERNEL_START
-void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM, D, E>& a_data, double a_dx, Point a_k, Point a_offset)
 {
     double x0[DIM];
     double x1[DIM];
@@ -785,15 +787,17 @@ void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Po
     }
     
     for (int ii = 0; ii < C; ii++)
+    for (int jj = 0; jj < D; jj++)
+    for (int kk = 0; kk < E; kk++)
     {
 #if DIM == 2
-        a_data(ii) =
+        a_data(ii, jj, kk) =
             + cos(k[0]*x1[0])*cos(k[1]*x1[1])
             - cos(k[0]*x0[0])*cos(k[1]*x1[1])
             - cos(k[0]*x1[0])*cos(k[1]*x0[1])
             + cos(k[0]*x0[0])*cos(k[1]*x0[1]);
 #elif DIM == 3
-        a_data(ii) =
+        a_data(ii, jj, kk) =
             + cos(k[0]*x1[0])*cos(k[1]*x1[1])*cos(k[2]*x1[2])
             - cos(k[0]*x0[0])*cos(k[1]*x1[1])*cos(k[2]*x1[2])
             - cos(k[0]*x1[0])*cos(k[1]*x0[1])*cos(k[2]*x1[2])
@@ -804,7 +808,7 @@ void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Po
             - cos(k[0]*x0[0])*cos(k[1]*x0[1])*cos(k[2]*x0[2]);
 #else
 #endif
-        a_data(ii) *= (-k2/kdx);
+        a_data(ii, jj, kk) *= (-k2/kdx);
     }
 }
 PROTO_KERNEL_END(f_Lphi_avgF, f_Lphi_avg);
