@@ -1,14 +1,14 @@
 
 #pragma once
-#ifndef _PROTO_FACE_AVERAGE_PRODUCT_OP_
-#define _PROTO_FACE_AVERAGE_PRODUCT_OP_
+#ifndef _PROTO_FACE_AVERAGE_QUOTIENT_OP_
+#define _PROTO_FACE_AVERAGE_QUOTIENT_OP_
 
 #include "Proto.H"
 
 namespace Proto
 {
     template <class T>
-    class FaceAverageProductOp : public CompositeOp
+    class FaceAverageQuotientOp : public CompositeOp
     {
 
     private:
@@ -16,7 +16,7 @@ namespace Proto
         Array<Stencil<T>, DIM> _diffs;
 
     public:
-        inline FaceAverageProductOp(int normDir)
+        inline FaceAverageQuotientOp(int normDir)
         {
             _normDir = normDir;
             for (int dd = 0; dd < DIM; dd++)
@@ -52,7 +52,7 @@ namespace Proto
         inline Box range(const std::vector<Box> &domainBoxes) const
         {
             PROTO_ASSERT(domainBoxes.size() == 4,
-                "FaceAverageProduct::range | Error: Incorrect input size (%i). Should be 4.",
+                "FaceAverageQuotient::range | Error: Incorrect input size (%i). Should be 4.",
                 domainBoxes.size());
             
             Box rangeBox = domainBoxes[0];
@@ -68,22 +68,58 @@ namespace Proto
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
         inline void
         operator()(
-            BoxData<T, C, MEM, D, E> &AB_4thOrder,
+            BoxData<T, C, MEM, D, E> &Quotient_4thOrder,
             const BoxData<T, C, MEM, D, E> &A_4thOrder,
             const BoxData<T, C, MEM, D, E> &B_4thOrder,
             const BoxData<T, C, MEM, D, E> &A_2ndOrder,
             const BoxData<T, C, MEM, D, E> &B_2ndOrder)
         {
-            PR_TIME("FaceAverageProductOp::operator()");
-            AB_4thOrder.setVal(0);
+            auto& Q = Quotient_4thOrder;
+            PR_TIME("CellAverageQuotientOp::operator()");
+            forallInPlace(
+                [=] PROTO_LAMBDA (
+                    Var<T,C,MEM,D,E>& v_Q,
+                    Var<T,C,MEM,D,E>& v_A,
+                    Var<T,C,MEM,D,E>& v_B)
+                {
+                    for (int cc = 0; cc < C; cc++)
+                    for (int dd = 0; dd < D; dd++)
+                    for (int ee = 0; ee < E; ee++)
+                    {
+                        v_Q(cc,dd,ee) = (v_A(cc,dd,ee) / v_B(cc,dd,ee));
+                    }
+                }, Q, A_4thOrder, B_4thOrder);
+            
+            BoxData<T,C,MEM,D,E> dBSquaredFactor(Q.box());
+            BoxData<T,C,MEM,D,E> dAdBTerm(Q.box());
+            
+            dBSquaredFactor.setVal(1.0);
+            dAdBTerm.setToZero();
             for (int dd = 0; dd < DIM; dd++)
             {
                 if (dd == _normDir) { continue; }
                 BoxData<T,C,MEM,D,E> dA = _diffs[dd](A_2ndOrder);
                 BoxData<T,C,MEM,D,E> dB = _diffs[dd](B_2ndOrder);
-                AB_4thOrder.incrementProduct(dA, dB, 1.0/12.0);
+                forallInPlace(
+                    [] PROTO_LAMBDA (
+                        Var<T,C,MEM,D,E>& v_dBSquared,
+                        Var<T,C,MEM,D,E>& v_dAdBTerm,
+                        Var<T,C,MEM,D,E>& v_dA,
+                        Var<T,C,MEM,D,E>& v_dB,
+                        Var<T,C,MEM,D,E>& v_B)
+                    {
+                        for (int cc = 0; cc < C; cc++)
+                        for (int dd = 0; dd < D; dd++)
+                        for (int ee = 0; ee < E; ee++)
+                        {
+                            T BB = v_B(cc,dd,ee)*v_B(cc,dd,ee)*12.0;
+                            v_dBSquared(cc,dd,ee) += v_dB(cc,dd,ee)*v_dB(cc,dd,ee)/BB;
+                            v_dAdBTerm(cc,dd,ee) -= v_dA(cc,dd,ee)*v_dB(cc,dd,ee)/BB;
+                        }
+                    }, dBSquaredFactor, dAdBTerm, dA, dB, B_4thOrder);
             }
-            AB_4thOrder.incrementProduct(A_4thOrder, B_4thOrder);
+            Q *= dBSquaredFactor;
+            Q += dAdBTerm;
         }
 
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
@@ -103,7 +139,7 @@ namespace Proto
         template <unsigned int C, MemType MEM, Centering CTR>
         inline void
         operator()(
-            LevelBoxData<T, C, MEM, CTR> &AB_4thOrder,
+            LevelBoxData<T, C, MEM, CTR> &Quotient_4thOrder,
             const LevelBoxData<T, C, MEM, CTR> &A_4thOrder,
             const LevelBoxData<T, C, MEM, CTR> &B_4thOrder,
             const LevelBoxData<T, C, MEM, CTR> &A_2ndOrder,
@@ -115,7 +151,7 @@ namespace Proto
                 "Incompatible layouts");
             PROTO_ASSERT(A_4thOrder.layout().compatible(B_2ndOrder.layout()),
                 "Incompatible layouts");
-            PROTO_ASSERT(A_4thOrder.layout().compatible(AB_4thOrder.layout()),
+            PROTO_ASSERT(A_4thOrder.layout().compatible(Quotient_4thOrder.layout()),
                 "Incompatible layouts");
             auto &layout = A_4thOrder.layout();
             for (auto index : layout)
@@ -124,8 +160,8 @@ namespace Proto
                 const auto &B4 = B_4thOrder[index];
                 const auto &A2 = A_2ndOrder[index];
                 const auto &B2 = B_2ndOrder[index];
-                auto AB4 = AB_4thOrder[index];
-                (*this)(AB4, A4, B4, A2, B2);
+                auto Q4 = Quotient_4thOrder[index];
+                (*this)(Q4, A4, B4, A2, B2);
             }
         }
     };

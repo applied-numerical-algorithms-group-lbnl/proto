@@ -3,6 +3,8 @@
 #ifndef _PROTO_NAME_OF_YOUR_OP_
 #define _PROTO_NAME_OF_YOUR_OP_
 
+#include "Proto.H"
+
 namespace Proto
 {
     template <class T>

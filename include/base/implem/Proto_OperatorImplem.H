@@ -427,48 +427,8 @@ _cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
             "Operator::cellQuotient | incompatible patch sizes.");
     PROTO_ASSERT(a_qavg.box().containsBox(a_q2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
-    forallInPlace(
-        [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
-        {
-            for (int cc = 0; cc < C; cc++)
-            for (int dd = 0; dd < D; dd++)
-            for (int ee = 0; ee < E; ee++)
-            {
-                v_out(cc,dd,ee) = (v_p(cc,dd,ee) / v_q(cc,dd,ee));
-            }
-        }, a_quotient, a_pavg, a_qavg);
-
-    BoxData<T,C,MEM,D,E> dqsqFactor(a_quotient.box());
-    BoxData<T,C,MEM,D,E> dpdqTerm(a_quotient.box());
-    
-    dqsqFactor.setVal(1.0);
-    dpdqTerm.setToZero();
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
-        BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
-        BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
-        
-        forallInPlace
-          ([=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out1,
-                             Var<T,C,MEM,D,E>& v_out2,
-                             Var<T,C,MEM,D,E>& v_dp,
-                             Var<T,C,MEM,D,E>& v_dq,
-                             Var<T,C,MEM,D,E>& v_q)
-            {
-                for (int cc = 0; cc < C; cc++)
-                for (int dd = 0; dd < D; dd++)
-                for (int ee = 0; ee < E; ee++)
-                {                  
-                  v_out1(cc,dd,ee) += v_dq(cc,dd,ee)*v_dq(cc,dd,ee)/
-                    (v_q(cc,dd,ee)*v_q(cc,dd,ee)*12.0);
-                  v_out2(cc,dd,ee) -= v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/
-                     (v_q(cc,dd,ee)*v_q(cc,dd,ee)*12.0);
-                }
-            }, dqsqFactor,dpdqTerm, Dp, Dq, a_qavg);
-    }
-    a_quotient*=dqsqFactor;
-    a_quotient += dpdqTerm;
+    CellAverageQuotientOp<T> op;
+    op(a_quotient, a_pavg, a_qavg, a_p2nd, a_q2nd);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -521,51 +481,8 @@ _faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
             "Operator::cellQuotient | incompatible patch sizes.");
     PROTO_ASSERT(a_qavg.box().containsBox(a_q2nd.box().grow(-1)),
             "Operator::cellQuotient | incompatible patch sizes.");
-    forallInPlace(
-        [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_p, Var<T,C,MEM,D,E>& v_q)
-        {
-            for (int cc = 0; cc < C; cc++)
-            for (int dd = 0; dd < D; dd++)
-            for (int ee = 0; ee < E; ee++)
-            {
-                v_out(cc,dd,ee) = (v_p(cc,dd,ee) / v_q(cc,dd,ee));
-            }
-        }, a_quotient, a_pavg, a_qavg);
-
-    BoxData<T,C,MEM,D,E> dqsqFactor(a_quotient.box());
-    BoxData<T,C,MEM,D,E> dpdqTerm(a_quotient.box());
-    
-    dqsqFactor.setVal(1.0);
-    dpdqTerm.setToZero();
-    for (int ii = 0; ii < DIM; ii++)
-    {
-      if (ii != a_dir)
-        {
-          auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
-          BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
-          BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
-          
-          forallInPlace
-            ([=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out1,
-                               Var<T,C,MEM,D,E>& v_out2,
-                               Var<T,C,MEM,D,E>& v_dp,
-                               Var<T,C,MEM,D,E>& v_dq,
-                               Var<T,C,MEM,D,E>& v_q)
-             {
-               for (int cc = 0; cc < C; cc++)
-                 for (int dd = 0; dd < D; dd++)
-                   for (int ee = 0; ee < E; ee++)
-                     {                  
-                       v_out1(cc,dd,ee) += v_dq(cc,dd,ee)*v_dq(cc,dd,ee)/
-                         (v_q(cc,dd,ee)*v_q(cc,dd,ee)*12.0);
-                       v_out2(cc,dd,ee) -= v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/
-                         (v_q(cc,dd,ee)*v_q(cc,dd,ee)*12.0);
-                     }
-             }, dqsqFactor,dpdqTerm, Dp, Dq, a_qavg);
-        }
-    }
-    a_quotient*=dqsqFactor;
-    a_quotient += dpdqTerm;
+    FaceAverageQuotientOp<T> op(a_dir);
+    op(a_quotient, a_pavg, a_qavg, a_p2nd, a_q2nd);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
