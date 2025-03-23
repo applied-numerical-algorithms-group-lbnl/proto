@@ -4,7 +4,10 @@
 #include "Proto.H"
 #include "MBMap_CubedSphereShell.H"
 #include "Proto_CubedSphereKernels.H"
-
+#define iVECX1 1
+#define iVECX2 5
+#define iPECS 4
+#define iRHOCS 0
 namespace Proto {
 
   /// Cubed Sphere Shell Utility
@@ -111,7 +114,7 @@ namespace Proto {
                                  Box a_bx,
                                  Box a_blockBox,
                                  T a_dxiPerp,
-                                 int a_block,                 
+                                 unsigned int a_block,                 
                                  unsigned int a_order = 4);
 #endif
     template<typename T, unsigned int C, MemType MEM>
@@ -147,7 +150,7 @@ namespace Proto {
                                  Box a_bx,
                                  Box a_blockBox,
                                  T a_dxiPerp,
-                                 int a_block,                 
+                                 unsigned int a_block,                 
                                  unsigned int a_order = 4);
     
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -212,7 +215,7 @@ namespace Proto {
     static BoxData<T,DIM,MEM> adjA(
                                    Box a_bx,
                                    T a_h,
-                                   int a_block,
+                                   unsigned int a_block,
                                    int a_centering);
 
     /// Average of determinant(A) over faces.
@@ -293,6 +296,39 @@ namespace Proto {
                                        Box a_validBox,
                                        uint a_dir,
                                        bool a_debug = false);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                                     const BoxData<T,C+2,MEM>& a_WSemi,
+                                     T a_h,
+                                     unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void USemiSphPointwiseToJUAverage(MBLevelBoxData<T,C,MEM>& a_JU,
+                                             const MBLevelBoxData<T,C+2,MEM>& a_USemi,
+                                             MBInterpOp& a_iop,
+                                             MBLevelBoxData<T,1,MEM>& a_dVolr,
+                                             Array<T,DIM> a_dx);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
+                                      const BoxData<T,C+2,MEM>& a_WSemi,
+                                      T a_h,
+                                      T a_gamma,
+                                      unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                              const BoxData<T,C,MEM>& a_WSph,
+                              T a_h,
+                              unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                                      const BoxData<T,C,MEM>& a_W,
+                                      T a_h,
+                                      unsigned int a_block);
+    
     template<typename T, unsigned int C, MemType MEM>
     static void consToSemiSphNGEuler(                    
                                      BoxData<T,C+2,MEM>& a_USemiSph,
@@ -301,8 +337,9 @@ namespace Proto {
                                      Box a_bx,
                                      Box a_blockBox,
                                      T a_dxiPerp,
-                                     int a_block,                 
+                                     unsigned int a_block,                 
                                      unsigned int a_order);
+   
     template<typename T, MemType MEM>
     static void
     consToSemiSphVecNG(

@@ -146,9 +146,9 @@ void f_Amatrix_F(Point a_pt,
                  Var<T,DIM,MEM,DIM>& a_amatrix,
                  Array<unsigned int,DIM> a_permute,
                  Array<int,DIM> a_sign,
-                T a_h,
-                T a_offseta,
-                T a_offsetb)
+                 T a_h,
+                 T a_offseta,
+                 T a_offsetb)
 {
   T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
   T tana = tan(alpha);
@@ -180,9 +180,7 @@ void f_Amatrix_F(Point a_pt,
         }
     }        
 }
-
 PROTO_KERNEL_END(f_Amatrix_F,f_Amatrix)
-
 template<typename T>
 void f_Ainv_(Point a_pt,
              matType& a_amat,
@@ -224,7 +222,79 @@ void f_Ainv_(Point a_pt,
         }
     }
 }
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_Ainv_F(Point a_pt,
+              Var<T,DIM,MEM,DIM>& a_amat,
+              Array<unsigned int,DIM> a_permute,
+              Array<int,DIM> a_sign,
+              T a_h,
+              T a_offseta,
+              T a_offsetb)
+{
+  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
+  T tana = tan(alpha);
+  T secasq = 1.0 + tana*tana;
+           
+  T beta =
+    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
+  T tanb = tan(beta);
+  T secbsq = 1.0 + tanb*tanb;
+  
+  T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
+  T normsq = norm*norm;
+  T norm3 = normsq*norm;
 
+  matType amat2;
+  amat2[0][0] = 1.0/norm;
+  amat2[0][1] = tana*norm;
+  amat2[0][2] = tanb*norm;
+  amat2[1][0] =-tana/(secasq*norm*M_PI/2);
+  amat2[1][1] = 1.0/(secasq*norm*M_PI/2);
+  amat2[1][2] = 0.0;
+  amat2[2][0] = -tanb/(secbsq*norm*M_PI/2);
+  amat2[2][1] = 0.0;
+  amat2[2][2] = 1.0/(secbsq*norm*M_PI/2);
+  for (int dir0 = 0; dir0 < DIM ; dir0++)
+    {
+      for (int dir1 = 0; dir1 < DIM ; dir1++)
+        {
+          a_amat(dir0,dir1)
+            = a_sign[dir1]*amat2[dir0][a_permute[dir1]];
+        }
+    }
+}
+PROTO_KERNEL_END(f_Ainv_F,f_Ainv)
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_normal_F(Point a_pt,
+                Var<T,DIM,MEM>& a_normal,
+                Array<unsigned int,DIM> a_permute,
+                Array<int,DIM> a_sign,
+                T a_h,
+                T a_offseta,
+                T a_offsetb)
+{
+  T alpha = -.25*M_PI + .5*M_PI*(a_pt[1] + a_offseta)*a_h;
+  T tana = tan(alpha);
+          
+  T beta =
+    -.25*M_PI + .5*M_PI*(a_pt[2] + a_offsetb)*a_h;
+  T tanb = tan(beta);
+  
+  T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
+
+  Array<T,DIM> normal2;
+  normal2[0] = norm;
+  normal2[1] = tana*norm;
+  normal2[2] = tanb*norm;
+  for (int dir = 0; dir < DIM ; dir++)
+    {     
+          a_normal(dir)
+            = a_sign[dir]*normal2[a_permute[dir]];        
+    }
+}
+PROTO_KERNEL_END(f_normal_F,f_normal)
 template<typename T>
 void f_detA_A_(Point a_pt,
                matType& a_deta_amat,
