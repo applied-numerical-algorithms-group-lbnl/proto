@@ -109,6 +109,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                                               T a_h,
                                               uint a_block) const
 {
+  HDF5Handler h5;
   PR_TIMERS("primToCons");
   Array<Array<uint,DIM>,6>
     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
@@ -124,10 +125,22 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                                         - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   
   // Primitive variables at points -> <dVolr*(rho,vel_sph,rho*E)>
-
+  
   BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
   BoxData<T,1,MEM> ke = kineticEnergyW(a_WPoint,a_block,-1);
   BoxData<T,1,MEM> me = magneticEnergyW(a_WPoint,a_block,-1);
+  // DEBUG
+  if (procID() == 5)
+    {
+      Scalar rhoKe(ke.box());
+      ke.copyTo(rhoKe);
+      auto rho = slice(a_WPoint,iRHO);
+      rhoKe *= rho;
+      h5.writePatch(1.,me,"me");
+      h5.writePatch(1.,rhoKe,"rhoKe");
+      auto pres = slice(a_WPoint,iP);
+      h5.writePatch(1.,pres,"pres");
+    }
   BoxData<T,NUMCOMPS,MEM> UPoint =
     forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
                            (Var<T,NUMCOMPS,MEM>& a_upoint,
@@ -460,18 +473,20 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
                             const Var<T,NUMCOMPS>& a_wpoint,
                             const Var<T,1,MEM>& a_dvolpoint,
                             const Var<T,1,MEM>& a_ke,
+                            const Var<T,1,MEM>& a_me,
                             T a_gamma)
                            {
                              a_upoint(iRHO) = a_wpoint(iRHO)*a_dvolpoint(0);
                              a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO);
                              a_upoint(iMOMY) = a_wpoint(iVY)*a_upoint(iRHO);
                              a_upoint(iMOMZ) = a_wpoint(iVZ)*a_upoint(iRHO);
-                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0))
+                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0)
+                                             + a_ke(0) + a_me(0))
                              *a_dvolpoint(0);
                              a_upoint(iBX) = a_wpoint(iBX)*a_dvolpoint(0);
                              a_upoint(iBY) = a_wpoint(iBY)*a_dvolpoint(0);
                              a_upoint(iBZ) = a_wpoint(iBZ)*a_dvolpoint(0);
-                           },a_WPoint,dVolPoint,ke,m_gamma);
+                           },a_WPoint,dVolPoint,ke,me,m_gamma);
  
   a_USph |= convolveStencil(UPoint);
   cout << "UPoint, USph boxes = "  << UPoint.box() << " , " << a_USph.box()  << endl;

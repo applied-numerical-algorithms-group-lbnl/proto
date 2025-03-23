@@ -502,8 +502,8 @@ WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                     }
                   for (int dir = 0; dir < DIM; dir++)
                     {
-                      a_wsemi(iVECX1 + dir) -= uRadial*a_normal(dir);
-                      a_wsemi(iVECX2 + dir) -= BRadial*a_normal(dir);
+                      a_wsemi(iVECX1 + dir) = a_w(iVECX1 + dir) - uRadial*a_normal(dir);
+                      a_wsemi(iVECX2 + dir) = a_w(iVECX2 + dir) - BRadial*a_normal(dir);
                     }
                   a_wsemi(C) = uRadial;
                   a_wsemi(C+1) = BRadial;

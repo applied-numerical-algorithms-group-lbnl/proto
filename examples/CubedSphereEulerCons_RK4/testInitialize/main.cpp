@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
           BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
           eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
         }
-      if (restart_file.empty())
+      
         {
         Reduction<double,Operation::Max,HOST> dtinv;
         dtinv.reset();
@@ -158,16 +158,6 @@ int main(int argc, char *argv[])
         h5.writeMBLevel({}, map, Wout, "WPointPre");
         h5.writeMBLevel({}, map, WSemiCME, "WSemiCME");
         }
-      else
-        {
-          h5.readMBLevel(JU, restart_file);
-          time = h5.time();
-		      dt = h5.dt();   
-          restart_step = h5.iter();
-          if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
-        }
-        
-      MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);   
  // initialization test only
     }
   PR_TIMER_REPORT();
