@@ -133,11 +133,11 @@ int main(int argc, char *argv[])
             BoxData<double,NUMCOMPS,HOST> W_CME(WPoint[dit].box());
             W_CME.setVal(0.);
             forallInPlace_p(define_CME,W_CME,XCart);
-            // for (int dir = 0; dir < DIM; dir++)
-            //   {
-            //     auto W_CMESlice = slice(W_CME,iBX + dir);
-            //     W_CMESlice.setVal(0.);
-            //   }
+            for (int dir = 0; dir < DIM; dir++)
+              {
+                auto W_CMESlice = slice(W_CME,iBX + dir);
+                W_CMESlice.setVal(0.);
+              }
             CubedSphereShell::
               WSphToWSemiPointwise(WSemi[dit],WPoint[dit],dx[1],block);
             CubedSphereShell::
@@ -145,7 +145,6 @@ int main(int argc, char *argv[])
             WSemi[dit] += WSemiCME[dit];
             CubedSphereShell::
               WSemiToUSemiPointwise<double,NUMCOMPS,HOST>(USemi[dit],WSemi[dit],dx[1],gamma,block);
-           
             CubedSphereShell::
               WSemiToWSphPointwise(WPoint[dit],WSemi[dit],dx[1],block);
             eulerOp[dit].dtInv(dtinv,WPoint[dit]);

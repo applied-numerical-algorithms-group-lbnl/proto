@@ -561,8 +561,10 @@ WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
   auto sign = permsign(a_block);
   Box bx = a_WSph.box() & a_WSemi.box();
   Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM,DIM> A(btm);
   BoxData<T,DIM,MEM,DIM> Ainv(bx);
-  forallInPlace_p(f_Ainv,btm,Ainv,permute,sign,a_h,.5,.5);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  forallInPlace(f_matinv3by3,btm,Ainv,A);
   Operator::spreadSlice(Ainv);
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C,MEM>& a_w,
@@ -578,9 +580,6 @@ WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
                   a_w(iVECX2) = a_wsemi(C+1);
                   for (int dir0 = 1; dir0 < DIM; dir0++)
                     {
-                      a_w(iVECX1+dir0) = a_wsemi(C)*a_ainvmat(dir0,0);
-                      a_w(iVECX2+dir0) = a_wsemi(C+1)*a_ainvmat(dir0,0);
-                      
                       for (int dir1 = 0; dir1 < DIM; dir1++)
                         {
                           a_w(iVECX1+dir0) +=

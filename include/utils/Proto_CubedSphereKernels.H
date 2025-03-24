@@ -201,15 +201,13 @@ void f_Ainv_(Point a_pt,
   T secbsq = 1.0 + tanb*tanb;
   
   T norm = 1.0/sqrt(tana*tana + tanb*tanb + 1.0);
-  T normsq = norm*norm;
-  T norm3 = normsq*norm;
-
+  
   matType amat2;
-  amat2[0][0] = 1.0/norm;
+  amat2[0][0] = 1.0*norm;
   amat2[0][1] = tana*norm;
   amat2[0][2] = tanb*norm;
-  amat2[1][0] =-tana/(secasq*norm*M_PI/2);
-  amat2[1][1] = 1.0/(secasq*norm*M_PI/2);
+  amat2[1][0] = -tana/(norm*secasq*M_PI/2);
+  amat2[1][1] = 1./(secasq*norm*M_PI/2);
   amat2[1][2] = 0.0;
   amat2[2][0] = -tanb/(secbsq*norm*M_PI/2);
   amat2[2][1] = 0.0;
@@ -246,7 +244,7 @@ void f_Ainv_F(Point a_pt,
   T norm3 = normsq*norm;
 
   matType amat2;
-  amat2[0][0] = 1.0/norm;
+  amat2[0][0] = 1.0*norm;
   amat2[0][1] = tana*norm;
   amat2[0][2] = tanb*norm;
   amat2[1][0] =-tana/(secasq*norm*M_PI/2);
