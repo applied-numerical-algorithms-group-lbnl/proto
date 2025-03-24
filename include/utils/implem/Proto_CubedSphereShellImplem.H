@@ -533,23 +533,21 @@ WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                   a_wsemi(iPECS) = a_w(iPECS);
                   T uRadial = a_w(iVECX1);
                   T BRadial = a_w(iVECX2);
-                  Array<T,DIM> normal;
                   for (int dir0 = 0; dir0 < DIM; dir0++)
                     {
                       a_wsemi(iVECX1+dir0) = 0.0;
                       a_wsemi(iVECX2+dir0) = 0.0;
-                    
-                      //for (int dir1 = 0; dir1 < DIM; dir1++)
-                      for (int dir1 = 1; dir1 < DIM; dir1++)
+
+                      for (int dir1 = 1; dir1 < DIM; dir1++) // Note loop limit.
                         {
                           a_wsemi(iVECX1+dir0) +=
                             a_amat(dir0,dir1)*a_w(iVECX1 + dir1);
                           a_wsemi(iVECX2+dir0) +=
                             a_amat(dir0,dir1)*a_w(iVECX2 + dir1);
                         }
-                      //a_wsemi(iVX+dir0) -= uRadial*a_amat(dir0,0);
-                      //a_wsemi(iBX+dir0) -= BRadial*a_amat(dir0,0);
                     }
+                  a_wsemi(C) = uRadial;
+                  a_wsemi(C+1) = BRadial;
                 },a_WSemi,a_WSph,A);
 }
 template<typename T,unsigned int C,MemType MEM>

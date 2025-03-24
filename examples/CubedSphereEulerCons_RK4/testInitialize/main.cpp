@@ -132,7 +132,12 @@ int main(int argc, char *argv[])
             // Increment WPoint_i with CME perturbation
             BoxData<double,NUMCOMPS,HOST> W_CME(WPoint[dit].box());
             W_CME.setVal(0.);
-            forallInPlace_p(define_CME,W_CME,XCart);   
+            forallInPlace_p(define_CME,W_CME,XCart);
+            // for (int dir = 0; dir < DIM; dir++)
+            //   {
+            //     auto W_CMESlice = slice(W_CME,iBX + dir);
+            //     W_CMESlice.setVal(0.);
+            //   }
             CubedSphereShell::
               WSphToWSemiPointwise(WSemi[dit],WPoint[dit],dx[1],block);
             CubedSphereShell::
