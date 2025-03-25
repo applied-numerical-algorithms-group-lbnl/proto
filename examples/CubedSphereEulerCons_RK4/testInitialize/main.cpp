@@ -108,11 +108,11 @@ int main(int argc, char *argv[])
         Reduction<double,Operation::Max,HOST> dtinv;
         dtinv.reset();
         MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemiCME(layout, JU.ghost());
+        MBLevelBoxData<double, NUMCOMPS, HOST> WSphCME(layout, JU.ghost());
         MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemi(layout, JU.ghost());
-        MBLevelBoxData<double, NUMCOMPS, HOST> WPoint(layout, JU.ghost());
-        MBLevelBoxData<double, NUMCOMPS+2, HOST> USemi(layout, JU.ghost());
-        MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout,Point::Zeros());
-        
+        MBLevelBoxData<double, NUMCOMPS, HOST> WSph(layout, JU.ghost());      
+        MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout,JU.ghost());
+        MBLevelBoxData<double, NUMCOMPS+2, HOST> USemi(layout,JU.ghost());
         for (auto dit : layout)
           {
             dx = eulerOp[dit].dx();
@@ -126,41 +126,27 @@ int main(int argc, char *argv[])
             BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
               (f_cubedSphereMap3,radius.box(),radius,dx,half,half,block);
             
-            eulerOp[dit].initialize(WPoint[dit], dstData[dit], radius,
+            eulerOp[dit].initialize(WSph[dit], dstData[dit], radius,
                                     XCart, gamma, thickness, dx[2], block);
-            WPoint[dit].copyTo(Wout[dit]);
             // Increment WPoint_i with CME perturbation
-            BoxData<double,NUMCOMPS,HOST> W_CME(WPoint[dit].box());
+            CubedSphereShell::
+              WSphToWSemiPointwise(WSemi[dit],WSph[dit],dx[1],block);
+            BoxData<double,NUMCOMPS,HOST> W_CME(WSemi[dit].box());
             W_CME.setVal(0.);
             forallInPlace_p(define_CME,W_CME,XCart);
-            // for (int dir = 0; dir < DIM; dir++)
-            //   {
-            //     auto W_CMESlice = slice(W_CME,iBX + dir);
-            //     W_CMESlice.setVal(0.);
-            //   }
-            CubedSphereShell::
-              WSphToWSemiPointwise(WSemi[dit],WPoint[dit],dx[1],block);
             CubedSphereShell::
               WCartToWSemiPointwise(WSemiCME[dit],W_CME,dx[1],block);
             WSemi[dit] += WSemiCME[dit];
             CubedSphereShell::
               WSemiToUSemiPointwise<double,NUMCOMPS,HOST>(USemi[dit],WSemi[dit],dx[1],gamma,block);
-            CubedSphereShell::
-              WSemiToWSphPointwise(WPoint[dit],WSemi[dit],dx[1],block);
-            eulerOp[dit].dtInv(dtinv,WPoint[dit]);
-            
-            // WPoint[dit].copyTo(Wout[dit]);
-            // if (procID()==5) h5.writePatch(1,Wout[dit],"WPoint");
           }
         CubedSphereShell::
-          USemiSphPointwiseToJUAverage(JU,USemi,iop,dVolrLev,dx); 
-        Write_W(JU, eulerOp, iop, -1, time, dt);
-        h5.writeMBLevel({}, map, JU, "JUInit");
-        h5.writeMBLevel({}, map, WSemi, "WSemi");
-        h5.writeMBLevel({}, map, USemi, "USemi");
-        h5.writeMBLevel({}, map, WPoint, "WPointPost");
-        h5.writeMBLevel({}, map, Wout, "WPointPre");
-        h5.writeMBLevel({}, map, WSemiCME, "WSemiCME");
+          USemiSphPointwiseToJUAverage(JU,USemi,iop,dVolrLev,dx);
+        Write_W(JU,eulerOp,iop,-1,0,0);
+        h5.writeMBLevel({}, map,WSph,"WSphRef" );
+        h5.writeMBLevel({}, map,WSemi,"WSemi" );
+        h5.writeMBLevel({}, map,WSemiCME,"WSemiCME" );
+        h5.writeMBLevel({}, map,USemi,"USemi" );
         }
  // initialization test only
     }

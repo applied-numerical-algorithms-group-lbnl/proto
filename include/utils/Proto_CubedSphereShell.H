@@ -298,12 +298,6 @@ namespace Proto {
                                        bool a_debug = false);
     
     template<typename T,unsigned int C,MemType MEM>
-    static void WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
-                                     const BoxData<T,C+2,MEM>& a_WSemi,
-                                     T a_h,
-                                     unsigned int a_block);
-    
-    template<typename T,unsigned int C,MemType MEM>
     static void USemiSphPointwiseToJUAverage(MBLevelBoxData<T,C,MEM>& a_JU,
                                              const MBLevelBoxData<T,C+2,MEM>& a_USemi,
                                              MBInterpOp& a_iop,
@@ -324,10 +318,35 @@ namespace Proto {
                               unsigned int a_block);
 
     template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                                     const BoxData<T,C+2,MEM>& a_WSemi,
+                                     T a_h,
+                                     unsigned int a_block);
+    
+
+    template<typename T,unsigned int C,MemType MEM>
     static void WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                                       const BoxData<T,C,MEM>& a_W,
                                       T a_h,
                                       unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToWCartPointwise(BoxData<T,C,MEM>& a_W,
+                                      const BoxData<T,C+2,MEM>& a_WSemi,
+                                      T a_h,
+                                      unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WCartToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                                     const BoxData<T,C,MEM>& a_WCart,
+                                     T a_h,
+                                     unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToWCartPointwise(BoxData<T,C,MEM>& a_WCart,
+                              const BoxData<T,C,MEM>& a_WSph,
+                              T a_h,
+                              unsigned int a_block);
     
     template<typename T, unsigned int C, MemType MEM>
     static void consToSemiSphNGEuler(                    
