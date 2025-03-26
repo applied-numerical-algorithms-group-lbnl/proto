@@ -763,7 +763,6 @@ WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
   BoxData<T,DIM,MEM> normal(bx);
   forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
   Operator::spreadSlice(normal);
-  BoxData<T,C,MEM> WTemp(bx);
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C + 2,MEM>& a_usemi,
                                 const Var<T,C + 2,MEM>& a_wsemi,
@@ -776,18 +775,102 @@ WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
                     {
                       T velCart =
                         a_wsemi(dir + iVECX1) + a_wsemi(C)*a_normal(dir);
-                      ke += velCart*velCart/2;
+                      ke += velCart*velCart;
                       a_usemi(dir + iVECX1) = a_wsemi(dir + iVECX1)*a_wsemi(iRHOCS);
                       T BCart =
                         a_wsemi(dir + iVECX2) + a_wsemi(C+1)*a_normal(dir);
                       me += BCart*BCart;
                       a_usemi(dir + iVECX2) = a_wsemi(dir + iVECX2); 
                     }
-                  ke *= a_wsemi(iRHOCS);
+                  ke *=.5*a_wsemi(iRHOCS);
                   me *= 1./(M_PI*8);
                   a_usemi(iRHOCS) = a_wsemi(iRHOCS);
                   a_usemi(iPECS) = a_wsemi(iPECS)/(a_gamma - 1.0) + ke + me;
+                  //a_usemi(iPECS) = ke;
+                  a_usemi(C) = a_wsemi(C)*a_wsemi(iRHOCS);
+                  a_usemi(C+1) = a_wsemi(C+1);
                 },a_USemi,a_WSemi,normal,a_gamma);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      const BoxData<T,C+2,MEM>& a_USemi,
+                      T a_h,
+                      T a_gamma,
+                      unsigned int a_block)
+{
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_USemi.box() & a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM> normal(bx);
+  forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(normal);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C + 2,MEM>& a_wsemi,
+                                const Var<T,C + 2,MEM>& a_usemi,
+                                const Var<T,DIM,MEM>& a_normal,
+                                T a_gamma)
+                {
+                  T ke = 0.;
+                  T me = 0.;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      T velCart =
+                        (a_usemi(dir + iVECX1)
+                         + a_usemi(C)*a_normal(dir))/a_usemi(iRHOCS);
+                      ke += velCart*velCart;
+                      a_wsemi(dir + iVECX1) = a_usemi(dir + iVECX1)/a_usemi(iRHOCS);
+                      T BCart =
+                        a_usemi(dir + iVECX2) + a_usemi(C+1)*a_normal(dir);
+                      me += BCart*BCart;
+                      a_wsemi(dir + iVECX2) = a_usemi(dir + iVECX2); 
+                    }
+                  ke *= .5*a_usemi(iRHOCS);
+                  me *= 1./(M_PI*8);
+                  a_wsemi(iRHOCS) = a_usemi(iRHOCS);
+                  a_wsemi(iPECS) = (a_usemi(iPECS) - ke - me)*(a_gamma-1.0);
+                  //a_wsemi(iPECS) = ke;
+                  a_wsemi(C) = a_usemi(C)/a_wsemi(iRHOCS);
+                  a_wsemi(C+1) = a_usemi(C+1);
+                },a_WSemi,a_USemi,normal,a_gamma);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+PerpCheckPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      T a_h,
+                      unsigned int a_block)
+{
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx =  a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM> normal(bx);
+  forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(normal);
+  BoxData<T,2,MEM> perpcheck(bx);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,2,MEM>& a_perp,
+                                const Var<T,C+2,MEM>& a_wsemi,
+                                const Var<T,DIM,MEM>& a_normal)
+                {
+                  a_perp(0) = 0.;
+                  a_perp(1) = 0.;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_perp(0) +=
+                        + a_wsemi(dir + iVECX1)*a_normal(dir);
+                      a_perp(1) +=
+                        + a_wsemi(dir + iVECX2)*a_normal(dir);
+                    }                 
+                },perpcheck,a_WSemi,normal);
+  
+  cout << "block = " << a_block << ":vel perp = "
+       << slice(perpcheck,0).absMax()
+       << ", vel radial = " << slice(a_WSemi,C).absMax()
+       << ", B perp = " << slice(perpcheck,1).absMax()
+       << ", B radial = " << slice(a_WSemi,C+1).absMax()
+       << endl;
 }
 template<typename T, MemType MEM>
 void

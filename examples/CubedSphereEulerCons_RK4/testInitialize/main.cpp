@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
         MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemi(layout, JU.ghost());
         MBLevelBoxData<double, NUMCOMPS, HOST> WSph(layout, JU.ghost());      
         MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout,JU.ghost());
+          MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemiout(layout,JU.ghost());
         MBLevelBoxData<double, NUMCOMPS+2, HOST> USemi(layout,JU.ghost());
         for (auto dit : layout)
           {
@@ -134,11 +135,20 @@ int main(int argc, char *argv[])
             BoxData<double,NUMCOMPS,HOST> W_CME(WSemi[dit].box());
             W_CME.setVal(0.);
             forallInPlace_p(define_CME,W_CME,XCart);
+            W_CME.copyTo(Wout[dit]);
             CubedSphereShell::
               WCartToWSemiPointwise(WSemiCME[dit],W_CME,dx[1],block);
+            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(WSemiCME[dit],dx[1],block);
             WSemi[dit] += WSemiCME[dit];
+            
             CubedSphereShell::
-              WSemiToUSemiPointwise<double,NUMCOMPS,HOST>(USemi[dit],WSemi[dit],dx[1],gamma,block);
+              WSemiToUSemiPointwise<double,NUMCOMPS,HOST>
+              (USemi[dit],WSemi[dit],dx[1],gamma,block);
+            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(USemi[dit],dx[1],block);
+            CubedSphereShell::
+              USemiToWSemiPointwise<double,NUMCOMPS,HOST>
+              (WSemiout[dit],USemi[dit],dx[1],gamma,block);
+            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(WSemiout[dit],dx[1],block);
           }
         CubedSphereShell::
           USemiSphPointwiseToJUAverage(JU,USemi,iop,dVolrLev,dx);
@@ -146,7 +156,9 @@ int main(int argc, char *argv[])
         h5.writeMBLevel({}, map,WSph,"WSphRef" );
         h5.writeMBLevel({}, map,WSemi,"WSemi" );
         h5.writeMBLevel({}, map,WSemiCME,"WSemiCME" );
+        h5.writeMBLevel({}, map,Wout,"WCMECart" );
         h5.writeMBLevel({}, map,USemi,"USemi" );
+        h5.writeMBLevel({}, map,WSemiout,"WSemiout" );
         }
  // initialization test only
     }
