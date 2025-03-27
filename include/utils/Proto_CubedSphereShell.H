@@ -312,8 +312,22 @@ namespace Proto {
                                       unsigned int a_block);
 
     template<typename T,unsigned int C,MemType MEM>
-    static void USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
-                                      const BoxData<T,C+2,MEM>& a_USemi,
+    static void WSphToUSphPointwise(BoxData<T,C,MEM>& a_USph,
+                                      const BoxData<T,C,MEM>& a_WSph,
+                                      T a_h,
+                                      T a_gamma,
+                                      unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToJUSphAverage(BoxData<T,C,MEM>& a_USph,
+                                      const BoxData<T,C,MEM>& a_WSph,
+                                      T a_h,
+                                      T a_gamma,
+                                      unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_JU,
+                                      const BoxData<T,C+2,MEM>& a_USph,
                                       T a_h,
                                       T a_gamma,
                                       unsigned int a_block);
@@ -354,7 +368,14 @@ namespace Proto {
                               const BoxData<T,C,MEM>& a_WSph,
                               T a_h,
                               unsigned int a_block);
-
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
+                                         const BoxData<T,C,MEM>& a_WSph,
+                                         const BoxData<T,1,MEM>& a_dVolr,
+                                         T a_h,
+                                         T a_gamma,
+                                         unsigned int a_block);
+    
     template<typename T,unsigned int C,MemType MEM>
     static void PerpCheckPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                                    T a_h,

@@ -630,8 +630,8 @@ WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
   Operator::spreadSlice(A);
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C+2,MEM>& a_wsemi,
-                                Var<T,C,MEM>& a_w,
-                                Var<T,DIM,MEM,DIM>& a_amat)
+                                const Var<T,C,MEM>& a_w,
+                                const Var<T,DIM,MEM,DIM>& a_amat)
                 {
                   a_wsemi(iRHOCS) = a_w(iRHOCS);
                   a_wsemi(iPECS) = a_w(iPECS);
@@ -674,14 +674,13 @@ WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
   Operator::spreadSlice(Ainv);
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C,MEM>& a_w,
-                                Var<T,C+2,MEM>& a_wsemi,
-                                Var<T,DIM,MEM,DIM>& a_ainvmat)
+                                const Var<T,C+2,MEM>& a_wsemi,
+                                const Var<T,DIM,MEM,DIM>& a_ainvmat)
                 {
-                  a_wsemi(iRHOCS) = a_w(iRHOCS);
-                  a_wsemi(iPECS) = a_w(iPECS);
+                  a_w(iRHOCS) = a_wsemi(iRHOCS);
+                  a_w(iPECS) = a_wsemi(iPECS);
                   T uRadial = a_wsemi(C);
                   T BRadial = a_wsemi(C+1);
-                  
                   for (int dir0 = 0; dir0 < DIM; dir0++)
                     {
                       a_w(iVECX1+dir0) = 0.;
@@ -694,59 +693,86 @@ WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
                             a_ainvmat(dir0,dir1)*a_wsemi(iVECX2 + dir1);
                         }
                     }
-                  a_w(iVECX1) += uRadial;
-                  a_w(iVECX2) += BRadial;
+                  a_w(iVECX1) = uRadial;
+                  a_w(iVECX2) = BRadial;
                 },a_WSph,a_WSemi,Ainv);
 }
 template<typename T,unsigned int C,MemType MEM>
 void CubedSphereShell::
-USemiSphPointwiseToJUAverage(MBLevelBoxData<T,C,MEM>& a_JU,
-                             const MBLevelBoxData<T,C+2,MEM>& a_USemi,
-                             MBInterpOp& a_iop,
-                             MBLevelBoxData<T,1,MEM>& a_dVolr,
-                             Array<T,DIM> a_dx)
+WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
+                         const BoxData<T,C,MEM>& a_WSph,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         T a_h,
+                         T a_gamma,
+                         unsigned int a_block)
 {
-  auto layout = a_USemi.layout();
-  MBLevelBoxData<T,C+2,MEM> USemiAverage(layout, a_JU.ghost());
   Stencil<T> convolveStencil =
     1.0*Shift(Point::Zeros()) + (1.0/24.0)*Stencil<T>::Laplacian();
-  for (auto dit : layout)
-    {
-      USemiAverage[dit] |= convolveStencil(a_USemi[dit]);
-    }
-  USemiAverage.exchange();  
-  a_iop.apply(USemiAverage,USemiAverage);
-  for (auto dit : layout)
-    {
-      unsigned int block = layout.block(dit);
-      auto& JU_i = a_JU[dit];
-      Box bx = JU_i.box();
-      BoxData<T,1,MEM> J = detA<T,MEM>(bx,a_dx[1],-1);
-      J *= a_dVolr[dit];
-      Box btm = bx.face(0,Side::Lo);
-      BoxData<T,DIM,MEM> normal(bx);
-      auto permute = perm(block);
-      auto sign = permsign(block);
-      forallInPlace_p(f_normal,btm,normal,permute,sign,a_dx[1],.5,.5);
-      Operator::spreadSlice(normal);
-   
-      forallInPlace([] PROTO_LAMBDA(
-                                    Var<T,C+2,MEM>& a_usemi,
-                                    const Var<T,DIM,MEM>& a_normal)
+  // tranform WSph -> USph.
+  Box bx = a_WSph.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,C,MEM> USph(bx);
+  BoxData<T,DIM,MEM,DIM> A(bx);
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(A);  
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C,MEM>& a_usph,
+                                const Var<T,C,MEM>& a_wsph,
+                                const Var<T,DIM,MEM,DIM>& a_amat,
+                                T a_gamma)
+                {
+                  T ke = 0.;
+                  T me = 0.;
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
                     {
-                      for (int dir = 0; dir < DIM; dir++)
+                      T velcart = 0.;
+                      T bcart = 0.;
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
                         {
-                          a_usemi(dir+iVECX1) += a_normal(dir)*a_usemi(C);
-                          a_usemi(dir+iVECX2) += a_normal(dir)*a_usemi(C+1);
+                          velcart += a_amat(dir0,dir1)*a_wsph(dir1 + iVECX1);
+                          bcart += a_amat(dir0,dir1)*a_wsph(dir1 + iVECX2);
                         }
-                    },USemiAverage[dit],normal);
-      for (int comp = 0; comp < C; comp++)
+                      ke += velcart*velcart;
+                      me += bcart*bcart;
+                    }
+                  ke *= 0.5*a_wsph(iRHOCS);
+                  me *= 1.0/(M_PI*8);
+                  a_usph(iRHOCS) = a_wsph(iRHOCS);
+                  a_usph(iPECS) = a_wsph(iPECS)/(a_gamma - 1.0) + ke + me;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_usph(dir+iVECX1) = a_wsph(0)*a_wsph(dir + iVECX1);
+                      a_usph(dir+iVECX2) = a_wsph(dir + iVECX2);
+                    }
+                },USph,a_WSph,A,a_gamma);
+  // Compute average of U.
+  BoxData<T,C,MEM> UAverage = convolveStencil(USph);
+  
+  // product rule for U -> JU.
+  Box bxAv = UAverage.box();
+  BoxData<T,1,MEM> J = detA<T,MEM>(bxAv,a_h,0);
+  BoxData<T,DIM,MEM,DIM> J_amat =
+    CubedSphereShell::detA_A<T,MEM>(bxAv,a_h,a_block,0);
+  J *= a_dVolr;
+  for (int dir0 = 0;dir0 < DIM; dir0++)
+    {
+      for (int dir1 = 0;dir1 < DIM; dir1++)
         {
-          auto jcompslice = slice(a_JU[dit],comp);
-          auto compslice = slice(USemiAverage[dit],comp);
-          Operator::cellProduct(jcompslice,J,compslice);
+          slice(J_amat,dir0,dir1) *= a_dVolr;
         }
-    }                  
+    } 
+  auto JUVel = slice<T,C,DIM,MEM>(a_JU,iVECX1);
+  auto JUB = slice<T,C,DIM,MEM>(a_JU,iVECX2);
+  auto UVel = slice<T,C,DIM,MEM>(UAverage,iVECX1);
+  auto UB = slice<T,C,DIM,MEM>(UAverage,iVECX2);
+  Operator::matrixProductAB(JUVel,J_amat,UVel);
+  Operator::matrixProductAB(JUB,J_amat,UB);
+  auto JURho = slice(a_JU,iRHOCS);
+  auto JUE = slice(a_JU,iPECS);
+  Operator::cellProduct(JURho,J,slice(UAverage,iRHOCS));
+  Operator::cellProduct(JUE,J,slice(UAverage,iPECS));
 }
 template<typename T,unsigned int C,MemType MEM>
 void CubedSphereShell::

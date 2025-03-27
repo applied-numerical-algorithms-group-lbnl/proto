@@ -135,30 +135,34 @@ int main(int argc, char *argv[])
             BoxData<double,NUMCOMPS,HOST> W_CME(WSemi[dit].box());
             W_CME.setVal(0.);
             forallInPlace_p(define_CME,W_CME,XCart);
+            
             W_CME.copyTo(Wout[dit]);
             CubedSphereShell::
               WCartToWSemiPointwise(WSemiCME[dit],W_CME,dx[1],block);
-            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(WSemiCME[dit],dx[1],block);
             WSemi[dit] += WSemiCME[dit];
+          }
+        
+        WSemi.exchange();
+        iop.apply(WSemi,WSemi);
+        
+        for (auto dit : layout)
+          {
+            BoxData<double> radius(dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+            BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+            eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
+            auto block = layout.block(dit);
             
             CubedSphereShell::
-              WSemiToUSemiPointwise<double,NUMCOMPS,HOST>
-              (USemi[dit],WSemi[dit],dx[1],gamma,block);
-            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(USemi[dit],dx[1],block);
+              WSemiToWSphPointwise<double,NUMCOMPS,HOST>
+              (WSph[dit],WSemi[dit],dx[1],block);
+            
             CubedSphereShell::
-              USemiToWSemiPointwise<double,NUMCOMPS,HOST>
-              (WSemiout[dit],USemi[dit],dx[1],gamma,block);
-            //CubedSphereShell::PerpCheckPointwise<double,NUMCOMPS,HOST>(WSemiout[dit],dx[1],block);
-          }
-        CubedSphereShell::
-          USemiSphPointwiseToJUAverage(JU,USemi,iop,dVolrLev,dx);
+              WSphPointwiseToJUAverage(JU[dit],WSph[dit],dVolrLev[dit],dx[1],gamma,block);
+          }      
         Write_W(JU,eulerOp,iop,-1,0,0);
-        h5.writeMBLevel({}, map,WSph,"WSphRef" );
-        h5.writeMBLevel({}, map,WSemi,"WSemi" );
-        h5.writeMBLevel({}, map,WSemiCME,"WSemiCME" );
-        h5.writeMBLevel({}, map,Wout,"WCMECart" );
-        h5.writeMBLevel({}, map,USemi,"USemi" );
-        h5.writeMBLevel({}, map,WSemiout,"WSemiout" );
+        h5.writeMBLevel({}, map,WSph,"WSph" );
+        h5.writeMBLevel({}, map,WSemi,"WSemi" ); 
         }
  // initialization test only
     }

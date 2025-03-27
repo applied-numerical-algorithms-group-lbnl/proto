@@ -79,7 +79,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       a_Wout(1) = a_Wout(1)/1e5; // km/s;
       a_Wout(2) = a_Wout(2)/1e5; // km/s;
       a_Wout(3) = a_Wout(3)/1e5; // km/s;
-      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
+      //a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
       // scaled by r*(2*gamma)
       if (a_Wout(4) < 0.) a_Wout(4) = 0.;
       a_Wout(5) = a_Wout(5)*1e6; // microGauss
