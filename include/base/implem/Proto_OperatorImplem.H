@@ -1800,7 +1800,7 @@ _faceGradient(
 {
     PR_TIME("Operator::faceGradient");
 
-    FaceDiff<T> diffOp(a_dirNorm, a_order);
+    FaceAverageDiffOp<T> diffOp(a_dirNorm, a_order);
     return diffOp(a_phi);
 }
 

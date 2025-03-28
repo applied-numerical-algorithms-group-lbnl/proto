@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class FaceDiff : public CompositeOp
+    class FaceAverageDiffOp : public CompositeOp
     {
 
     private:
@@ -17,7 +17,7 @@ namespace Proto
         Array<Stencil<T>, DIM> _faceDerivs;
 
     public:
-        inline FaceDiff(int normalDir, int order)
+        inline FaceAverageDiffOp(int normalDir, int order)
         {
             _normalDir = normalDir;
             _order = order;

@@ -6,6 +6,17 @@
 
 namespace Proto 
 {
+    template<typename T, std::size_t... I>
+    auto tupleFromVector(const std::vector<T>& v, std::index_sequence<I...>) {
+        return std::make_tuple(v[I]...);
+    }
+
+    template<typename T, std::size_t N>
+    auto tupleFromVector(const std::vector<T>& v) {
+        PROTO_ASSERT(v.size() < N,
+            "Vector size %u is smaller than expected size %u", v.size(), N);
+        return tupleFromVector<T>(v, std::make_index_sequence<N>{});
+    }
     class CompositeOp
     {
     public:
@@ -45,7 +56,7 @@ namespace Proto
 #include "operators/Proto_DeconvolveOp.H"
 #include "operators/Proto_ConvolveFaceOp.H"
 #include "operators/Proto_DeconvolveFaceOp.H"
-#include "operators/Proto_FaceDiffOp.H"
+#include "operators/Proto_FaceAverageDiffOp.H"
 #include "operators/Proto_CellAverageProductOp.H"
 #include "operators/Proto_FaceAverageProductOp.H"
 #include "operators/Proto_CellAverageQuotientOp.H"
@@ -54,4 +65,5 @@ namespace Proto
 #include "operators/Proto_FaceAverageMatrixProductOp.H"
 #include "operators/Proto_CellAverageMatrixProductOp.H"
 #include "operators/Proto_FaceAverageTensorQuotientOp.H"
+#include "operators/Proto_MappedFaceAverageDiffOp.H"
 #endif

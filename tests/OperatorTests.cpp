@@ -331,7 +331,7 @@ TEST(Operator, InitConvolve)
     }
 }
 
-TEST(Operator, FaceDiff)
+TEST(Operator, FaceAverageDiffOp)
 {
     #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -340,10 +340,10 @@ TEST(Operator, FaceDiff)
     int domainSize = 32;
     Box rangeBox = Box::Cube(domainSize);
     Box domainBox;
-    std::vector<FaceDiff<double>> faceDiff;
+    std::vector<FaceAverageDiffOp<double>> faceDiff;
     for (int dd = 0; dd < DIM; dd++)
     {
-        faceDiff.push_back(FaceDiff<double>(dd, 4));
+        faceDiff.push_back(FaceAverageDiffOp<double>(dd, 4));
         Box domain_i = faceDiff[dd].domains(rangeBox)[0];
         domainBox += domain_i;
     }
