@@ -53,4 +53,5 @@ namespace Proto
 #include "operators/Proto_MatrixProductOp.H"
 #include "operators/Proto_FaceAverageMatrixProductOp.H"
 #include "operators/Proto_CellAverageMatrixProductOp.H"
+#include "operators/Proto_FaceAverageTensorQuotientOp.H"
 #endif

@@ -637,6 +637,7 @@ TEST(Operator, CellAverageQuotient)
         EXPECT_NEAR(rate, 4.0, 0.25);
     }
 }
+
 TEST(Operator, FaceAverageQuotient)
 {
     #if PR_VERBOSE > 0
@@ -723,6 +724,7 @@ TEST(Operator, FaceAverageQuotient)
         EXPECT_NEAR(rate, 4.0, 0.25);
     }
 }
+
 TEST(Operator, CellAverageMatrixProduct)
 {
     #if PR_VERBOSE > 0
@@ -885,6 +887,66 @@ TEST(Operator, FaceAverageMatrixProduct)
         if (error[nn] > 1e-12)
         {
             EXPECT_NEAR(rate, 4.0, 0.25);
+        }
+    }
+}
+
+TEST(Operator, FaceAverageTensorQuotient)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int C = 2;
+    constexpr int D = 1;
+    constexpr int E = 3;
+
+    int domainSize = 32;
+
+    double dx = 1.0/domainSize;
+    Box rangeBox = Box::Cube(domainSize);
+    Point offset_A(1,2,3,4,5,6);
+    Point offset_B(2,1,4,3,6,5);
+    Point k_A(1,2,3,4,5,6);
+    Point k_B(2,1,4,3,6,5);
+    auto side = Side::Lo;
+
+    for (int normDir = 0; normDir < DIM; normDir++)
+    {
+        auto quotientOp = FaceAverageTensorQuotientOp<double>(normDir);
+        auto domainBoxes = quotientOp.domains(rangeBox);
+
+        BoxData<double, C, HOST, D, E> A4_avg(domainBoxes[0]);
+        BoxData<double, 1> B4_avg(domainBoxes[1]);
+        BoxData<double, C, HOST, D, E> A2_avg(domainBoxes[2]);
+        BoxData<double, 1> B2_avg(domainBoxes[3]);
+        BoxData<double, C, HOST, D, E> testData(rangeBox);
+
+        forallInPlace_p(f_phi_face_avg,  A4_avg, dx, k_A, offset_A, normDir, side);
+        forallInPlace_p(f_phi_face_avg,  B4_avg, dx, k_B, offset_B, normDir, side);
+        forallInPlace_p(f_phi_face_avg,  A2_avg, dx, k_A, offset_A, normDir, side);
+        forallInPlace_p(f_phi_face_avg,  B2_avg, dx, k_B, offset_B, normDir, side);
+
+        B4_avg += 10.0;
+        B2_avg += 10.0;
+
+        quotientOp(testData, A4_avg, B4_avg, A2_avg, B2_avg);
+        auto solnData = Operator::_faceTensorQuotient(A4_avg, B4_avg, A2_avg, B2_avg, normDir);
+        solnData -= testData;
+        EXPECT_LT(solnData.absMax(), 1e-12);
+        
+        auto QOp = FaceAverageQuotientOp<double>(normDir);
+
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            BoxData<double, 1> A4 = slice(A4_avg, cc, dd, ee);
+            BoxData<double, 1> A2 = slice(A2_avg, cc, dd, ee);
+            BoxData<double, 1> Q = slice(testData, cc, dd, ee);
+            auto errData = QOp(A4, B4_avg, A2, B2_avg);
+            errData -= Q;
+            EXPECT_LT(errData.absMax(), 1e-12);
         }
     }
 }

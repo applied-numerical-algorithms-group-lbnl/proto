@@ -585,25 +585,8 @@ _faceTensorQuotient(
         int a_dir)
 {
     PR_TIME("Operator::faceTensorQuotient");
-    Box bx = a_ql4.box()&a_qr4.box();
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        if (dir!=a_dir)
-        {
-            bx = bx & a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
-        }
-    }
-    BoxData<T,C,MEM,D,E> quot(bx);
-    for (int ee = 0; ee < E;ee++)
-    for (int dd = 0; dd < D; dd++)
-    for (int cc = 0; cc < C; cc++)
-    {
-        auto quotcomp = slice(quot,cc,dd,ee);
-        auto ql4comp = slice(a_ql4,cc,dd,ee);
-        auto ql2comp = slice(a_ql2,cc,dd,ee);
-        Operator::_faceQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
-    }
-    return quot;
+    FaceAverageTensorQuotientOp<T> op(a_dir);
+    return op(a_ql4, a_qr4, a_ql2, a_qr2);
 }
 
 template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
