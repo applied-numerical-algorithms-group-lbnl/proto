@@ -307,9 +307,7 @@ namespace Proto {
     template<typename T,unsigned int C,MemType MEM>
     static void WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
                                       const BoxData<T,C+2,MEM>& a_WSemi,
-                                      T a_h,
-                                      T a_gamma,
-                                      unsigned int a_block);
+                                      T a_gamma);
 
     template<typename T,unsigned int C,MemType MEM>
     static void WSphToUSphPointwise(BoxData<T,C,MEM>& a_USph,
@@ -326,11 +324,9 @@ namespace Proto {
                                       unsigned int a_block);
     
     template<typename T,unsigned int C,MemType MEM>
-    static void USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_JU,
-                                      const BoxData<T,C+2,MEM>& a_USph,
-                                      T a_h,
-                                      T a_gamma,
-                                      unsigned int a_block);
+    static void USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                                      const BoxData<T,C+2,MEM>& a_USemi,
+                                      T a_gamma);
     
     template<typename T,unsigned int C,MemType MEM>
     static void WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
@@ -372,6 +368,7 @@ namespace Proto {
     static void WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
                                          const BoxData<T,C,MEM>& a_WSph,
                                          const BoxData<T,1,MEM>& a_dVolr,
+                                         Box a_bx,
                                          T a_h,
                                          T a_gamma,
                                          unsigned int a_block);

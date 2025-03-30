@@ -20,14 +20,14 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
-  a_JU.exchange();
   h5.setTime(time);
-	h5.setTimestep(dt);
+  h5.setTimestep(dt);
   h5.setIter(iter);
   typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
+  MBLevelBoxData<double, NUMCOMPS+2, HOST> USemiSph(layout,a_JU.ghost());
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
   for (auto dit : layout)
@@ -42,53 +42,95 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
-    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Basis(0,2)));
     auto& Wout_i = Wout[dit];
-    USemiSph.setToZero();
+    USemiSph[dit].setToZero();
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     auto& dVolr_i = dVolrLev[dit];
     Box bx_i = layout[dit];
     CubedSphereShell::
-      consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
+      consToSemiSphNGEuler(USemiSph[dit],JU_i,dVolr_i,bx_i,
                            blockBox,dxiPerp,block,4);
+  }
+  USemiSph.exchange();
+  a_iop.apply(USemiSph,USemiSph);
+  Stencil<double> deconvolve = ((1.0)*Shift(Point::Zeros()))
+  - ((1.0/24.0)*Stencil<double>::Laplacian());
+  for (auto dit : layout)
+  {
+    unsigned int block = layout.block(dit);
+    auto ptlow = layout[dit].low();
+    auto pthigh = layout[dit].high();
+    if (layout[dit].low()[0] == 0) ptlow[0] += 1;
+    if (layout[dit].high()[0] == size[0] - 1) pthigh[0] -= 1;
+    Box bxlessRBdries(ptlow,pthigh);
+ 
+    BoxData<double,NUMCOMPS+2,HOST> USemiPointwise(layout[dit]);
+    USemiSph[dit].copyTo(USemiPointwise);
+    USemiPointwise |= deconvolve(USemiSph[dit],bxlessRBdries);
+    Box bx = USemiPointwise.box();
+    Box btm = bx.face(0,Side::Lo);  
+    BoxData<double,DIM,HOST> normal(bx);
+    auto permute = CubedSphereShell::perm(block);
+    auto sign = CubedSphereShell::permsign(block);
+    forallInPlace_p(f_normal,btm,normal,permute,sign,dxiPerp,.5,.5);
+    Operator::spreadSlice(normal);
+    
+    BoxData<double,4,HOST> energyTest(USemiPointwise.box());
+    energyTest.setVal(0.);
     forallInPlace([ ] PROTO_LAMBDA
     (Var<double,NUMCOMPS+2,HOST>& a_Wout,
-     const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
+     Var<double,4,HOST>& a_energy,
+     // DEBUG
+     const Var<double,NUMCOMPS+2,HOST>& a_usemi,
+     const Var<double,DIM,HOST>& a_normal,
      double a_gamma,
      const Var<double,1,HOST>& a_radius)
     {
-      a_Wout(0) = a_USemiSph(0);
-      a_Wout(1) = a_USemiSph(1) / a_Wout(0);
-      a_Wout(2) = a_USemiSph(2) / a_Wout(0);
-      a_Wout(3) = a_USemiSph(3) / a_Wout(0);
-      a_Wout(5) = a_USemiSph(5);
-      a_Wout(6) = a_USemiSph(6);
-      a_Wout(7) = a_USemiSph(7);
-      a_Wout(8) = a_USemiSph(8) / a_Wout(0);
-      a_Wout(9) = a_USemiSph(9);
+      a_Wout(0) = a_usemi(0);
+      a_Wout(1) = a_usemi(1) / a_Wout(0);
+      a_Wout(2) = a_usemi(2) / a_Wout(0);
+      a_Wout(3) = a_usemi(3) / a_Wout(0);
+      a_Wout(5) = a_usemi(5);
+      a_Wout(6) = a_usemi(6);
+      a_Wout(7) = a_usemi(7);
+      a_Wout(8) = a_usemi(8) / a_Wout(0);
+      a_Wout(9) = a_usemi(9);
+      double veln = 
+       a_Wout(1)*a_normal(0) + a_Wout(2)*a_normal(1) + a_Wout(3)*a_normal(2);
+      double Bn = 
+        a_Wout(5)*a_normal(0) + a_Wout(6)*a_normal(1) + a_Wout(7)*a_normal(2);
       double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
-                         + a_Wout(2)*a_Wout(2)
-                         + a_Wout(3)*a_Wout(3) + a_Wout(8)*a_Wout(8))*.5;
+                             + a_Wout(2)*a_Wout(2)
+                             + a_Wout(3)*a_Wout(3)
+                             + a_Wout(8)*a_Wout(8)
+                             + 2*veln*a_Wout(8))*.5;
       double me = (a_Wout(5)*a_Wout(5)
-              + a_Wout(6)*a_Wout(6)
-              + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
-      a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
-
-      //a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
+                   + a_Wout(6)*a_Wout(6)
+                   + a_Wout(7)*a_Wout(7)
+                   + a_Wout(9)*a_Wout(9)
+                   + 2*Bn*a_Wout(9))/(8.0*M_PI);
+      a_Wout(4) = (a_usemi(4) - ke - me)*(a_gamma - 1.0);
+      //a_Wout(4) = max(a_Wout(4),0.);
+      a_energy(0) = a_usemi(4);
+      a_energy(1) = ke;
+      a_energy(2) = me/ke;
+      a_energy(3) = a_Wout(4)/ke;
+      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
       a_Wout(1) = a_Wout(1)/1e5; // km/s;
       a_Wout(2) = a_Wout(2)/1e5; // km/s;
       a_Wout(3) = a_Wout(3)/1e5; // km/s;
-      //a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
+      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
       // scaled by r*(2*gamma)
-      if (a_Wout(4) < 0.) a_Wout(4) = 0.;
+      // if (a_Wout(4) < 0.) a_Wout(4) = 0.;
       a_Wout(5) = a_Wout(5)*1e6; // microGauss
       a_Wout(6) = a_Wout(6)*1e6; // microGauss
       a_Wout(7) = a_Wout(7)*1e6; // microGauss
       a_Wout(8) = a_Wout(8)/1e5; // km/s;
       a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
-    }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
+                  }, Wout[dit], energyTest, USemiPointwise,normal, gamma, radiusLev[dit]);
     Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+    h5.writePatch(1.0,energyTest,"EnergyIO"+to_string(block));
 #ifndef PR_DISABLE_INIT_CHECKS
     // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
     // if (infOrNanBlock)

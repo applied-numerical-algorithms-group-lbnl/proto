@@ -56,8 +56,6 @@ int main(int argc, char *argv[])
       bool cullRadialGhost = true;
       bool use2DFootprint = true;
       
-      Array<Array<uint, DIM>, 6> permute = {{1,2,0}, {1,2,0}, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, {0, 1, 2}};
-      Array<Array<int, DIM>, 6> sign = {{1, -1, -1}, {1, 1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {-1, -1, 1}}; 
       Point boxSizeVect = Point::Ones(boxSize_nonrad);
       boxSizeVect[radialDir] = boxSize_rad;
       MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -111,8 +109,8 @@ int main(int argc, char *argv[])
         MBLevelBoxData<double, NUMCOMPS, HOST> WSphCME(layout, JU.ghost());
         MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemi(layout, JU.ghost());
         MBLevelBoxData<double, NUMCOMPS, HOST> WSph(layout, JU.ghost());      
-        MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout,JU.ghost());
-          MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemiout(layout,JU.ghost());
+        MBLevelBoxData<double, NUMCOMPS, HOST> Wout(layout,Point::Zeros());
+          MBLevelBoxData<double, NUMCOMPS+2, HOST> WSemiout(layout,Point::Zeros());
         MBLevelBoxData<double, NUMCOMPS+2, HOST> USemi(layout,JU.ghost());
         for (auto dit : layout)
           {
@@ -129,37 +127,33 @@ int main(int argc, char *argv[])
             
             eulerOp[dit].initialize(WSph[dit], dstData[dit], radius,
                                     XCart, gamma, thickness, dx[2], block);
+            
             // Increment WPoint_i with CME perturbation
-            CubedSphereShell::
-              WSphToWSemiPointwise(WSemi[dit],WSph[dit],dx[1],block);
             BoxData<double,NUMCOMPS,HOST> W_CME(WSemi[dit].box());
             W_CME.setVal(0.);
             forallInPlace_p(define_CME,W_CME,XCart);
-            
-            W_CME.copyTo(Wout[dit]);
+            bool nomagfield = false;
+            if (nomagfield)
+              {
+                for (int dir = 0; dir < DIM; dir++)
+                  {
+                    slice(W_CME,iVECX2+dir).setVal(0.);
+                  }
+              }
             CubedSphereShell::
-              WCartToWSemiPointwise(WSemiCME[dit],W_CME,dx[1],block);
+              WSphToWSemiPointwise(WSemi[dit],WSph[dit],dx[1],block);
+            CubedSphereShell::
+              WCartToWSemiPointwise(WSemiCME[dit],W_CME,dx[1],block);          
             WSemi[dit] += WSemiCME[dit];
-          }
-        
-        WSemi.exchange();
-        iop.apply(WSemi,WSemi);
-        
-        for (auto dit : layout)
-          {
-            BoxData<double> radius(dVolrLev[dit].box());
-            BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-            BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-            eulerOp[dit].radialMetrics(radius, Dr, adjDr, dVolrLev[dit], Dr.box());
-            auto block = layout.block(dit);
-            
+
+            // Transform to WSemi to JU.
             CubedSphereShell::
               WSemiToWSphPointwise<double,NUMCOMPS,HOST>
               (WSph[dit],WSemi[dit],dx[1],block);
-            
             CubedSphereShell::
-              WSphPointwiseToJUAverage(JU[dit],WSph[dit],dVolrLev[dit],dx[1],gamma,block);
-          }      
+              WSphPointwiseToJUAverage(JU[dit],WSph[dit],dVolrLev[dit],layout[dit],dx[1],gamma,block);
+          }
+        
         Write_W(JU,eulerOp,iop,-1,0,0);
         h5.writeMBLevel({}, map,WSph,"WSph" );
         h5.writeMBLevel({}, map,WSemi,"WSemi" ); 
