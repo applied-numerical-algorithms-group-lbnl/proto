@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class FaceAverageDiffOp : public CompositeOp
+    class FaceAverageDiffOp : public CompositeOp<1>
     {
 
     private:
@@ -37,19 +37,19 @@ namespace Proto
             }
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 1> domains(const Box &rangeBox) const
         {
-            std::vector<Box> domainBoxes;
+            std::array<Box, 1> domainBoxes;
             Box b;
             for (int dd = 0; dd < DIM; dd++)
             {
                 b += _faceDerivs[dd].domain(rangeBox);
             }
-            domainBoxes.push_back(b);
+            domainBoxes[0] = b;
             return domainBoxes;
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 1> &domainBoxes) const
         {
             Box b = _faceDerivs[0].range(domainBoxes[0]);
             for (int dd = 1; dd < DIM; dd++)

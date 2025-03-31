@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T, template<class> typename PRODUCT_OP>
-    class MatrixProductOp : public CompositeOp
+    class MatrixProductOp : public CompositeOp<4>
     {
 
     protected:
@@ -19,21 +19,21 @@ namespace Proto
         {
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 4> domains(const Box &rangeBox) const
         {
             if (!_productOp)
             {
-                std::vector<Box> domainBoxes;
+                std::array<Box, 4> domainBoxes;
                 for (int ii = 0; ii < 4; ii++)
                 {
-                    domainBoxes.push_back(rangeBox);
+                    domainBoxes[ii] = rangeBox;
                 }
                 return domainBoxes;
             }
             return _productOp->domains(rangeBox);
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 4> &domainBoxes) const
         {
             if (!_productOp)
             {

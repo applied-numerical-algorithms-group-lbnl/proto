@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class FaceAverageQuotientOp : public CompositeOp
+    class FaceAverageQuotientOp : public CompositeOp<4>
     {
 
     private:
@@ -30,26 +30,23 @@ namespace Proto
             }
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 4> domains(const Box &rangeBox) const
         {
-            std::vector<Box> domainBoxes;
-
-            domainBoxes.push_back(rangeBox);
-            domainBoxes.push_back(rangeBox);
-
+            std::array<Box, 4> domainBoxes;
             Box diffBox;
             for (int dd = 0; dd < DIM; dd++)
             {
                 diffBox += _diffs[dd].domain(rangeBox);
             }
-
-            domainBoxes.push_back(diffBox);
-            domainBoxes.push_back(diffBox);
+            domainBoxes[0] = rangeBox;
+            domainBoxes[1] = rangeBox;
+            domainBoxes[2] = diffBox;
+            domainBoxes[3] = diffBox;
 
             return domainBoxes;
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 4> &domainBoxes) const
         {
             PROTO_ASSERT(domainBoxes.size() == 4,
                 "FaceAverageQuotient::range | Error: Incorrect input size (%i). Should be 4.",

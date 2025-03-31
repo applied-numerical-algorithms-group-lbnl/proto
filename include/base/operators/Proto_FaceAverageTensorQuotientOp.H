@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class FaceAverageTensorQuotientOp : public CompositeOp
+    class FaceAverageTensorQuotientOp : public CompositeOp<4>
     {
 
     private:
@@ -21,12 +21,12 @@ namespace Proto
             _quotient = std::make_unique<FaceAverageQuotientOp<T>>(normDir);
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 4> domains(const Box &rangeBox) const
         {
             return _quotient->domains(rangeBox);
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 4> &domainBoxes) const
         {
             return _quotient->range(domainBoxes);
         }

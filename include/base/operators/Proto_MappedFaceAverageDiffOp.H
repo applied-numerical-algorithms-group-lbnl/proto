@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class MappedFaceAverageDiffOp : public CompositeOp
+    class MappedFaceAverageDiffOp : public CompositeOp<6>
     {
 
     private:
@@ -27,30 +27,21 @@ namespace Proto
             _quotientOp = std::make_unique<FaceAverageTensorQuotientOp<T>>(normDir);
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 6> domains(const Box &rangeBox) const
         {
-            auto [jgradphi4, J4, jgradphi2, J2] = 
-                tupleFromVector(_quotientOp->domains(rangeBox));
-            auto [gradxphi4, N4, gradxphi2, N2] = 
-                tupleFromVector(_matProdOp->domains(jgradphi4));
-            auto [phi4] = tupleFromVector(_diff4Op->domains(gradxphi4));
-            auto gradxphi2 = jgradphi2;
+            auto [jgradphi4, J4, jgradphi2, J2] = _quotientOp->domains(rangeBox);
+            auto [gradxphi4, N4, gradxphi2, N2] = _matProdOp->domains(jgradphi4);
+            auto [phi4] = _diff4Op->domains(gradxphi4);
+            gradxphi2 += jgradphi2;
             N2 += jgradphi2;
-            auto [phi2] = tupleFromVector(_diff2Op->domains(gradxphi2));
+            auto [phi2] = _diff2Op->domains(gradxphi2);
 
-            std::vector<Box> output;
-            output.push_back(phi4);
-            output.push_back(phi2);
-            output.push_back(N4);
-            output.push_back(N2);
-            output.push_back(J4);
-            output.push_back(J2);
-            return output;
+            return {phi4, phi2, N4, N2, J4, J2};
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 6> &domainBoxes) const
         {
-            auto [phi4, phi2, N4, N2, J4, J2] = tupleFromVector(domainBoxes);
+            auto [phi4, phi2, N4, N2, J4, J2] = domainBoxes;
             auto G4 = _diff4Op->range(phi4);
             auto G2 = _diff2Op->range(phi2);
             auto JG4 = _matProdOp->range(G4, N4, G2, N2);

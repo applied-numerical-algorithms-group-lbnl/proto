@@ -6,7 +6,7 @@
 namespace Proto
 {
     template <class T>
-    class ConvolveOp : public CompositeOp
+    class ConvolveOp : public CompositeOp<2>
     {
 
     private:
@@ -18,15 +18,15 @@ namespace Proto
             m_L = Stencil<T>::Laplacian();
         }
 
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, 2> domains(const Box &rangeBox) const
         {
-            std::vector<Box> domainBoxes;
-            domainBoxes.push_back(rangeBox);
-            domainBoxes.push_back(m_L.domain(rangeBox));
+            std::array<Box, 2> domainBoxes;
+            domainBoxes[0] = rangeBox;
+            domainBoxes[1] = m_L.domain(rangeBox);
             return domainBoxes;
         }
 
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, 2> &domainBoxes) const
         {
             PROTO_ASSERT(domainBoxes.size() == 2,
                          "ConvolveOp::range | Error: ConvolveOp requires two input domains for the 4th order and 2nd order cell centered data respectively");

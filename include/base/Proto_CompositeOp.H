@@ -17,11 +17,15 @@ namespace Proto
             "Vector size %u is smaller than expected size %u", v.size(), N);
         return tupleFromVector<T>(v, std::make_index_sequence<N>{});
     }
+    template<unsigned int NDOMAINS>
     class CompositeOp
     {
     public:
-        inline virtual std::vector<Box> domains(const Box &rangeBox) const = 0;
-        inline virtual Box range(const std::vector<Box> &domainBoxes) const = 0;
+        
+        inline virtual std::array<Box, NDOMAINS> domains(const Box &rangeBox) const = 0;
+        
+        inline virtual Box range(const std::array<Box, NDOMAINS> &domainBoxes) const = 0;
+        
         template<typename... Args>
         inline Box getRange(Box first, Args... boxes)
         {
@@ -29,7 +33,11 @@ namespace Proto
             std::vector<Box> domains;
             domains.push_back(first);
             (domains.push_back(boxes), ...);
-            return range(domains);
+            PROTO_ASSERT(domains.size() == NDOMAINS,
+                "Incorrect number of domains (%u should be %u)", domains.size(), NDOMAINS);
+            std::array<Box, NDOMAINS> domainArray;
+            std::copy_n(domains.begin(), NDOMAINS, domainArray.begin());
+            return range(domainArray);
         }
         inline Box domainUnion(const Box& rangeBox) const
         {
@@ -44,11 +52,16 @@ namespace Proto
     protected:
         
         template<typename... Srcs>
-        inline std::vector<Box> getDomains(Srcs&... sources)
+        inline std::array<Box, NDOMAINS> getDomains(Srcs&... sources)
         {
             std::vector<Box> domains;
             (domains.push_back(sources.box()), ...); //C++17 fold expression
-            return domains;
+            PROTO_ASSERT(domains.size() == NDOMAINS,
+                "incorrect number of arguments (detected %u, should be %u)",
+            domains.size(), NDOMAINS);
+            std::array<Box, NDOMAINS> domainArray;
+            std::copy_n(domains.begin(), NDOMAINS, domainArray.begin());
+            return domainArray;
         }
     };
 }
