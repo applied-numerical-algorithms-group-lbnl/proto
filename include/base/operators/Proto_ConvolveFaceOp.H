@@ -28,8 +28,6 @@ namespace Proto
 
         inline Box range(const std::array<Box, 2> &domainBoxes) const
         {
-            PROTO_ASSERT(domainBoxes.size() == 2,
-                         "ConvolveFaceOp::range | Error: ConvolveFaceOp requires two input domains for the 4th order and 2nd order cell centered data respectively");
             return (m_Lf.range(domainBoxes[1]) & domainBoxes[0]);
         }
 

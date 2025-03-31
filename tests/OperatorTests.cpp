@@ -146,6 +146,77 @@ TEST(Operator, ConvolveFace) {
     }
 }
 
+TEST(Operator, ConvolveEdge) {
+    int domainSize = 64;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
+    int numIter = 3;
+    double errTol = 1e-5;
+    double rateTol = 0.1;
+
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        int s2 = 8;
+        int s4 = 10;
+        ConvolveEdgeOp<double> op(dd);
+        std::array<Box,2> domains;
+        Box b2 = Box::Cube(s2);
+        Box b4 = Box::Cube(s4);
+        domains[0]=b4;
+        domains[1]=b2;
+        Box range = op.range(domains);
+        Point ghost = Point::Basis(dd);
+        EXPECT_EQ(range, b2.grow(-ghost));
+        auto computedDomains = op.domains(range);
+        EXPECT_EQ(computedDomains[0], range);
+        EXPECT_EQ(computedDomains[1], range.grow(ghost));
+    }
+
+#ifdef PR_HDF5
+    HDF5Handler h5;
+#endif
+    double errNorm[numIter][DIM];
+    for (int n = 0; n < numIter; n++)
+    {
+        double dx = 1.0/domainSize;
+        Box B = Box::Cube(domainSize);
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            ConvolveEdgeOp<double> convolveEdge(dir);
+            Box Bd = B.grow(dir,1);
+            data[dir].define(Bd);
+            soln[dir].define(B);
+            err[dir].define(B);
+        
+            forallInPlace_p(f_phi_edge, data[dir], dx, k, offset, dir);
+            forallInPlace_p(f_phi_edge_avg, soln[dir], dx, k, offset, dir);
+            err[dir].setVal(0);
+
+            auto test = convolveEdge(data[dir], data[dir]);
+            err[dir] += test;
+            err[dir] -= soln[dir];
+            EXPECT_EQ(test.box(), B);
+            errNorm[n][dir] = err[dir].absMax();
+        }
+        domainSize *= 2; 
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            double rate = log(errNorm[ii-1][dir]/errNorm[ii][dir])/log(2.0);
+            double rateErr = abs(4.0-rate);
+            #if PR_VERBOSE > 0
+            std::cout << "Dir: " << dir << " | Error (Max Norm): " << errNorm[ii][dir] << " | Convergence Rate: " << rate << std::endl;
+            #endif
+            EXPECT_LT(rateErr, rateTol);
+        }
+    }
+}
+
 TEST(Operator, Deconvolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -249,6 +320,77 @@ TEST(Operator, DeconvolveFace) {
             err[dir].setVal(0);
 
             auto test = deconvolveFace(data[dir], dir);
+            err[dir] += test;
+            err[dir] -= soln[dir];
+            EXPECT_EQ(test.box(), B);
+            errNorm[n][dir] = err[dir].absMax();
+        }
+        domainSize *= 2; 
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            double rate = log(errNorm[ii-1][dir]/errNorm[ii][dir])/log(2.0);
+            double rateErr = abs(4.0-rate);
+            #if PR_VERBOSE > 0
+            std::cout << "Dir: " << dir << " | Error (Max Norm): " << errNorm[ii][dir] << " | Convergence Rate: " << rate << std::endl;
+            #endif
+            EXPECT_LT(rateErr, rateTol);
+        }
+    }
+}
+
+TEST(Operator, DeconvolveEdge) {
+    int domainSize = 64;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
+    int numIter = 3;
+    double errTol = 1e-5;
+    double rateTol = 0.1;
+
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        int s2 = 8;
+        int s4 = 10;
+        DeconvolveEdgeOp<double> op(dd);
+        std::array<Box,2> domains;
+        Box b2 = Box::Cube(s2);
+        Box b4 = Box::Cube(s4);
+        domains[0]=b4;
+        domains[1]=b2;
+        Box range = op.range(domains);
+        Point ghost = Point::Basis(dd);
+        EXPECT_EQ(range, b2.grow(-ghost));
+        auto computedDomains = op.domains(range);
+        EXPECT_EQ(computedDomains[0], range);
+        EXPECT_EQ(computedDomains[1], range.grow(ghost));
+    }
+
+#ifdef PR_HDF5
+    HDF5Handler h5;
+#endif
+    double errNorm[numIter][DIM];
+    for (int n = 0; n < numIter; n++)
+    {
+        double dx = 1.0/domainSize;
+        Box B = Box::Cube(domainSize);
+        Array<BoxData<double, 1, HOST>, DIM> data;
+        Array<BoxData<double, 1, HOST>, DIM> soln;
+        Array<BoxData<double, 1, HOST>, DIM> err;
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Box Bd = B.grow(dir,1);
+            data[dir].define(Bd);
+            soln[dir].define(B);
+            err[dir].define(B);
+        
+            forallInPlace_p(f_phi_edge_avg, data[dir], dx, k, offset, dir);
+            forallInPlace_p(f_phi_edge, soln[dir], dx, k, offset, dir);
+            err[dir].setVal(0);
+
+            DeconvolveEdgeOp<double> deconvolveEdge(dir);
+            auto test = deconvolveEdge(data[dir], data[dir]);
             err[dir] += test;
             err[dir] -= soln[dir];
             EXPECT_EQ(test.box(), B);

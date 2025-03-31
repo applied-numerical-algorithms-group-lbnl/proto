@@ -8,7 +8,7 @@
 namespace Proto
 {
     template <class T>
-    class NameOfYourOp : public CompositeOp
+    class NameOfYourOp : public CompositeOp<NUM_DOMAINS>
     {
 
     private:
@@ -20,15 +20,15 @@ namespace Proto
         }
 
         // Mandatory
-        inline std::vector<Box> domains(const Box &rangeBox) const
+        inline std::array<Box, NUM_DOMAINS> domains(const Box &rangeBox) const
         {
-            std::vector<Box> domainBoxes;
+            std::array<Box, NUM_DOMAINS> domainBoxes;
             // compute domains of each BoxData argument of operator()
             return domainBoxes;
         }
 
         // Mandatory
-        inline Box range(const std::vector<Box> &domainBoxes) const
+        inline Box range(const std::array<Box, NUM_DOMAINS> &domainBoxes) const
         {
             // compute the range from the domains of all inputs of operator()
            return domainBoxes[0];
