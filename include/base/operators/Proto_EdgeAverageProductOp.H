@@ -59,6 +59,20 @@ namespace Proto
             AB_4thOrder.incrementProduct(A_4thOrder, B_4thOrder);
         }
 
+        template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
+        inline BoxData<T, C, MEM, D, E>
+        operator()(
+            const BoxData<T, C, MEM, D, E> &A_4thOrder,
+            const BoxData<T, C, MEM, D, E> &B_4thOrder,
+            const BoxData<T, C, MEM, D, E> &A_2ndOrder,
+            const BoxData<T, C, MEM, D, E> &B_2ndOrder)
+        {
+            Box rangeBox = range(getDomains(A_4thOrder, B_4thOrder, A_2ndOrder, B_2ndOrder));
+            BoxData<T, C, MEM, D, E> output(rangeBox);
+            (*this)(output, A_4thOrder, B_4thOrder, A_2ndOrder, B_2ndOrder);
+            return output;
+        }
+
         template <unsigned int C, MemType MEM, Centering CTR>
         inline void
         operator()(

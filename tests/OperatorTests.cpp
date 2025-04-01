@@ -697,6 +697,89 @@ TEST(Operator, FaceAverageProduct)
     }
 }
 
+TEST(Operator, EdgeAverageProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int C = 2;
+    int domainSize = 32;
+    int numIter = 3;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        Box rangeBox = Box::Cube(domainSize);
+        Point offset_A(1,2,3,4,5,6);
+        Point offset_B(2,1,4,3,6,5);
+        Point k_A(1,2,3,4,5,6);
+        Point k_B(2,1,4,3,6,5);
+        auto side = Side::Lo;
+        error[nn] = 0;
+        for (int edgeDir = 0; edgeDir < DIM; edgeDir++)
+        {
+            auto productOp = EdgeAverageProductOp<double>(edgeDir);
+            auto domainBoxes = productOp.domains(rangeBox);
+            
+            auto AVG = ConvolveEdgeOp<double>(edgeDir);
+
+            Box avgDomain = AVG.domainUnion(rangeBox);
+            BoxData<double, C> A(avgDomain);
+            BoxData<double, C> B(avgDomain);
+            BoxData<double, C> AB(avgDomain);
+            BoxData<double, C> solnData(rangeBox);
+
+            
+            forallInPlace_p(f_phi_edge,  A, dx, k_A, offset_A, edgeDir);
+            forallInPlace_p(f_phi_edge,  B, dx, k_B, offset_B, edgeDir);
+
+            AB.setVal(0);
+            AB.incrementProduct(A, B);
+            AVG(solnData, AB, AB);
+
+            BoxData<double, C> A4_avg(domainBoxes[0]);
+            BoxData<double, C> B4_avg(domainBoxes[1]);
+            BoxData<double, C> A2_avg(domainBoxes[2]);
+            BoxData<double, C> B2_avg(domainBoxes[3]);
+            BoxData<double, C> testData(rangeBox);
+
+            forallInPlace_p(f_phi_edge_avg,  A4_avg, dx, k_A, offset_A, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  B4_avg, dx, k_B, offset_B, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  A2_avg, dx, k_A, offset_A, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  B2_avg, dx, k_B, offset_B, edgeDir);
+
+            productOp(testData, A4_avg, B4_avg, A2_avg, B2_avg);
+            
+            BoxData<double, C> errData(rangeBox);
+            errData.setVal(0);
+            errData += testData;
+            errData -= solnData;
+
+            #if PR_VERBOSE > 0
+            h5.writePatch(testData, "TEST_PROD_EDGE_DAT_D%i_N%i", edgeDir, nn);
+            h5.writePatch(A, "TEST_PROD_EDGE_A_D%i_N%i", edgeDir, nn);
+            h5.writePatch(B, "TEST_PROD_EDGE_B_D%i_N%i", edgeDir, nn);
+            h5.writePatch(AB, "TEST_PROD_EDGE_AB_D%i_N%i", edgeDir, nn);
+            h5.writePatch(solnData, "TEST_PROD_EDGE_SLN_D%i_N%i", edgeDir, nn);
+            h5.writePatch(errData, "TEST_PROD_EDGE_ERR_D%i_N%i", edgeDir, nn);
+            #endif
+
+            error[nn] = max(error[nn], errData.absMax());
+        }
+        domainSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn-1]/error[nn])/ log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        
+        EXPECT_NEAR(rate, 4.0, 0.25);
+    }
+}
+
 TEST(Operator, CellAverageQuotient)
 {
     #if PR_VERBOSE > 0

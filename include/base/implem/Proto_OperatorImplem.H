@@ -1664,37 +1664,8 @@ _product1D(
         int a_dir)
 {
     PR_TIME("Operator::product1D");
-    auto b = (a_ql2.box().grow(a_dir,-1) & a_qr2.box().grow(a_dir,-1));
-    b &= (a_ql4.box() & a_qr4.box());
-    BoxData<T,C,MEM,D,E> prod(b);
-    prod.setToZero();
-    auto Diff = 0.5*Shift::Basis(a_dir,1) - 0.5*Shift::Basis(a_dir,-1);
-    BoxData<T,C,MEM,D,E> Dql = Diff(a_ql2);
-    BoxData<T,C,MEM,D,E> Dqr = Diff(a_qr2);
-
-    forallInPlace(
-        [ ] PROTO_LAMBDA (
-            Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq)
-        {
-            for (int cc = 0; cc < C; cc++)
-            for (int dd = 0; dd < D; dd++)
-            for (int ee = 0; ee < E; ee++)
-            {
-                prod_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
-            }
-        }, prod, Dql, Dqr);
-    forallInPlace(
-        [ ] PROTO_LAMBDA (
-            Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_l, Var<T,C,MEM,D,E>& v_r)
-        {
-            for (int cc = 0; cc < C; cc++)
-            for (int dd = 0; dd < D; dd++)
-            for (int ee = 0; ee < E; ee++)
-            {
-                prod_out(cc,dd,ee) += v_l(cc,dd,ee)*v_r(cc,dd,ee);
-            }
-        }, prod, a_ql4, a_qr4);
-    return prod;
+    EdgeAverageProductOp<T> op(a_dir);
+    return op(a_ql4, a_qr4, a_ql2, a_qr2);
 }
 
 template<class T, unsigned int C, unsigned int D, unsigned int E, MemType MEM>
