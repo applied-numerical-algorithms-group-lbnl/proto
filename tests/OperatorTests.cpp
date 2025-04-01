@@ -1284,6 +1284,7 @@ int main(int argc, char *argv[]) {
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
+    std::cout << "DIM = " << DIM << std::endl;
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI
     MPI_Finalize();
