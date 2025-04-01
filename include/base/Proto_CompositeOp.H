@@ -81,9 +81,14 @@ namespace Proto
 #include "operators/Proto_QuotientAverageOp.H"
 #include "operators/Proto_CellAverageQuotientOp.H"
 #include "operators/Proto_FaceAverageQuotientOp.H"
+
 #include "operators/Proto_MatrixProductOp.H"
 #include "operators/Proto_FaceAverageMatrixProductOp.H"
 #include "operators/Proto_CellAverageMatrixProductOp.H"
 #include "operators/Proto_FaceAverageTensorQuotientOp.H"
+
+#include "operators/Proto_CrossProductOp.H"
+#include "operators/Proto_EdgeAverageCrossProductOp.H"
+
 #include "operators/Proto_MappedFaceAverageDiffOp.H"
 #endif

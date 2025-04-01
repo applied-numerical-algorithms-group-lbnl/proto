@@ -1316,8 +1316,8 @@ _edgeCrossProduct3D(
                              int a_edgedir)
 {
     PR_TIME("Operator::edgeCrossProduct");
-    Array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
-    for (int comp = 0; comp < DIM; comp++)
+    Array<BoxData<T,1,MEM>,3> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
+    for (int comp = 0; comp < 3; comp++)
     {
         qlcomp2[comp] = slice(a_ql2,comp);
         qrcomp2[comp] = slice(a_qr2,comp);
@@ -1332,7 +1332,7 @@ _edgeCrossProduct3D(
     auto prod_02 = _product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
 
     auto retBD =
-        forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_retval,
+        forall<T,3,MEM>([]PROTO_LAMBDA(Var<T,3,MEM>& a_retval,
                     Var<T,1,MEM>& a_pr_01,Var<T,1,MEM>& a_pr_10,
                     Var<T,1,MEM>& a_pr_12,Var<T,1,MEM>& a_pr_21,
                     Var<T,1,MEM>& a_pr_20,Var<T,1,MEM>& a_pr_02)

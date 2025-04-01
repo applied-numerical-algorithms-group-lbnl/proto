@@ -1176,6 +1176,74 @@ TEST(Operator, FaceAverageTensorQuotient)
     }
 }
 
+
+TEST(Operator, EdgeAverageCrossProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    int domainSize = 32;
+    int numIter = 3;
+    double error[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        Box rangeBox = Box::Cube(domainSize);
+        Point offset_A(1,2,3,4,5,6);
+        Point offset_B(2,1,4,3,6,5);
+        Point k_A(1,2,3,4,5,6);
+        Point k_B(2,1,4,3,6,5);
+        auto side = Side::Lo;
+        error[nn] = 0;
+        for (int edgeDir = 0; edgeDir < DIM; edgeDir++)
+        {
+            auto productOp = EdgeAverageCrossProductOp<double>(edgeDir);
+            auto domainBoxes = productOp.domains(rangeBox);
+
+            BoxData<double, 3> A4_avg(domainBoxes[0]);
+            BoxData<double, 3> B4_avg(domainBoxes[1]);
+            BoxData<double, 3> A2_avg(domainBoxes[2]);
+            BoxData<double, 3> B2_avg(domainBoxes[3]);
+            BoxData<double, 3> testData(rangeBox);
+
+            forallInPlace_p(f_phi_edge_avg,  A4_avg, dx, k_A, offset_A, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  B4_avg, dx, k_B, offset_B, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  A2_avg, dx, k_A, offset_A, edgeDir);
+            forallInPlace_p(f_phi_edge_avg,  B2_avg, dx, k_B, offset_B, edgeDir);
+
+            productOp(testData, A4_avg, B4_avg, A2_avg, B2_avg);
+            
+            auto solnData = Operator::_edgeCrossProduct3D(A4_avg, B4_avg, A2_avg, B2_avg, edgeDir);
+
+            BoxData<double, 3> errData(rangeBox);
+            errData.setVal(0);
+            errData += testData;
+            errData -= solnData;
+
+            #if PR_VERBOSE > 0
+            h5.writePatch(testData, "TEST_CROSS_PROD_EDGE_DAT_D%i_N%i", edgeDir, nn);
+            h5.writePatch(solnData, "TEST_CROSS_PROD_EDGE_SLN_D%i_N%i", edgeDir, nn);
+            h5.writePatch(errData, "TEST_CROSS_PROD_EDGE_ERR_D%i_N%i", edgeDir, nn);
+            #endif
+
+            error[nn] = max(error[nn], errData.absMax());
+        }
+        domainSize *= 2;
+    }
+    for (int nn = 1; nn < numIter; nn++)
+    {
+        double rate = log(error[nn-1]/error[nn])/ log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (w.r.t original implementation): " << error[nn] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        if (error[nn] > 1e-12)
+        {
+            EXPECT_NEAR(rate, 4.0, 0.25);
+        }
+    }
+}
+
 #if 0
 #if DIM==3
 #ifdef PR_MMB
