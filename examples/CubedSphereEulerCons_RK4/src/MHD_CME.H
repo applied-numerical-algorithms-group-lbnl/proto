@@ -237,6 +237,15 @@ void define_CMEF(const Point& a_pt,
         }
         phi = atan2(z_dash,y_dash);
         B0_local = B0*log(T0*T0*R_p*R_p + 1.0)/log(T0*T0*R_big*R_big + 1.0);
+        // If radius of curvature needed
+        // double a_axis = M_PI/2.0/theta_HW_rad;
+        // double r_axis = r_1;
+        // double r_dash_axis = -n*a_axis*R_t*pow(cos(a_axis*theta_rad),n-1.)*sin(a_axis*theta_rad);
+        // double r_double_dash_axis = a_axis*a_axis*n*R_t*(pow(cos(a_axis*theta_rad),n) - (n-1.)*pow(cos(a_axis*theta_rad),n-2.)*pow(sin(a_axis*theta_rad),2.0));
+        // R0_Vandas = pow(r_axis*r_axis + r_dash_axis*r_dash_axis,1.5)/(r_axis*r_axis + 2.0*r_dash_axis*r_dash_axis - r_axis*r_double_dash_axis);
+
+        // Another ad-hoc approximation for the radius of curvature
+        R0_Vandas = (1.0+(theta_HW-45.0)/100)*R_p*(1.7-1.4*(R_p/R_t));
         
         //Gold-Hoyle (Only valid in cylindrical geometry)
         //B_x_dash = B0_local/(1.0+T0*T0*r_dash*r_dash);
