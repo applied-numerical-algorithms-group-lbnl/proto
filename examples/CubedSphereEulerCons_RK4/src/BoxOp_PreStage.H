@@ -330,7 +330,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   // HDF5Handler h5;
   // typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
   // 
-  // CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, a_kstage);
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, a_kstage);
   // MBLevelBoxData<T,NUMCOMPS,MEM> primvars(layout,a_UStage.ghost());
   // for (auto dit : layout)
   //   {
