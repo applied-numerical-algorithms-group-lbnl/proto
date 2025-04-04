@@ -2,7 +2,7 @@ import clang.cindex
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional
 
 @dataclass
 class FunctionInfo:
@@ -59,6 +59,15 @@ def get_source_text(cursor, tu_source):
         source_lines[-1] = source_lines[-1][:end.column-1]
     
     return '\n'.join(source_lines)
+def is_method(cursor):
+    if cursor.kind in [
+        clang.cindex.CursorKind.CXX_METHOD,
+        clang.cindex.CursorKind.FUNCTION_TEMPLATE,
+        clang.cindex.CursorKind.CONSTRUCTOR,
+        clang.cindex.CursorKind.DESTRUCTOR
+    ]:
+        return True
+    return False
 
 def parse_function(cursor, tu_source):
     """Parse a function declaration."""
@@ -78,7 +87,6 @@ def parse_function(cursor, tu_source):
     source = get_source_text(cursor, tu_source)
     comment = extract_comment(cursor)
 
-    print("Parsed function: " + cursor.spelling)
     return FunctionInfo(
         name=name,
         signature=signature,
@@ -112,12 +120,7 @@ def parse_class(cursor, tu_source):
     
     # Extract methods and fields
     for child in cursor.get_children():
-        if child.kind in [
-            clang.cindex.CursorKind.CXX_METHOD,
-            clang.cindex.CursorKind.FUNCTION_TEMPLATE,
-            clang.cindex.CursorKind.CONSTRUCTOR,
-            clang.cindex.CursorKind.DESTRUCTOR
-        ]:
+        if is_method(child):
             methods.append(parse_function(child, tu_source))
         elif child.kind == clang.cindex.CursorKind.FIELD_DECL:
             fields.append({
@@ -129,7 +132,6 @@ def parse_class(cursor, tu_source):
     source = get_source_text(cursor, tu_source)
     comment = extract_comment(cursor)
     
-    print("Parsed class: " + cursor.spelling)
     return ClassInfo(
         name=name,
         location=location,
@@ -159,7 +161,6 @@ def parse_namespace(cursor, tu_source):
             functions.append(parse_function(child, tu_source))
     
     source = get_source_text(cursor, tu_source)
-    print("Parsed namespace: " + cursor.spelling)
     return NamespaceInfo(
         name=name,
         classes=classes,
@@ -216,26 +217,73 @@ def setup_compiler_args(include_paths=None, compiler_name='clang++'):
 
     return args
 
-def parse_header_file(file_path, include_paths=None, compiler_name='clang++'):
+def get_method_source(cursor, file_content):
+    """Extract the source code for a method from file content."""
+    start = cursor.extent.start.offset
+    end = cursor.extent.end.offset
+    
+    # Make sure offsets are valid
+    if start >= 0 and end >= 0 and start < len(file_content) and end <= len(file_content):
+        return file_content[start:end]
+    return ""
+
+def find_implementations(cursor, implem_file_path, class_data=None, func_data=None):
+    implems = {}
+    with open(implem_file_path, 'r') as f:
+        implem_file_content = f.read()
+
+    for child in cursor.get_children():
+        if not child.location.file:
+            continue
+
+        if child.location.file.name == implem_file_path:
+            if class_data and child.kind in [
+                clang.cindex.CursorKind.CXX_METHOD,
+                clang.cindex.CursorKind.FUNCTION_TEMPLATE,
+                clang.cindex.CursorKind.CONSTRUCTOR,
+                clang.cindex.CursorKind.DESTRUCTOR
+            ]:
+                if child.semantic_parent and child.semantic_parent.spelling == class_data.name:
+                    impl = get_method_source(child, implem_file_content)
+                    implems[child.spelling] = impl
+            
+            elif func_data and child.spelling == func_data.name:
+                impl = get_method_source(child, implem_file_content)
+                implems[child.spelling] = impl
+
+            else:
+                nested_implems = find_implementations(child, implem_file_path, class_data, func_data)
+                implems.update(nested_implems)
+    if class_data:
+        for method_data in class_data.methods:
+            method_data.source = implems[method_data.name]
+    if func_data:
+        func_data.source = implems[func_data.name]
+    return implems
+
+
+
+
+def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_name='clang++'):
     """Parse a C++ header file and extract its structure."""
     index = clang.cindex.Index.create()
     args = setup_compiler_args(include_paths, compiler_name)
 
     # Parse the file
     try:
-        translation_unit = index.parse(file_path, args=args)
-        
+        header_tu = index.parse(file_path, args=args)
+
         # Check for parsing errors
-        for diag in translation_unit.diagnostics:
+        for diag in header_tu.diagnostics:
             if diag.severity >= clang.cindex.Diagnostic.Error:
                 print(f"Error parsing {file_path}: {diag.spelling}")
         
         # Get file content as string for source extraction
         with open(file_path, 'r') as f:
-            file_content = f.read()
+            header_file_content = f.read()
         
         # Root cursor represents the translation unit
-        root = translation_unit.cursor
+        root = header_tu.cursor
         
         # Extract top-level declarations
         global_namespace = NamespaceInfo(
@@ -250,12 +298,34 @@ def parse_header_file(file_path, include_paths=None, compiler_name='clang++'):
             # Filter out declarations from other files
             if child.location.file and child.location.file.name == file_path:
                 if child.kind == clang.cindex.CursorKind.NAMESPACE:
-                    global_namespace.nested_namespaces.append(parse_namespace(child, file_content))
+                    global_namespace.nested_namespaces.append(parse_namespace(child, header_file_content))
                 elif child.kind in [clang.cindex.CursorKind.CLASS_DECL, clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.CLASS_TEMPLATE]:
-                    global_namespace.classes.append(parse_class(child, file_content))
+                    global_namespace.classes.append(parse_class(child, header_file_content))
                 elif child.kind in [clang.cindex.CursorKind.FUNCTION_DECL, clang.cindex.CursorKind.FUNCTION_TEMPLATE]:
-                    global_namespace.functions.append(parse_function(child, file_content))
+                    global_namespace.functions.append(parse_function(child, header_file_content))
         
+        #get implementations
+        if implem_file_path and os.path.exists(implem_file_path):
+            implem_tu = index.parse(implem_file_path, args=args)
+            
+            for diag in implem_tu.diagnostics:
+                if diag.severity >= clang.cindex.Diagnostic.Error:
+                    print(f"Error parsing {implem_file_path}: {diag.spelling}")
+
+            for ci in global_namespace.classes:
+                implems = find_implementations(implem_tu.cursor, implem_file_path, ci, None)
+                print(f"found {len(implems)} implementations for class {ci.name}")
+            for fi in global_namespace.functions:
+                implems = find_implementations(implem_tu.cursor, implem_file_path, None, fi)
+                print(f"found {len(implems)} implementations for function {fi.name}")
+            for ns in global_namespace.nested_namespaces:
+                for ci in ns.classes:
+                    implems = find_implementations(implem_tu.cursor, implem_file_path, ci, None)
+                    print(f"found {len(implems)} implementations for class {ci.name}")
+                for fi in ns.functions:
+                    implems = find_implementations(implem_tu.cursor, implem_file_path, None, fi)
+                    print(f"found {len(implems)} implementations for function {fi.name}")
+
         return global_namespace
         
     except Exception as e:
@@ -268,37 +338,37 @@ def parse_codebase(root_dir, include_paths=None):
     """Parse all header files in a directory recursively."""
     all_parsed_files = {}
     main_filepath = os.path.join(root_dir, 'Main.H')
-    all_parsed_files[main_filepath] = parse_header_file(main_filepath, include_paths)
-    # for dirpath, _, filenames in os.walk(root_dir):
-    #     for filename in filenames:
-    #         if filename.endswith(('.h', '.hpp', '.hxx', '.H')):
-    #             file_path = os.path.join(dirpath, filename)
-    #             parsed_file = parse_header_file(file_path, include_paths)
-    #             if parsed_file:
-    #                 all_parsed_files[file_path] = parsed_file
+    all_parsed_files[main_filepath] = parse_header_file(main_filepath, None, include_paths)
+    for dirpath, _, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename.endswith(('.h', '.hpp', '.hxx', '.H')):
+                file_path = os.path.join(dirpath, filename)
+                name, ext = os.path.splitext(filename)
+                implem_filename = f"{name}Implem{ext}"
+                implem_file_path = f"{dirpath}/implem/{implem_filename}"
+                parsed_file = parse_header_file(file_path, implem_file_path, include_paths)
+                if parsed_file:
+                    all_parsed_files[file_path] = parsed_file
     
     return all_parsed_files
+
+def print_structure(codebase_structure):
+    for file_path, structure in codebase_structure.items():
+        print(f"source file: {file_path}")
+        for ns in structure.nested_namespaces:
+            for ci in ns.classes:
+                print(f"\tClass {ci.name}")
+                for vi in ci.fields:
+                    print(f"\t\tField {vi['name']}")
+                for fi in ci.methods:
+                    print(f"\t\tMethod {fi.name}")
+                    print(fi.source)
 
 if __name__ == "__main__":
     include_paths = [
         "./include/base",
         "./include/base/implem"
     ]
-    codebase_structure = parse_codebase("./include")
-
-    #Print summary of parsed structures
-    for file_path, structure in codebase_structure.items():
-        print(f"File: {file_path}")
-        
-        # Count classes, functions, etc.
-        classes_count = len(structure.classes)
-        for ns in structure.nested_namespaces:
-            classes_count += len(ns.classes)
-            
-        functions_count = len(structure.functions)
-        for ns in structure.nested_namespaces:
-            functions_count += len(ns.functions)
-            
-        print(f"  Classes: {classes_count}")
-        print(f"  Functions: {functions_count}")
-        print()
+    codebase_structure = parse_codebase("./include", include_paths)
+    print_structure(codebase_structure)
+    

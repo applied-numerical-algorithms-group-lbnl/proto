@@ -8,9 +8,10 @@ namespace Classes {
         
         public:
 
-        inline A();
-        inline void print();
+        A();
+        void print() const;
 
     };
-    #include "implem/ClassAImplem.H"
+
+    void fooA(const A& a);
 }

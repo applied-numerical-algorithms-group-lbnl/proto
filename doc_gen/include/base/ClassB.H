@@ -9,9 +9,8 @@ namespace Classes {
         
         public:
 
-        inline B();
-        inline void print();
+        B();
+        void print();
 
     };
-    #include "implem/ClassBImplem.H"
 }

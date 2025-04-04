@@ -1,6 +1,10 @@
 #pragma once
 #include "../ClassA.H"
-using namespace Classes;
-
-A::A() { value = 7; }
-void A::print() { std::cout << value << std::endl; }
+namespace Classes {
+    inline A::A() { value = 7; }
+    inline void A::print() const { std::cout << value << std::endl; }
+    void fooA(const A& a)
+    {
+        a.print();
+    }
+}

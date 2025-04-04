@@ -11,7 +11,6 @@ namespace Classes {
 
         public:
 
-        inline void print();
+        void print();
     };
-    #include "implem/ClassCImplem.H"
 }
