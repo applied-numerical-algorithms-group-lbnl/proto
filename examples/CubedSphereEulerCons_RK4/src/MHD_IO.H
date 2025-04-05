@@ -20,6 +20,143 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
+  a_JU.exchange();
+  h5.setTime(time);
+	h5.setTimestep(dt);
+  h5.setIter(iter);
+  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
+  auto layout = a_JU.layout();
+  auto map = CubedSphereShell::Map(layout, OP::ghost());
+  MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
+  MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
+  MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
+  for (auto dit : layout)
+  {
+    BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
+    BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
+    eulerOp[dit].radialMetrics(radiusLev[dit], Dr, adjDr, dVolrLev[dit], Dr.box());
+  }
+  Point size = layout.domain().getBlock(0).sizes();
+  double dxiPerp = 1.0/size[1];
+  bool infOrNan = false;
+  for (auto dit : layout)
+  {
+    auto& JU_i = a_JU[dit];
+    BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Basis(0,2)));
+    auto& Wout_i = Wout[dit];
+    USemiSph.setToZero();
+    unsigned int block = layout.block(dit);
+    Box blockBox = layout.getBlock(block).domain().box();
+    auto& dVolr_i = dVolrLev[dit];
+    Box bx_i = layout[dit];
+    CubedSphereShell::
+      consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
+                           blockBox,dxiPerp,block,4);
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double,NUMCOMPS+2,HOST>& a_Wout,
+     const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
+     double a_gamma,
+     const Var<double,1,HOST>& a_radius)
+    {
+      a_Wout(0) = a_USemiSph(0);
+      a_Wout(1) = a_USemiSph(1) / a_Wout(0);
+      a_Wout(2) = a_USemiSph(2) / a_Wout(0);
+      a_Wout(3) = a_USemiSph(3) / a_Wout(0);
+      a_Wout(5) = a_USemiSph(5);
+      a_Wout(6) = a_USemiSph(6);
+      a_Wout(7) = a_USemiSph(7);
+      a_Wout(8) = a_USemiSph(8) / a_Wout(0);
+      a_Wout(9) = a_USemiSph(9);
+      double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
+                         + a_Wout(2)*a_Wout(2)
+                         + a_Wout(3)*a_Wout(3) + a_Wout(8)*a_Wout(8))*.5;
+      double me = (a_Wout(5)*a_Wout(5)
+              + a_Wout(6)*a_Wout(6)
+              + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
+      a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
+
+      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
+      a_Wout(1) = a_Wout(1)/1e5; // km/s;
+      a_Wout(2) = a_Wout(2)/1e5; // km/s;
+      a_Wout(3) = a_Wout(3)/1e5; // km/s;
+      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
+      // scaled by r*(2*gamma)
+      if (a_Wout(4) < 0.) a_Wout(4) = 0.;
+      a_Wout(5) = a_Wout(5)*1e6; // microGauss
+      a_Wout(6) = a_Wout(6)*1e6; // microGauss
+      a_Wout(7) = a_Wout(7)*1e6; // microGauss
+      a_Wout(8) = a_Wout(8)/1e5; // km/s;
+      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
+    }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
+    Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+#ifndef PR_DISABLE_INIT_CHECKS
+    // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
+    // if (infOrNanBlock)
+    //   {
+    //     h5.writePatch(1.0,Wout[dit],"MHD_IO_InfOrNAN"+to_string(block));
+    //     infOrNan = infOrNan || infOrNanBlock;
+    //     cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
+    //          << ", block = " << block << endl;
+    //   }
+#endif
+#if 0
+    if (procID() == 0)
+    {
+      Box bx = layout[dit];
+      std::string output1D_file = ParseInputs::get_data_file_prefix()+"index" + "1D_" + std::to_string(iter)+".curve";
+      std::ofstream ofs (output1D_file, std::ofstream::out);
+      Point ptcen = bx.high()/2;
+      int highxi0 = bx.high()[0];
+      ptcen[0] = 0;
+      
+      for (int comp = 0; comp < NUMCOMPS+3; comp++)
+        {
+          ofs << "#" + names[comp] << endl;
+          for (int ind = 0; ind < highxi0; ind++)
+            {
+              Point ptindex = ptcen;
+              ptindex[0] = ind;
+              Point ptindex_p = ptcen;
+              ptindex_p[0] = ind+1;
+              double r = (radiusLev[dit](ptindex,0) + radiusLev[dit](ptindex_p,0))*.5;
+              if (comp < NUMCOMPS+2)
+                {
+                  double val = Wout[dit](ptindex,comp);
+                  ofs << r << " " << val << endl;
+                }
+              else if (comp == NUMCOMPS+2)
+                {
+                  double p = Wout[dit](ptindex,4);
+                  double rho = Wout[dit](ptindex,0);
+                  double val = p/pow(rho,gamma);
+                  ofs << r << " " << val << endl;
+                }
+            }
+          ofs << endl;
+        }
+    }
+#endif
+  }
+  
+  std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
+  
+  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"}, map, Wout, output_file);
+cout << infOrNan << endl;
+if (infOrNan) abort();
+  // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
+  // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
+}
+
+template<typename BOX_OP>
+void Write_W_Phil(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
+             BOX_OP &eulerOp,
+             MBInterpOp &a_iop,
+             int iter,
+             double time = 0.0,
+             double dt = 0.0)
+{
+  double gamma = ParseInputs::get_gamma();
+  HDF5Handler h5;
   h5.setTime(time);
   h5.setTimestep(dt);
   h5.setIter(iter);
@@ -27,7 +164,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
-  MBLevelBoxData<double, NUMCOMPS+2, HOST> USemiSph(layout,a_JU.ghost());
+  MBLevelBoxData<double, NUMCOMPS+2, HOST> USemiSph(layout,a_JU.ghost()+ Point::Ones(2));
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
   for (auto dit : layout)

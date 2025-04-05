@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
     
       Write_W(JU, eulerOp, iop, restart_step, time, dt);      
+      // Write_W_Phil(JU, eulerOp, iop, restart_step, time, dt);      
       {
         HDF5Handler h5;
         MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
