@@ -1,19 +1,35 @@
+import sys
+import traceback
 import clang.cindex
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 
 @dataclass
 class FunctionInfo:
     name: str
     signature: str
     return_type: str
-    parameters: List[Dict[str, str]]
+    parameters: List[Dict[str, Any]]
+    location: str
+    attributes: Dict[str,str]
+    source: str
+    comment: Optional[str] = None
+@dataclass
+class EnumInfo:
+    name: str
+    values: List[Dict[str, str]]
     location: str
     source: str
     comment: Optional[str] = None
-
+@dataclass
+class TypedefInfo:
+    name: str
+    base_type: str
+    location: str
+    source: str
+    comment: Optional[str] = None
 @dataclass
 class ClassInfo:
     name: str
@@ -22,6 +38,8 @@ class ClassInfo:
     methods: List[FunctionInfo]
     fields: List[Dict[str, str]]
     base_classes: List[str]
+    friend_functions: List[FunctionInfo] = None
+    friend_classes: List[str] = None
     comment: Optional[str] = None
     is_template: bool = False
     template_parameters: List[str] = None
@@ -31,11 +49,13 @@ class NamespaceInfo:
     name: str
     classes: List[ClassInfo]
     functions: List[FunctionInfo]
+    enums: List[EnumInfo]
+    typedefs: List[TypedefInfo]
     nested_namespaces: List['NamespaceInfo']
     source: str
+    using_directives: List[str] = None
 
 def extract_comment(cursor):
-    """Extract documentation comment for a cursor if available."""
     comment = cursor.brief_comment
     if not comment:
         # Try to get raw comment which might include doxygen
@@ -43,22 +63,20 @@ def extract_comment(cursor):
     return comment
 
 def get_source_text(cursor, tu_source):
-    """Extract source code for a given cursor."""
     start = cursor.extent.start
     end = cursor.extent.end
     
-    # Get source lines
     start_line = start.line - 1  # 0-based indexing
     end_line = end.line - 1
     
     source_lines = tu_source.splitlines()[start_line:end_line+1]
     
-    # Adjust first and last line to respect column offsets
     if source_lines:
         source_lines[0] = source_lines[0][start.column-1:]
         source_lines[-1] = source_lines[-1][:end.column-1]
     
     return '\n'.join(source_lines)
+
 def is_method(cursor):
     if cursor.kind in [
         clang.cindex.CursorKind.CXX_METHOD,
@@ -70,17 +88,88 @@ def is_method(cursor):
     return False
 
 def parse_function(cursor, tu_source):
-    """Parse a function declaration."""
     name = cursor.spelling
     signature = cursor.displayname
     return_type = cursor.result_type.spelling
+
+# Safe attribute extraction with fallbacks
+    attributes = {}
     
+    # Storage class (static, extern, etc.)
+    try:
+        attributes['storage_class'] = cursor.storage_class.name
+    except (AttributeError, ValueError):
+        attributes['storage_class'] = None
+    
+    # Check if method is inline
+    try:
+        attributes['is_inline'] = cursor.is_inline()
+    except (AttributeError, ValueError):
+        # Fallback: check tokens for 'inline' keyword
+        attributes['is_inline'] = 'inline' in get_source_text(cursor, tu_source).split()
+    
+    # For methods only (not free functions)
+    if cursor.kind in [
+        clang.cindex.CursorKind.CXX_METHOD,
+        clang.cindex.CursorKind.CONSTRUCTOR,
+        clang.cindex.CursorKind.DESTRUCTOR
+    ]:
+        # Method-specific attributes
+        try:
+            attributes['is_const'] = cursor.is_const_method()
+        except (AttributeError, ValueError):
+            attributes['is_const'] = False
+            
+        try:
+            attributes['is_virtual'] = cursor.is_virtual_method()
+        except (AttributeError, ValueError):
+            attributes['is_virtual'] = False
+            
+        try:
+            attributes['is_pure_virtual'] = cursor.is_pure_virtual_method()
+        except (AttributeError, ValueError):
+            attributes['is_pure_virtual'] = False
+            
+        try:
+            attributes['is_static'] = cursor.is_static_method()
+        except (AttributeError, ValueError):
+            attributes['is_static'] = False
+            
+        # Access specifier
+        try:
+            attributes['access_specifier'] = cursor.access_specifier.name.lower()
+        except (AttributeError, ValueError):
+            attributes['access_specifier'] = None
+    
+    # For all function types
+    # Check for noexcept (libclang doesn't have direct API)
+    source_text = get_source_text(cursor, tu_source)
+    attributes['is_noexcept'] = 'noexcept' in source_text
+    attributes['is_constexpr'] = 'constexpr' in source_text.split()
+    
+    # Look for override, final keywords
+    attributes['is_override'] = 'override' in source_text.split()
+    attributes['is_final'] = 'final' in source_text.split()
     # Extract parameters
     parameters = []
     for param in cursor.get_arguments():
+        default_value = None
+        for child in param.get_children():
+            # Look for default value expression
+            if child.kind in [clang.cindex.CursorKind.INTEGER_LITERAL, 
+                             clang.cindex.CursorKind.FLOATING_LITERAL,
+                             clang.cindex.CursorKind.STRING_LITERAL,
+                             clang.cindex.CursorKind.CHARACTER_LITERAL,
+                             clang.cindex.CursorKind.CXX_BOOL_LITERAL_EXPR,
+                             clang.cindex.CursorKind.CXX_NULL_PTR_LITERAL_EXPR,
+                             clang.cindex.CursorKind.UNEXPOSED_EXPR]:
+                default_value = get_source_text(child, tu_source)
+                break
+        
         parameters.append({
             'name': param.spelling,
-            'type': param.type.spelling
+            'type': param.type.spelling,
+            'default_value': default_value
         })
     
     location = f"{cursor.location.file.name}:{cursor.location.line}"
@@ -91,6 +180,7 @@ def parse_function(cursor, tu_source):
         name=name,
         signature=signature,
         return_type=return_type,
+        attributes=attributes,
         parameters=parameters,
         location=location,
         source=source,
@@ -98,7 +188,6 @@ def parse_function(cursor, tu_source):
     )
 
 def parse_class(cursor, tu_source):
-    """Parse a class declaration including its methods and fields."""
     name = cursor.spelling
     location = f"{cursor.location.file.name}:{cursor.location.line}"
     methods = []
@@ -106,21 +195,15 @@ def parse_class(cursor, tu_source):
     base_classes = []
     is_template = False
     template_parameters = []
-    
-    # Check if this is a template class
+    friend_functions = []
+    friend_classes=[]
     for child in cursor.get_children():
         if child.kind == clang.cindex.CursorKind.TEMPLATE_TYPE_PARAMETER:
             is_template = True
             template_parameters.append(child.spelling)
-    
-    # Extract base classes
-    for child in cursor.get_children():
-        if child.kind == clang.cindex.CursorKind.CXX_BASE_SPECIFIER:
+        elif child.kind == clang.cindex.CursorKind.CXX_BASE_SPECIFIER:
             base_classes.append(child.spelling)
-    
-    # Extract methods and fields
-    for child in cursor.get_children():
-        if is_method(child):
+        elif is_method(child):
             methods.append(parse_function(child, tu_source))
         elif child.kind == clang.cindex.CursorKind.FIELD_DECL:
             fields.append({
@@ -128,6 +211,12 @@ def parse_class(cursor, tu_source):
                 'type': child.type.spelling,
                 'comment': extract_comment(child)
             })
+        elif child.kind == clang.cindex.CursorKind.FRIEND_DECL:
+            for grandchild in child.get_children():
+                if grandchild.kind in [clang.cindex.CursorKind.FUNCTION_DECL, clang.cindex.CursorKind.FUNCTION_TEMPLATE]:
+                    friend_functions.append(parse_function(grandchild, tu_source))
+                elif grandchild.kind in [clang.cindex.CursorKind.CLASS_DECL, clang.cindex.CursorKind.STRUCT_DECL]:
+                    friend_classes.append(grandchild.spelling)
     
     source = get_source_text(cursor, tu_source)
     comment = extract_comment(cursor)
@@ -139,19 +228,68 @@ def parse_class(cursor, tu_source):
         methods=methods,
         fields=fields,
         base_classes=base_classes,
+        friend_functions=friend_functions,
+        friend_classes=friend_classes,
         comment=comment,
         is_template=is_template,
         template_parameters=template_parameters
     )
 
 
+def parse_enum(cursor, tu_source):
+    name = cursor.spelling
+    location = f"{cursor.location.file.name}:{cursor.location.line}"
+    values = []
+    
+    for child in cursor.get_children():
+        if child.kind == clang.cindex.CursorKind.ENUM_CONSTANT_DECL:
+            # Try to get the enum value
+            value = None
+            for grandchild in child.get_children():
+                if grandchild.kind == clang.cindex.CursorKind.INTEGER_LITERAL:
+                    value = grandchild.spelling
+                    break
+            
+            values.append({
+                'name': child.spelling,
+                'value': value,
+                'comment': extract_comment(child)
+            })
+    
+    source = get_source_text(cursor, tu_source)
+    comment = extract_comment(cursor)
+    
+    return EnumInfo(
+        name=name,
+        location=location,
+        source=source,
+        values=values,
+        comment=comment
+    )
+
+def parse_typedef(cursor, tu_source):
+    name = cursor.spelling
+    base_type = cursor.underlying_typedef_type.spelling
+    location = f"{cursor.location.file.name}:{cursor.location.line}"
+    source = get_source_text(cursor, tu_source)
+    comment = extract_comment(cursor)
+    
+    return TypedefInfo(
+        name=name,
+        base_type=base_type,
+        source=source,
+        location=location,
+        comment=comment
+    )
+
 def parse_namespace(cursor, tu_source):
-    """Parse a namespace and its contents recursively."""
     name = cursor.spelling or "<anonymous>"
     classes = []
     functions = []
     nested_namespaces = []
-    
+    enums = []
+    typedefs = []
+    using_directives = []
     for child in cursor.get_children():
         if child.kind == clang.cindex.CursorKind.NAMESPACE:
             nested_namespaces.append(parse_namespace(child, tu_source))
@@ -159,15 +297,25 @@ def parse_namespace(cursor, tu_source):
             classes.append(parse_class(child, tu_source))
         elif child.kind in [clang.cindex.CursorKind.FUNCTION_DECL, clang.cindex.CursorKind.FUNCTION_TEMPLATE]:
             functions.append(parse_function(child, tu_source))
+        elif child.kind == clang.cindex.CursorKind.ENUM_DECL:
+            enums.append(parse_enum(child, tu_source))
+        elif child.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+            typedefs.append(parse_typedef(child, tu_source))
+        elif child.kind == clang.cindex.CursorKind.USING_DIRECTIVE:
+            using_directives.append(child.spelling)
     
     source = get_source_text(cursor, tu_source)
     return NamespaceInfo(
         name=name,
         classes=classes,
         functions=functions,
+        enums=enums,
+        typedefs=typedefs,
         nested_namespaces=nested_namespaces,
-        source=source
+        source=source,
+        using_directives=using_directives
     )
+
 
 def get_system_includes(compiler_name='clang++'):
     
@@ -235,7 +383,7 @@ def find_implementations(cursor, implem_file_path, class_data=None, func_data=No
     for child in cursor.get_children():
         if not child.location.file:
             continue
-
+        
         if child.location.file.name == implem_file_path:
             if class_data and child.kind in [
                 clang.cindex.CursorKind.CXX_METHOD,
@@ -251,21 +399,19 @@ def find_implementations(cursor, implem_file_path, class_data=None, func_data=No
                 impl = get_method_source(child, implem_file_content)
                 implems[child.spelling] = impl
 
-            else:
+            elif child.kind == clang.cindex.CursorKind.NAMESPACE:
                 nested_implems = find_implementations(child, implem_file_path, class_data, func_data)
                 implems.update(nested_implems)
+
     if class_data:
         for method_data in class_data.methods:
-            method_data.source = implems[method_data.name]
+            if method_data.name in implems:
+                method_data.source = implems[method_data.name]
     if func_data:
         func_data.source = implems[func_data.name]
     return implems
 
-
-
-
 def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_name='clang++'):
-    """Parse a C++ header file and extract its structure."""
     index = clang.cindex.Index.create()
     args = setup_compiler_args(include_paths, compiler_name)
 
@@ -276,7 +422,19 @@ def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_
         # Check for parsing errors
         for diag in header_tu.diagnostics:
             if diag.severity >= clang.cindex.Diagnostic.Error:
-                print(f"Error parsing {file_path}: {diag.spelling}")
+                message = f"Error: {diag.spelling}"
+            
+                # Add location information if available
+                if diag.location.file:
+                    message += f" at {diag.location.file.name}:{diag.location.line}:{diag.location.column}"
+                
+                # Add any additional notes/fixits
+                if diag.fixits:
+                    for fixit in diag.fixits:
+                        message += f"\n  Suggested fix: {fixit.value}"
+                
+                # Print all diagnostics, but flag errors
+                print(message)
         
         # Get file content as string for source extraction
         with open(file_path, 'r') as f:
@@ -291,6 +449,8 @@ def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_
             classes=[],
             functions=[],
             nested_namespaces=[],
+            enums=[],
+            typedefs=[],
             source=""
         )
         
@@ -303,6 +463,10 @@ def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_
                     global_namespace.classes.append(parse_class(child, header_file_content))
                 elif child.kind in [clang.cindex.CursorKind.FUNCTION_DECL, clang.cindex.CursorKind.FUNCTION_TEMPLATE]:
                     global_namespace.functions.append(parse_function(child, header_file_content))
+                elif child.kind == clang.cindex.CursorKind.ENUM_DECL:
+                    global_namespace.enums.append(parse_enum(child, header_file_content))
+                elif child.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+                    global_namespace.typedefs.append(parse_typedef(child, header_file_content))
         
         #get implementations
         if implem_file_path and os.path.exists(implem_file_path):
@@ -314,28 +478,24 @@ def parse_header_file(file_path, implem_file_path, include_paths=None, compiler_
 
             for ci in global_namespace.classes:
                 implems = find_implementations(implem_tu.cursor, implem_file_path, ci, None)
-                print(f"found {len(implems)} implementations for class {ci.name}")
             for fi in global_namespace.functions:
                 implems = find_implementations(implem_tu.cursor, implem_file_path, None, fi)
-                print(f"found {len(implems)} implementations for function {fi.name}")
             for ns in global_namespace.nested_namespaces:
                 for ci in ns.classes:
                     implems = find_implementations(implem_tu.cursor, implem_file_path, ci, None)
-                    print(f"found {len(implems)} implementations for class {ci.name}")
                 for fi in ns.functions:
                     implems = find_implementations(implem_tu.cursor, implem_file_path, None, fi)
-                    print(f"found {len(implems)} implementations for function {fi.name}")
 
         return global_namespace
         
     except Exception as e:
-        print(f"Error parsing {file_path}: {str(e)}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        print(f"\nError parsing {file_path}:")
+        print(f"  Exception type: {exc_type.__name__}")
+        print(f"  Exception message: {str(e)}")
         return None
 
-
-
 def parse_codebase(root_dir, include_paths=None):
-    """Parse all header files in a directory recursively."""
     all_parsed_files = {}
     main_filepath = os.path.join(root_dir, 'Main.H')
     all_parsed_files[main_filepath] = parse_header_file(main_filepath, None, include_paths)
@@ -349,6 +509,8 @@ def parse_codebase(root_dir, include_paths=None):
                 parsed_file = parse_header_file(file_path, implem_file_path, include_paths)
                 if parsed_file:
                     all_parsed_files[file_path] = parsed_file
+                else:
+                    print(f"Warning: Skipping {file_path} due to parsing errors")
     
     return all_parsed_files
 
@@ -356,13 +518,20 @@ def print_structure(codebase_structure):
     for file_path, structure in codebase_structure.items():
         print(f"source file: {file_path}")
         for ns in structure.nested_namespaces:
+            for td in ns.typedefs:
+                print(f"\tTypedef {td.source}")
+            for ei in ns.enums:
+                print(f"\tEnum {ei.name}")
+                for ev in ei.values:
+                    print(f"\t\t{ev['name']}")
             for ci in ns.classes:
                 print(f"\tClass {ci.name}")
+                print(ci.source)
                 for vi in ci.fields:
                     print(f"\t\tField {vi['name']}")
                 for fi in ci.methods:
                     print(f"\t\tMethod {fi.name}")
-                    print(fi.source)
+                    # print(fi.source)
 
 if __name__ == "__main__":
     include_paths = [

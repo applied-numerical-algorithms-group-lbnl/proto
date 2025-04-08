@@ -2,6 +2,13 @@
 #include <iostream>
 
 namespace Classes {
+    
+    enum AEnum {
+        E0,
+        E1,
+        E2
+    };
+    
     class A {
         private:
         int value;

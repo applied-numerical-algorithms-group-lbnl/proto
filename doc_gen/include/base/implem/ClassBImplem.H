@@ -3,13 +3,13 @@
 
 namespace Classes {
 
-inline B::B() { values = {1,2,3}; }
-inline void B::print()
-{
-    for (auto vi : values)
+    inline B::B() { values = {1,2,3}; }
+    inline void B::print()
     {
-        std::cout << vi << ", ";
+        for (auto vi : values)
+        {
+            std::cout << vi << ", ";
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
-}
 }

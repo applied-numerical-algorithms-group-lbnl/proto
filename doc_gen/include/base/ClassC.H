@@ -3,6 +3,10 @@
 #include "ClassB.H"
 
 namespace Classes {
+    
+    typedef A typedefA;
+    typedef B typedefB;
+    
     class C {
         private: 
 
