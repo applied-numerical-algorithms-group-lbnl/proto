@@ -80,7 +80,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       if (dir ==0) deta.copyTo(deta0);
       Box bx = W.box();
       Box bxdir = bx.extrude(Point::Basis(dir));
-      BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,dxiPerp,a_block,dir);
+      BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bxdir,dxiPerp,a_block,dir);
       if (dir == 0) ntrow.copyTo(ntrow0);
       Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
       Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
@@ -397,25 +397,59 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
                 const Var<T,NUMCOMPS>& a_wface_L,
                 const Var<T,NUMCOMPS>& a_wface_R,
                 const Var<T,DIM,MEM,DIM>& a_Amatrix,
+                const Var<T,1,MEM>& a_detA,
+                const Var<T,DIM,MEM>& a_adjArow,
                 const T a_gamma,
                 const int a_d)
                 {        
                   double rho = 0.5*(a_wface_L(iRHO)+a_wface_R(iRHO));
                   double w_d = 0.5*(a_wface_L(iVX+a_d)+a_wface_R(iVX+a_d));
+                  double B_d = 0.5*(a_wface_L(iBX+a_d)+a_wface_R(iBX+a_d));
                   double B_x = 0.5*(a_wface_L(iBX)+a_wface_R(iBX));
                   double B_y = 0.5*(a_wface_L(iBY)+a_wface_R(iBY));
                   double B_z = 0.5*(a_wface_L(iBZ)+a_wface_R(iBZ));
-                  double B_mag = sqrt(B_x*B_x + B_y*B_y + B_z*B_z);
                   double p = 0.5*(a_wface_L(iP)+a_wface_R(iP));
                   if (p < 0.0) p = 0.0;
-                  double af = sqrt(a_gamma*p/rho + B_mag*B_mag/4.0/M_PI/rho);  
+
+
+                  vecType bSph;
+                  vecType bCart;
+              
+                  bSph[0] = B_x;       
+                  bSph[1] = B_y;
+                  bSph[2] = B_z;
+                  bCart[0] = 0.;       
+                  bCart[1] = 0.;
+                  bCart[2] = 0.;
+                  double B_mag = 0.;
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          bCart[dir0] += a_Amatrix(dir0,dir1)*bSph[dir1];
+                        }
+                        B_mag += bCart[dir0]*bCart[dir0];
+                    }
+                  B_mag = sqrt(B_mag);
+
+
+                  // double B_mag = sqrt(B_x*B_x + B_y*B_y + B_z*B_z);
+                  
+                  double ce = sqrt(a_gamma*p/rho);
+                  double Bnorm = B_d*a_detA(0)/sqrt(a_adjArow(0)*a_adjArow(0) + a_adjArow(1)*a_adjArow(1) + a_adjArow(2)*a_adjArow(2));
+                  double a = ce*ce + B_mag*B_mag/4.0/M_PI/rho;
+                  double b = abs(Bnorm)*ce/sqrt(M_PI*rho);
+                  if (b > a) b = a;
+                  double af = 0.5*(sqrt(a + b) + sqrt(a - b));
+                  double af2 = sqrt(a); // Originally I had this.
+
                   double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
                   
                   for (int comp = 0; comp < NUMCOMPS;comp++)
                   {
                     a_Rusflux(comp) *= (abs(w_d) + af*A_d_mag);
                   }
-                },a_fluxdir,a_WFace_L,a_WFace_R,a_A,m_gamma,a_dir);
+                },a_fluxdir,a_WFace_L,a_WFace_R,a_A,a_deta,a_ntrow,m_gamma,a_dir);
 }
 
 template<
