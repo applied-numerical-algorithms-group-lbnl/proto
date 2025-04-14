@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, List, Dict, Optional
 
+# =================================================================================================
+# CODE PARSING 
 @dataclass
 class FunctionInfo:
     name: str
@@ -235,7 +237,6 @@ def parse_class(cursor, tu_source):
         template_parameters=template_parameters
     )
 
-
 def parse_enum(cursor, tu_source):
     name = cursor.spelling
     location = f"{cursor.location.file.name}:{cursor.location.line}"
@@ -315,7 +316,6 @@ def parse_namespace(cursor, tu_source):
         source=source,
         using_directives=using_directives
     )
-
 
 def get_system_includes(compiler_name='clang++'):
     
@@ -533,6 +533,94 @@ def print_structure(codebase_structure):
                     print(f"\t\tMethod {fi.name}")
                     # print(fi.source)
 
+# =================================================================================================
+# DOCUMENT GENERATION
+
+def create_class_documentation_prompt(class_info, namespace_context=""):
+
+    # Create fully qualified name
+    qualified_name = f"{namespace_context}::{class_info.name}" if namespace_context else class_info.name
+    
+    prompt = f"""
+# C++ Class Documentation Request
+
+Generate comprehensive markdown documentation for the following C++ class:
+
+## Basic Information
+- **Class Name**: {class_info.name}
+- **Fully Qualified Name**: {qualified_name}
+- **File Location**: {class_info.location}
+
+## Class Definition
+```cpp
+{class_info.source}
+```
+"""
+    # Add template information if present
+    if class_info.is_template and class_info.template_parameters:
+        prompt += "\n## Template Parameters\n"
+        for param in class_info.template_parameters:
+            prompt += f"- {param}\n"
+
+    # Add inheritance information
+    if class_info.base_classes:
+        prompt += "\n## Inheritance\n"
+        for base in class_info.base_classes:
+            prompt += f"- Inherits from: {base}\n"
+
+    # Include existing documentation comment if available
+    if class_info.comment:
+        prompt += f"\n## Existing Documentation\n{class_info.comment}\n"
+
+    # Add field information
+    if class_info.fields:
+        prompt += "\n## Member Variables\n"
+        for field in class_info.fields:
+            field_info = f"- **{field['name']}**: {field['type']}"
+            if field.get('comment'):
+                field_info += f"\n  Comment: {field['comment']}"
+            prompt += field_info + "\n"
+
+    # Add method signatures (detailed method docs will be separate)
+    if class_info.methods:
+        prompt += "\n## Methods Overview\n"
+        for method in class_info.methods:
+            prompt += f"- {method.signature}\n"
+    
+    # Instructions for the LLM
+# Instructions for the LLM
+    prompt += """
+## Documentation Requirements
+
+Please provide clear, comprehensive documentation for this class that includes:
+
+1. **Class Purpose and Overview**: A concise description of what this class represents and its role.
+
+2. **Usage Examples**: At least one example showing typical usage of this class.
+
+3. **Design Patterns**: Identify any design patterns or principles employed.
+
+4. **Thread Safety**: Mention any thread safety considerations if applicable.
+
+5. **Member Variables Documentation**: For each member variable, explain:
+   - Its purpose and role in the class
+   - Any constraints or valid values
+   - Its relationship to class functionality
+
+6. **Methods Organization**: Group related methods together under logical sections.
+
+7. **Key Method Explanations**: For important methods, provide:
+   - Purpose and functionality
+   - How they should be used
+   - Any preconditions and postconditions
+   - Error handling behavior
+   
+8. **Best Practices**: Any recommendations for effectively using this class.
+
+Format the documentation using Markdown with appropriate headers, code blocks, and emphasis.
+"""
+    return prompt
+
 if __name__ == "__main__":
     include_paths = [
         "./include/base",
@@ -540,4 +628,11 @@ if __name__ == "__main__":
     ]
     codebase_structure = parse_codebase("./include", include_paths)
     print_structure(codebase_structure)
+    for file_path, structure in codebase_structure.items():
+        context = ""
+        for ns in structure.nested_namespaces:
+            context += f"::{ns.name}"
+            for ci in ns.classes:
+                prompt = create_class_documentation_prompt(ci, context)
+                print(prompt)
     
