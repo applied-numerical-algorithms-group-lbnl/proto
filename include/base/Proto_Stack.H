@@ -5,6 +5,8 @@
 #include <stack>
 #include "Proto_PAssert.H"
 #include "Proto_MemType.H"
+#include "Proto_Macros.H"
+#include "Proto_Memory.H" //unused, but should be used instead of macros
 
 #define PR_STACK_ALLOC    4294967296 //4GB
 //#define PR_STACK_OVERFLOW 268435456  //256MB

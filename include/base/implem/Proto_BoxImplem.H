@@ -1,3 +1,7 @@
+#include "../Proto_Box.H"
+
+namespace Proto {
+
 //=================================================================================================
 // Constructors ||
 //==============++ 
@@ -884,3 +888,4 @@ BoxIterator BoxIterator::operator--(int)
     m_pos--;
     return ptr;
 }
+} // end namespace Proto

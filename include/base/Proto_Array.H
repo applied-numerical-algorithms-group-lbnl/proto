@@ -10,7 +10,8 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
-#include "Proto_accel.H"
+
+#include "Proto_Accel.H"
 #include "Proto_Point.H"
 
 namespace Proto {
@@ -245,7 +246,6 @@ inline Array<T,N>& operator-(Array<T,N>& a_array);
 template<typename T, size_t N>
 inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array);
 
-#include "implem/Proto_ArrayImplem.H"
 }
 
 #endif

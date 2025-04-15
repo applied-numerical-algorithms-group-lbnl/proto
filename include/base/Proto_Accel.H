@@ -9,7 +9,6 @@
 
 #else
 
-
 #define ACCEL_DECORATION /*__host__ __device__ */ 
 #define ACCEL_KERNEL /* __global__ */
 

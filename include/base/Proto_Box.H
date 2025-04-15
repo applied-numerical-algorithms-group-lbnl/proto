@@ -2,14 +2,15 @@
 #ifndef _PROTO_BOX_
 #define _PROTO_BOX_
 
-#include "Proto_MayDay.H"
-#include "Proto_Point.H"
-#include "Proto_LoHiSide.H"
-#include "Proto_Centering.H"
 #include <cstdlib> //for size_t
 #include <iostream> //pretty printing
 #include <sstream> //pretty printing
 #include <cmath>
+
+#include "Proto_MayDay.H"
+#include "Proto_Face.H"
+#include "Proto_Point.H"
+#include "Proto_Centering.H"
 
 namespace Proto 
 {
@@ -1044,6 +1045,5 @@ namespace Proto
             int m_pos;
     }; //end class BoxIterator
 
-    #include "implem/Proto_BoxImplem.H"
 } //end namespace Proto
 #endif //end include guard

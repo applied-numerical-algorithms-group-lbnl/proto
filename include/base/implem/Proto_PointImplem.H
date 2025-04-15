@@ -1,4 +1,7 @@
 
+#include "../Proto_Point.H"
+namespace Proto {
+    
 ACCEL_DECORATION
 Point::Point()
 {
@@ -618,3 +621,4 @@ std::istream& operator >>(std::istream& a_is,  Point& a_pt)
   a_is >> dum;
   return a_is;
 }
+} // end namespace Proto

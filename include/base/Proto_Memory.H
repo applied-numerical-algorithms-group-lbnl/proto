@@ -4,9 +4,9 @@
 
 #include <cstring>
 #include <limits>
-#include "Proto_MemType.H"
-
 #include <sys/resource.h>
+
+#include "Proto_MemType.H"
 
 #define PR_UNALLOCATED_FLOAT 7.77e77
 
@@ -90,6 +90,5 @@ inline constexpr T proto_unallocated()
     }
 }
 
-#include "implem/Proto_MemoryImplem.H"
 }
 #endif

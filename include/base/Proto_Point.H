@@ -1,15 +1,15 @@
 #pragma once
 #ifndef _PROTO_POINT_
 #define _PROTO_POINT_
-#include "Proto_accel.H"
-#include "Proto_LoHiSide.H"
-
-#include "Proto_PAssert.H"
 
 #include <iostream>
 #include <sstream>
 #include <array>
 #include <set>
+
+#include "Proto_Accel.H"
+#include "Proto_Face.H"
+#include "Proto_PAssert.H"
 
 namespace Proto
 {
@@ -564,7 +564,5 @@ namespace Proto
     }
 
     ///@}
-
-#include "implem/Proto_PointImplem.H"
 } //end namespace Proto
 #endif //end include guard

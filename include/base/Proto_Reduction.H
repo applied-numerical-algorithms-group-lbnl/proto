@@ -3,7 +3,7 @@
 
 //#include "Proto_gpu.H"
 #include "Proto_MemType.H"
-#include "Proto_accel.H"
+#include "Proto_Accel.H"
 #include "Proto_Macros.H"
 #include "Proto_SPMD.H"
 #include <limits>
