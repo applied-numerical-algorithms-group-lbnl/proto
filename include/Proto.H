@@ -1,18 +1,29 @@
 #ifndef __PROTO_HEADER__
 #define __PROTO_HEADER__
 
-#include <cstdlib>
-#include <limits>
-#include "base/Proto_PAssert.H"
-#include "base/Proto_parstream.H"
-#include "base/Proto_macros.H"
-#include "base/Proto_SPMD.H"
-#include "base/Proto_MemInfo.H"
+
 #include "base/Proto_Timer.H"
+#include "base/Proto_PAssert.H"
+#include "base/Proto_SPMD.H"
+#include "base/Proto_Parstream.H" //SPMD
+#include "base/Proto_MayDay.H" //parstream
+#include "base/Proto_MemType.H"
+#include "base/Proto_MemInfo.H" //MemType
+#include "base/Proto_CPU.H" //MemInfo
+#include "base/Proto_GPU.H" //MemInfo
+#include "base/Proto_Macros.H" //CPU, GPU, MemType
+
+#include "base/implem/Proto_TimerImplem.H"
+#include "base/implem/Proto_ParstreamImplem.H"
+#include "base/implem/Proto_MayDayImplem.H"
+
+
+
+
 #ifdef PROTO_ACCEL
 #include "base/Proto_accel.H"
 #endif
-#include "base/Proto_MemType.H"
+
 #include "base/Proto_Centering.H"
 #include "base/Proto_Memory.H"
 #include "base/Proto_Stack.H"
@@ -48,7 +59,7 @@
 #include "base/Proto_Operator.H"
 #include "base/Proto_LevelBC.H"
 #include "base/Proto_LevelOp.H"
-#include "base/Proto_MayDay.H"
+
 
 #ifdef PR_AMR
 #include "ProtoAMR.H"

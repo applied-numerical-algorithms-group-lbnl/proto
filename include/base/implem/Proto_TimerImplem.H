@@ -1,9 +1,9 @@
 
 #ifndef __PROTO_TIMER_IMPLEM_H__
 #define __PROTO_TIMER_IMPLEM_H__
-//using namespace std;
 #ifndef PR_TURN_OFF_TIMERS
 
+#include "../Proto_Timer.H"
 #ifdef PROTO_ACCEL
 #ifndef PROTO_HIP
 #include <nvToolsExt.h>
@@ -15,9 +15,6 @@
 
 namespace Proto
 {
-
-
-
   struct elem
   {
     elem()

@@ -58,6 +58,5 @@ inline void setPoutBaseName(const std::string & a_Name);
 */
 inline const std::string & poutFileName();
 
-#include "implem/Proto_parstreamImplem.H"
 }
 #endif // _PARSTREAM_H_

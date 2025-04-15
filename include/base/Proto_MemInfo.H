@@ -1,11 +1,11 @@
 #ifndef PROTO_MEMINFO_H
 #define PROTO_MEMINFO_H
 
-#include<map>
-#include<iostream>
-#include<vector>
+#include <map>
+#include <iostream>
+#include <vector>
 #include <fstream>
-#include<assert.h>
+#include <assert.h>
 #include <sys/resource.h>
 #include "Proto_MemType.H"
 
