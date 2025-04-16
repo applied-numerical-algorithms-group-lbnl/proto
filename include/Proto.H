@@ -24,33 +24,41 @@
 #ifdef PROTO_ACCEL
 #include "base/Proto_Accel.H"
 #endif
+#include "base/Proto_Math.H"
 #include "base/Proto_Face.H"
+#include "base/Proto_Centering.H"
+#include "base/Proto_CInterval.H"
 #include "base/Proto_Point.H" // Accel, Face
 #include "base/Proto_Array.H" // Accel, Point
-#include "base/Proto_Centering.H"
 #include "base/Proto_Box.H" // Face, Point, Centering
+#include "base/Proto_CoordPermutation.H" //Point, Array, Box
+#include "base/Proto_Reduction.H" //SPMD, Memory, Macros, Accel
+#include "base/Proto_BoxData.H" //MemType, Memory, Stack, Array, Box, CoordPermutation, CInterval, Reduction
+#include "base/Proto_Stencil.H" //MemType, Point, BoxData, Math
 
 #include "base/implem/Proto_PointImplem.H"
 #include "base/implem/Proto_ArrayImplem.H"
 #include "base/implem/Proto_BoxImplem.H"
+#include "base/implem/Proto_CoordPermutationImplem.H"
+#include "base/implem/Proto_CIntervalImplem.H"
+#include "base/implem/Proto_ReductionImplem.H"
+#include "base/implem/Proto_BoxDataImplem.H"
+#include "base/implem/Proto_StencilImplem.H"
+#include "base/implem/Proto_StencilDefs.H"
 
 #ifdef PR_OPS
 #include "ProtoOps.H"
 #endif
 
 
-
-
-#include "base/Proto_CoordPermutation.H"
 #include "base/Proto_DistributedSet.H"
-#include "base/Proto_PowerItoI.H"
-#include "base/Proto_Taylor.H"
-#include "base/Proto_BoxData.H"
+
+
 #ifdef PR_HDF5
 #include "base/Proto_HDF5.H"
 #endif
 #include "base/Proto_Forall.H"
-#include "base/Proto_Stencil.H"
+
 #include "base/Proto_InterpStencil.H"
 #include "base/Proto_BoundaryCondition.H"
 #include "base/Proto_BoxOp.H"
@@ -60,7 +68,7 @@
 #include "base/Proto_DataIterator.H"
 #include "base/Proto_DisjointBoxLayout.H"
 #include "base/Proto_LevelBoxData.H"
-#include "base/Proto_Reduction.H"
+
 #include "base/Proto_CompositeOp.H"
 #include "base/Proto_Operator.H"
 #include "base/Proto_LevelBC.H"

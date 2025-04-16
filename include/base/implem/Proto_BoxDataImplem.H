@@ -12,6 +12,9 @@ static struct_##local_name app_name;
 //=================================================================================================
 // Constructors ||
 //==============++
+#include "../Proto_BoxData.H"
+
+namespace Proto {
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
@@ -2073,3 +2076,4 @@ BoxData<T, CL, MEM, CR, E> matrixProductRightTranspose(
     }
     return ABT;
 }
+} // end namespace Proto

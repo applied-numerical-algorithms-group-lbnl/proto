@@ -1,20 +1,6 @@
 #pragma once
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
-#include "Proto_Timer.H"
-
-#include "Proto_Memory.H"
-#include "Proto_MemType.H"
-
-#include "Proto_CInterval.H"
-#include "Proto_Array.H"
-#include "Proto_Box.H"
-#include "Proto_CoordPermutation.H"
-#include "Proto_PowerItoI.H"
-#include "Proto_Stencil.H"
-#include "Proto_Reduction.H"
-#include "Proto_Stack.H"
-#include "Proto_DisjointBoxLayout.H"
 
 #include <memory>   //for shared_ptr
 #include <iostream>
@@ -28,6 +14,19 @@
 #include <unordered_map>
 #include <type_traits> // used in containsNAN
 
+#include "Proto_Timer.H"
+
+#include "Proto_MemType.H"
+#include "Proto_Memory.H"
+#include "Proto_Stack.H"
+#include "Proto_Array.H"
+#include "Proto_Box.H"
+#include "Proto_CoordPermutation.H"
+#include "Proto_Stencil.H"
+#include "Proto_CInterval.H"
+#include "Proto_Reduction.H" 
+
+#include "Proto_DisjointBoxLayout.H" //this shouldn't be here
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -92,8 +91,6 @@ namespace Proto
         Subtract, 
         Multiply, 
         Divide, 
-        //ThresholdMax,
-        //ThresholdMin,
         NUM_OP_TYPES
     };
 
@@ -1592,6 +1589,5 @@ namespace Proto
         const BoxData<T,CR,MEM,DR,E>& B,
         T scale = 1.0);
 
-#include "implem/Proto_BoxDataImplem.H"
 } //end Proto namespace
 #endif //end include guard

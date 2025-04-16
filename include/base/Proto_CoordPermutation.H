@@ -4,8 +4,8 @@
 #define _PROTO_COORD_PERMUTATION_
 
 #include "Proto_Point.H"
-#include "Proto_Box.H"
 #include "Proto_Array.H"
+#include "Proto_Box.H"
 
 namespace Proto
 {
@@ -96,6 +96,5 @@ namespace Proto
     };
 
     inline CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);
-#include "implem/Proto_CoordPermutationImplem.H"
 } // end namespace Proto
 #endif //end include guard

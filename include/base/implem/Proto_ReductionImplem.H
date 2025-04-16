@@ -1,3 +1,7 @@
+#include "../Proto_Reduction.H"
+
+namespace Proto {
+
 //// CONSTRUCTOR
 template<typename T, Operation OP, MemType MEM>
 Reduction<T,OP,MEM>::Reduction(bool dynamic) {
@@ -186,3 +190,4 @@ void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
         *m_hostTotal = val;
     }
 }
+} //end namespace Proto

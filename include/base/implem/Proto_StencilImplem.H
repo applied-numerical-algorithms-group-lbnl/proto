@@ -1,4 +1,8 @@
 #pragma once
+
+#include "../Proto_Stencil.H"
+
+namespace Proto {
 //=======================================================================================
 // Constructors ||
 //==============++ 
@@ -889,5 +893,4 @@ void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
     }
 #endif
 }
-
-/**/
+} // end namespace Proto

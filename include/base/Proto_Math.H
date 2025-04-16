@@ -1,17 +1,14 @@
-#ifndef _PROTO_POWERITOI_H_
-#define _PROTO_POWERITOI_H_
-
-#include <cassert>
-#include <cmath>
+#ifndef _PROTO_MATH_H_
+#define _PROTO_MATH_H_
 
 namespace Proto {
-
+    
     /// Template Based Integer Exponentiation
     template <unsigned int P>
-        inline int ipow(int M){return M*ipow<P-1>(M);}
-
+    inline int ipow(int M){return M*ipow<P-1>(M);}
+    
     template <>
-        inline int ipow<0>(int M){return 1;}
+    inline int ipow<0>(int M){return 1;}
 
     // Dynamic version
     inline int ipow(int a_base, unsigned int a_exp)
@@ -26,6 +23,19 @@ namespace Proto {
         }
         return result;
     }
+
+    inline int factorial(int value)
+    {
+        if (value == 0) { return 1; }
+        else { return value * factorial(value - 1); }
+    }
+
+    template<typename T>
+    inline T taylor(int index) 
+    {
+        return 1.0/((T)factorial(index));
+    }
+
 } //end Proto namespace
 
 #endif //end include guard

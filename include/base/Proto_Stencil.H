@@ -1,19 +1,21 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
-#include "Proto_Timer.H"
-
-#ifdef PR_OPS
-#include "Proto_Matrix.H"
-#endif
-
-#include "Proto_BoxData.H"
-#include "Proto_DisjointBoxLayout.H"
 
 #include <vector>
 #include <tuple>
 #include <iostream>
 #include <iomanip> //for pretty printing
 #include <set>
+
+#include "Proto_Timer.H"
+#include "Proto_MemType.H"
+#include "Proto_Point.H"
+#include "Proto_BoxData.H"
+#include "Proto_Math.H"
+#ifdef PR_OPS
+#include "Proto_Matrix.H"
+#endif
+
 
 //biggest stencil size I have seen:
 #define PR_MAX_COEFFS 343
@@ -991,7 +993,5 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int
 BoxData<T,C,MEMTYPE,D,E>& operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 ///@}
-#include "implem/Proto_StencilImplem.H"
-#include "implem/Proto_StencilDefs.H"
 } //end Proto namespace
 #endif

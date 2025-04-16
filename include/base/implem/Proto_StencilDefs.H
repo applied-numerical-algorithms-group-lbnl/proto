@@ -1,7 +1,9 @@
-#ifndef PRroto_stencildefs
-#define PRroto_stencildefs
+#ifndef _PROTO_STENCIL_DEFS
+#define _PROTO_STENCIL_DEFS
 
+#include "../Proto_Stencil.H"
 
+namespace Proto {
 //========================================================================
 // Utililties
 //======================
@@ -506,3 +508,4 @@ Stencil<T> Stencil<T>::CornersToCells(int a_order)
 }
 
 #endif
+} // end namespace Proto

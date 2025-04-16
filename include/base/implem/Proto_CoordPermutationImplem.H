@@ -1,3 +1,7 @@
+#include "../Proto_CoordPermutation.H"
+
+namespace Proto {
+
 CoordPermutation::CoordPermutation()
 {
     for (int ii = 0; ii < DIM; ii++)
@@ -6,12 +10,6 @@ CoordPermutation::CoordPermutation()
         m_matrix[ii][ii] = 1;
     }
 }
-/*
-CoordPermutation::CoordPermutation(Array<Array<int, DIM>, DIM> a_matrix)
-{
-    m_matrix = a_matrix;
-}
-*/
 
 CoordPermutation::CoordPermutation(
         std::vector<Array<int, 3>>& a_mapping)
@@ -330,4 +328,4 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
     R.defineMatrix(M);
     return R;
 }
-
+} // end namespace Proto

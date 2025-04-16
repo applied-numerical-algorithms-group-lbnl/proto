@@ -1,3 +1,7 @@
+#include "../Proto_CInterval.H"
+
+namespace Proto {
+
 CInterval::CInterval(
         unsigned int a_c0,  unsigned int a_c1,
         unsigned int a_d0,  unsigned int a_d1,
@@ -124,3 +128,4 @@ std::ostream& operator<<(std::ostream& a_os, const CInterval& a_int)
     a_os << " }";
     return a_os;
 }
+} // end namespace Proto
