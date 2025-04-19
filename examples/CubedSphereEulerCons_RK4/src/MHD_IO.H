@@ -28,6 +28,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
+  MBLevelBoxData<double, NUMCOMPS, HOST> Uout(layout, Point::Zeros());
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
   for (auto dit : layout)
@@ -38,10 +39,19 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   Point size = layout.domain().getBlock(0).sizes();
   double dxiPerp = 1.0/size[1];
+  
   bool infOrNan = false;
+  int scale_data_with_r = ParseInputs::get_scale_data_with_r(); 
+  Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+  if (scale_data_with_r == 1){
+    names[0] = "density_scaled";
+    names[4] = "P_scaled";
+    names[9] = "Br_scaled"; 
+  }
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
+    BoxData<double,1,HOST> deta = CubedSphereShell::detA<double,HOST>(JU_i.box(),dxiPerp,0); 
     BoxData<double,NUMCOMPS+2,HOST> USemiSph(layout[dit].grow(Point::Basis(0,2)));
     auto& Wout_i = Wout[dit];
     USemiSph.setToZero();
@@ -56,7 +66,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     (Var<double,NUMCOMPS+2,HOST>& a_Wout,
      const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
      double a_gamma,
-     const Var<double,1,HOST>& a_radius)
+     const Var<double,1,HOST>& a_radius,
+     int a_scale_data_with_r)
     {
       a_Wout(0) = a_USemiSph(0);
       a_Wout(1) = a_USemiSph(1) / a_Wout(0);
@@ -75,20 +86,34 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
               + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
       a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
 
-      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
-      a_Wout(1) = a_Wout(1)/1e5; // km/s;
-      a_Wout(2) = a_Wout(2)/1e5; // km/s;
-      a_Wout(3) = a_Wout(3)/1e5; // km/s;
-      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
-      // scaled by r*(2*gamma)
-      if (a_Wout(4) < 0.) a_Wout(4) = 0.;
-      a_Wout(5) = a_Wout(5)*1e6; // microGauss
-      a_Wout(6) = a_Wout(6)*1e6; // microGauss
-      a_Wout(7) = a_Wout(7)*1e6; // microGauss
-      a_Wout(8) = a_Wout(8)/1e5; // km/s;
-      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
-    }, Wout[dit], USemiSph, gamma, radiusLev[dit]);
-    Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
+      if (a_scale_data_with_r == 1){
+        a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
+        a_Wout(1) = a_Wout(1)/1e5; // km/s;
+        a_Wout(2) = a_Wout(2)/1e5; // km/s;
+        a_Wout(3) = a_Wout(3)/1e5; // km/s;
+        a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
+        // scaled by r*(2*gamma)
+        if (a_Wout(4) < 0.) a_Wout(4) = 0.;
+        a_Wout(5) = a_Wout(5)*1e6; // microGauss
+        a_Wout(6) = a_Wout(6)*1e6; // microGauss
+        a_Wout(7) = a_Wout(7)*1e6; // microGauss
+        a_Wout(8) = a_Wout(8)/1e5; // km/s;
+        a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
+      }
+    }, Wout[dit], USemiSph, gamma, radiusLev[dit], scale_data_with_r);
+
+    forallInPlace([ ] PROTO_LAMBDA
+      (Var<double,NUMCOMPS,HOST>& l_U,
+        const Var<double,NUMCOMPS,HOST>& l_JU,
+        const Var<double,1,HOST>& l_deta,
+        const Var<double,1,HOST>& l_dVolr)
+      {                    
+        for (int comp = 0; comp < NUMCOMPS; comp++)
+          {
+            l_U(comp) = l_JU(comp)/(l_deta(0)*l_dVolr(0));
+          } 
+      },Uout[dit],JU_i,deta,dVolr_i);
+    
 #ifndef PR_DISABLE_INIT_CHECKS
     // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
     // if (infOrNanBlock)
@@ -140,10 +165,15 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
   
-  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"}, map, Wout, output_file);
+  if (scale_data_with_r == 1){
+  h5.writeMBLevel({"density_scaled", "VxPerp", "VyPerp", "VzPerp", "P_scaled", "BxPerp", "ByPerp", "BzPerp","Vr","Br_scaled"}, map, Wout, output_file);
+  } else {
+  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
+  }
 cout << infOrNan << endl;
 if (infOrNan) abort();
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
+  h5.writeMBLevel({"density","Momx","Momy","Momz","E","Bx","By","Bz"}, map, Uout, "Uout" + to_string(iter));
   // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
 

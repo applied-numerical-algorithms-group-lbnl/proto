@@ -94,7 +94,7 @@ void f_nonradialInit_F(
   T u0 = 500.0*1e5; // v at 21.5 c_SR is about 500 km/s
   T eps = 0.1;
   T amplitude;
-  T arg = sqrt((a_X_cart(2)+0.7) * (a_X_cart(2)+0.7) + a_X_cart(0) * a_X_cart(0) + a_X_cart(1) * a_X_cart(1));
+  T arg = sqrt((a_X_cart(0)+1.0) * (a_X_cart(0)+1.0) + a_X_cart(2) * a_X_cart(2) + a_X_cart(1) * a_X_cart(1));
   // T arg = (1.0 * a_pt[0] + .5 - 1.0 * a_nradius / 2) / a_nradius / 2.;
   if (abs(arg) < .25)
   {
@@ -104,11 +104,20 @@ void f_nonradialInit_F(
   {
     amplitude = 0.;
   }
+  arg = sqrt((a_X_cart(1)+1.0) * (a_X_cart(1)+1.0) + a_X_cart(2) * a_X_cart(2) + a_X_cart(0) * a_X_cart(0));
+  if (abs(arg) < .25)
+  {
+    amplitude += eps * pow(cos(2 * M_PI * arg), 6);
+  }
+  else
+  {
+    amplitude += 0.;
+  }
   T rho = rho0 + amplitude * rho0;
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;
+  a_W(iVX) = 0.0;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;

@@ -64,7 +64,9 @@ public:
   }
 protected:
     LevelStateData      m_k;
+    LevelStateData      m_k_by_J;
     LevelStateData      m_delta;
+    LevelStateData      m_delta_by_J;
     LOP                 m_f;
     std::shared_ptr<BC> m_bc;
     LevelStateData      m_U0;
@@ -89,7 +91,9 @@ protected:
     MBDisjointBoxLayout layout = a_map.layout();
     m_blockreg.define(layout,1,Point::Zeros());
     m_delta.define(a_map.layout(), ghost);
+    m_delta_by_J.define(a_map.layout(), ghost);
     m_k.define(a_map.layout(), ghost);
+    m_k_by_J.define(a_map.layout(), ghost);
     ghost.fill(OP::ghost() + Point::Ones(2));
     ghost[0] = OP::ghost();
     m_U0.define(a_map.layout(), ghost);
@@ -117,6 +121,7 @@ advance(
     sixth/=6; third/=3; half/=2;
     int kstage;
     m_delta.setVal(0.);
+    m_delta_by_J.setVal(0.);
     m_blockreg.clear();
     
     //int opswitchiv = ParseInputs::get_operator_switchiv();
@@ -135,9 +140,10 @@ advance(
           m_delta.increment(m_k, weight*a_dt);
           if (flagi)
             {
-              OP::StageLevel(m_k, m_U0, m_blockreg, m_consSum,
+              OP::StageLevel(m_k, m_k_by_J,m_U0, m_blockreg, m_consSum,
                              a_time, a_dt, weight, kstage);
               m_delta.increment(m_k, weight*a_dt);
+              m_delta_by_J.increment(m_k_by_J, weight*a_dt);
             }
         }
     }
@@ -154,7 +160,7 @@ advance(
         if (flagi)
           {
             OP::StageLevel
-              (m_k, m_U0, m_blockreg, m_consSum,
+              (m_k, m_k_by_J, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_0");
@@ -172,7 +178,7 @@ advance(
         if (flagi)
           {
             OP::StageLevel
-              (m_k, m_U0, m_blockreg, m_consSum,
+              (m_k, m_k_by_J, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_1");
@@ -189,7 +195,7 @@ advance(
         if (flagi)
           {
             OP::StageLevel
-              (m_k, m_U0, m_blockreg, m_consSum,
+              (m_k, m_k_by_J, m_U0, m_blockreg, m_consSum,
                a_time, a_dt, weight, kstage);
            {
               PR_TIMERS("block_increment_2");
@@ -206,7 +212,7 @@ advance(
         if (flagi)
           {
             OP::StageLevel
-              (m_k, m_U0, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
+              (m_k, m_k_by_J, m_U0, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_3");
               m_delta.increment(m_k, a_dt*weight);
@@ -225,15 +231,16 @@ advance(
       }
     }
     a_state.increment(m_delta, 1.0);
-    // m_counter++;
-    // auto layout = m_delta.layout();
-    // LevelStateData bregtest(layout,Point::Zeros());
-    // bregtest.setVal(0.);
-    // m_blockreg.reflux(bregtest);
-    // auto map = CubedSphereShell::Map(layout, OP::ghost());
-    //  HDF5Handler h5;
-    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta, "delta"+to_string(m_counter));
-    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map,bregtest, "bregtest"+to_string(m_counter));
+    m_counter++;
+    auto layout = m_delta.layout();
+    LevelStateData bregtest(layout,Point::Zeros());
+    bregtest.setVal(0.);
+    m_blockreg.reflux(bregtest);
+    auto map = CubedSphereShell::Map(layout, OP::ghost());
+     HDF5Handler h5;
+    h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta, "delta"+to_string(m_counter));
+    h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta_by_J, "delta_by_J"+to_string(m_counter));
+    h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map,bregtest, "bregtest"+to_string(m_counter));
 }
 } //end Proto namespace
 

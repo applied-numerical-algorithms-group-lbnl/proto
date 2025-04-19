@@ -318,34 +318,16 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               T a_weight,
               int a_kstage)
 {
-  //
-  // Transform JU -> USph.
+  
   PR_TIMERS("BoxOp_Euler::PreStageLevel");
   int init_condition_type = ParseInputs::get_init_condition_type();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
   auto layout = a_UStage.layout();
-  // Begin DEBUG
-  // HDF5Handler h5;
-  // typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
-  // 
+  // Transform JU -> USph.
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, a_kstage);
-  // MBLevelBoxData<T,NUMCOMPS,MEM> primvars(layout,a_UStage.ghost());
-  // for (auto dit : layout)
-  //   {
-  //     unsigned int block = layout.block(dit);
-  //     State& prim_i = primvars[dit];
-  //     State& sph_i = a_UStage[dit];
-  //     eulerOp[dit].sphToPrim_2O(prim_i,sph_i,block);
-      //h5.writePatch(1.0,prim_i,"primpatch_"
-      //           +to_string(a_kstage) + "_" + to_string(block));
-      //h5.writePatch(1.0,sph_i,"sphpatch_"
-      //           +to_string(a_kstage) + "_" + to_string(block));
-  // }
-  //h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map, primvars, "primStage" + to_string(a_kstage));
-  //h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map, a_UStage, "sphStage" + to_string(a_kstage));
-  
+
   // initialize a_k to zero. 
   a_k.setVal(0.);
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -364,8 +346,6 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
     eulerOp[dit].PreStagePatch(USph_i,dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,a_kstage);
     auto dx = eulerOp[dit].dx();    
     // Compute viscous operators here, and increment a_rhsTotal.
-    //bool flagv = (opswitchiv % 4) != 2;
-    //if (procID() == 0) cout << opswitchiv << ": flagv = " << flagv  << endl;
     int linear_visc = ParseInputs::get_linear_viscosity();
     int divBcleaning = ParseInputs::get_divergence_cleaning();
     if (linear_visc == 1 && a_kstage == 0)
@@ -373,7 +353,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         PR_TIMERS("artificial viscosity");
         unsigned int block = layout.block(dit);
         Box blockBox = layout.getBlock(block).domain().box();
-        auto mbdata = a_blockreg.bounds(dit);
+        // auto mbdata = a_blockreg.bounds(dit);
         Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
         fluxes[0].define(rhs_i.box().extrude(0));
         fluxes[0].setToZero();
@@ -381,14 +361,9 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
         fluxes[1].setToZero();
         fluxes[2].define(rhs_i.box().extrude(2));
         fluxes[2].setToZero();
-        //if (flagv)
-          {
-            eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0, a_dt); //dt is not used in viscFlux. dt is multiplied in RK4
-            T one = 1.0;
-            // eulerOp[dit].PostStagePatch(mbdata,fluxes,a_time,a_dt,one);
-            a_blockreg.increment(fluxes, dit, a_dt);
-            CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
-          }
+        eulerOp[dit].viscFlux(rhs_i, fluxes, USph_i, 1.0, a_dt); //dt is not used in viscFlux. dt is multiplied in RK4
+        a_blockreg.increment(fluxes, dit, a_dt);
+        CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,a_dt);
       }
     if (divBcleaning == 1 && a_kstage == 0) eulerOp[dit].DivBPowell(rhs_i, USph_i, 1.0);
   }

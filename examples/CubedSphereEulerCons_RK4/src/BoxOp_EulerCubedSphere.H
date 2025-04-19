@@ -251,6 +251,7 @@ public:
   inline void operator()
   (
    State&                          a_Rhs,
+   State&                          a_Rhs_by_J,
    Array<State, DIM>&              a_fluxes,
    const State&                    a_USph,
    T                               a_dt,
@@ -484,6 +485,7 @@ public:
   /// Compute fluxes, and RHS.
   static inline void
   StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs,
+             MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhs_by_J,
              MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
              MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
              Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,

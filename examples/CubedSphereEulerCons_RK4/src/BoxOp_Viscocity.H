@@ -290,11 +290,36 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearViscCoef(
                   double B_x = a_wface(iBX);
                   double B_y = a_wface(iBY);
                   double B_z = a_wface(iBZ);
-                  double B_mag = sqrt(B_x*B_x + B_y*B_y + B_z*B_z);
                   double p = a_wface(iP);
                   if (p < 0.0) p = 0.0;
-                  double af = sqrt(a_gamma*p/rho + B_mag*B_mag/4.0/M_PI/rho); 
-                  double AdjA = sqrt(a_ntrow(0)*a_ntrow(0) + a_ntrow(1)*a_ntrow(1) + a_ntrow(2)*a_ntrow(2)); 
+
+                  vecType bSph;
+                  vecType bCart;
+              
+                  bSph[0] = B_x;       
+                  bSph[1] = B_y;
+                  bSph[2] = B_z;
+                  bCart[0] = 0.;       
+                  bCart[1] = 0.;
+                  bCart[2] = 0.;
+                  double B_n = 0.;
+                  double B_mag = 0.;
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          bCart[dir0] += a_Amatrix(dir0,dir1)*bSph[dir1];
+                        }
+                        B_n += a_Amatrix(dir0,0)*bCart[dir0];
+                        B_mag += bCart[dir0]*bCart[dir0];
+                    }
+                  B_mag = sqrt(B_mag);
+    
+                  double ce = sqrt(a_gamma*p/rho);
+                  double a = ce*ce + B_mag*B_mag/4.0/M_PI/rho;
+                  double b = abs(B_n)*ce/sqrt(M_PI*rho);
+                  double af = 0.5*(sqrt(a + b) + sqrt(a - b));
+                  double af2 = sqrt(a); // Originally I had this.
                   double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
                   
                   a_linfluxcoef(0) = (abs(w_d) + af*A_d_mag);

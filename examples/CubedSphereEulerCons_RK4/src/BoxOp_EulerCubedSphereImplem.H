@@ -9,6 +9,7 @@ inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   (
    State&                          a_Rhs,
+   State&                          a_Rhs_by_J,
    Array<State, DIM>&              a_fluxes,
    const State&                    a_USph,
    T                               a_dt,
@@ -33,9 +34,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // cout << "inputbox = " << bx << endl;
   
   sphToPrim(W,WBar,a_USph,a_block);
-  State Wtemp(bx.grow(-NGHOST));
-  W.copyTo(Wtemp);
-  if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
+  // State Wtemp(bx.grow(-NGHOST));
+  // W.copyTo(Wtemp);
+  // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
   T dxiPerp = this->dx()[1];
@@ -99,7 +100,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       if (dir == 0) A_matrix.copyTo(A_matrix0);
       
       int limiter = ParseInputs::get_limiter();
-      if (limiter != 1 && limiter != 2)
+      if (limiter != 0 && limiter != 1 && limiter != 2)
       {
         limiter = 1;
       }
@@ -165,9 +166,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
       fluxdir.setVal(0.0);
       fluxdir += fluxdir_R;
-      fluxdir += fluxdir_L;
-      fluxdir -= fluxdir_Rus;
-      fluxdir *= 0.5;
+      // fluxdir += fluxdir_L;
+      // fluxdir -= fluxdir_Rus;
+      // fluxdir *= 0.5;
 
       // Save fluxes, update RHS.
       fluxdir.copyTo(a_fluxes[dir]);
@@ -201,6 +202,21 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           h5.writePatch(1.0,dummy,"rhsIncr_"+suffix);
         }
     }
+
+    // Scale rho, rho E fluxes by det(A),
+  forallInPlace([ ] PROTO_LAMBDA
+    (Var<T,NUMCOMPS,MEM>& a_rhsJ,
+      const Var<T,NUMCOMPS,MEM>& a_rhs,
+      const Var<T,1,MEM>& a_deta,
+      const Var<T,1,MEM>& a_dVolr)
+    {                    
+      for (int comp = 0; comp < NUMCOMPS; comp++)
+        {
+          a_rhsJ(comp) = a_rhs(comp)/(a_deta(0)*a_dVolr(0));
+        } 
+    },a_Rhs_by_J,a_Rhs,deta0,dVolr);
+
+
   // a_dt_next = 1.0/speedMax.absMax();
   // if (a_block == BLOCKTEST)
   //   {
@@ -250,8 +266,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
                   const Var<T,1,MEM>& a_adjddir)
                 {                    
                   a_advflux(iRHO) = a_deta(0)*a_fluxin(iRHO);
-                  a_advflux(iE) =
-                    a_deta(0)*a_fluxin(iE);  
+                  a_advflux(iE) = a_deta(0)*a_fluxin(iE);  
                 },a_fluxdir,a_physFlux,a_deta,a_adjDrDir);
     
   for (int comp = 0; comp < NUMCOMPS;comp++)
@@ -404,13 +419,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
                 {        
                   double rho = 0.5*(a_wface_L(iRHO)+a_wface_R(iRHO));
                   double w_d = 0.5*(a_wface_L(iVX+a_d)+a_wface_R(iVX+a_d));
-                  double B_d = 0.5*(a_wface_L(iBX+a_d)+a_wface_R(iBX+a_d));
                   double B_x = 0.5*(a_wface_L(iBX)+a_wface_R(iBX));
                   double B_y = 0.5*(a_wface_L(iBY)+a_wface_R(iBY));
                   double B_z = 0.5*(a_wface_L(iBZ)+a_wface_R(iBZ));
                   double p = 0.5*(a_wface_L(iP)+a_wface_R(iP));
                   if (p < 0.0) p = 0.0;
-
 
                   vecType bSph;
                   vecType bCart;
@@ -433,21 +446,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
                         B_mag += bCart[dir0]*bCart[dir0];
                     }
                   B_mag = sqrt(B_mag);
-
-
-                  // double B_mag = sqrt(B_x*B_x + B_y*B_y + B_z*B_z);
-                  
+    
                   double ce = sqrt(a_gamma*p/rho);
-                  // double Bnorm = B_d*a_detA(0)/sqrt(a_adjArow(0)*a_adjArow(0) + a_adjArow(1)*a_adjArow(1) + a_adjArow(2)*a_adjArow(2));
                   double a = ce*ce + B_mag*B_mag/4.0/M_PI/rho;
                   double b = abs(B_n)*ce/sqrt(M_PI*rho);
-                  if (b > a){
-                    cout << "b > a, b = " << b << ", a = " << a << endl;
-                    b = a;
-                  } 
                   double af = 0.5*(sqrt(a + b) + sqrt(a - b));
-                  double af2 = sqrt(a); // Originally I had this.
-
                   double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
                   
                   for (int comp = 0; comp < NUMCOMPS;comp++)
@@ -570,6 +573,7 @@ template<
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
 StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
+           MBLevelBoxData<T,NUMCOMPS,MEM>& a_k_by_J,
            MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
            MBBoundaryRegister<T,NUMREG,MEM>& a_blockreg,
            Array<Reduction<T,Operation::Sum,MEM>,NUMCOMPS>& a_consSum,
@@ -582,6 +586,9 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
   auto layout = a_UStage.layout();
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  MBLevelBoxData<T,NUMCOMPS,MEM> flux0(layout,a_UStage.ghost());
+  MBLevelBoxData<T,NUMCOMPS,MEM> flux1(layout,a_UStage.ghost());
+  MBLevelBoxData<T,NUMCOMPS,MEM> flux2(layout,a_UStage.ghost()); 
   T dt_min = 1.0e20;
   T dt_next_local = 1.e20;
   T wgtxdt = a_weight*a_dt;
@@ -589,6 +596,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
   {
     PROTO_ASSERT(a_k[dit].box() == a_k.layout()[dit],"k_i isn't exactly the size of a rhs");
     auto &k_i = a_k[dit];
+    auto &k_i_by_J = a_k_by_J[dit];
     auto &USph_i = a_UStage[dit];
     Array<BoxData<double, NUMCOMPS>, DIM> fluxes;
     fluxes[0].define(k_i.box().extrude(0));
@@ -598,18 +606,25 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
     fluxes[1].setToZero();
     fluxes[2].setToZero();
     
-    eulerOp[dit](k_i, fluxes, USph_i, 1.0);
+    eulerOp[dit](k_i, k_i_by_J, fluxes, USph_i, 1.0);
     auto dx = eulerOp[dit].dx();
     unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
     CubedSphereShell::radialCons<T,NUMCOMPS,MEM>(fluxes[0],a_consSum,dx[0],blockBox,wgtxdt);
+    fluxes[0].copyTo(flux0[dit]);
+    fluxes[1].copyTo(flux1[dit]);
+    fluxes[2].copyTo(flux2[dit]);
     
   }
   {
-    //HDF5Handler h5;
-    //h5.writeMBLevel({},map, a_k, "stageRhs"+to_string(a_kstage));
+    HDF5Handler h5;
+    h5.writeMBLevel({},map, a_k_by_J, "stageRhsbyJ"+to_string(a_kstage));
+    h5.writeMBLevel({},map, flux0, "flux0"+to_string(a_kstage));
+    h5.writeMBLevel({},map, flux1, "flux1"+to_string(a_kstage));
+    h5.writeMBLevel({},map, flux2, "flux2"+to_string(a_kstage));
+
   }
 }
 template<
@@ -630,6 +645,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   Array<Reduction<T,Operation::Sum,MEM>,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState()> consSum, consRhs;
   MBLevelBoxData<T,NUMCOMPS,MEM> JUTemp(layout,a_JU.ghost());
   MBLevelBoxData<T,NUMCOMPS,MEM> rhs(layout,Point::Zeros());
+  MBLevelBoxData<T,NUMCOMPS,MEM> rhs_by_J(layout,Point::Zeros());
   T time = 0.;
   T dt = 1.0;
   int kstage = 0;
@@ -643,7 +659,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;  
   if (flagi) 
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
-    StageLevel(rhs, JUTemp, blockreg, consSum,
+    StageLevel(rhs,rhs_by_J, JUTemp, blockreg, consSum,
                time, dt, weight, kstage);
   blockreg.reflux(rhs);
   
