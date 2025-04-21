@@ -659,6 +659,7 @@ cofactor(
         const BoxData<T,DIM,MEM>& a_X,
         int a_dir)
 {
+    // compute cofactor averaged on face dir from node centered X
     PR_TIME("Operator::cofactor");
 #if DIM==2
     int dirperp = (a_dir+1)%DIM;
@@ -677,12 +678,14 @@ cofactor(
     }
     return ret;
 #elif DIM==3
-    int dirperp1 = (a_dir+1)%DIM;
+    int dirperp1 = (a_dir+1)%DIM;.
     int dirperp2 = (a_dir+2)%DIM;
 
     // average X in direction 1
+    // XAv1 is on edges parallel to dirperp1
     BoxData<T,DIM,MEM> XAv1 = Stencil<T>::faceToCell(dirperp1,4)(a_X);
     // dX/dx1
+    // dXdxi1 is on edges parellel to dirperp1, 2nd order, undivided
     BoxData<T,DIM,MEM> dXdxi1 = Stencil<T>::FluxDivergence(dirperp1)(a_X);
     // dX/dx1 ^ X
     auto dXdxi1byX = Operator::_edgeCrossProduct3D(dXdxi1,XAv1,dXdxi1,XAv1,dirperp1);

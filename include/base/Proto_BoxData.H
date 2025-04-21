@@ -16,6 +16,7 @@
 
 #include "Proto_Timer.H"
 
+#include "Proto_Accel.H"
 #include "Proto_MemType.H"
 #include "Proto_Memory.H"
 #include "Proto_Stack.H"

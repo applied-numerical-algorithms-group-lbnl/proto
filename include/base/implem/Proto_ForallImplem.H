@@ -1,4 +1,6 @@
+#include "../Proto_Forall.H"
 
+namespace Proto {
 // Helper API for dynamically determining MemType
 template<typename T>
 struct getMemType
@@ -839,4 +841,5 @@ inline void protoForall_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("protoForall_i");
   makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
 }
