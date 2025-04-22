@@ -433,9 +433,9 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_a_W(iBZ) = a_B_sph(2);
             },W_CME, V_CME_sph, B_CME_sph);
             W_point.copyTo(Wout[dit]);
-            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME1");
+            // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME1");
             W_CME.copyTo(Wout[dit]);
-            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME2");
+            // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME2");
             forallInPlace([ ] PROTO_LAMBDA
                         (Var<double, NUMCOMPS, HOST> &a_W,
                         Var<double, NUMCOMPS, HOST> &a_W_CME,

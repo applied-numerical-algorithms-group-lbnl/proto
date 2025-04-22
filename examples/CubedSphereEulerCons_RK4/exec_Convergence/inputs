@@ -1,22 +1,23 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
--init_condition_type             1
--domainSize                      50
--thickness                       100
--boxSize_nonrad                  50
--boxSize_rad                     100
--max_iter                        100
+-init_condition_type             3
+-domainSize                      30
+-thickness                       60
+-boxSize_nonrad                  15
+-boxSize_rad                     60
+-max_iter                        3
 -CFL                             0.5
 -limiter                         1
 -strength                        100.
--write_cadence                   10
--checkpoint_cadence              10
+-write_cadence                   1
+-checkpoint_cadence              50
 -data_file_prefix                data
 -checkpoint_file_prefix          checkpoint
+-scale_data_with_r               1
 -max_checkpoint_files            3
--restart_file                    checkpoint_1200.hdf5
+#-restart_file                    checkpoint_c_700.hdf5
 -gamma                           1.6666666666666666666667
--temporal_order                  4
+-temporal_order                  1
 -divergence_cleaning             1
 -linear_viscosity                1
 -boundary_reflux                 1
@@ -34,7 +35,7 @@
 -BC_force_single_frame           0
 # CME properties
 -CME_type                        0
--CME_Enter_Time                  2022.015
+-CME_Enter_Time                  2021.015
 -CME_r1                          46.67
 -CME_r0                          23.33
 -CME_halfangle                   48.00
@@ -48,5 +49,5 @@
 -CME_energy_control              1.0
 -CME_density                     1.38e-23
 -CME_helicity_sign               1.00
--CME_a1                          0.00276
+-CME_a1                          0.0276
 -CME_shift                       0.0

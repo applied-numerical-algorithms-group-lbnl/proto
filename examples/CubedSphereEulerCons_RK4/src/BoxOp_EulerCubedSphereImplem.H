@@ -63,7 +63,18 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   
   for (int dir = 0; dir < DIM; dir++)
     {
-      PR_TIME("BoxOp_Euler::operator()::directional flux calculation");        
+      PR_TIME("BoxOp_Euler::operator()::directional flux calculation");   
+      
+      // Piecewise constant for debugging.
+      // Stencil<T> m_copy;
+      // m_copy = 1.0*Shift(Point::Zeros());
+      // Stencil<T> m_shift;
+      // m_shift = 1.0*Shift(Point::Basis(dir));
+      // State WFace_L = m_shift(W);
+      // State WFace_R = m_copy(W);
+      // State WFaceBar_L = m_shift(WBar);
+      // State WFaceBar_R = m_copy(WBar);
+
       State WFace_L = Stencil<T>::CellToFace(dir)(W);   
       State WFace_R = Stencil<T>::CellToFace(dir)(W);
       

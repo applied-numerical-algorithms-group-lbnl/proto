@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
             eulerOp[dit].dtInv(dtinv,WPoint_i);
             eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
             WPoint_i.copyTo(Wout[dit]);
-            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME0");
+            // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME0");
             JU_i.setVal(0.);
             JUTemp.copyTo(JU_i, layout[dit]);
           }
