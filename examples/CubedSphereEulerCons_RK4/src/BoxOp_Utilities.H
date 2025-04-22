@@ -129,18 +129,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
   BoxData<T,1,MEM> dVolPoint = deconvolveStencilRadial(a_dVolr);
   BoxData<T,1,MEM> ke = kineticEnergyW(a_WPoint,a_block,-1);
   BoxData<T,1,MEM> me = magneticEnergyW(a_WPoint,a_block,-1);
-  // DEBUG
-  if (procID() == 5)
-    {
-      Scalar rhoKe(ke.box());
-      ke.copyTo(rhoKe);
-      auto rho = slice(a_WPoint,iRHO);
-      rhoKe *= rho;
-      h5.writePatch(1.,me,"me");
-      h5.writePatch(1.,rhoKe,"rhoKe");
-      auto pres = slice(a_WPoint,iP);
-      h5.writePatch(1.,pres,"pres");
-    }
+  
   BoxData<T,NUMCOMPS,MEM> UPoint =
     forall<T,NUMCOMPS,MEM>([ ] PROTO_LAMBDA
                            (Var<T,NUMCOMPS,MEM>& a_upoint,
@@ -150,18 +139,31 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                             const Var<T,1,MEM>& a_me,
                             T a_gamma)
                            {
-                             a_upoint(iRHO) = a_wpoint(iRHO)*a_dvolpoint(0);
+                             a_upoint(iRHO) = a_wpoint(iRHO);
                              a_upoint(iMOMX) = a_wpoint(iVX)*a_upoint(iRHO);
                              a_upoint(iMOMY) = a_wpoint(iVY)*a_upoint(iRHO);
                              a_upoint(iMOMZ) = a_wpoint(iVZ)*a_upoint(iRHO);
-                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0) + a_me(0))
-                             *a_dvolpoint(0);
-                             a_upoint(iBX) = a_wpoint(iBX)*a_dvolpoint(0);
-                             a_upoint(iBY) = a_wpoint(iBY)*a_dvolpoint(0);
-                             a_upoint(iBZ) = a_wpoint(iBZ)*a_dvolpoint(0);
-                           },a_WPoint,dVolPoint,ke,me,a_gamma);
- 
-  BoxData<T,NUMCOMPS,MEM> U = convolveStencil(UPoint);
+                             a_upoint(iE) = (a_wpoint(iP)/(a_gamma - 1.0) + a_ke(0) + a_me(0));
+                             a_upoint(iBX) = a_wpoint(iBX);
+                             a_upoint(iBY) = a_wpoint(iBY);
+                             a_upoint(iBZ) = a_wpoint(iBZ);
+                           },a_WPoint,dVolPoint,ke,me,a_gamma);                         
+
+  BoxData<T,NUMCOMPS,MEM> U = convolveStencil(UPoint);                        
+  // multiply U by dvolr using fourth-order product rule.
+  for (int i=0; i < NUMCOMPS; i++)
+  {
+    BoxData<T,1,MEM> Ui = slice(U,i);
+    BoxData<T,1,MEM> dvolrUi = a_dVolr*Ui;  
+    T twelveth = 1.0/12.0;
+    Box bxOut = this->layout()[this->index()];
+    unsigned int block = this->block();
+    Box blockBox = this->layout().blockDomainBox(block);  
+    BoxData<T,1,MEM> ddVolr = Stencil<T>::Derivative(1,0,2)(a_dVolr,twelveth);
+    BoxData<T,1,MEM> dUi = CubedSphereShell::deriv3case(Ui,bxOut,blockBox,0);
+    dvolrUi.copyTo(Ui);
+    Ui += ddVolr*dUi;
+  }                        
   
   // spherical velocities -> Cartesian velocities:
   // multiply <dvolr*rho u>, <dVolr*B> by det(A)*A using fourth-order product rule.

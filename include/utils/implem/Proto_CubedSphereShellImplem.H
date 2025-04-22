@@ -919,9 +919,15 @@ CubedSphereShell::consToSemiSphVecNG(
   BoxData<T,1,MEM> uRadial = slice(USph,0);  
   uRadial.copyTo(a_uRadial);
   uRadial.setToZero();
-  cellMatrixVectorProd(a_UPerp,a_Amat,USph,a_bx,a_blockBox);
-  //if ((procID() == 0) && a_debug)
-  // cout << "vsphbx = " << vsphbx << ", output box = " << a_bx << endl;
+  // cellMatrixVectorProd(a_UPerp,a_Amat,USph,a_bx,a_blockBox); // Some bug in Amat. AdetA is correct.
+  BoxData<T,DIM,MEM> JUCart(USph.box());
+  cellMatrixVectorProd(JUCart,a_AdetA,USph,a_bx,a_blockBox);
+  for (int dir = 0; dir < DIM; dir++)
+  {
+      auto JUCartComp = slice(JUCart,dir);
+      auto UPerpComp = slice(a_UPerp,dir);
+    cellQuotientValAndInv(UPerpComp,a_detA,a_invDetA,JUCartComp,USph.box(),a_blockBox);
+  };
 }
 template<typename T, unsigned int C, MemType MEM>
 void CubedSphereShell::
