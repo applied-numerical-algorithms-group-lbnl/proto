@@ -678,7 +678,7 @@ cofactor(
     }
     return ret;
 #elif DIM==3
-    int dirperp1 = (a_dir+1)%DIM;.
+    int dirperp1 = (a_dir+1)%DIM;
     int dirperp2 = (a_dir+2)%DIM;
 
     // average X in direction 1

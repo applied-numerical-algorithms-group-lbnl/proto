@@ -90,5 +90,6 @@ namespace Proto
 #include "operators/Proto_CrossProductOp.H"
 #include "operators/Proto_EdgeAverageCrossProductOp.H"
 
+#include "operators/Proto_FaceAverageSurfaceTransformOp.H"
 #include "operators/Proto_MappedFaceAverageDiffOp.H"
 #endif

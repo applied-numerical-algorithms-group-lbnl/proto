@@ -1,24 +1,29 @@
 
 #pragma once
-#ifndef _PROTO_NAME_OF_YOUR_OP_
-#define _PROTO_NAME_OF_YOUR_OP_
+#ifndef _PROTO_FACE_AVERAGED_SURFACE_TRANSFORM_OP_
+#define _PROTO_FACE_AVERAGED_SURFACE_TRANSFORM_OP_
 
 #include "Proto.H"
 
 namespace Proto
 {
+    /// @brief Computes the value of a unit normal vector in a given direction under a specified coordinate transformation. \
+    The resulting vector is unnormalized, and averaged over surfaces corresponding to the specified normal vector. \
+    This quantity is equivalent to the Nth column of the adjugate of the Jacobian matrix.
+    /// @tparam T 
+    /// @tparam NCOMPS 
     template <class T, unsigned int NCOMPS>
-    class FaceAverageCofactorOp : public CompositeOp<1>
+    class FaceAveragedSurfaceTransformOp : public CompositeOp<1>
     {
 
     private:
         // Stencils, intermediates, etc.
 
     public:
-        inline FaceAverageCofactorOp()
+        inline FaceAveragedSurfaceTransformOp()
         {
             // unspecialized template is not valid
-            PROTO_ASSERT(false, "Error: FaceAverageCofactorOp is not implemented for NCOMPS = %u", NCOMPS);
+            PROTO_ASSERT(false, "Error: FaceAverageSurfaceTransformOp is not implemented for NCOMPS = %u", NCOMPS);
         }
 
         inline std::array<Box, 1> domains(const Box &rangeBox) const
@@ -36,7 +41,7 @@ namespace Proto
     };
 
     template <class T>
-    class FaceAverageCofactorOp<T, 2> : public CompositeOp<1>
+    class FaceAveragedSurfaceTransformOp<T, 2> : public CompositeOp<1>
     {
         private:
         int _normDir;
@@ -45,11 +50,11 @@ namespace Proto
 
         public:
 
-        inline FaceAverageCofactorOp(int normDir)
+        inline FaceAveragedSurfaceTransformOp(int normDir)
         {
             _normDir = normDir;
             _perpDir = (normDir + 1) % 2;
-            _diffOp = Stencil<T>::FluxDivergence(_perpDir)
+            _diffOp = Stencil<T>::FluxDivergence(_perpDir);
         }
 
         inline std::array<Box, 1> domains(const Box &rangeBox) const
@@ -67,13 +72,8 @@ namespace Proto
             BoxData<T, 2> &cofactors,
             const BoxData<T, 2> &nodeCoords)
         {
-            PR_TIME("FaceAverageCofactorOp::operator()");
-            // for n = 0:
-            //   C0 = + dx1/dX1
-            //   C1 = - dx0/dX1
-            // for n = 1:
-            //   C0 = - dx1/dX0
-            //   C1 = + dx0/dX0
+            PR_TIME("FaceAverageSurfaceTransformOp::operator()");
+
             for (int ii = 0; ii < 2; ii++)
             {
                 int jj = (ii+1) % 2;
@@ -88,7 +88,8 @@ namespace Proto
         operator()(
             const BoxData<T, 2> &nodeCoords)
         {
-            Box rangeBox = range(getDomains(nodeCoords));
+            auto domains = getDomains(nodeCoords);
+            Box rangeBox = range(domains);
             BoxData<T, 2> cofactors(rangeBox);
             (*this)(cofactors, nodeCoords);
             return cofactors;
@@ -98,7 +99,7 @@ namespace Proto
         inline void
         operator()(
             LevelBoxData<T, 2, MEM, PR_CELL> &cofactors,
-            const LevelBoxData<T, C, MEM, PR_NODE> &nodeCoords)
+            const LevelBoxData<T, 2, MEM, PR_NODE> &nodeCoords)
         {
             PROTO_ASSERT(nodeCoords.layout().compatible(cofactors.layout()),
                          "incompatible layouts");
@@ -114,7 +115,7 @@ namespace Proto
     };
 
     template <class T>
-    class FaceAverageCofactorOp<T, 3> : public CompositeOp<1>
+    class FaceAveragedSurfaceTransformOp<T, 3> : public CompositeOp<1>
     {
         private:
         int _normDir;
@@ -130,13 +131,13 @@ namespace Proto
 
         public:
 
-        inline FaceAverageCofactorOp(int normDir)
+        inline FaceAveragedSurfaceTransformOp(int normDir)
         {
             _normDir = normDir;
             _perpDir0 = (normDir + 1) % 3;
             _perpDir1 = (normDir + 2) % 3;
-            _cross0 = std::make_unique(_perpDir0);
-            _cross1 = std::make_unique(_perpDir1);
+            _cross0 = std::make_unique<EdgeAverageCrossProductOp<T>>(_perpDir0);
+            _cross1 = std::make_unique<EdgeAverageCrossProductOp<T>>(_perpDir1);
             _diff0 = Stencil<T>::FluxDivergence(_perpDir0);
             _diff1 = Stencil<T>::FluxDivergence(_perpDir1);
             _avg0 = Stencil<T>::faceToCell(_perpDir0, 4);
@@ -145,9 +146,9 @@ namespace Proto
 
         inline std::array<Box, 1> domains(const Box &rangeBox) const
         {
-            Box c0 = _diff0.domain(rangeBox);
-            Box c1 = _diff1.domain(rangeBox);
-            auto [a0, d0, _a0, _d0] = _cross1->domains(c0);
+            Box c1 = _diff0.domain(rangeBox);
+            Box c0 = _diff1.domain(rangeBox);
+            auto [a0, d0, _a0, _d0] = _cross0->domains(c0);
             auto [a1, d1, _a1, _d1] = _cross1->domains(c1);
             a0 += _a0;
             d0 += _d0;
@@ -169,7 +170,7 @@ namespace Proto
             Box d0 = _diff0.range(domain);
             Box d1 = _diff1.range(domain);
             Box c0 = _cross0->range({d0, a0, d0, a0});
-            Box c1 = _cross0->range({d1, a1, d1, a1});
+            Box c1 = _cross1->range({d1, a1, d1, a1});
             Box range = _diff1.range(c0);
             range &= _diff0.range(c1);
             return range;
@@ -180,13 +181,13 @@ namespace Proto
             BoxData<T, 3> &cofactors,
             const BoxData<T, 3> &nodeCoords)
         {
-            PR_TIME("FaceAverageCofactorOp::operator()");
+            PR_TIME("FaceAverageSurfaceTransformOp::operator()");
             BoxData<T,3> xAvg0 = _avg0(nodeCoords); 
             BoxData<T,3> xAvg1 = _avg1(nodeCoords); 
             BoxData<T,3> dx0 = _diff0(nodeCoords);  
             BoxData<T,3> dx1 = _diff1(nodeCoords);              
-            BoxData<T,3> dx0_cross_x = _cross0(dx0, xAvg0, dx0, xAvg0);
-            BoxData<T,3> x_cross_dx1 = _cross1(xAvg1, dx1, xAvg1, dx1);
+            BoxData<T,3> dx0_cross_x = (*_cross0)(dx0, xAvg0, dx0, xAvg0);
+            BoxData<T,3> x_cross_dx1 = (*_cross1)(xAvg1, dx1, xAvg1, dx1);
             cofactors |= _diff1(dx0_cross_x, 0.5);
             cofactors += _diff0(x_cross_dx1, 0.5);
         }
@@ -196,7 +197,7 @@ namespace Proto
             const BoxData<T, 3> &nodeCoords)
         {
             Box rangeBox = range(getDomains(nodeCoords));
-            BoxData<T, 2> cofactors(rangeBox);
+            BoxData<T, 3> cofactors(rangeBox);
             (*this)(cofactors, nodeCoords);
             return cofactors;
         }

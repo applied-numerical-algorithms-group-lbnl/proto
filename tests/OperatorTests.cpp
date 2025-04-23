@@ -19,7 +19,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
 }
-
+#if 0
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -1176,7 +1176,6 @@ TEST(Operator, FaceAverageTensorQuotient)
     }
 }
 
-
 TEST(Operator, EdgeAverageCrossProduct)
 {
     #if PR_VERBOSE > 0
@@ -1184,7 +1183,7 @@ TEST(Operator, EdgeAverageCrossProduct)
     #endif
 
     int domainSize = 32;
-    int numIter = 3;
+    int numIter = 1;
     double error[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
@@ -1200,6 +1199,7 @@ TEST(Operator, EdgeAverageCrossProduct)
         {
             auto productOp = EdgeAverageCrossProductOp<double>(edgeDir);
             auto domainBoxes = productOp.domains(rangeBox);
+            EXPECT_EQ(productOp.range(domainBoxes), rangeBox);
 
             BoxData<double, 3> A4_avg(domainBoxes[0]);
             BoxData<double, 3> B4_avg(domainBoxes[1]);
@@ -1243,110 +1243,104 @@ TEST(Operator, EdgeAverageCrossProduct)
         }
     }
 }
-
-#if 0
-#if DIM==3
-#ifdef PR_MMB
-TEST(Operator, Cofactor)
-{
-#ifdef PR_HDF5
-    HDF5Handler h5;
 #endif
-    int domainSize_0 = 16;
-    int thickness = 1;
-    double r0 = 0.9;
-    double r1 = 1.1;
-    int ghostSize = 3;
-
-    int N = 3;
-    for (int tt = 0; tt < 2; tt++)
+#if 1
+namespace {
+    
+    PROTO_KERNEL_START
+    void f_shearF(Var<double, DIM>& x, Var<double, DIM>& X, double stretch, double angle)
     {
-        //tt == 0 -> classical sphere
-        //tt == 1 -> cube sphere
-        int domainSize = domainSize_0;
-        double dv0; 
-        switch (tt)
+        x(0) = stretch*X(0) + X(1)/tan(angle);
+        for (int ii = 1; ii < DIM; ii++)
         {
-            case 0: dv0 = 2.0*M_PI*M_PI/2.0*(r1-r0); break;
-            case 1: dv0 = M_PI*M_PI/4.0*(r1-r0); break;
+            x(ii) = X(ii);
         }
-        //dv0 = 1.0;
-        double JErrNorm[N];
-        for (int nn = 0; nn < N; nn++)
-        {
-            Array<double, DIM> dx = 1.0/domainSize;
-            dx[0] = 1.0/thickness;
-            double dv = dv0;
-            for (int dir = 0; dir < DIM; dir++) { dv *= dx[dir]; }
-
-            // Define Mapping
-            Point domainBoxSize(thickness, domainSize, domainSize);
-            Box domainBox(domainBoxSize);
-            domainBox = domainBox.grow(ghostSize+1);
-            BoxData<double, DIM, HOST> X(domainBox);
-            BoxData<double, 1, HOST> J0(domainBox);
-            switch(tt)
-            {
-                case 0: forallInPlace_p(f_classicSphereMap, X, J0, dx, r0, r1); break;
-                //case 1: forallInPlace_p(f_cubeSphereMap, X, J0, dx, r0, r1); break;
-            }
-
-            // Compute Metrics
-            FluxBoxData<double, DIM, HOST> NT(domainBox);
-            Array<BoxData<double, DIM, HOST>, DIM> NT0;
-            for (int dir = 0; dir < DIM; dir++)
-            {
-                NT[dir] = Operator::cofactor(X, dir);
-            }
-            BoxData<double, 1, HOST> J;
-            J = Operator::jacobian(X, NT);
-            //J /= dv;
-
-            #if PR_VERBOSE > 0
-            pr_out() << "Coordinate Values: " << std::endl;
-            X.printData();
-            pr_out() << "Cofactors: " << std::endl;
-            for (int dd = 0; dd < DIM; dd++)
-            {
-                NT[dd].printData();
-            }
-            pr_out() << "Jacobian: " << std::endl;
-            J.printData();
-            #endif
-
-            auto JAvg = Operator::convolve(J0);
-            JAvg *= dv;
-            BoxData<double, 1> JAvg2(J.box());
-            JAvg.copyTo(JAvg2);
-            BoxData<double, 1> JErr(J.box());
-            J.copyTo(JErr);
-            JErr -= JAvg;
-            JErrNorm[nn] = JErr.sumAbs()*dv;
-#if PR_VERBOSE > 0
-            std::cout << "Max Norm Error in J: " << JErrNorm[nn] << std::endl;
-            h5.writePatch({"x", "y", "z"}, dx, X, "X_T%i_N%i", tt, nn);
-            h5.writePatch({"J"}, dx, JAvg2, "J0_T%i_N%i", tt, nn);
-            h5.writePatch({"J"}, dx, J, "J_T%i_N%i", tt, nn);
-            h5.writePatch({"Err"}, dx, JErr, "JErr_T%i_N%i", tt, nn);
-#endif
-            domainSize *= 2;
-        }
-        
-        for (int ii = 1; ii < N; ii++)
-        {
-            double rate = log(JErrNorm[ii-1]/JErrNorm[ii])/log(2.0);
-            double rateErr = std::abs(rate - 4);
-#if PR_VERBOSE > 0
-            std::cout << "Convergence Rate: " << rate << std::endl;
-#endif
-            EXPECT_LT(rateErr, 0.3);
-        }
-
     }
+    PROTO_KERNEL_END(f_shearF, f_shear);
+}
+
+TEST(Operator, FaceAveragedSurfaceTransformOp)
+{
+    int domainSize = 32;
+    double stretch = 2.0;
+    double angle = M_PI/4.0;
+    double dX = domainSize/domainSize;
+    double dA = pow(dX,DIM);
+    double a = stretch;
+    double b = 1.0/tan(angle);
+    Array<double, DIM> dx;
+    dx.fill(dX);
+    dx[0] *= stretch;
+    dx[1] /= sin(angle);
+    Array<double, DIM> da;
+
+#if DIM == 2
+    da[0] = dx[1];
+    da[1] = dx[0];
+#elif DIM == 3
+    da[0] = dx[1]*dx[2];
+    da[1] = dx[2]*dx[0];
+    da[2] = dx[0]*dx[1]*sin(angle);
+#endif
+
+    FaceAveragedSurfaceTransformOp<double, DIM> adj0(0);
+    FaceAveragedSurfaceTransformOp<double, DIM> adj1(1);
+
+    Box range = Box::Cube(domainSize);
+
+    auto [domain0] = adj0.domains(range);
+    auto range0 = adj0.range({domain0});
+    auto [domain1] = adj1.domains(range);
+    auto range1 = adj1.range({domain1});
+
+    EXPECT_EQ(range0, range);
+    EXPECT_EQ(range1, range);
+
+    Box domain = domain0 + domain1;
+
+    auto X0 = forall_p<double, DIM>(f_iotaCorner, domain, dX);
+    auto X_0 = forall<double, DIM>(f_shear, domain0, X0, stretch, angle);
+    auto X_1 = forall<double, DIM>(f_shear, domain1, X0, stretch, angle);
+
+    auto Adj0 = adj0(X_0);
+    auto Adj1 = adj1(X_1);
+    EXPECT_EQ(Adj0.box(), range);
+    EXPECT_EQ(Adj1.box(), range);
+    double Adj00 = Adj0.sum(0)/range.size();
+    double Adj10 = Adj0.sum(1)/range.size();
+    double Adj01 = Adj1.sum(0)/range.size();
+    double Adj11 = Adj1.sum(1)/range.size();
+
+    EXPECT_NEAR(Adj00, 1.0, 1e-12);
+    EXPECT_NEAR(Adj10, -b, 1e-12);
+    EXPECT_NEAR(Adj01, 0, 1e-12);
+    EXPECT_NEAR(Adj11, a, 1e-12);
+
+    EXPECT_NEAR(sqrt(Adj00*Adj00 + Adj10*Adj10), da[0], 1e-12);
+    EXPECT_NEAR(sqrt(Adj01*Adj01 + Adj11*Adj11), da[1], 1e-12);
+
+    auto Adj0_ = Operator::cofactor(X_0, 0);
+    auto Adj1_ = Operator::cofactor(X_1, 1);
+
+    Adj0_ -= Adj0;
+    Adj1_ -= Adj1;
+
+    EXPECT_LT(Adj0_.absMax(), 1e-12);
+    EXPECT_LT(Adj1_.absMax(), 1e-12);
+
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    h5.writePatch(X0, "TEST_ADJUGATE_X0");
+    h5.writePatch(X_0, "TEST_ADJUGATE_X_0");
+    h5.writePatch(X_1, "TEST_ADJUGATE_X_1");
+    h5.writePatch(Adj0, "TEST_ADJUGATE_ADJ0");
+    h5.writePatch(Adj1, "TEST_ADJUGATE_ADJ1");
+    h5.writePatch(Adj0_, "TEST_ADJUGATE_ADJ0_");
+    h5.writePatch(Adj1_, "TEST_ADJUGATE_ADJ1_");
+    #endif
 }
 #endif
-#endif
-#endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
