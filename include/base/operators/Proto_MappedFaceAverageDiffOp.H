@@ -42,11 +42,11 @@ namespace Proto
         inline Box range(const std::array<Box, 6> &domainBoxes) const
         {
             auto [phi4, phi2, N4, N2, J4, J2] = domainBoxes;
-            auto G4 = _diff4Op->range(phi4);
-            auto G2 = _diff2Op->range(phi2);
-            auto JG4 = _matProdOp->range(G4, N4, G2, N2);
+            auto G4 = _diff4Op->range({phi4});
+            auto G2 = _diff2Op->range({phi2});
+            auto JG4 = _matProdOp->range({G4, N4, G2, N2});
             auto JG2 = (G2 & N2);
-            return _quotientOp->range(JG4, J4, JG2, J2);
+            return _quotientOp->range({JG4, J4, JG2, J2});
         }
         
         template <unsigned int C, MemType MEM>
@@ -61,14 +61,14 @@ namespace Proto
             const BoxData<T, 1, MEM, 1> &JFace_2ndOrder)
         {
             PR_TIME("MappedFaceAverageDiffOp::operator()");
-            auto G4 = (*_diff4Op)(phiFace_4thOrder);
-            auto G2 = (*_diff2Op)(phiFace_2ndOrder);
-            auto JG4 = (*_matProdOp)(G4, NFace_4thOrder, G2, NFace_2ndOrder);
-            auto JG2 = matrixProduct(G2, NFace_2ndOrder);
-            (*_quotientOp)(diff_4thOrder, JG4, JFace_4thOrder, JG2, JFace_2ndOrder);
+            auto G4 = (*_diff4Op)(phiFace_4thOrder); // C x DIM
+            auto G2 = (*_diff2Op)(phiFace_2ndOrder); // C x DIM
+            auto JG4 = (*_matProdOp)(G4, NFace_4thOrder, G2, NFace_2ndOrder); // C x DIM
+            auto JG2 = matrixProduct(G2, NFace_2ndOrder); // C x DIM
+            (*_quotientOp)(diff_4thOrder, JG4, JFace_4thOrder, JG2, JFace_2ndOrder); // C x DIM
         }
 
-        template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>
+        template <unsigned int C, MemType MEM>
         inline BoxData<T, C, MEM, DIM>
         operator()(
             const BoxData<T, C, MEM, 1> &phiFace_4thOrder,
@@ -86,7 +86,7 @@ namespace Proto
                 JFace_4thOrder,
                 JFace_2ndOrder
             ));
-            BoxData<T, C, MEM, D, E> output(rangeBox);
+            BoxData<T, C, MEM, DIM> output(rangeBox);
             (*this)(output,
                 phiFace_4thOrder, phiFace_2ndOrder,
                 NFace_4thOrder, NFace_2ndOrder,
