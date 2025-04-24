@@ -61,11 +61,11 @@ namespace Proto
             const BoxData<T, 1, MEM, 1> &JFace_2ndOrder)
         {
             PR_TIME("MappedFaceAverageDiffOp::operator()");
-            auto G4 = (*_diff4Op)(phiFace_4thOrder); // C x DIM
-            auto G2 = (*_diff2Op)(phiFace_2ndOrder); // C x DIM
-            auto JG4 = (*_matProdOp)(G4, NFace_4thOrder, G2, NFace_2ndOrder); // C x DIM
-            auto JG2 = matrixProduct(G2, NFace_2ndOrder); // C x DIM
-            (*_quotientOp)(diff_4thOrder, JG4, JFace_4thOrder, JG2, JFace_2ndOrder); // C x DIM
+            auto G4 = (*_diff4Op)(phiFace_4thOrder);
+            auto G2 = (*_diff2Op)(phiFace_2ndOrder); 
+            auto JG4 = _matProdOp->transposeRight(G4, NFace_4thOrder, G2, NFace_2ndOrder); 
+            auto JG2 = matrixProductRightTranspose(G2, NFace_2ndOrder);
+            (*_quotientOp)(diff_4thOrder, JG4, JFace_4thOrder, JG2, JFace_2ndOrder);
         }
 
         template <unsigned int C, MemType MEM>

@@ -70,7 +70,6 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     
         for (int dir = 0; dir < DIM; dir++)
         {
-            std::cout << "dx: " << this->dx()[dir] << " | da: " << areas[dir] << std::endl;
             gradOps[dir] = std::make_unique<MappedFaceAverageDiffOp<T>>(dir);
             matProdOps[dir] = std::make_unique<FaceAverageMatrixProductOp<T>>(dir);
 
