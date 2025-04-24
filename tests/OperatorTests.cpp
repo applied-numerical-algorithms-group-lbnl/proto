@@ -1244,7 +1244,7 @@ TEST(Operator, EdgeAverageCrossProduct)
     }
 }
 #endif
-#if 1
+
 namespace {
     
     PROTO_KERNEL_START
@@ -1257,15 +1257,15 @@ namespace {
         }
     }
     PROTO_KERNEL_END(f_shearF, f_shear);
+
 }
 
-TEST(Operator, FaceAveragedSurfaceTransformOp)
+TEST(Operator, FaceAverageSurfaceTransformOp)
 {
     int domainSize = 32;
     double stretch = 2.0;
     double angle = M_PI/4.0;
     double dX = domainSize/domainSize;
-    double dA = pow(dX,DIM);
     double a = stretch;
     double b = 1.0/tan(angle);
     Array<double, DIM> dx;
@@ -1283,8 +1283,8 @@ TEST(Operator, FaceAveragedSurfaceTransformOp)
     da[2] = dx[0]*dx[1]*sin(angle);
 #endif
 
-    FaceAveragedSurfaceTransformOp<double, DIM> adj0(0);
-    FaceAveragedSurfaceTransformOp<double, DIM> adj1(1);
+    FaceAverageSurfaceTransformOp<double, DIM> adj0(0);
+    FaceAverageSurfaceTransformOp<double, DIM> adj1(1);
 
     Box range = Box::Cube(domainSize);
 
@@ -1312,9 +1312,9 @@ TEST(Operator, FaceAveragedSurfaceTransformOp)
     double Adj11 = Adj1.sum(1)/range.size();
 
     EXPECT_NEAR(Adj00, 1.0, 1e-12);
-    EXPECT_NEAR(Adj10, -b, 1e-12);
-    EXPECT_NEAR(Adj01, 0, 1e-12);
-    EXPECT_NEAR(Adj11, a, 1e-12);
+    EXPECT_NEAR(Adj10,  -b, 1e-12);
+    EXPECT_NEAR(Adj01,   0, 1e-12);
+    EXPECT_NEAR(Adj11,   a, 1e-12);
 
     EXPECT_NEAR(sqrt(Adj00*Adj00 + Adj10*Adj10), da[0], 1e-12);
     EXPECT_NEAR(sqrt(Adj01*Adj01 + Adj11*Adj11), da[1], 1e-12);
@@ -1339,7 +1339,60 @@ TEST(Operator, FaceAveragedSurfaceTransformOp)
     h5.writePatch(Adj1_, "TEST_ADJUGATE_ADJ1_");
     #endif
 }
+
+TEST(Operator, FaceAverageAdjugateMatrixOp) {
+    int domainSize = 32;
+    double stretch = 2.0;
+    double dX = 1.0;
+    double angle = M_PI/4.0;
+    double a = stretch;
+    double b = 1.0/tan(angle);
+    Array<double, DIM> dx;
+    dx.fill(dX);
+    dx[0] *= stretch;
+    dx[1] /= sin(angle);
+    Array<double, DIM> da;
+
+#if DIM == 2
+    da[0] = dx[1];
+    da[1] = dx[0];
+#elif DIM == 3
+    da[0] = dx[1]*dx[2];
+    da[1] = dx[2]*dx[0];
+    da[2] = dx[0]*dx[1]*sin(angle);
 #endif
+
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        int normDir = dd;
+        FaceAverageAdjugateMatrixOp<double> adjOp(normDir);
+
+        Box range = Box::Cube(domainSize);
+        auto domains = adjOp.domains(range);
+        Box domain = domains[0];
+        
+        EXPECT_EQ(adjOp.range(domains), range);
+
+        auto X0 = forall_p<double, DIM>(f_iotaCorner, domain, dX);
+        auto X = forall<double, DIM>(f_shear, domain, X0, stretch, angle);
+
+        auto adjugateMatrix = adjOp(X);
+        EXPECT_EQ(adjugateMatrix.box(), range);
+
+        for (int jj = 0; jj < DIM; jj++)
+        {
+            auto col = plane(adjugateMatrix, jj);
+            Array<double, DIM> comps_squared;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                double a_ij = col.sum(ii)/range.size();
+                comps_squared[ii] = pow(a_ij, 2);
+            }
+            double area = sqrt(comps_squared.sum());
+            EXPECT_NEAR(area, da[jj], 1e-12);
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

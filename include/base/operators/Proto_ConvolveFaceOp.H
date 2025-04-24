@@ -5,6 +5,7 @@
 
 namespace Proto
 {
+
     template <class T>
     class ConvolveFaceOp : public CompositeOp<2>
     {

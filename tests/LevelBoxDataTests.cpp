@@ -3,21 +3,22 @@
 #include "TestFunctions.H"
 using namespace Proto;
 
-DisjointBoxLayout testLayout(int domainSize, Point boxSize)
-{
-    Box domainBox = Box::Cube(domainSize); 
-    Box patchBox = domainBox.coarsen(boxSize);
-    std::vector<Point> patches;
-    for (auto patch : patchBox)
+namespace {
+    DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
-        if (patch != Point::Zeros()) { patches.push_back(patch); }
+        Box domainBox = Box::Cube(domainSize); 
+        Box patchBox = domainBox.coarsen(boxSize);
+        std::vector<Point> patches;
+        for (auto patch : patchBox)
+        {
+            if (patch != Point::Zeros()) { patches.push_back(patch); }
+        }
+        std::array<bool, DIM> periodicity;
+        periodicity.fill(true);
+        ProblemDomain domain(domainBox, periodicity);
+        return DisjointBoxLayout(domain, patches, boxSize);
     }
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
-    ProblemDomain domain(domainBox, periodicity);
-    return DisjointBoxLayout(domain, patches, boxSize);
 }
-
 
 TEST(LevelBoxData, SetVal) {
     int domainSize = 32;

@@ -13,14 +13,14 @@ namespace Proto
     /// @tparam T 
     /// @tparam NCOMPS 
     template <class T, unsigned int NCOMPS>
-    class FaceAveragedSurfaceTransformOp : public CompositeOp<1>
+    class FaceAverageSurfaceTransformOp : public CompositeOp<1>
     {
 
     private:
         // Stencils, intermediates, etc.
 
     public:
-        inline FaceAveragedSurfaceTransformOp()
+        inline FaceAverageSurfaceTransformOp()
         {
             // unspecialized template is not valid
             PROTO_ASSERT(false, "Error: FaceAverageSurfaceTransformOp is not implemented for NCOMPS = %u", NCOMPS);
@@ -41,7 +41,7 @@ namespace Proto
     };
 
     template <class T>
-    class FaceAveragedSurfaceTransformOp<T, 2> : public CompositeOp<1>
+    class FaceAverageSurfaceTransformOp<T, 2> : public CompositeOp<1>
     {
         private:
         int _normDir;
@@ -50,7 +50,7 @@ namespace Proto
 
         public:
 
-        inline FaceAveragedSurfaceTransformOp(int normDir)
+        inline FaceAverageSurfaceTransformOp(int normDir)
         {
             _normDir = normDir;
             _perpDir = (normDir + 1) % 2;
@@ -115,7 +115,7 @@ namespace Proto
     };
 
     template <class T>
-    class FaceAveragedSurfaceTransformOp<T, 3> : public CompositeOp<1>
+    class FaceAverageSurfaceTransformOp<T, 3> : public CompositeOp<1>
     {
         private:
         int _normDir;
@@ -131,7 +131,7 @@ namespace Proto
 
         public:
 
-        inline FaceAveragedSurfaceTransformOp(int normDir)
+        inline FaceAverageSurfaceTransformOp(int normDir)
         {
             _normDir = normDir;
             _perpDir0 = (normDir + 1) % 3;

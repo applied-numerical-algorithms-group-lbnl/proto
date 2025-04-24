@@ -7,6 +7,8 @@
 
 namespace Proto
 {
+    /// @brief Computes the cell-averaged product of two cell-averaged BoxData to 4th order
+    /// @tparam T 
     template <class T>
     class CellAverageProductOp : public ProductAverageOp<T>
     {

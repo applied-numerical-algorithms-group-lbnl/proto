@@ -5,6 +5,8 @@
 
 namespace Proto
 {
+    /// @brief Convolves data which is centered along a specified direction. The result will be averaged along that direction to 4th order.
+    /// @tparam T 
     template <class T>
     class ConvolveEdgeOp : public CompositeOp<2>
     {

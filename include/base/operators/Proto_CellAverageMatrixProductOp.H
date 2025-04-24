@@ -7,6 +7,8 @@
 
 namespace Proto
 {
+    /// @brief Computes the cell averaged product of two matrix-valued BoxData to 4th order
+    /// @tparam T 
     template <class T>
     class CellAverageMatrixProductOp : public MatrixProductOp<T, CellAverageProductOp>
     {
