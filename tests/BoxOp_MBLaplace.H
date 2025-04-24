@@ -66,8 +66,11 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     // Cache metric terms and Jacobian
     inline void init()
     {
+        auto areas = this->da();
+    
         for (int dir = 0; dir < DIM; dir++)
         {
+            std::cout << "dx: " << this->dx()[dir] << " | da: " << areas[dir] << std::endl;
             gradOps[dir] = std::make_unique<MappedFaceAverageDiffOp<T>>(dir);
             matProdOps[dir] = std::make_unique<FaceAverageMatrixProductOp<T>>(dir);
 
@@ -76,7 +79,9 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
             FaceAverageSurfaceTransformOp<T,DIM> surfOp(dir);
             J_f[dir] = cellToFaceOp(this->jacobian());
             N_f[dir] = surfOp(this->x());
+            N_f[dir] /= areas[dir];
             adjJ_f[dir] = adjOp(this->x());
+            adjJ_f[dir] /= areas[dir];
         }
         m_useBC = true;
     }

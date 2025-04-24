@@ -293,6 +293,24 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::dx() const
 
 template <typename T, template<MemType> typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+Array<T, DIM>
+MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::da() const
+{
+    auto h = this->dx();
+    Array<T,DIM> areas;
+    areas.fill(1.0);
+    for (int norm = 0; norm < DIM; norm++)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (norm != ii) { areas[norm] *= h[ii]; }
+        }
+    }
+    return areas;
+}
+
+template <typename T, template<MemType> typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 const BoxData<double, DIM, MEM>&
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::x() const
 {
