@@ -2058,7 +2058,7 @@ BoxData<T, DL, MEM, DR, E> matrixProductLeftTranspose(
 }
 
 template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
-    unsigned int DL, unsigned int DR, unsigned int E = 1>
+    unsigned int DL, unsigned int DR, unsigned int E>
 BoxData<T, CL, MEM, CR, E> matrixProductRightTranspose(
     const BoxData<T,CL,MEM,DL,E>& A,
     const BoxData<T,CR,MEM,DR,E>& B,
