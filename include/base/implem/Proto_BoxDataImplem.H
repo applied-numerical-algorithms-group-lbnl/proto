@@ -1146,8 +1146,10 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
 {
     PR_TIME("BoxData::operator/=(scale)");
     this->operatorT<BoxDataOp::Divide>(a_scale);
+    #ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
-    "A division generated values of inf or nan");
+        "A division generated values of inf or nan");
+    #endif
     return *this;
 }
 

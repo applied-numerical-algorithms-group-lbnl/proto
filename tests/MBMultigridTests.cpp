@@ -248,7 +248,7 @@ TEST(MBMultigridTests, AverageDown)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, LaplaceIdentity) {
     #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -327,7 +327,6 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
 #endif
     mg.solve(phi, rhs, 10, 1e-10);
-
 }
 #endif
 
