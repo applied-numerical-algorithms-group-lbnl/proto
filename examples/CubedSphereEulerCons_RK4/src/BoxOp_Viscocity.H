@@ -292,7 +292,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearViscCoef(
                   double B_z = a_wface(iBZ);
                   double p = a_wface(iP);
                   if (p < 0.0) p = 0.0;
-
+                  rho = max(rho,RHO00);
                   vecType bSph;
                   vecType bCart;
               

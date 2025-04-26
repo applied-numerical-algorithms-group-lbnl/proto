@@ -420,7 +420,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
                   double B_z = 0.5*(a_wface_L(iBZ)+a_wface_R(iBZ));
                   double p = 0.5*(a_wface_L(iP)+a_wface_R(iP));
                   if (p < 0.0) p = 0.0;
-
+                  rho = max(rho,RHO00);
                   vecType bSph;
                   vecType bCart;
               

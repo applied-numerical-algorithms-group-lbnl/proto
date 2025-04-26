@@ -413,9 +413,18 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
 
             BoxData<double,DIM,HOST> V_CME_sph(bx);
             BoxData<double,DIM,HOST> B_CME_sph(bx);
+            BoxData<double,1,HOST> Bmag_CME(bx);
 
             BoxData<double,DIM,HOST> V_CME_cart = slice<double,NUMCOMPS,DIM,HOST>(W_CME,iVX);
             BoxData<double,DIM,HOST> B_CME_cart = slice<double,NUMCOMPS,DIM,HOST>(W_CME,iBX);
+            
+            forallInPlace([ ] PROTO_LAMBDA
+                (Var<double, 1, HOST> &a_Bmag_CME,
+                 Var<double, DIM, HOST> &a_B_CME_cart)
+            {  
+                a_Bmag_CME(0) = sqrt(a_B_CME_cart(0)*a_B_CME_cart(0) + a_B_CME_cart(1)*a_B_CME_cart(1) + a_B_CME_cart(2)*a_B_CME_cart(2));
+            },Bmag_CME, B_CME_cart);
+
             double one = 1.0;  
             forallInPlace(f_matVecProd,V_CME_sph,A_matrix_inv,V_CME_cart,one);
             forallInPlace(f_matVecProd,B_CME_sph,A_matrix_inv,B_CME_cart,one);
@@ -439,6 +448,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
             forallInPlace([ ] PROTO_LAMBDA
                         (Var<double, NUMCOMPS, HOST> &a_W,
                         Var<double, NUMCOMPS, HOST> &a_W_CME,
+                        Var<double, 1, HOST> &a_Bmag_CME,
                         double a_gamma)
             { 
                 if (a_W_CME(iRHO) != 0){
@@ -449,9 +459,10 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_W(iBX) = a_W_CME(iBX);
                 a_W(iBY) = a_W_CME(iBY);
                 a_W(iBZ) = a_W_CME(iBZ);
-                // a_W(iP) = 0;
+                double beta = 0.1;
+                a_W(iP) *= beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
                 }
-            },W_point, W_CME,a_gamma);
+            },W_point, W_CME, Bmag_CME, a_gamma);
             MPI_Barrier(MPI_COMM_WORLD);
 
             W_point.copyTo(Wout[dit]);

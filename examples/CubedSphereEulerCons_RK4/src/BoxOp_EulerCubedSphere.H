@@ -160,6 +160,7 @@ void f_speedmax_F
   T B_mag = sqrt(b2);
   T p = a_W(iP);
   if (p < 0.0) p = 0.0;
+  rho = max(rho,RHO00);
   T af = sqrt(a_gamma*p/rho + b2/4.0/M_PI/rho);  
   a_speedmax(0) += (af + sqrt(v2))/dx_d;
 }
@@ -211,6 +212,7 @@ void f_csq_F
   T B_mag = sqrt(b2);
   T p = a_W(iP);
   if (p < 0.0) p = 0.0;
+  rho = max(rho,RHO00);
   a_csq(0) = a_gamma*p/rho + b2/4.0/M_PI/rho;  
 }
 PROTO_KERNEL_END(f_csq_F, f_csq);
