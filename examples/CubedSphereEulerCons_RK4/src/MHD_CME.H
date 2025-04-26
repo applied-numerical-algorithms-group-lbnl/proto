@@ -477,10 +477,9 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
             BoxData<double, DIM, HOST> adjDr(a_dVolrLev[dit].box());
             eulerOp[dit].radialMetrics(radius, Dr, adjDr, a_dVolrLev[dit], Dr.box());
             
-            BoxData<double, NUMCOMPS, HOST> W(USph_CME[dit].box());
-            BoxData<double, NUMCOMPS, HOST> WBar(USph_CME[dit].box());
-            eulerOp[dit].sphToPrim(W,WBar,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
-            W.copyTo(Wout[dit]);
+            BoxData<double, NUMCOMPS, HOST> W_point(USph_CME[dit].box());
+            eulerOp[dit].sphToPrim_2O(W_point,USph_CME[dit],block, true); // Transform to primitive variables, spherical velocities.
+            W_point.copyTo(Wout[dit]);
             if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME4");
         }
       }

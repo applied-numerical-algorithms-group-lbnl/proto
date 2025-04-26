@@ -67,7 +67,7 @@ void f_radialShellInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = 0.0;//ur;
+  a_W(iVX) = ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -115,9 +115,9 @@ void f_nonradialInit_F(
   }
   T rho = rho0 + amplitude * rho0;
   T p = p0 * pow(rho / rho0, a_gamma);
-  T ur = amplitude * sqrt(a_gamma * p0 / rho0) / rho0;
+  T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = 0.0;
+  a_W(iVX) = ur;//0.0;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;

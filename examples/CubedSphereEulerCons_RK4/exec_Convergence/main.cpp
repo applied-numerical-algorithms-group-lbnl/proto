@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
       {
         double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
         // if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
-        dt = dtcfl1*ParseInputs::get_CFL();
+        dt = 0.2*dtcfl1*ParseInputs::get_CFL();
         // if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
       }
     if (convTestType > 2) max_iter = 1;
@@ -321,24 +321,28 @@ int main(int argc, char *argv[])
         JU[dit].copyTo(U_conv_test[lev][dit]);
       }
       h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
-      int maxRadSize = 64;
+      // int maxRadSize = 64;
       Point refRatio = 2*Point::Ones();
       if (radial_refinement)
         {
           refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
-          maxRadSize = 1024;
+          // maxRadSize = 1024;
+          domainSize *= refRatio[1];
+          boxSize_nonrad *= refRatio[1];
+        } else {
+          domainSize *= 2;
+          boxSize_nonrad *= 2;
         }
-      domainSize *= refRatio[1];
-      boxSize_nonrad *= refRatio[1];
+      
       thickness *= 2;
       boxSize_rad *= 2;
       time = 0.;
       domain = domain.refine(refRatio); 
-      if (boxSize_nonrad > maxRadSize)
-        {
-          boxSize_nonrad = maxRadSize;
-          if (procID() == 0) cout << "radial Box Size = " << boxSize_nonrad << endl;
-        }
+      // if (boxSize_nonrad > maxRadSize)
+      //   {
+      //     boxSize_nonrad = maxRadSize;
+      //     if (procID() == 0) cout << "radial Box Size = " << boxSize_nonrad << endl;
+      //   }
       if (convTestType == 2){
         dt /= 2;
         max_iter *= 2;
