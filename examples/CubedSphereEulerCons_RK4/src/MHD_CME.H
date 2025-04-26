@@ -460,7 +460,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_W(iBY) = a_W_CME(iBY);
                 a_W(iBZ) = a_W_CME(iBZ);
                 double beta = 0.1;
-                a_W(iP) *= beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
+                a_W(iP) = beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
                 }
             },W_point, W_CME, Bmag_CME, a_gamma);
             MPI_Barrier(MPI_COMM_WORLD);
@@ -489,7 +489,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
             eulerOp[dit].radialMetrics(radius, Dr, adjDr, a_dVolrLev[dit], Dr.box());
             
             BoxData<double, NUMCOMPS, HOST> W_point(USph_CME[dit].box());
-            eulerOp[dit].sphToPrim_2O(W_point,USph_CME[dit],block, true); // Transform to primitive variables, spherical velocities.
+            eulerOp[dit].sphToPrim_2O(W_point,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
             W_point.copyTo(Wout[dit]);
             if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME4");
         }
