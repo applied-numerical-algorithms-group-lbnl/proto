@@ -33,6 +33,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // cout << "inputbox = " << bx << endl;
   
   sphToPrim(W,WBar,a_USph,a_block);
+  BoxData<T,1,MEM> me = magneticEnergyW(W,a_block,0);
   // State Wtemp(bx.grow(-NGHOST));
   // W.copyTo(Wtemp);
   // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
@@ -122,8 +123,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         State WFaceBar_L_temp = idOP(WFaceBar_L);    
         State WFace_R_temp = idOP(WFace_R);
         State WFaceBar_R_temp = idOP(WFaceBar_R); 
-        Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,W,dir,dxiR, dxiPerp, dxiPerp);
-        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,dir,dxiR, dxiPerp, dxiPerp);
+        Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,W,me,dir,dxiR, dxiPerp, dxiPerp);
+        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
       }
 
       if (limiter == 2){

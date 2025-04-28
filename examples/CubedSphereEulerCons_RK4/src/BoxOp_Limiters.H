@@ -156,16 +156,21 @@ void eta_tilde_d_calcF(Var<double,1>& a_eta_tilde_d,
                         const Var<T,NUMCOMPS,MEM>& a_W_ave_ahead2,
                         const Var<T,NUMCOMPS,MEM>& a_W_ave_behind,
                         const Var<T,NUMCOMPS,MEM>& a_W_ave_behind2,
+                        const Var<T,1,MEM>& a_me,
+                        const Var<T,1,MEM>& a_me_ahead,
+                        const Var<T,1,MEM>& a_me_ahead2,
+                        const Var<T,1,MEM>& a_me_behind,
+                        const Var<T,1,MEM>& a_me_behind2,
                         int a_d)
 {
   double z1=0.85, z0=0.75, delta = 0.33, si;
   double p, p_ahead, p_ahead2, p_behind, p_behind2;
 
-  p = a_W_ave(iP) + (a_W_ave(iBX)*a_W_ave(iBX)+a_W_ave(iBY)*a_W_ave(iBY)+a_W_ave(iBZ)*a_W_ave(iBZ))/8.0/M_PI;
-  p_ahead = a_W_ave_ahead(iP) + (a_W_ave_ahead(iBX)*a_W_ave_ahead(iBX)+a_W_ave_ahead(iBY)*a_W_ave_ahead(iBY)+a_W_ave_ahead(iBZ)*a_W_ave_ahead(iBZ))/8.0/M_PI;
-  p_ahead2 = a_W_ave_ahead2(iP) + (a_W_ave_ahead2(iBX)*a_W_ave_ahead2(iBX)+a_W_ave_ahead2(iBY)*a_W_ave_ahead2(iBY)+a_W_ave_ahead2(iBZ)*a_W_ave_ahead2(iBZ))/8.0/M_PI;
-  p_behind = a_W_ave_behind(iP) + (a_W_ave_behind(iBX)*a_W_ave_behind(iBX)+a_W_ave_behind(iBY)*a_W_ave_behind(iBY)+a_W_ave_behind(iBZ)*a_W_ave_behind(iBZ))/8.0/M_PI;
-  p_behind2 = a_W_ave_behind2(iP) + (a_W_ave_behind2(iBX)*a_W_ave_behind2(iBX)+a_W_ave_behind2(iBY)*a_W_ave_behind2(iBY)+a_W_ave_behind2(iBZ)*a_W_ave_behind2(iBZ))/8.0/M_PI;
+  p = a_W_ave(iP) + a_me(0);
+  p_ahead = a_W_ave_ahead(iP) + a_me_ahead(0);
+  p_ahead2 = a_W_ave_ahead2(iP) + a_me_ahead2(0);
+  p_behind = a_W_ave_behind(iP) + a_me_behind(0);
+  p_behind2 = a_W_ave_behind2(iP) + a_me_behind2(0);
 
   double arg = std::abs(p_ahead-p_behind)/std::abs(p_ahead2-p_behind2);
   if (arg > z1) {si = 0.0;}
@@ -244,6 +249,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
                   BoxData<double,NUMCOMPS>& a_W_ave_R,
                   BoxData<double,NUMCOMPS>& a_W_ave,
                   BoxData<double,NUMCOMPS>& a_W_bar,
+                  BoxData<double,1>& a_me,
                   const int a_d,
                   const double a_dx,
                   const double a_dy,
@@ -294,8 +300,13 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
       State W_bar_ahead2 = alias(a_W_bar,Point::Basis(d)*(-2));
       State W_bar_behind = alias(a_W_bar,Point::Basis(d)*(1));
       State W_bar_behind2 = alias(a_W_bar,Point::Basis(d)*(2));
+      BoxData<double,1> me_ahead = alias(a_me,Point::Basis(d)*(-1));
+      BoxData<double,1> me_behind = alias(a_me,Point::Basis(d)*(1));
+      BoxData<double,1> me_ahead2 = alias(a_me,Point::Basis(d)*(-2));
+      BoxData<double,1> me_behind2 = alias(a_me,Point::Basis(d)*(2));
       Scalar eta_tilde_d = forall<double,1,MEM>( eta_tilde_d_calc, a_W_bar, W_bar_ahead, W_bar_ahead2,
-                                            W_bar_behind, W_bar_behind2, d);
+                                            W_bar_behind, W_bar_behind2, a_me, me_ahead,
+                                            me_ahead2, me_behind, me_behind2, d);
       
       Scalar eta_tilde_d_ahead = alias(eta_tilde_d,Point::Basis(d)*(-1));
       Scalar eta_tilde_d_behind = alias(eta_tilde_d,Point::Basis(d)*(1));
@@ -309,18 +320,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
       }
       eta_old = alias(eta);
     }
-     // if (procID() == 0)
-     //  {
-     //    //DEBUG
-     //    HDF5Handler h5;
-     //    auto domainBox = this->layout().domain().getBlock(0).box();
-     //    BoxData<T,1,MEM> dummy(domainBox);
-     //    eta.copyTo(dummy);
-     //    int nrad = domainBox.high()[0]+1;
-     //    double dxirad = 1.0/nrad;
-     //    //cout << nrad << ", " << eta_tilde_d.box() << ", " << eta_tilde_d.absMax() << ", " << eta_tilde_d.min() << endl;
-     //    h5.writePatch(dxirad,eta,"eta_"+to_string(nrad));
-     //  }
     State W_ave_L_ahead_lim_flat = forall<double,NUMCOMPS,MEM>(Flat_calc, W_ave_L_ahead_limited, a_W_ave, eta, a_d);
     
     a_W_ave_R_lim_flat = forall<double,NUMCOMPS,MEM>(Flat_calc, W_ave_R_limited, a_W_ave, eta, a_d);

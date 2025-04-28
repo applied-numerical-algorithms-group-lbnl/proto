@@ -435,6 +435,7 @@ public:
                               BoxData<double,NUMCOMPS>& a_W_ave_R,
                               BoxData<double,NUMCOMPS>& a_W_ave,
                               BoxData<double,NUMCOMPS>& a_W_bar,
+                              BoxData<double,1>& a_me,
                               const int a_d,
                               const double a_dx,
                               const double a_dy,
