@@ -187,7 +187,7 @@ TEST(BoxData, ContainsNAN) {
     Box B = Box::Cube(8);
     Point p = Point::Ones(3);
     Box b = (B & B.shift(p + Point::Ones()));
-    BoxData<double, 3> data(B);
+    BoxData<double, 3, HOST> data(B);
     data.setVal(1.0);
     EXPECT_FALSE(data.containsInfOrNAN());
     data(p) = 1.0/0.0;

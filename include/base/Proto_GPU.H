@@ -25,6 +25,7 @@
 #include "hip/hip_runtime_api.h"
 #endif
 #include "iostream" // Use for CHECK(X)
+// #include "Proto_MemInfo.H"
 
 #define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
 

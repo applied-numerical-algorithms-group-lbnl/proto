@@ -9,9 +9,10 @@
 #include "base/Proto_MayDay.H" //parstream
 #include "base/Proto_MemType.H"
 #include "base/Proto_Memory.H" //MemType
-#include "base/Proto_MemInfo.H" //MemType
+
 #include "base/Proto_CPU.H" //MemInfo
 #include "base/Proto_GPU.H" //MemInfo
+#include "base/Proto_MemInfo.H" //MemType
 #include "base/Proto_Macros.H" //CPU, GPU, MemType
 #include "base/Proto_Stack.H" // MemType, Macros, Memory
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <type_traits>
+// #include "Proto_MemInfo.H"
 
 #define cpuMalloc(ptr,nbBytes)     ptr = (decltype(ptr)) malloc(nbBytes)
 
