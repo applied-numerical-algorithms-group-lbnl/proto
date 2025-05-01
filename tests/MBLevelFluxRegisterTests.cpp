@@ -188,9 +188,9 @@ namespace {
         Point dir,
         MBDisjointBoxLayout fineLayout)
     {
-        PatchID finePatch = fineLayout.point(fineIndex);
         BlockIndex block = fineLayout.block(fineIndex);
-        bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, block, dir);
+        auto finePatch = fineLayout.patch(fineIndex);
+        bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, dir);
         if (patchOnBlockBoundary)
         {
             BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);
@@ -200,15 +200,8 @@ namespace {
 
             PatchID adjPatch = rotatedDomain.coarsen(fineLayout.boxSizes()[adjBlock]).low();
             auto adjIndex = fineLayout.find(adjPatch, adjBlock);
-            if (adjIndex == *fineLayout.end())
-            {
-                std::cout << "Couldn't find adjacent index" << std::endl;
-                std::cout << "source data: " << finePatch << " | " << block << std::endl;
-                std::cout << "dir: " << dir << std::endl;
-                std::cout << "adj data: " << adjPatch << " | " << adjBlock << std::endl;
-            }
         }
-        return fineLayout.find(finePatch, block);
+        return fineLayout.find(finePatch.point, block);
     }
 
     std::tuple<Point, Box, BlockIndex> getFineRegisterArgsFromCoarse(
@@ -236,7 +229,7 @@ namespace {
         MBLevelFluxRegister<T,C,MEM>& coarseFluxRegister,
         MBLevelFluxRegister<T,C,MEM>& fineFluxRegister,
         MBLevelFluxRegister<T,C,MEM>& refluxFluxRegister,
-        MBAMRGrid& grid)
+        MBAMRLayout& grid)
     {
         for (auto iter : grid[0])
         {
@@ -411,7 +404,7 @@ namespace {
         return patches;
     }
 
-    MBAMRGrid testCubedSphereGrid(
+    MBAMRLayout testCubedSphereGrid(
         int domainSize,
         int thickness,
         int boxSize, 
@@ -422,7 +415,7 @@ namespace {
         Point boxSizeVect(boxSize, boxSize, thickness);
         std::vector<Point> boxSizes(numBlocks, boxSizeVect);
         auto coarsePatches = domain.patches(boxSizeVect);
-        MBAMRGrid grid(domain, boxSizeVect, refRatio, 2);
+        MBAMRLayout grid(domain, boxSizeVect, refRatio, 2);
 
         for (int li = 1; li < 2; li++)
         {
@@ -822,7 +815,7 @@ TEST(MBLevelFluxRegister, CubedSphereConstruction) {
     Array<double, DIM> gridSpacing;
     gridSpacing.fill(1.0/domainSize);
 
-    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
+    MBAMRLayout grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
 
     auto& fineLayout = grid[1];
     auto& crseLayout = grid[0];
@@ -933,7 +926,7 @@ TEST(MBLevelFluxRegister, CubedSphereIncrement) {
     refRatios[2] = 1;
     ghostWidths[2] = 0;
 
-    MBAMRGrid grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
+    MBAMRLayout grid = testCubedSphereGrid(domainSize, thickness, boxSize, refRatios);
 
     Array<double, DIM> gridSpacing = Point::Ones();
     gridSpacing /= domainSize;

@@ -3,18 +3,24 @@
 #define _PR_TIMER_H_
 
 #include <cstdlib>
-#include <cstdio>
 #include <vector>
 #include <string>
 #include <iostream>
-#include "implem/Proto_ClockTicks.H"
-#include <iostream>
 #include <fstream>
 #include <list>
-#include <vector>
 #include <cstdio>
 #include <cstring>
 #include <sys/time.h>
+#include <chrono>
+
+inline unsigned long long int PR_ticks()
+{
+
+  using namespace std::chrono;
+  return steady_clock::now().time_since_epoch().count();
+
+}
+#define PR_TICKS
 
 using std::string;
 
@@ -546,5 +552,4 @@ namespace Proto
 #endif
 }//namespace proto
 
-#include "implem/Proto_TimerImplem.H"
 #endif // PR_TIMER_H

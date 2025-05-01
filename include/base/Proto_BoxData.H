@@ -1,20 +1,6 @@
 #pragma once
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
-#include "Proto_Timer.H"
-
-#include "Proto_Memory.H"
-#include "Proto_MemType.H"
-
-#include "Proto_CInterval.H"
-#include "Proto_Array.H"
-#include "Proto_Box.H"
-#include "Proto_CoordPermutation.H"
-#include "Proto_PowerItoI.H"
-#include "Proto_Stencil.H"
-#include "Proto_Reduction.H"
-#include "Proto_Stack.H"
-#include "Proto_DisjointBoxLayout.H"
 
 #include <memory>   //for shared_ptr
 #include <iostream>
@@ -22,11 +8,26 @@
 #include <iomanip>  // for pretty printing
 #include <limits>   // for max / min functions
 #include <cstdlib>  // for size_t
-#include <cmath>    // floating point abs
+#include <cmath>    // floating point abs, isnan
 #include <map>
 #include <random>   // random initialization
 #include <unordered_map>
+#include <type_traits> // used in containsNAN
 
+#include "Proto_Timer.H"
+
+#include "Proto_Accel.H"
+#include "Proto_MemType.H"
+#include "Proto_Memory.H"
+#include "Proto_Stack.H"
+#include "Proto_Array.H"
+#include "Proto_Box.H"
+#include "Proto_CoordPermutation.H"
+#include "Proto_Stencil.H"
+#include "Proto_CInterval.H"
+#include "Proto_Reduction.H" 
+
+#include "Proto_DisjointBoxLayout.H" //this shouldn't be here
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -91,8 +92,6 @@ namespace Proto
         Subtract, 
         Multiply, 
         Divide, 
-        //ThresholdMax,
-        //ThresholdMin,
         NUM_OP_TYPES
     };
 
@@ -726,7 +725,7 @@ namespace Proto
           */
 
         inline std::size_t size() const {return m_box.size()*C*D*E;};
-
+        inline std::size_t numValues() const { return m_box.size()*C*D*E; }
         /// Defined Query
         /**
           Returns true if this is defined (e.g., it has memory allocated to it).
@@ -911,6 +910,10 @@ namespace Proto
           \param a_scale  A scalare of type T
           */
         inline BoxData<T,C,MEM,D,E>& operator/=(const Array<T, C*D*E>& a_array);
+
+        inline void increment(const BoxData<T,C,MEM,D,E>& rhs, T scale = 1);
+
+        inline void incrementProduct(const BoxData<T,C,MEM,D,E>& A, const BoxData<T,C,MEM,D,E>& B, T scale = 1);
 
         ///@}
 
@@ -1351,6 +1354,11 @@ namespace Proto
           \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2
         */    
         void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
+        
+        bool containsInfOrNAN() const;
+        bool containsInfOrNAN(Box domain) const;
+        bool containsUninitialized() const;
+        bool containsUninitialized(Box domain) const;
         ///@}
         
         ///////////////////////////////////////////////////////////////////////////////////////
@@ -1400,6 +1408,8 @@ namespace Proto
             return a_bx.size()*sizeof(T)*a_numcomps;
         }
         
+        
+
         // TODO: Chombo Compatibility?
         static int preAllocatable()
         {
@@ -1556,6 +1566,29 @@ namespace Proto
     
 ///@}
 
-#include "implem/Proto_BoxDataImplem.H"
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, DR, E>
+    matrixProduct(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, DL, MEM, DR, E>
+    matrixProductLeftTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, CR, E>
+    matrixProductRightTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
 } //end Proto namespace
 #endif //end include guard

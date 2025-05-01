@@ -45,6 +45,7 @@ option(ENABLE_DOCS "Build Proto documentation" OFF)
 option(MEMCHECK "turns on code in BoxData that checks that copying/aliasing is working correctly" OFF)
 option(MEMTRACK "print the amount of data allocated per protoMalloc" OFF)
 option(TIMERS "whether to turn on timers" ON)
+option(DISABLE_INIT_CHECKS "Disables automatic checks for uninitialized/NAN/inf values in BoxData" OFF)
 
 set(VERBOSE 0 CACHE STRING "Verbosity of output")
 set(DIM 3 CACHE STRING "Dimensionality of examples")
@@ -61,12 +62,19 @@ if (NOT DEFINED CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
         options are: Debug Release RelWithDebInfo" FORCE)
     else()
+        add_compile_definitions(NDEBUG)
+        add_compile_definitions(PR_DISABLE_INIT_CHECKS)
         set(VERBOSE 0 CACHE STRING "Verbosity of output")
         set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type, \
         options are: Debug Release RelWithDebInfo" FORCE)
     endif()
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+if (DISABLE_INIT_CHECKS)
+    message(STATUS "Data initialization checks are DISABLED")
+    add_compile_definitions(PR_DISABLE_INIT_CHECKS)
+endif()
 
 if (AMR)
     message(STATUS "AMR libraries are enabled")

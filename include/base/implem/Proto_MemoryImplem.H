@@ -1,4 +1,6 @@
 
+#include "../Proto_Memory.H"
+namespace Proto {
 #ifdef PROTO_ACCEL
 #if defined PROTO_HIP
 inline void hipErrorCheck(hipError_t a_err, std::string a_message)
@@ -79,6 +81,8 @@ void* proto_malloc(size_t a_size)
     if (MEM == HOST)
     {
         buffer = std::malloc(a_size);
+        //std::memset(buffer, PR_UNALLOCATED, a_size);
+
     } else if (MEM == DEVICE)
     {
 #ifdef PROTO_ACCEL
@@ -117,4 +121,4 @@ void proto_free(void* a_buffer)
 #endif
     }
 }
-
+} // end namespace Proto

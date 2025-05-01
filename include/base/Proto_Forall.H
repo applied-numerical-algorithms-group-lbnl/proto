@@ -2,6 +2,9 @@
 #ifndef _PROTO_FORALL_H_
 #define _PROTO_FORALL_H_
 
+#include "Proto_MemType.H"
+#include "Proto_Point.H"
+#include "Proto_Box.H"
 #include "Proto_BoxData.H"
 
 namespace Proto {
@@ -399,6 +402,5 @@ namespace Proto {
     template<typename Func, typename... Srcs>
     inline void protoForall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 #endif
-#include "implem/Proto_ForallImplem.H"
 } // end namespace Proto
 #endif // end include guard

@@ -2,7 +2,7 @@
 #ifndef _PROTO_MB_AMR_DATA_
 #define _PROTO_MB_AMR_DATA_
 
-#include "Proto_MBAMRGrid.H"
+#include "Proto_MBAMRLayout.H"
 #include "Proto_MBLevelBoxData.H"
 
 namespace Proto
@@ -15,25 +15,25 @@ namespace Proto
         
         inline MBAMRData();
         inline MBAMRData(
-                const MBAMRGrid& a_grid,
+                const MBAMRLayout& a_grid,
                 Array<Point, DIM+1> a_ghost,
                 Point a_boundGhost = Point::Zeros());
         inline MBAMRData(
-                const MBAMRGrid& a_grid,
+                const MBAMRLayout& a_grid,
                 Point            a_ghost,
                 Point a_boundGhost = Point::Zeros());
        
         inline MBAMRData(
-                const MBAMRGrid& a_grid,
+                const MBAMRLayout& a_grid,
                 std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
 
         inline void define(
-                const MBAMRGrid& a_grid,
+                const MBAMRLayout& a_grid,
                 Array<Point, DIM+1> a_ghost,
                 Point a_boundGhost = Point::Zeros());
        
         inline void define(
-                const MBAMRGrid& a_grid,
+                const MBAMRLayout& a_grid,
                 std::vector<std::shared_ptr<MBLevelBoxData<T,C,MEM,CTR>>> a_levelData);
 
         inline bool validate() const;
@@ -42,7 +42,7 @@ namespace Proto
         inline void setRandom(T a_low, T a_high);
         inline void exchange();
         inline Array<Point, DIM+1> ghost() const { return m_ghost; }
-        inline const MBAMRGrid& grid() const {return m_grid; }
+        inline const MBAMRLayout& grid() const {return m_grid; }
         inline MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level);
         inline const MBLevelBoxData<T,C,MEM,CTR>& getLevel(unsigned int a_level) const;
         inline MBLevelBoxData<T,C,MEM,CTR>& operator[](unsigned int a_level)
@@ -73,7 +73,7 @@ namespace Proto
         void defineAMRData();
         
         Array<Point, DIM+1>                                             m_ghost;
-        MBAMRGrid                                                       m_grid;
+        MBAMRLayout                                                       m_grid;
         std::vector<std::shared_ptr<MBLevelBoxData<T, C, MEM, CTR>>>    m_levelData;
         std::vector<std::shared_ptr<AMRData<T, C, MEM, CTR>>>           m_amrData;
     };

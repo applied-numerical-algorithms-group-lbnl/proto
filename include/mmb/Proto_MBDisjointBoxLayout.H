@@ -66,6 +66,7 @@ namespace Proto
         inline Array<double, DIM> dx(MBIndex a_index) const;
         inline Box blockDomainBox(BlockIndex a_block) const { return getBlock(a_block).domain().box(); }
         inline unsigned int block(const MBIndex& a_index) const; 
+        inline MBPoint patch(const MBIndex& a_index) const;
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
         inline MBIndex find(Point a_point, BlockIndex a_block) const;
@@ -76,76 +77,71 @@ namespace Proto
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
         inline bool compatible(const MBIndex& a_index) const;
         inline Point connectivity(
-                const MBIndex&  a_i1,
-                const MBIndex&  a_i2) const;
+            const MBPoint&  patch_1,
+            const MBPoint&  patch_2) const;
+        inline Point connectivity(
+            const MBIndex& i1,
+            const MBIndex& i2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_i1,
-                const MBIndex&  a_i2) const;
+            const MBPoint&  patch_1,
+            const MBPoint&  patch_2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
+            const MBIndex&  patch_1,
+            const MBIndex&  patch_2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir,
-                unsigned int    a_block) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isBlockBoundary(
+            const MBIndex&  patch,
+            Point           dir) const;
+        inline bool isBlockBoundary(
+            const MBPoint&  patch,
+            Point           dir,
+            BlockIndex      adjBlock) const;
+        inline bool isPatchOnBlockBoundary( const MBPoint& patch) const;
+        inline bool isPatchOnBlockBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isPatchInBlockBoundary( const MBPoint& patch) const;
+        inline bool isPatchInBlockBoundary( const MBPoint& patch, Point dir) const;
         inline bool isDomainBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isDomainBoundary(
+            const MBIndex&  patch,
+            Point           dir) const;
+        inline bool isPatchOnDomainBoundary( const MBPoint& patch) const;
+        inline bool isPatchOnDomainBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isPatchInDomainBoundary( const MBPoint& patch) const;
+        inline bool isPatchInDomainBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isRefinementBoundary(
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isPatchOnRefinementBoundary( const MBPoint& patch) const;
         inline bool isInteriorBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
-        inline bool isPatchOnBlockBoundary(
-            PatchID a_patch,
-            BlockIndex a_block) const;
-        inline bool isPatchOnBlockBoundary(
-            PatchID a_patch,
-            BlockIndex a_block,
-            Point a_dir) const;
-        inline bool isPatchOnDomainBoundary(
-            PatchID a_patch,
-            BlockIndex a_block) const;
-        inline bool isPatchOnDomainBoundary(
-            PatchID a_patch,
-            BlockIndex a_block,
-            Point a_dir) const;
-        inline bool isPatchInBlockBoundary(
-            PatchID a_patch,
-            BlockIndex a_block) const;
-        inline bool isPatchInBlockBoundary(
-            PatchID a_patch,
-            BlockIndex a_block,
-            Point a_dir) const;
-        inline bool isPatchInDomainBoundary(
-            PatchID a_patch,
-            BlockIndex a_block) const;
-        inline bool isPatchInDomainBoundary(
-            PatchID a_patch,
-            BlockIndex a_block,
-            Point a_dir) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isPatchInTriplePointRegion(const MBPoint& patch) const;
         inline bool isPatchInTriplePointRegion(
-            PatchID a_patch,
-            BlockIndex a_block) const;
-        inline bool isPatchInTriplePointRegion(
-            PatchID a_patch,
-            BlockIndex a_block,
-            Point a_dir) const;
-
-        /** Works even when a_patch doesn't exist in the layout */
-        inline std::vector<MBIndex> findAdjacentIndices(
-                MBIndex index,
-                Point dir) const;
-        inline MBIndex findAdjacentIndex(
-                PatchID a_patch,
-                BlockIndex a_block,
-                Point a_codim1Dir) const;
-        inline std::vector<MBIndex> bounds(
-                const MBIndex&  a_index) const;
+            const MBPoint& patch,
+            Point dir) const;
+        inline std::vector<MBIndex> adjacentIndices( const MBPoint& patch) const;
+        inline std::vector<MBIndex> adjacentIndices(
+            const MBPoint& patch,
+            Point dir) const;
         inline unsigned int size() const;
         inline unsigned int localSize() const;
         inline std::vector<Point> boxSizes() const;
         inline Point boxSize(BlockIndex a_block) const;
         MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+        void validateSelf(std::string methodName) const;
+        void validateIndex(const MBIndex& index, std::string methodName) const;
+        void validateBlock(const BlockIndex& block, std::string methodName) const; 
         inline void print() const;
         inline bool defined() const {return m_defined; }
         private:

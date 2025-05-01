@@ -117,6 +117,7 @@ TEST(BoxData, DefaultConstructor) {
 TEST(BoxData, BoxConstructor) {
     Box B = Box(Point(1,2,3,4,5,6,7));
     BoxData<int,3,HOST,4,5> BD(B);
+    EXPECT_TRUE(BD.containsUninitialized());
     EXPECT_TRUE(BD.box()==B);
     EXPECT_EQ(BD.size(),B.size()*3*4*5);
     EXPECT_EQ(BD.linearSize(),BD.size()*sizeof(int));
@@ -182,6 +183,22 @@ TEST(BoxData, MoveConstructor) {
 }
 #endif
 
+TEST(BoxData, ContainsNAN) {
+    Box B = Box::Cube(8);
+    Point p = Point::Ones(3);
+    Box b = (B & B.shift(p + Point::Ones()));
+    BoxData<double, 3, HOST> data(B);
+    data.setVal(1.0);
+    EXPECT_FALSE(data.containsInfOrNAN());
+    data(p) = 1.0/0.0;
+    EXPECT_TRUE(data.containsInfOrNAN());
+    EXPECT_FALSE(data.containsInfOrNAN(b));
+    data.setVal(1.0);
+    EXPECT_FALSE(data.containsInfOrNAN());
+    data(p) = std::nan("");
+    EXPECT_TRUE(data.containsInfOrNAN());
+    EXPECT_FALSE(data.containsInfOrNAN(b));
+}
 
 TEST(BoxData, Arithmetic) {
     Box B = Box::Cube(5);
@@ -318,6 +335,81 @@ TEST(BoxData, ArrayArithmetic) {
     {
         EXPECT_TRUE(compareBoxData(hostDataComps[ii], v0 / A[ii]));
     }
+}
+
+TEST(BoxData, Increment)
+{
+    constexpr int C = 2;
+    constexpr int D = 3;
+    constexpr int E = 4;
+    double scale = 17;
+
+    Box BDst = Box::Cube(8).shift(-Point::Ones());
+    Box BSrc = BDst.shift(Point::X());
+    BoxData<double, C, HOST, D, E> hostDst(BDst);
+    BoxData<double, C, HOST, D, E> hostSrc(BSrc);
+    BoxData<double, C, HOST, D, E> hostSln(BDst);
+
+    hostDst.setVal(7);
+    hostSln.setVal(7);
+    for (int cc = 0; cc < C; cc++)
+    for (int dd = 0; dd < D; dd++)
+    for (int ee = 0; ee < E; ee++)
+    for (auto p : BSrc)
+    {
+        hostSrc(p,cc,dd,ee) = p.sum() + cc*10000 + dd*1000 + ee*100;
+    }
+    
+    hostDst.increment(hostSrc, scale);
+    BoxData<double, C, HOST, D, E> tmp1(BSrc);
+    hostSrc.copyTo(tmp1);
+    tmp1 *= scale;
+    hostSln += tmp1;
+
+    BoxData<double, C, HOST, D, E> hostErr(BDst);
+    hostDst.copyTo(hostErr);
+    hostErr -= hostSln;
+    double error = hostErr.absMax();
+
+    EXPECT_LT(error, 1e-12);
+}
+
+TEST(BoxData, IncrementProduct)
+{
+    constexpr int C = 2;
+    constexpr int D = 3;
+    constexpr int E = 4;
+    double scale = 17;
+
+    Box BDst = Box::Cube(8).shift(-Point::Ones());
+    Box BSrc = BDst.shift(Point::X());
+    BoxData<double, C, HOST, D, E> hostDst(BDst);
+    BoxData<double, C, HOST, D, E> hostSrc(BSrc);
+    BoxData<double, C, HOST, D, E> hostSln(BDst);
+
+    hostDst.setVal(7);
+    hostSln.setVal(7);
+    for (int cc = 0; cc < C; cc++)
+    for (int dd = 0; dd < D; dd++)
+    for (int ee = 0; ee < E; ee++)
+    for (auto p : BSrc)
+    {
+        hostSrc(p,cc,dd,ee) = p.sum() + cc*10000 + dd*1000 + ee*100;
+    }
+    
+    hostDst.incrementProduct(hostSrc, hostSrc, scale);
+    BoxData<double, C, HOST, D, E> tmp1(BSrc);
+    hostSrc.copyTo(tmp1);
+    tmp1 *= hostSrc;
+    tmp1 *= scale;
+    hostSln += tmp1;
+
+    BoxData<double, C, HOST, D, E> hostErr(BDst);
+    hostDst.copyTo(hostErr);
+    hostErr -= hostSln;
+    double error = hostErr.absMax();
+
+    EXPECT_LT(error, 1e-12);
 }
 
 TEST(BoxData, Reduction) {
@@ -519,6 +611,7 @@ TEST(BoxData, Alias) {
     }
 #endif
 }
+
 TEST(BoxData, SliceBasic) {
     int domainSize = 8;
     Box domainBox = Box::Cube(domainSize).grow(1);
@@ -718,6 +811,65 @@ TEST(BoxData, Rotate)
             EXPECT_TRUE(v0(ii) == v1(ii));
         }
     }
+}
+
+TEST(BoxData, MatrixProduct)
+{
+    #if PR_VERBOSE > 0
+    HDF5Handler h5;
+    #endif
+
+    constexpr int CL = 2;
+    constexpr int DL = 4;
+    constexpr int CR = 4;
+    constexpr int DR = 1;
+    int domainSize = 32;
+
+    double dx = 1.0/domainSize;
+    Box domainBox = Box::Cube(domainSize);
+    Point offset_A(1,2,3,4,5,6);
+    Point offset_B(2,1,4,3,6,5);
+    Point k_A(1,2,3,4,5,6);
+    Point k_B(2,1,4,3,6,5);
+
+    BoxData<double, CL, HOST, DL> A(domainBox);
+    BoxData<double, CR, HOST, DR> B(domainBox);
+    BoxData<double, DL, HOST, CL> AT(domainBox);
+    BoxData<double, DR, HOST, CR> BT(domainBox);
+
+    forallInPlace_p(f_phi,  A, dx, k_A, offset_A);
+    forallInPlace_p(f_phi,  B, dx, k_B, offset_B);
+    forallInPlace_p(f_phi,  AT, dx, k_A, offset_A);
+    forallInPlace_p(f_phi,  BT, dx, k_B, offset_B);
+
+    auto ABTest = matrixProduct(A, B);
+    auto ABTTest = matrixProductRightTranspose(A, BT);
+    auto ATBTest = matrixProductLeftTranspose(AT, B);
+    auto ABSoln = Operator::_matrixProductAB2(A, B);
+    auto ABTSoln = Operator::_matrixProductABT2(A, BT);
+    auto ATBSoln = Operator::_matrixProductATB2(AT, B);
+    BoxData<double, CL, HOST, DR> ABError(domainBox);
+    BoxData<double, CL, HOST, DR> ATBError(domainBox);
+    BoxData<double, CL, HOST, DR> ABTError(domainBox);
+    ABError.setToZero();
+    ABError += ABTest;
+    ABError -= ABSoln;
+    ABTError.setToZero();
+    ABTError += ABTTest;
+    ABTError -= ABTSoln;
+    ATBError.setToZero();
+    ATBError += ATBTest;
+    ATBError -= ATBSoln;
+    
+    #if PR_VERBOSE > 0
+    std::cout << "AB Error (Max Norm): " << ABError.absMax() << std::endl;
+    std::cout << "ATB Error (Max Norm): " << ATBError.absMax() << std::endl;
+    std::cout << "ABT Error (Max Norm): " << ABTError.absMax() << std::endl;
+    #endif
+
+    EXPECT_LT(ABError.absMax(), 1e-12);
+    EXPECT_LT(ATBError.absMax(), 1e-12);
+    EXPECT_LT(ABTError.absMax(), 1e-12);
 }
 
 int main(int argc, char *argv[]) {

@@ -224,6 +224,9 @@ namespace Proto
                 BlockIndex    a_srcBlock,
                 Point           a_dir) const;
         
+        inline std::set<BlockIndex> adjacentBlocks(
+                BlockIndex srcBlock,
+                Point dir) const;
 
         /// Equality Operator
         inline bool operator==(const MBGraph& a_rhs) const;
@@ -266,8 +269,6 @@ namespace Proto
         private:
         bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;
-        
-        
     };
 #include "implem/Proto_MBGraphImplem.H"
 } // end namespace Proto

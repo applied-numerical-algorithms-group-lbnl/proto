@@ -1,4 +1,7 @@
 
+#include "../Proto_Point.H"
+namespace Proto {
+    
 ACCEL_DECORATION
 Point::Point()
 {
@@ -552,36 +555,54 @@ void Point::linearOut(char* a_buf) const
     }
 }
 
+std::string Point::str() const {
+    std::ostringstream oss;
+    oss << "(";
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        oss << m_tuple[dir];
+        if (dir < DIM-1)
+        {
+            oss << ", ";
+        }
+    }
+    oss << ")";
+    return oss.str();
+}
+
 void Point::print() const
 {
-    using std::cout;
-    using std::endl;
-    cout << "(";
-    for (int dir = 0; dir < DIM ; dir++)
-    {
-        cout << m_tuple[dir];
-        if(dir < DIM-1) cout << ",";
-    }
-    cout <<   ")"  << endl;
+    std::cout << str() << std::endl;
+    // using std::cout;
+    // using std::endl;
+    // cout << "(";
+    // for (int dir = 0; dir < DIM ; dir++)
+    // {
+    //     cout << m_tuple[dir];
+    //     if(dir < DIM-1) cout << ",";
+    // }
+    // cout <<   ")"  << endl;
 }
 
 std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
 {
-    a_os << "(" ;
-    for (int dir = 0; dir < DIM; dir++) 
-    {
-      //keeps positive and negative stuff lined up --dtg
-      if(a_pt[dir] >= 0)
-      {
-        a_os << " ";
-      }
-        a_os << a_pt[dir];
-        if (dir < DIM-1) 
-        {
-            a_os << ",";
-        }
-    }
-    a_os << ")";
+    // a_os << "(" ;
+    // for (int dir = 0; dir < DIM; dir++) 
+    // {
+    //   //keeps positive and negative stuff lined up --dtg
+    //   if(a_pt[dir] >= 0)
+    //   {
+    //     a_os << " ";
+    //   }
+    //     a_os << a_pt[dir];
+    //     if (dir < DIM-1) 
+    //     {
+    //         a_os << ",";
+    //     }
+    // }
+    // a_os << ")";
+    // return a_os;
+    a_os << a_pt.str();
     return a_os;
 }
 
@@ -600,3 +621,4 @@ std::istream& operator >>(std::istream& a_is,  Point& a_pt)
   a_is >> dum;
   return a_is;
 }
+} // end namespace Proto

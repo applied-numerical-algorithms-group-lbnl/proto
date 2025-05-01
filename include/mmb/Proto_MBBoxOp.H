@@ -288,6 +288,9 @@ class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
     /// Get Grid Spacing (Mapped Coordinates)
     inline Array<T, DIM> dx() const;
 
+    /// Get Differential Area (Mapped Coordinates) 
+    inline Array<T, DIM> da() const;
+
     /// Get Coordinates
     /** Output is immutable and node centered */
     inline const BoxData<double, DIM, MEM>& x() const;

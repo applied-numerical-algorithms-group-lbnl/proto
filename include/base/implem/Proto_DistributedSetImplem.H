@@ -14,6 +14,7 @@ DistributedSet<DATA>::DistributedSet()
 template <typename DATA>
 DistributedSet<DATA>::~DistributedSet()
 {
+    #ifdef PR_MPI
     proto_free(m_localBufferSizesInBytes);
     proto_free(m_bufferOffsetsInBytes);
     if (m_sendBufferSizeInBytes > 0)
@@ -24,6 +25,7 @@ DistributedSet<DATA>::~DistributedSet()
     {
         proto_free(m_recvBuffer);
     }
+    #endif
 }
 
 template <typename DATA>
@@ -41,6 +43,14 @@ template <typename DATA>
 void DistributedSet<DATA>::exchange()
 {
 #ifdef PR_MPI
+    if (numProc() == 1)
+    {
+        for (auto item : m_localBuffer)
+        {
+            m_globalSet.insert(item);
+        }
+        return;
+    }
     MPI_Barrier(MPI_COMM_WORLD);
 
     // GET BUFFER SIZES

@@ -1,3 +1,7 @@
+#include "../Proto_CoordPermutation.H"
+
+namespace Proto {
+
 CoordPermutation::CoordPermutation()
 {
     for (int ii = 0; ii < DIM; ii++)
@@ -6,12 +10,6 @@ CoordPermutation::CoordPermutation()
         m_matrix[ii][ii] = 1;
     }
 }
-/*
-CoordPermutation::CoordPermutation(Array<Array<int, DIM>, DIM> a_matrix)
-{
-    m_matrix = a_matrix;
-}
-*/
 
 CoordPermutation::CoordPermutation(
         std::vector<Array<int, 3>>& a_mapping)
@@ -161,8 +159,6 @@ CoordPermutation CoordPermutation::inverse() const
 
 Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
-    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
     Point src0 = a_srcBox.low();
     Point dst0 = a_dstBox.low();
     Box B0 = a_srcBox.shift(-src0);
@@ -180,8 +176,6 @@ Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Bo
 
 Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
-    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
     Point src0 = a_srcBox.low();
     Point dst0 = a_dstBox.low();
     Box B0 = a_srcBox.shift(-src0);
@@ -334,4 +328,4 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
     R.defineMatrix(M);
     return R;
 }
-
+} // end namespace Proto

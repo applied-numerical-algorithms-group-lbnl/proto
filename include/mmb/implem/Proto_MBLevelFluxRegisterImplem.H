@@ -111,7 +111,8 @@ void MBFluxRegisterCopier<T,C,MEM>::addCoarseMotionItems (MBLevelFluxRegister<T,
             Box coarseBox = ri.data().box();
             Box fineBox = coarseBox.refine(refRatio);
             PatchID finePatch = fineBox.low() / fineBoxSize;
-            MBIndex adjFineIndex = fineLayout.findAdjacentIndex(finePatch, block, ri.dir());
+            //MBIndex adjFineIndex = fineLayout.findAdjacentIndex(finePatch, block, ri.dir());
+            MBIndex adjFineIndex = fineLayout.adjacentIndices(MBPoint(finePatch, block), ri.dir())[0];
             PROTO_ASSERT(adjFineIndex != *fineLayout.end(),
                 "MBFluxRegisterCopier::addCoarseMotionItems | Error: Data corruption");
             
@@ -192,6 +193,9 @@ MBIndex MBFluxRegisterCopier<T,C,MEM>::getCoarseIndex(
     MBIndex a_fineIndex,
     Point a_dir)
 {
+    PROTO_ASSERT(a_dir.codim() == 1,
+        "MBFluxRegisterCopier::getCoarseIndex | Error: direction %s is not codimension 1",
+        a_dir.str());
     auto& fineLayout = a_fluxRegister.m_fineLayout;
     auto& coarseLayout = a_fluxRegister.m_crseLayout;
     
@@ -207,7 +211,7 @@ MBIndex MBFluxRegisterCopier<T,C,MEM>::getCoarseIndex(
     {
         return coarseIndex;
     } else {
-        return coarseLayout.findAdjacentIndex(coarsePatch, block, a_dir);
+        return coarseLayout.adjacentIndices(MBPoint(coarsePatch, block), a_dir)[0];
     }
 }
 
@@ -378,8 +382,13 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisters(
 
     for (auto dir : Point::DirectionsOfCodim(1))
     {
-        MBIndex fineIndexAdj = m_fineLayout.findAdjacentIndex(a_finePatch, block, dir);
-        addCoarseRegisterFromAdjacent(a_finePatch, a_coarseIndex, dir, fineIndexAdj);
+        MBPoint finePatch(a_finePatch, block);
+        auto adjacentIndices = m_fineLayout.adjacentIndices(finePatch, dir);
+        if (adjacentIndices.size() > 0)
+        {
+            addCoarseRegisterFromAdjacent(a_finePatch, a_coarseIndex, dir, adjacentIndices[0]);
+        }
+        
     }
 }
 
@@ -498,13 +507,12 @@ bool MBLevelFluxRegister<T,C,MEM>::adjacentInProblemDomain(
     MBIndex a_fineIndex,
     Point a_dir) const
 {
-    PatchID finePatch = m_fineLayout.point(a_fineIndex);
-    BlockIndex block = m_fineLayout.block(a_fineIndex);
-    Box patchDomain = m_fineLayout.patchDomain().getBlock(block).box();
-    PatchID adjFinePatch = finePatch + a_dir;
+    auto finePatch = m_fineLayout.patch(a_fineIndex);
+    Box patchDomain = m_fineLayout.patchDomain().getBlock(finePatch.block).box();
+    auto adjFinePatch = finePatch + a_dir;
 
-    if (patchDomain.containsPoint(adjFinePatch)) { return true; }
-    else if (m_fineLayout.isPatchOnBlockBoundary(finePatch, block, a_dir)) { return true; }
+    if (patchDomain.containsPoint(adjFinePatch.point)) { return true; }
+    else if (m_fineLayout.isPatchOnBlockBoundary(finePatch, a_dir)) { return true; }
     else { return false; }
 }
 
@@ -513,13 +521,17 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
     MBIndex a_fineIndex,
     Point a_dir)
 {
+    PROTO_ASSERT(a_dir.codim() == 1,
+        "MBLevelFluxRegister::addFineRegisterFromAdjacent | Error: Invalid direction %s",
+        a_dir.str());
     int coord = a_dir.firstNonZeroIndex();
     int side = (a_dir[coord] < 0) ? 0 : 1;
     BlockIndex block = m_fineLayout.block(a_fineIndex);
 
-    Point finePatch = m_fineLayout.point(a_fineIndex);
-    MBIndex adjFineIndex = m_fineLayout.findAdjacentIndex(finePatch, block, a_dir);
-    if (adjFineIndex == *m_fineLayout.end())
+    auto finePatch = m_fineLayout.patch(a_fineIndex);
+    //MBIndex adjFineIndex = m_fineLayout.findAdjacentIndex(finePatch, block, a_dir);
+    auto adjFineIndices = m_fineLayout.adjacentIndices(finePatch, a_dir);
+    if (adjFineIndices.size() == 0)
     {
         Point refRatio = m_refRatios[block];
         Box fineBox = m_fineLayout[a_fineIndex];

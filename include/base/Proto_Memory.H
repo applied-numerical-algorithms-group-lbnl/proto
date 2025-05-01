@@ -1,10 +1,14 @@
 #pragma once
 #ifndef _PROTO_MEMORY_
 #define _PROTO_MEMORY_
+
 #include <cstring>
+#include <limits>
+#include <sys/resource.h>
+
 #include "Proto_MemType.H"
 
-#include <sys/resource.h>
+#define PR_UNALLOCATED_FLOAT 7.77e77
 
 //#define   RUSAGE_SELF     0
 //#define   RUSAGE_CHILDREN     -1
@@ -74,6 +78,17 @@ inline void proto_free(void* a_buffer);
 */
 inline MemType pointerMemType(const void* a_ptr);
 
-#include "implem/Proto_MemoryImplem.H"
+template<typename T>
+inline constexpr T proto_unallocated()
+{
+    if constexpr (std::is_floating_point_v<T>)
+    {
+        T val = (T)PR_UNALLOCATED_FLOAT;
+        return val;
+    } else {
+        return std::numeric_limits<T>::max()-1;
+    }
+}
+
 }
 #endif

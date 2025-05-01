@@ -478,13 +478,17 @@ DisjointBoxLayout::print(std::string a_name) const
         return;
     }
     pr_out() << std::right;
+    double maxDomainSize = m_problemDomain.box().sizes().max();
+    int numDigits = log(maxDomainSize)/log(10.0);
+    int pointWidth = 2 + (DIM-1)*2 + DIM*numDigits;
+    int boxWidth = 2*pointWidth + 3;
     for (int ii = 0; ii < size(); ii++)
     {
         Point p = boxes()[ii].first;
         Box b = Box(p,p).refine(m_boxSize);
-        pr_out() << std::setw(4) << boxes()[ii].second << " | ";
-        pr_out() << b << " | ";
-        pr_out() << p << std::endl;
+        pr_out() << std::setw(4) << boxes()[ii].second << "  |  ";
+        pr_out() << std::setw(pointWidth) << p << "  |  ";
+        pr_out() << std::setw(boxWidth) << b << std::endl;
     }
     pr_out() << setfill(' ') << std::endl;
 }

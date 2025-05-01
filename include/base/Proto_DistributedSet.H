@@ -10,13 +10,13 @@ namespace Proto
     class DistributedSet
     {
         public:
-        DistributedSet();
-        ~DistributedSet();
-        void insert(const DATA& item);
-        void exchange();
-        void clearLocal();
-        void clearGlobal();
-        std::set<DATA> data() { return m_globalSet; }
+        inline DistributedSet();
+        inline ~DistributedSet();
+        inline void insert(const DATA& item);
+        inline void exchange();
+        inline void clearLocal();
+        inline void clearGlobal();
+        inline std::set<DATA> data() { return m_globalSet; }
 
         private:
         

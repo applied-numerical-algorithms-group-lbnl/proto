@@ -15,7 +15,6 @@ namespace {
         std::vector<Point> patches;
         for (auto patch : patchBox)
         {
-            patches.push_back(patch);
             if (patch != Point::Zeros()) { patches.push_back(patch); }
         }
         std::array<bool, DIM> periodicity;
@@ -41,7 +40,52 @@ namespace {
         }
     PROTO_KERNEL_END(f_testMapF, f_testMap);
 }
-TEST(HDF5, ReadMBLevel)
+TEST(HDF5, ReadWritePatch)
+{
+    Box B = Box::Cube(8);
+    BoxData<double, 3, HOST> data(B);
+    forallInPlace_p(f_pointID, data);
+    HDF5Handler h5;
+    h5.writePatch(data, "TEST_WRITE_PATCH");
+    //todo: implement readPatch
+}
+TEST(HDF5, ReadWriteLevel)
+{
+    int domainSize = 32;
+    int boxSize = 8;
+    int ghostSize = 3;
+
+    double dx = 1.0/domainSize;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
+
+    auto layout = testLayout(domainSize, Point::Ones(boxSize));
+    layout.print();
+    LevelBoxData<double, 3, HOST> writeData(layout, Point::Ones(ghostSize));
+    LevelBoxData<double, 3, HOST> readData(layout, Point::Ones(ghostSize));
+    writeData.initialize(f_phi, dx, k, offset);
+
+    HDF5Handler h5;
+    h5.writeLevel(writeData, "TEST_WRITE_LEVEL");
+    h5.readLevel(readData, "TEST_WRITE_LEVEL");
+
+    LevelBoxData<double, 3, HOST> errorData(layout, Point::Ones(ghostSize));
+    errorData.setVal(0);
+    double error = 0;
+    for (auto index : layout)
+    {
+        auto& wi = writeData[index];
+        auto& ri = readData[index];
+        auto& ei = errorData[index];
+        EXPECT_EQ(wi.box(), ri.box());
+
+        wi.copyTo(ei);
+        ei -= ri;
+        error = max(error, ei.absMax());
+    }
+    EXPECT_LT(error, 1e-12);
+}
+TEST(HDF5, ReadWriteMBLevel)
 {
     HDF5Handler h5;
     int domainSize = 4;
@@ -63,10 +107,10 @@ TEST(HDF5, ReadMBLevel)
     MBDisjointBoxLayout layout(domain, patches, boxSizes);
     MBLevelBoxData<double, DIM, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
-    h5.writeMBLevel(data, "DATA_0");
+    h5.writeMBLevel(data, "TEST_WRITE_MB_LEVEL");
     
     MBDisjointBoxLayout newLayout;
-    h5.readMBLayout(newLayout, domain.graphPtr(), "DATA_0");
+    h5.readMBLayout(newLayout, domain.graphPtr(), "TEST_WRITE_MB_LEVEL");
     EXPECT_TRUE(newLayout.compatible(layout));
     for (auto iter : layout)
     {
@@ -75,7 +119,7 @@ TEST(HDF5, ReadMBLevel)
 
     MBLevelBoxData<double, DIM, HOST> newData(newLayout, Point::Ones());
     newData.setVal(7);
-    h5.readMBLevel(newData, "DATA_0");
+    h5.readMBLevel(newData, "TEST_WRITE_MB_LEVEL");
 
     for (auto iter : layout)
     {

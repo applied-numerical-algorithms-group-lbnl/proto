@@ -2,13 +2,15 @@
 #ifndef _PROTO_BOX_
 #define _PROTO_BOX_
 
-#include "Proto_MayDay.H"
-#include "Proto_Point.H"
-#include "Proto_LoHiSide.H"
-#include "Proto_Centering.H"
 #include <cstdlib> //for size_t
-#include <iostream>
+#include <iostream> //pretty printing
+#include <sstream> //pretty printing
 #include <cmath>
+
+#include "Proto_MayDay.H"
+#include "Proto_Face.H"
+#include "Proto_Point.H"
+#include "Proto_Centering.H"
 
 namespace Proto 
 {
@@ -340,6 +342,8 @@ namespace Proto
           */
         inline void operator&=(const Box& a_rhs); 
 
+        inline Box operator+(const Box& box) const;
+        inline void operator+=(const Box& box);
         /// Add Point Operator
         /**
           Returns a new Box which has been grown such that it contains a_pt. 
@@ -369,7 +373,7 @@ namespace Proto
           */
         inline void operator&=(const Point& a_pt);
 
-        //inline void operator&=(const Box& a_rightBox);
+        
 
         /// Equality Operator
         /**
@@ -932,6 +936,8 @@ namespace Proto
           Prints *this using the format <code>[low, high]</code>
           */ 
         inline void print() const; 
+
+        inline std::string str() const;
         ///@}
 
         //private:  // these should be treated as private.  Some wise guy needs access.
@@ -947,7 +953,8 @@ namespace Proto
      /// OStream Operator 
     inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
-        a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        //a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        a_os << a_box.str();
         return a_os;
     }
 
@@ -1038,6 +1045,5 @@ namespace Proto
             int m_pos;
     }; //end class BoxIterator
 
-    #include "implem/Proto_BoxImplem.H"
 } //end namespace Proto
 #endif //end include guard

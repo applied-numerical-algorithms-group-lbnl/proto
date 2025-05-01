@@ -1,3 +1,7 @@
+#include "../Proto_Box.H"
+
+namespace Proto {
+
 //=================================================================================================
 // Constructors ||
 //==============++ 
@@ -275,6 +279,19 @@ void Box::operator&=(const Box& a_rhs)
 {
     Box intersect = a_rhs & (*this);
     *this = intersect;
+}
+
+Box Box::operator+(const Box& a_rhs) const
+{
+    Box combined = *this;
+    combined &= a_rhs.low();
+    combined &= a_rhs.high();
+    return combined;
+}
+
+void Box::operator+=(const Box& a_rhs)
+{
+    *this = (*this) + a_rhs;
 }
 
 Box Box::operator&(const Point& a_pt) const
@@ -760,9 +777,17 @@ BoxIterator Box::rend() const
     return BoxIterator(*this, -1);
 }
 
+std::string Box::str() const
+{
+    std::stringstream oss;
+    oss << "[" << low().str() << "," << high().str() << "]";
+    return oss.str();
+}
+
 void Box::print() const 
 {
-    std::cout<<*this<<std::endl;
+    std::cout << str() << std::endl;
+    //std::cout<<*this<<std::endl;
 }
 
 size_t Box::linearSize() const
@@ -863,3 +888,4 @@ BoxIterator BoxIterator::operator--(int)
     m_pos--;
     return ptr;
 }
+} // end namespace Proto

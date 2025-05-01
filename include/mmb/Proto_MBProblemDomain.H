@@ -24,8 +24,49 @@ namespace Proto
                 return (block < a_rhs.block);
             }
         }
+        inline bool operator==(const MBPoint a_rhs) const{
+            return point == a_rhs.point && block == a_rhs.block;
+        }
+        struct Hash
+        {
+            std::size_t operator()(const MBPoint &key) const
+            {
+                std::size_t seed = 0;
+
+                // Hash combine function
+                auto hash_combine = [](std::size_t& seed, std::size_t value) {
+                    seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                };
+        
+                // Hash the vector elements
+                for (int dd = 0; dd < DIM; dd++) {
+                    hash_combine(seed, std::hash<int>{}(key.point[dd]));
+                }
+        
+                // Hash the unsigned int
+                hash_combine(seed, std::hash<int>{}(key.block));
+        
+                return seed;
+            }
+        };
         
     };
+
+    inline MBPoint operator+(const MBPoint& mbpoint, const Point& p)
+    {
+        return MBPoint(mbpoint.point + p, mbpoint.block);
+    }
+    inline MBPoint operator+(const Point& p, const MBPoint& mbpoint)
+    {
+        return mbpoint + p;
+    }
+    inline MBPoint operator+(const MBPoint& p1, const MBPoint& p2)
+    {
+        PROTO_ASSERT(p1.block == p2.block,
+            "MBPoint::operator+ | Error: MBPoint objects are in different blocks (%i and %i)",
+            p1.block, p2.block);
+        return MBPoint(p1.point + p2.point, p1.block);
+    }
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the

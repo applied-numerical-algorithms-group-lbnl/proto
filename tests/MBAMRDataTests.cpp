@@ -22,7 +22,7 @@ TEST(MBAMRData, Construction) {
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 
     auto coarsePatches = domain.patches(Point::Ones(boxSize));
-    MBAMRGrid grid(domain, coarsePatches, boxSizeVect, refRatios);
+    MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
     for (int li = 1; li < numLevels; li++)
     {
         auto domain = grid[li].domain();

@@ -557,19 +557,8 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
     MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
-  // PR_TIME("MBLevelBoxData::bound");
-    return layout().isBlockBoundary(a_index, a_dir, a_block);
-    /*
-    auto &boundaries = bounds(a_index, a_dir);
-    for (auto b : boundaries)
-    {
-        if (m_layout.block(b.adjIndex) == a_block)
-        {
-            return true;
-        }
-    }
-    return false;
-    */
+    auto patch = layout().patch(a_index);
+    return layout().isBlockBoundary(patch, a_dir, a_block);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>

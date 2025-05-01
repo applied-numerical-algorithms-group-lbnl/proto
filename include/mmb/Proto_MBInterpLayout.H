@@ -11,7 +11,7 @@ namespace Proto
         public:
         inline MBInterpLayout(){}
         inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
-        inline bool addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
+        inline void addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
         inline void ignoreAxis(int dir);
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
 
@@ -170,14 +170,13 @@ namespace Proto
         Point point,
         MBIndex index) const
     {
-        PatchID patch = m_layout.point(index);
-        BlockIndex block = m_layout.block(index);
+        auto patch = m_layout.patch(index);
         Box patchBox = m_layout[index];
         std::vector<Point> initialFootprint(footprint.begin(), footprint.end());
         for (auto dir : Point::DirectionsOfCodim(1))
         {
             if (dir * footprintMask() == Point::Zeros()) { continue; }
-            if (m_layout.isPatchOnDomainBoundary(patch, block, dir))
+            if (m_layout.isPatchOnDomainBoundary(patch, dir))
             {
                 int coord = dir.firstNonZeroIndex();
                 Box faceBox = patchBox.edge(dir);

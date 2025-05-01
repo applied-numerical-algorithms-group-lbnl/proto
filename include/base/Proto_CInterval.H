@@ -92,7 +92,5 @@ namespace Proto {
     /// CInterval IOStream Operator
     inline std::ostream& operator<<(std::ostream& a_os, const CInterval& a_int);
 
-
-#include "implem/Proto_CIntervalImplem.H"
 } // end namespace Proto
 #endif // end include guard
