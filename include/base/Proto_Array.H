@@ -20,7 +20,9 @@ template<typename T, size_t N>
 class ArrayIterator;
 template<typename T, size_t N>
 class ConstArrayIterator;
-
+/// @brief A templated constant size array object similar to std::array, but with the ability to be used inside of device kernels
+/// @tparam T 
+/// @tparam N 
 template<typename T, size_t N>
 class Array {
 

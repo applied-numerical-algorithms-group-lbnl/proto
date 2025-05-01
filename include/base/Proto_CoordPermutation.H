@@ -9,6 +9,7 @@
 
 namespace Proto
 {
+    /// @brief Defines discrete rotations in logically rectangular coordinate systems. 
     class CoordPermutation
     {
         public:

@@ -7,7 +7,7 @@ namespace Proto {
 
 /// Abstract Box-Scope Operator
 /**
-    BoxOp is the class from which all operators on AMR
+    BoxOp is the class from which all operators on single patches, levels of patches, and AMR
     hierarchies are derived. Representable operators are of the form:
 
     L(phi, rho) = d*D(phi, rho)*I + f*[Div(F(phi, rho)) + S(phi, rho)]
