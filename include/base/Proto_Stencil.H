@@ -104,6 +104,10 @@ namespace Proto {
             */
             inline static Shift Ones(int a_scale=1){return Shift(Point::Ones(a_scale));};
 
+            inline static Shift X(int scale = 1) { return Shift(Point::X()*scale); }
+            inline static Shift Y(int scale = 1) { return Shift(Point::Y()*scale); }
+            inline static Shift Z(int scale = 1) { return Shift(Point::Z()*scale); }
+
             /// Get Shift Point
             inline Point& point(){ return m_shift; }
 
