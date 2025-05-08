@@ -318,6 +318,12 @@ namespace Proto
                 std::string a_filename,
                 Args... a_params);
 
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBLevelBoundsUnified(
+                std::vector<std::string> a_varNames,
+                const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+                std::string a_filename,
+                Args... a_params);
 
         template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void writeMBLevelBounds(

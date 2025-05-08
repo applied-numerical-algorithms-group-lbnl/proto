@@ -85,14 +85,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
                         a_grid[li], Point::Ones(2), N0));
         } else {
-            //FIXME: assumes no subcycling
+            //FIXME: assumes point relaxation only
             m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
                         a_grid[li], Point::Ones(), 1));
         }
 
         // build data holders
         m_residual[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), Point::Zeros());
-        //m_boundRegisters[li].define(a_grid.getLevel(li), 1, Point::Zeros());
         if (li < m_numLevels-1)
         {
             m_state_0[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li),Point::Zeros());
@@ -133,6 +132,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     //TODO: need to average down onto coarsest level first
     T r0 = m_mg[0].resnorm(crseRes, crseState, crseForce);
     T r = r0;
+    m_solveIter = 0;
     for (int ii = 0; ii < a_maxIter; ii++)
     {
         vCycle(a_state, a_force, fineForce, m_numLevels-1);
@@ -145,6 +145,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
         if (r/r0 < a_tolerance) {
             return r;
         }
+        m_solveIter++;
     }
     return r;
 }

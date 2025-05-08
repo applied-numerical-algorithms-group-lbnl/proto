@@ -162,6 +162,20 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_numPreRelax = 4;
     m_numPostRelax = 4;
     m_numBottomRelax = 2;
+
+    // print domains
+    // for (int li = 0; li < a_numLevels; li++)
+    // {
+    //     pr_out() << std::endl << "LEVEL: " << li << std::endl;
+    //     pr_out() << "Layout of state, state_0, force, residual: (size = " << layouts[li].numBoxes() << ")" << std::endl;
+    //     layouts[li].print();
+    //     if (li < a_numLevels-1)
+    //     {
+    //         pr_out() << "Layout of local: (size = " << m_local[li]->layout().numBoxes() << ")" << std::endl;
+    //         m_local[li]->layout().print();
+    //     }
+    // }
+    PROTO_ASSERT(validate(a_fineLayout, a_refRatios, a_numLevels), "MBMultigrid Object Failed Validation on Construction");
 }
 
 template <
@@ -345,18 +359,41 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
     m_relaxIter = 0;
     // lambda ~ 0.5 / spectral radius
     Stencil<T> INCR = (-lambda(a_level))*Shift::Zeros();
+    #if PR_VERBOSE > 1
+    HDF5Handler h5;
+    h5.writeMBLevel(m_maps[a_level], a_force, "MBMultigrid_Relax_Force_S%i_L%i", m_solveIter, m_solveLevel);
+    #endif
     for (int ii = 0; ii < a_numIter; ii++)
     {
-        interpBlockBoundaries(a_state, a_level);
+        #if PR_VERBOSE > 1
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
+        h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
+        #endif
+        //interpBlockBoundaries(a_state, a_level);
+        a_state.exchange();
+        #if PR_VERBOSE > 1
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
+        h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
+        #endif
+        m_blockInterp[a_level]->apply(a_state, a_state);
         residual(*m_residual[a_level], a_state, a_force, a_level);
+        #if PR_VERBOSE > 1
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_2", m_solveIter, m_solveLevel, m_relaxIter);
+        h5.writeMBLevel(m_maps[a_level], *m_residual[a_level], "MBMultigrid_Relax_Residual_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+        #endif
         for (auto iter : a_state.layout())
         {
             auto& state_i = a_state[iter];
             auto& res_i = (*m_residual[a_level])[iter];
             state_i += INCR(res_i);
         }
+        #if PR_VERBOSE > 1
+        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_3", m_solveIter, m_solveLevel, m_relaxIter);
+        #endif
         m_relaxIter++;
     }
+
+    abort();
 }
 
 template <

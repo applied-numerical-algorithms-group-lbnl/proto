@@ -48,6 +48,23 @@ namespace Proto
             }
             return unionBox;
         }
+        inline Point ghost()
+        {
+            Box B(Point::Zeros());
+            auto doms = domains(B);
+            for (auto di : doms)
+            {
+                B += di;
+            }
+            Point H = B.high();
+            Point L = B.low();
+            Point g;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                g[ii] = max(abs(H[ii]), abs(L[ii]));
+            }
+            return g;
+        }
 
     protected:
         

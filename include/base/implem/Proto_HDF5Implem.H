@@ -1461,6 +1461,30 @@ void HDF5Handler::writeMBLevel(
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevelBoundsUnified(
+        std::vector<std::string> a_varNames,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    MBLevelBoxData<T, C, MEM, CTR> data(a_data.layout(), a_data.ghost()[1]);
+    data.setVal(0);
+    for (auto iter : a_data.layout())
+    {
+        for (auto dir : Point::Directions())
+        {
+            auto bounds = a_data.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                auto& di = data[iter];
+                bound.localData->copyTo(di);
+            }
+        }
+    }
+    writeMBLevel(data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevelBounds(
         std::vector<std::string> a_varNames,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,

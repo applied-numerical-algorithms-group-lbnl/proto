@@ -14,7 +14,17 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     using MBBoxOp<T, MAP, 1, 0, MEM>::MBBoxOp;
     
     // How many ghost cells does the operator need from the state variables
-    inline static Point ghost() { return Point::Ones(3);}
+    inline static Point ghost()
+    {
+        Point diffGhost = Point::Zeros();
+        Point matProdGhost = Point::Zeros();
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            diffGhost = absMaxPoint(diffGhost, MappedFaceAverageDiffOp<T>(ii).ghost());
+            matProdGhost = absMaxPoint(matProdGhost, FaceAverageMatrixProductOp<T>(ii).ghost());
+        }
+        return Point::Ones() + diffGhost + matProdGhost;
+    }
     
     // How many ghost cells does the operator need from the auxiliary variables
     inline static Point auxGhost() { return Point::Zeros();}

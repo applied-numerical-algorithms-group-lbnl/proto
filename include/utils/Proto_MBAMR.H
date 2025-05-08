@@ -181,7 +181,7 @@ public:
             int                   a_level);
 private:
 
-   
+    int m_solveIter;
     MBAMRMap<MAP, MEM> m_map; ///< AMR Map handle
 
     std::vector<MBMultigrid<OPType, MAP, T, BCType, MEM>> m_mg; ///< MG solvers for each level

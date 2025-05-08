@@ -533,7 +533,7 @@ namespace Proto
     /// Unary Negation
     inline Point operator-(Point a_pt) { return a_pt*(-1); }
 
-    inline Point minPoint(Point& a_p1, Point& a_p2)
+    inline Point minPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)
@@ -543,7 +543,7 @@ namespace Proto
         return p;
     }
 
-    inline Point maxPoint(Point& a_p1, Point& a_p2)
+    inline Point maxPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)
@@ -553,7 +553,7 @@ namespace Proto
         return p;
     }
 
-    inline Point absMaxPoint(Point& a_p1, Point& a_p2)
+    inline Point absMaxPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)

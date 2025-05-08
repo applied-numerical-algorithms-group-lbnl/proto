@@ -321,6 +321,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     
     mg.op(numLevels-1)(rhs, phi);
     phi.setVal(0);
+    res.setVal(0);
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE_XPOINT");
     h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_XPOINT");
