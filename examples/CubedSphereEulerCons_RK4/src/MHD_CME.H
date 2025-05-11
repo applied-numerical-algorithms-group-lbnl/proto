@@ -459,39 +459,20 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 a_W(iBX) = a_W_CME(iBX);
                 a_W(iBY) = a_W_CME(iBY);
                 a_W(iBZ) = a_W_CME(iBZ);
-                double beta = 0.1;
-                a_W(iP) = beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
+                // double beta = 0.1;
+                // a_W(iP) = beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
                 }
             },W_point, W_CME, Bmag_CME, a_gamma);
             MPI_Barrier(MPI_COMM_WORLD);
 
-            W_point.copyTo(Wout[dit]);
-            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME3");
+            // W_point.copyTo(Wout[dit]);
+            // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME3");
 
             BoxData<double, NUMCOMPS, HOST> JUTemp;
             eulerOp[dit].primToCons(JUTemp, W_point, a_dVolrLev[dit], a_gamma, dx[2], block);
-            if (procID()==5) h5.writePatch(1,JUTemp,"JUTemp");
+            // if (procID()==5) h5.writePatch(1,JUTemp,"JUTemp");
             JUTemp.copyTo(a_JU[dit]);
 
-        }
-        a_JU.copyTo(USph_CME);
-        CubedSphereShell::consToSphInterpEuler(USph_CME,a_iop,a_dVolrLev, 4); // Transform a_JU -> USph.
-        for (auto dit : a_layout)
-        {
-            auto block = a_layout.block(dit);
-            Box blockBox = a_layout.getBlock(block).domain().box();
-            eulerOp[dit].PreStagePatch(USph_CME[dit],dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,0);
-            Array<double, DIM> dx = eulerOp[dit].dx();
-            double dxiPerp = dx[2];
-            BoxData<double> radius(a_dVolrLev[dit].box());
-            BoxData<double, DIM, HOST> Dr(a_dVolrLev[dit].box());
-            BoxData<double, DIM, HOST> adjDr(a_dVolrLev[dit].box());
-            eulerOp[dit].radialMetrics(radius, Dr, adjDr, a_dVolrLev[dit], Dr.box());
-            
-            BoxData<double, NUMCOMPS, HOST> W_point(USph_CME[dit].box());
-            eulerOp[dit].sphToPrim_2O(W_point,USph_CME[dit],block); // Transform to primitive variables, spherical velocities.
-            W_point.copyTo(Wout[dit]);
-            if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME4");
         }
       }
 }

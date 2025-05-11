@@ -460,6 +460,17 @@ public:
     double a_gamma);
 // End CME
 
+// Begin Floor P
+static inline void
+P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
+  MBLevelBoxData<T, 1, MEM> &a_dVolrLev,
+  MBInterpOp &a_iop,
+  MBDisjointBoxLayout &a_layout,
+  double a_time,
+  double a_dt,
+  double a_gamma);
+// End Floor P
+
   /// Local boundary conditions here. 
   inline void
   PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_UStage,

@@ -141,9 +141,8 @@ int main(int argc, char *argv[])
       OP::Insert_CME(JU,dVolrLev,iop,layout,time,dt,gamma);
 
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
-    
-      Write_W(JU, eulerOp, iop, restart_step, time, dt);      
-      // Write_W_Phil(JU, eulerOp, iop, restart_step, time, dt);      
+      OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
+      Write_W(JU, eulerOp, iop, restart_step, time, dt);            
       {
         HDF5Handler h5;
         MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
@@ -157,13 +156,12 @@ int main(int argc, char *argv[])
             auto &USph_i = JUTemp[dit];
             eulerOp[dit].PreStagePatch(USph_i,JU[dit],dVolrLev[dit],blockBox,0.,0.,0);
           }
-        // auto map = CubedSphereShell::Map(JUTemp);
-        // h5.writeMBLevel({}, map, JUTemp, "USphere");
       }
     
-  //#if 0 // Begin debug comment.
+  
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
+#if 0 // Begin debug comment.
     auto initialCons = CubedSphereShell::conservationSum(JU);
     for (int comp = 0; comp< 8; comp++)
       {
@@ -178,30 +176,29 @@ int main(int argc, char *argv[])
       {
         cout << "mass = " << mass/discreteVol << ", energy = " << energy/discreteVol << ", momentum scale = " << momentum/discreteVol << endl;
       }
+#endif // End debug comment.
     if (lev == 0)
       {
         double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
-        // if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
         dt = 0.2*dtcfl1*ParseInputs::get_CFL();
-        // if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
       }
     if (convTestType > 2) max_iter = 1;
     
     for (int iter = restart_step + 1; iter <= max_iter; iter++)
     {
       auto start = chrono::steady_clock::now();
+      if ((iter % ParseInputs::get_P_floor_cadence()) == 0) OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
       if (convTestType == 0)
         {
           double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
-          // if (procID() == 0) cout << "dt_{CFL=1} = " << dtcfl1;
           dt = dtcfl1*ParseInputs::get_CFL();
-          // if (procID() == 0) cout << " ,input CFl dt = " << dt << endl;
         }
       if (convTestType < 3)
         {
           rk4.advance(JU, dVolrLev, dt, time, temporal_order);
           time += dt;
         }
+#if 0
       else
         {
           PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
@@ -236,10 +233,12 @@ int main(int argc, char *argv[])
                 }
             }
         }
+#endif
       if (iter % write_cadence == 0)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
           // Check conservation.
+#if 0
           if (convTestType < 3)
             {
               Array<double,8> consRadial = rk4.getCons<8>();
@@ -282,35 +281,22 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+#endif
         }
       // Checkpointing.
       if ((iter % checkpoint_cadence == 0) || (iter == max_iter))
         {
-          std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
-          h5.setTime(time);
-		      h5.setTimestep(dt);
-          h5.setIter(iter);
-          h5.writeMBLevel(JU, check_file_name);
-          if (procID() == 0) cout << "Checkpointed at iter " << iter << endl;
-          int iter_to_delete = iter - (checkpoint_cadence*ParseInputs::get_max_checkpoint_files());
-          if (iter_to_delete > restart_step)
-          {
-            std::string filename_to_delete=ParseInputs::get_checkpoint_file_prefix()+"_"+std::to_string(iter_to_delete)+".hdf5";
-            const char* str = filename_to_delete.c_str();
-            if (procID() == 0) std::remove(str);
-          }
+          Write_Checkpoint(JU, iter, restart_step, time, dt);
         }
-      auto end = chrono::steady_clock::now();
-      
+     
       int probe_cadence_new = floor(time/probe_cadence);
       if (probe_cadence_new > probe_cadence_temp || iter == 1){
         Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file);
         give_space_in_probe_file = false;
         probe_cadence_temp = probe_cadence_new;
-        if(procID() == 0) cout << "Probed" << endl;
       }
       
-
+      auto end = chrono::steady_clock::now();
       if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time  << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms" << endl;
     }
 

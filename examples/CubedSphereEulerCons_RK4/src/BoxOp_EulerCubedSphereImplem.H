@@ -33,7 +33,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   // cout << "inputbox = " << bx << endl;
   
   sphToPrim(W,WBar,a_USph,a_block);
-  BoxData<T,1,MEM> me = magneticEnergyW(W,a_block,0);
+  BoxData<T,1,MEM> me = magneticEnergyW(WBar,a_block,0);
   // State Wtemp(bx.grow(-NGHOST));
   // W.copyTo(Wtemp);
   // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
@@ -78,11 +78,25 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
       State WFace_L = Stencil<T>::CellToFace(dir)(W);   
       State WFace_R = Stencil<T>::CellToFace(dir)(W);
-      
-      //State WFace_L = Stencil<T>::CellToFace(dir,Side::Lo,5)(W);      
-      //State WFace_R = ((1.0*Shift(Point::Basis(dir,-1)))*Stencil<T>::CellToFace(dir,Side::Hi,5))(W);
       State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);    
-      State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);   
+      State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);  
+      
+      // State WFace_L = Stencil<T>::CellToFace(dir,Side::Lo,5)(W);      
+      // State WFace_R = ((1.0*Shift(Point::Basis(dir,-1)))*Stencil<T>::CellToFace(dir,Side::Hi,5))(W);
+      // State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
+      // State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
+       
+      // forallInPlace([ ] PROTO_LAMBDA
+      //   ( Var<T,NUMCOMPS,MEM>& a_WFace_L,
+      //     Var<T,NUMCOMPS,MEM>& a_WFace_R,
+      //     Var<T,NUMCOMPS,MEM>& a_WFaceBar_L,
+      //     Var<T,NUMCOMPS,MEM>& a_WFaceBar_R)
+      //   { 
+      //     a_WFace_L(iRHO) = std::max(a_WFace_L(iRHO),RHO00);
+      //     a_WFace_R(iRHO) = std::max(a_WFace_R(iRHO),RHO00);
+      //     a_WFaceBar_L(iRHO) = std::max(a_WFaceBar_L(iRHO),RHO00);
+      //     a_WFaceBar_R(iRHO) = std::max(a_WFaceBar_R(iRHO),RHO00);             
+      //   }, WFace_L,WFace_R,WFaceBar_L,WFaceBar_R);
 
       //Required mapping variables.
       Box bxface = WFace_L.box().grow(-2);     
@@ -783,3 +797,54 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialGhost(State& a_U,
 // ====================================================================================
 
 
+template<
+    typename T,
+    template<MemType> typename MAP,
+    MemType MEM>
+inline void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
+    MBLevelBoxData<T, 1, MEM> &a_dVolrLev,
+    MBInterpOp &a_iop,
+    MBDisjointBoxLayout &a_layout,
+    double a_time,
+    double a_dt,
+    double a_gamma)
+{
+  auto map = CubedSphereShell::Map(a_JU.layout(), ghost());
+  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  MBLevelBoxData<double, NUMCOMPS, HOST> USph(a_layout, ghost());
+  a_JU.exchange();
+  a_JU.copyTo(USph);
+  CubedSphereShell::consToSphInterpEuler(USph,a_iop,a_dVolrLev, 4); // Transform a_JU -> USph.
+  int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+  int thetaCoord = (rCoord + 1) % DIM;
+  int phiCoord = (rCoord + 2) % DIM;
+  MBLevelBoxData<double, 8, HOST> dstData(a_layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
+  if (ParseInputs::get_init_condition_type() == 3) BC_global.BoxData_to_BC<double,HOST>(dstData, map, a_time);
+  for (auto dit : a_layout)
+  {
+      auto block = a_layout.block(dit);
+      Box blockBox = a_layout.getBlock(block).domain().box();
+      eulerOp[dit].PreStagePatch(USph[dit],dstData[dit],a_dVolrLev[dit],blockBox,a_time,a_dt,0);
+      Array<double, DIM> dx = eulerOp[dit].dx();
+      BoxData<double, NUMCOMPS, HOST> W(USph[dit].box());
+      BoxData<double, NUMCOMPS, HOST> WBar(USph[dit].box());
+      eulerOp[dit].sphToPrim(W,WBar,USph[dit],block); // Transform to primitive variables, spherical velocities.
+      BoxData<double, NUMCOMPS, HOST> W_point(USph[dit].box());
+      W.copyTo(W_point);
+      W_point += Stencil<double>::Laplacian()(W,-1./24.);  
+      BoxData<T,1,MEM> ke = eulerOp[dit].kineticEnergyW(W_point,block,-1);
+      BoxData<T,1,MEM> me = eulerOp[dit].magneticEnergyW(W_point,block,-1);
+      forallInPlace([ ] PROTO_LAMBDA
+                  (Var<double, NUMCOMPS, HOST> &a_W,
+                    const Var<double, 1, HOST> &a_ke,
+                    const Var<double, 1, HOST> &a_me)                    
+      { 
+        double eps = 1.0e-10;
+        a_W(iP) = std::max(a_W(iP),eps*(a_ke(0) + a_me(0)));
+      },W_point, ke, me);
+      eulerOp[dit].primToCons(USph[dit], W_point, a_dVolrLev[dit], a_gamma, dx[2], block);
+  }
+  USph.copyTo(a_JU);
+}

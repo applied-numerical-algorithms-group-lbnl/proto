@@ -496,7 +496,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
                            },a_WPoint,dVolPoint,ke,me,m_gamma);
  
   a_USph |= convolveStencil(UPoint);
-  cout << "UPoint, USph boxes = "  << UPoint.box() << " , " << a_USph.box()  << endl;
+  // cout << "UPoint, USph boxes = "  << UPoint.box() << " , " << a_USph.box()  << endl;
 }
 
 template<

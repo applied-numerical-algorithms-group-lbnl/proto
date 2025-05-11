@@ -170,190 +170,35 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   } else {
   h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
   }
-cout << infOrNan << endl;
-if (infOrNan) abort();
+  if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
+// cout << infOrNan << endl;
+// if (infOrNan) abort();
   // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
   // h5.writeMBLevel({"density","Momx","Momy","Momz","E","Bx","By","Bz"}, map, Uout, "Uout" + to_string(iter));
   // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
 
-template<typename BOX_OP>
-void Write_W_Phil(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
-             BOX_OP &eulerOp,
-             MBInterpOp &a_iop,
+void Write_Checkpoint(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              int iter,
+             int restart_step,
              double time = 0.0,
              double dt = 0.0)
 {
-  double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
+  std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
   h5.setTime(time);
   h5.setTimestep(dt);
   h5.setIter(iter);
-  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
-  auto layout = a_JU.layout();
-  auto map = CubedSphereShell::Map(layout, OP::ghost());
-  MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
-  MBLevelBoxData<double, NUMCOMPS+2, HOST> USemiSph(layout,a_JU.ghost()+ Point::Ones(2));
-  MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
-  MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
-  for (auto dit : layout)
+  h5.writeMBLevel(a_JU, check_file_name);
+  if (procID() == 0) cout << "Checkpoint file written at iteration " << iter << endl;
+  int checkpoint_cadence = ParseInputs::get_checkpoint_cadence();
+  int iter_to_delete = iter - (checkpoint_cadence*ParseInputs::get_max_checkpoint_files());
+  if (iter_to_delete > restart_step)
   {
-    BoxData<double, DIM, HOST> Dr(dVolrLev[dit].box());
-    BoxData<double, DIM, HOST> adjDr(dVolrLev[dit].box());
-    eulerOp[dit].radialMetrics(radiusLev[dit], Dr, adjDr, dVolrLev[dit], Dr.box());
+    std::string filename_to_delete=ParseInputs::get_checkpoint_file_prefix()+"_"+std::to_string(iter_to_delete)+".hdf5";
+    const char* str = filename_to_delete.c_str();
+    if (procID() == 0) std::remove(str);
   }
-  Point size = layout.domain().getBlock(0).sizes();
-  double dxiPerp = 1.0/size[1];
-  bool infOrNan = false;
-  for (auto dit : layout)
-  {
-    auto& JU_i = a_JU[dit];
-    auto& Wout_i = Wout[dit];
-    USemiSph[dit].setToZero();
-    unsigned int block = layout.block(dit);
-    Box blockBox = layout.getBlock(block).domain().box();
-    auto& dVolr_i = dVolrLev[dit];
-    Box bx_i = layout[dit];
-    CubedSphereShell::
-      consToSemiSphNGEuler(USemiSph[dit],JU_i,dVolr_i,bx_i,
-                           blockBox,dxiPerp,block,4);
-  }
-  USemiSph.exchange();
-  a_iop.apply(USemiSph,USemiSph);
-  Stencil<double> deconvolve = ((1.0)*Shift(Point::Zeros()))
-  - ((1.0/24.0)*Stencil<double>::Laplacian());
-  for (auto dit : layout)
-  {
-    unsigned int block = layout.block(dit);
-    auto ptlow = layout[dit].low();
-    auto pthigh = layout[dit].high();
-    if (layout[dit].low()[0] == 0) ptlow[0] += 1;
-    if (layout[dit].high()[0] == size[0] - 1) pthigh[0] -= 1;
-    Box bxlessRBdries(ptlow,pthigh);
- 
-    BoxData<double,NUMCOMPS+2,HOST> USemiPointwise(layout[dit]);
-    USemiSph[dit].copyTo(USemiPointwise);
-    USemiPointwise |= deconvolve(USemiSph[dit],bxlessRBdries);
-    Box bx = USemiPointwise.box();
-    Box btm = bx.face(0,Side::Lo);  
-    BoxData<double,DIM,HOST> normal(bx);
-    auto permute = CubedSphereShell::perm(block);
-    auto sign = CubedSphereShell::permsign(block);
-    forallInPlace_p(f_normal,btm,normal,permute,sign,dxiPerp,.5,.5);
-    Operator::spreadSlice(normal);
-    
-    BoxData<double,4,HOST> energyTest(USemiPointwise.box());
-    energyTest.setVal(0.);
-    forallInPlace([ ] PROTO_LAMBDA
-    (Var<double,NUMCOMPS+2,HOST>& a_Wout,
-     Var<double,4,HOST>& a_energy,
-     // DEBUG
-     const Var<double,NUMCOMPS+2,HOST>& a_usemi,
-     const Var<double,DIM,HOST>& a_normal,
-     double a_gamma,
-     const Var<double,1,HOST>& a_radius)
-    {
-      a_Wout(0) = a_usemi(0);
-      a_Wout(1) = a_usemi(1) / a_Wout(0);
-      a_Wout(2) = a_usemi(2) / a_Wout(0);
-      a_Wout(3) = a_usemi(3) / a_Wout(0);
-      a_Wout(5) = a_usemi(5);
-      a_Wout(6) = a_usemi(6);
-      a_Wout(7) = a_usemi(7);
-      a_Wout(8) = a_usemi(8) / a_Wout(0);
-      a_Wout(9) = a_usemi(9);
-      double veln = 
-       a_Wout(1)*a_normal(0) + a_Wout(2)*a_normal(1) + a_Wout(3)*a_normal(2);
-      double Bn = 
-        a_Wout(5)*a_normal(0) + a_Wout(6)*a_normal(1) + a_Wout(7)*a_normal(2);
-      double ke = a_Wout(0)*(a_Wout(1)*a_Wout(1)
-                             + a_Wout(2)*a_Wout(2)
-                             + a_Wout(3)*a_Wout(3)
-                             + a_Wout(8)*a_Wout(8)
-                             + 2*veln*a_Wout(8))*.5;
-      double me = (a_Wout(5)*a_Wout(5)
-                   + a_Wout(6)*a_Wout(6)
-                   + a_Wout(7)*a_Wout(7)
-                   + a_Wout(9)*a_Wout(9)
-                   + 2*Bn*a_Wout(9))/(8.0*M_PI);
-      a_Wout(4) = (a_usemi(4) - ke - me)*(a_gamma - 1.0);
-      //a_Wout(4) = max(a_Wout(4),0.);
-      a_energy(0) = a_usemi(4);
-      a_energy(1) = ke;
-      a_energy(2) = me/ke;
-      a_energy(3) = a_Wout(4)/ke;
-      a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
-      a_Wout(1) = a_Wout(1)/1e5; // km/s;
-      a_Wout(2) = a_Wout(2)/1e5; // km/s;
-      a_Wout(3) = a_Wout(3)/1e5; // km/s;
-      a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
-      // scaled by r*(2*gamma)
-      // if (a_Wout(4) < 0.) a_Wout(4) = 0.;
-      a_Wout(5) = a_Wout(5)*1e6; // microGauss
-      a_Wout(6) = a_Wout(6)*1e6; // microGauss
-      a_Wout(7) = a_Wout(7)*1e6; // microGauss
-      a_Wout(8) = a_Wout(8)/1e5; // km/s;
-      a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
-                  }, Wout[dit], energyTest, USemiPointwise,normal, gamma, radiusLev[dit]);
-    Array<std::string,NUMCOMPS+2> names = {"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"};//,"e^entropy"};
-    h5.writePatch(1.0,energyTest,"EnergyIO"+to_string(block));
-#ifndef PR_DISABLE_INIT_CHECKS
-    // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
-    // if (infOrNanBlock)
-    //   {
-    //     h5.writePatch(1.0,Wout[dit],"MHD_IO_InfOrNAN"+to_string(block));
-    //     infOrNan = infOrNan || infOrNanBlock;
-    //     cout << "Inf or Nan at Point " << Wout[dit].findInfOrNAN()
-    //          << ", block = " << block << endl;
-    //   }
-#endif
-#if 0
-    if (procID() == 0)
-    {
-      Box bx = layout[dit];
-      std::string output1D_file = ParseInputs::get_data_file_prefix()+"index" + "1D_" + std::to_string(iter)+".curve";
-      std::ofstream ofs (output1D_file, std::ofstream::out);
-      Point ptcen = bx.high()/2;
-      int highxi0 = bx.high()[0];
-      ptcen[0] = 0;
-      
-      for (int comp = 0; comp < NUMCOMPS+3; comp++)
-        {
-          ofs << "#" + names[comp] << endl;
-          for (int ind = 0; ind < highxi0; ind++)
-            {
-              Point ptindex = ptcen;
-              ptindex[0] = ind;
-              Point ptindex_p = ptcen;
-              ptindex_p[0] = ind+1;
-              double r = (radiusLev[dit](ptindex,0) + radiusLev[dit](ptindex_p,0))*.5;
-              if (comp < NUMCOMPS+2)
-                {
-                  double val = Wout[dit](ptindex,comp);
-                  ofs << r << " " << val << endl;
-                }
-              else if (comp == NUMCOMPS+2)
-                {
-                  double p = Wout[dit](ptindex,4);
-                  double rho = Wout[dit](ptindex,0);
-                  double val = p/pow(rho,gamma);
-                  ofs << r << " " << val << endl;
-                }
-            }
-          ofs << endl;
-        }
-    }
-#endif
-  }
-  
-  std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
-  
-  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br*r^2"}, map, Wout, output_file);
-cout << infOrNan << endl;
-if (infOrNan) abort();
-  // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
-  // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
 }
 
 // Returns interpolated value at x from parallel arrays ( xData, yData )
@@ -729,6 +574,8 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       // }
     }
   }
+
+  if (procID() == 0) cout << "Probed at iteration " << a_iter << endl;
 
   outputFile.close();
 }

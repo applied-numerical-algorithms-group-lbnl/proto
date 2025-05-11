@@ -31,6 +31,7 @@ private:
     double strength; // Strength of perturbation for test problems.
     int write_cadence; 
     int checkpoint_cadence;
+    int P_floor_cadence; // Iteration cadence for P_floor
     string data_file_prefix;
     string checkpoint_file_prefix;
     int scale_data_with_r; // 0: No scaling, 1: Scale with r
@@ -99,6 +100,7 @@ public:
     static double get_strength() {return getInstance().strength;}
     static int get_write_cadence() {return getInstance().write_cadence;}
     static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
+    static int get_P_floor_cadence() {return getInstance().P_floor_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
     static int get_scale_data_with_r() {return getInstance().scale_data_with_r;}
@@ -154,6 +156,7 @@ public:
         args.add("strength", strength);
         args.add("write_cadence", write_cadence);
         args.add("checkpoint_cadence", checkpoint_cadence);
+        args.add("P_floor_cadence", P_floor_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("checkpoint_file_prefix", checkpoint_file_prefix);
         args.add("scale_data_with_r", scale_data_with_r);
@@ -211,6 +214,7 @@ public:
             cout << "strength: " << strength << endl;
             cout << "write_cadence: " << write_cadence << endl;
             cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
+            cout << "P_floor_cadence: " << P_floor_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
             cout << "scale_data_with_r: " << scale_data_with_r << endl;

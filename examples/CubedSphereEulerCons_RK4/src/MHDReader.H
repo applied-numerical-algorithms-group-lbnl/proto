@@ -1,3 +1,4 @@
+#pragma once
 #include "Proto.H"
 #include "hdf5.h"
 #include "Inputs_Parsing.H"
