@@ -123,6 +123,7 @@ namespace Proto
         inline std::vector<MBDataPoint> sources() const {return m_srcs;}
         inline std::vector<double> coefs() const {return m_coefs; }
         inline void print() const; 
+        inline void writeFootprint(std::string filename) const;
         
         private:
 
@@ -140,7 +141,7 @@ namespace Proto
         std::unordered_map<BlockIndex, std::vector<BoxData<double>>> computeMoments(
             const MBLevelMap<MAP, MEM>& map) const;
         void computeCoefficients(std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData);
-        
+
         MBDataPoint m_dst;
         std::vector<MBDataPoint> m_srcs;
         std::vector<Point> m_exponents;
@@ -235,7 +236,7 @@ namespace Proto
         inline void copyAxis(unsigned int a_axis, bool a_flag);
 
         void print() const;
-       
+        void writeFootprint(std::string filename) const;
         template<typename T, unsigned int C, MemType MEM>
         void printErrorPoints(
                 MBLevelBoxData<T,C,MEM>& a_err,

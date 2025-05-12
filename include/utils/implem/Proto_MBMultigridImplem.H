@@ -120,7 +120,9 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
         if (li < a_numLevels-1)
         {
             m_state[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
+            m_state[li]->setVal(0);
             m_state_0[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
+            m_state_0[li]->setVal(0);
             m_force[li] = std::make_shared<LevelStateData>(layouts[li], Point::Zeros());
            
             // fine index space, coarse grid. Used for CF operations.
@@ -162,6 +164,9 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_numPreRelax = 4;
     m_numPostRelax = 4;
     m_numBottomRelax = 2;
+
+    m_solveIter = 0;
+    m_solveLevel = m_numLevels-1;
 
     // print domains
     // for (int li = 0; li < a_numLevels; li++)
@@ -392,8 +397,6 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         #endif
         m_relaxIter++;
     }
-
-    abort();
 }
 
 template <

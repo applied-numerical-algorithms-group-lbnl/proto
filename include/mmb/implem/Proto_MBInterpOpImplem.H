@@ -292,7 +292,24 @@ void MBPointInterpOp::print() const
         pr_out() << "\tcoef: " << m_coefs[ii] << " | " << m_srcs[ii] << std::endl;
     }
 }
-
+void MBPointInterpOp::writeFootprint(std::string filename) const 
+{
+    Box B;
+    B &= target().point();
+    for (auto si : m_srcs)
+    {
+        B &= si.point();
+    }
+    BoxData<double,1> D(B);
+    D.setVal(0);
+    for (auto si : m_srcs)
+    {
+        D(si.point()) = 1 + si.srcBlock();
+    }
+    D(target().point()) = -1;
+    HDF5Handler h5;
+    h5.writePatch(D, filename);
+}
 MBInterpOp::MBInterpOp()
 {
     PR_TIME("MBInterpOp::constructor");
@@ -515,6 +532,17 @@ void MBInterpOp::print() const
     for (auto& op : m_ops)
     {
         op->print(); 
+    }
+}
+void MBInterpOp::writeFootprint(std::string filename) const
+{
+    std::map<int, int> counters;
+    for (auto& op : m_ops)
+    {
+        int block = op->target().dstBlock();
+        int ii = counters[block]++;
+        std::string suffix = ("B" + std::to_string(block) + "_I" + std::to_string(ii));
+        op->writeFootprint(filename+suffix);
     }
 }
 // void MBInterpOp::copyAxis(unsigned int a_axis, bool a_flag)
