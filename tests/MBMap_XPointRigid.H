@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Proto.H"
-
+#define XPOINT_NBLOCKS 4
 using namespace Proto;
 
 namespace {
@@ -69,5 +69,5 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
     }
     private:
 
-    int m_numBlocks = 5;
+    int m_numBlocks = XPOINT_NBLOCKS;
 };

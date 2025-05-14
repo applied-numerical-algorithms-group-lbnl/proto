@@ -267,13 +267,16 @@ void MBPointInterpOp::apply(
 {
     PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
-    
+    PROTO_ASSERT(a_dst[m_dst.index()].containsAddress(&dst(0)), "Data Corruption");
     for (int ii = 0; ii < size(); ii++)
     {
+        
         auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
         for (int cc = 0; cc < C; cc++)
         {
             if (ii == 0) { dst(cc) = 0.0; }
+            auto& patch = m_srcs[ii].patch(a_src);
+            PROTO_ASSERT(patch.containsAddress(&src(cc)), "Data Corruption");
             dst(cc) += m_coefs[ii]*src(cc);
         }
     }

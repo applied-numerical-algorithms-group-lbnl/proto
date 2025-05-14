@@ -374,17 +374,16 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
-        //interpBlockBoundaries(a_state, a_level);
-        a_state.exchange();
+        interpBlockBoundaries(a_state, a_level);
         #if PR_VERBOSE > 1
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
-        m_blockInterp[a_level]->apply(a_state, a_state);
         residual(*m_residual[a_level], a_state, a_force, a_level);
         #if PR_VERBOSE > 1
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_2", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevel(m_maps[a_level], *m_residual[a_level], "MBMultigrid_Relax_Residual_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
+        std::cout << "Relax | Iter: " << m_relaxIter << " | Level: " << a_level << " | Residual: " << m_residual[a_level]->absMax() << std::endl;
         #endif
         for (auto iter : a_state.layout())
         {

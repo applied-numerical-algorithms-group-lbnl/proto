@@ -17,7 +17,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
         Point                       a_ghost,    // additional space around each register
         bool                        a_bothSides)// allocate space on both "sides" of the boundary
 {
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_bounds.clear();
 
     for (auto iter : a_layout)
@@ -127,8 +127,8 @@ std::vector<MBBoundaryData<T,C,MEM>> MBBoundaryRegister<T,C,MEM,CTR>::bounds(
         Point   a_dir)
 {
     std::vector<MBBoundaryData<T,C,MEM>> empty;
-    auto block = m_layout->block(a_index);
-    auto patch = m_layout->point(a_index);
+    auto block = m_layout.block(a_index);
+    auto patch = m_layout.point(a_index);
     boundsKey_t key(patch, block, a_dir);
     if (m_bounds.find(key) == m_bounds.end())
     {
