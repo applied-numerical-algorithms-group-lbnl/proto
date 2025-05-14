@@ -410,7 +410,7 @@ namespace {
         int boxSize, 
         Point refRatio)
     {
-        int numBlocks = 6;
+        constexpr int numBlocks = 6;
         auto domain = CubedSphereShell::Domain(domainSize, thickness, 2);
         Point boxSizeVect(boxSize, boxSize, thickness);
         std::vector<Point> boxSizes(numBlocks, boxSizeVect);
@@ -565,7 +565,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
 
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 4;
     int numGhost = 2;
@@ -576,14 +576,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     ghost.fill(Point::Ones(numGhost));
 
     auto grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
-    for (int li = 0; li < numLevels; li++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            map[li][bi].setNumBlocks(numBlocks);
-        }
-    }
+    MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
 
     #if PR_VERBOSE > 0
@@ -627,7 +620,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     #endif
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 4;
     int numGhost = 2;
@@ -638,14 +631,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     ghost.fill(Point::Ones(numGhost));
 
     auto grid = refinedBlockBoundaryXPointGrid(domainSize, numLevels, refRatio, boxSize);
-    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
-    for (int li = 0; li < numLevels; li++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            map[li][bi].setNumBlocks(numBlocks);
-        }
-    }
+    MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
 
     #if PR_VERBOSE > 0
@@ -688,7 +674,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     int boxSize = 16;
     int refRatio = 4;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
 
     Point refRatios = Point::Ones(refRatio);
     Point ghostWidths = Point::Ones(ghostWidth);
@@ -718,14 +704,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 
-    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghostWidths);
-    for (int li = 0; li < 2; li++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            map[li][bi].setNumBlocks(numBlocks);
-        }
-    }
+    MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghostWidths);
 
     h5.writeMBLevel(map[0], coarseRegisters, "TELESCOPING_COARSE_REGISTERS");
     h5.writeMBLevel(map[0], fineRegisters, "TELESCOPING_FINE_REGISTERS");
@@ -747,7 +726,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
     int boxSize = 16;
     int refRatio = 4;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
 
     Point refRatios = Point::Ones(refRatio);
     Point ghostWidths = Point::Ones(ghostWidth);
@@ -777,14 +756,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 
-    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghostWidths);
-    for (int li = 0; li < 2; li++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            map[li][bi].setNumBlocks(numBlocks);
-        }
-    }
+    MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghostWidths);
 
     h5.writeMBLevel(map[0], coarseRegisters, "REFINED_BB_COARSE_REGISTERS");
     h5.writeMBLevel(map[0], fineRegisters, "REFINED_BB_FINE_REGISTERS");

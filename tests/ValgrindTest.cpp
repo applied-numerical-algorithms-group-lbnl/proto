@@ -6,18 +6,14 @@ using namespace Proto;
 TEST(Suite, Test) {
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 3;
+    constexpr int numBlocks = 3;
     int ghostSize = 2;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostSize));
-    for (auto bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
     map.initialize();
 
     MBInterpOp interp(map);

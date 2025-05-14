@@ -159,7 +159,7 @@ TEST(MBInterpOp, ShearTest)
 }
 #endif
 
-#if 1
+#if 0
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0

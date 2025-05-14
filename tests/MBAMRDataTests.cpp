@@ -10,7 +10,7 @@ TEST(MBAMRData, Construction) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 3;
     int refRatio = 2;
     int numGhost = 1;
@@ -36,14 +36,7 @@ TEST(MBAMRData, Construction) {
         grid[li].define(domain, patches, boxSizeVect);
     }
 
-    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
-    for (int li = 0; li < numLevels; li++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            map[li][bi].setNumBlocks(numBlocks);
-        }
-    }
+    MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     
     MBAMRData<double, 1, HOST> data(grid, ghost);
     data.setRandom(0,1);

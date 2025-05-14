@@ -40,7 +40,7 @@ TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 2;
     int ghostWidth = 1;
@@ -51,15 +51,8 @@ TEST(MBAMR, AverageDown) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout layout = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(layout, Point::Ones(refRatio)); 
-        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(layout, ghostWidths);
-        for (int li = 0; li < numLevels; li++)
-        {
-            for (BlockIndex bi = 0; bi < numBlocks; bi++)
-            {
-                map[li][bi].setNumBlocks(numBlocks);
-            }
-        }
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(layout, Point::Ones(refRatio)); 
+        MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(layout, ghostWidths);
         MBAMRData<double, 1, HOST> phi(layout, ghostWidths);
         MBAMRData<double, 1, HOST> err(layout, ghostWidths);
         MBAMRData<double, 1, HOST> phi0(layout, ghostWidths);
@@ -112,7 +105,7 @@ TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 2;
     int numGhost = 1;
@@ -125,17 +118,10 @@ TEST(MBAMR, InterpBounds) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(
                 grid, Point::Ones(refRatio)); 
 
-        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
-        for (int li = 0; li < numLevels; li++)
-        {
-            for (BlockIndex bi = 0; bi < numBlocks; bi++)
-            {
-                map[li][bi].setNumBlocks(numBlocks);
-            }
-        }
+        MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
         MBAMRData<double, 1, HOST> phi(grid, ghost);
         MBAMRData<double, 1, HOST> err(grid, ghost);
         MBAMRData<double, 1, HOST> phi0(grid, ghost);
@@ -205,28 +191,22 @@ TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<HOST>> OP;
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 1;
     Array<double, DIM> offset{0,0,0,0,0,0};
     int refRatio = 2;
+
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<numBlocks, HOST>> OP;
    
     for (int nn = 0; nn < 1; nn++)
     {
         MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(
             grid, Point::Ones(refRatio));
 
-        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, OP::ghost());
-        for (int li = 0; li < numLevels; li++)
-        {
-            for (BlockIndex bi = 0; bi < numBlocks; bi++)
-            {
-                map[li][bi].setNumBlocks(numBlocks);
-            }
-        }
+        MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, OP::ghost());
         MBAMRData<double, 1, HOST> phi(grid, OP::ghost());
         MBAMRData<double, 1, HOST> rhs(grid, Point::Zeros());
 

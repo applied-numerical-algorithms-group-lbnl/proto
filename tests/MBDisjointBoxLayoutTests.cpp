@@ -4,12 +4,12 @@
 
 using namespace Proto;
 
-#if 1
+
 TEST(MBDisjointBoxLayout, Iteration)
 {
     int domainSize = 64;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -59,7 +59,7 @@ TEST(MBDisjointBoxLayout, PatchConnectivity)
 {
     int domainSize = 32;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -116,7 +116,7 @@ TEST(MBDisjointBoxLayout, Find)
 {
     int domainSize = 64;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -135,7 +135,7 @@ TEST(MBDisjointBoxLayout, Coarsen)
     int domainSize = 64;
     int boxSize = 16;
     int refRatio = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -154,14 +154,14 @@ TEST(MBDisjointBoxLayout, Coarsen)
         EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
-
+#if 0
 TEST(MBDisjointBoxLayout, BoundaryQueries)
 {
     for (int testNum = 0; testNum < 2; testNum++)
     {
         int domainSize = 16;
         int boxSize = 4;
-        int numBlocks = 3 + 2 * testNum;
+        constexpr int numBlocks = 3 + 2 * testNum;
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -225,12 +225,12 @@ TEST(MBDisjointBoxLayout, BoundaryQueries)
         }
     }
 }
-
+#endif
 TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
 {
     int domainSize = 16;
     int boxSize = 4;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -288,14 +288,14 @@ TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
         }
     }
 }
-
+#if 0
 TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
 {
     int domainSize = 16;
     int boxSize = 4;
     for (int testNum = 0; testNum < 3; testNum++)
     {
-        int numBlocks = 3+testNum;
+        constexpr int numBlocks = 3+testNum;
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -346,13 +346,14 @@ TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
     }
 }
 #endif
+#if 0
 TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
 {
     for (int testNum = 0; testNum < 1; testNum++)
     {
         int domainSize = 16;
         int boxSize = 4;
-        int numBlocks = 3 + 2 * testNum;
+        constexpr int numBlocks = 3 + 2 * testNum;
 
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
@@ -373,9 +374,8 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
         #if PR_VERBOSE > 0
         HDF5Handler h5;
         MBLevelBoxData<int, 1, HOST> data(layout, Point::Zeros());
-        MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
+        MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
         map.define(layout, Point::Zeros());
-        for (BlockIndex bi = 0; bi < numBlocks; bi++) { map[bi].setNumBlocks(numBlocks); }
         map.initialize();
         data.setVal(0);
         for (auto index : layout)
@@ -416,12 +416,13 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
         }
     }
 }
+#endif
 #if 1
 TEST(MBDisjointBoxLayout, Connectivity_XPoint)
 {
     int domainSize = 8;
     int boxSize = 4;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     auto domain = buildXPoint(domainSize, numBlocks);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);

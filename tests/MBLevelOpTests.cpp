@@ -157,6 +157,7 @@ TEST(MBLevelOp, XPointLaplace) {
     int domainSize = 32;
     int boxSize = 32;
     int ghostWidth = 4;
+    constexpr int numBlocks = 5;
     Point ghostWidths = Point::Ones(ghostWidth);
     Point noGhost = Point::Zeros();
     Array<double, DIM> k{1,1,1,0,0,0};
@@ -173,7 +174,7 @@ TEST(MBLevelOp, XPointLaplace) {
         Point boxSizes = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizes);
 
-        MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
+        MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
         map.define(layout, ghostWidths);
         
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghostWidths);
@@ -211,7 +212,7 @@ TEST(MBLevelOp, XPointLaplace) {
         hostErr.setVal(0);
         hostFlx.setVal(0);
 
-        MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         //hostDst.exchange();

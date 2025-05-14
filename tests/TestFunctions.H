@@ -186,17 +186,13 @@ MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
     domain.close();
     return domain;
 }
-template<MemType MEM>
-std::shared_ptr<MBLevelMap<MBMap_XPointRigid<MEM>, MEM>> XPointMap(int domainSize, int boxSize, int numBlocks, int ghostSize)
+template<int NBLOCK, MemType MEM>
+std::shared_ptr<MBLevelMap<MBMap_XPointRigid<NBLOCK, MEM>, MEM>> XPointMap(int domainSize, int boxSize, int ghostSize)
 {
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = buildXPoint(domainSize, NBLOCK);
     auto layout = MBDisjointBoxLayout(domain, Point::Ones(boxSize));
-    auto map = std::make_shared<MBLevelMap<MBMap_XPointRigid<MEM>, MEM>>();
+    auto map = std::make_shared<MBLevelMap<MBMap_XPointRigid<NBLOCK, MEM>, MEM>>();
     map->define(layout, Point::Ones(ghostSize));
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        (*map)[bi].setNumBlocks(numBlocks);
-    }
     map->initialize();
     return map;
 }

@@ -72,7 +72,7 @@ TEST(MBLevelMapTests, XPointMapSmall)
     int domainSize = 16;
     int boxSize = 8;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
@@ -80,12 +80,8 @@ TEST(MBLevelMapTests, XPointMapSmall)
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
-    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
 }
 #if 1
 TEST(MBLevelMapTests, XPointMap)
@@ -93,7 +89,7 @@ TEST(MBLevelMapTests, XPointMap)
     int domainSize = 16;
     int boxSize = 8;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
@@ -101,13 +97,8 @@ TEST(MBLevelMapTests, XPointMap)
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
-    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
-    
 
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_XPointMap_X");

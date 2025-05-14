@@ -9,7 +9,8 @@ using namespace Proto;
 
 namespace
 {
-    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<HOST>> OP;
+    constexpr int numBlocks = 4;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<numBlocks, HOST>> OP;
 
     PROTO_KERNEL_START
     void f_linearF(Var<double> &a_data, Var<double, DIM> &a_X, double a_slope, int a_comp)
@@ -51,13 +52,13 @@ TEST(MBMultigridTests, Construction)
 {
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = log(domainSize)/log(2.0);
     Point refRatio = Point::Ones(2);
 
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> mg(layout, refRatio, numLevels);
 
     std::vector<Point> refRatios;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -87,7 +88,7 @@ TEST(MBMultigridTests, BlockBoundaryInterpolate)
 
     int domainSize = 8;
     int boxSize = 8;
-    int numBlocks = 4;
+    constexpr int numBlocks = 4;
     int numLevels = 1;
     Point refRatio = Point::Ones(2);
 
@@ -132,7 +133,7 @@ TEST(MBMultigridTests, Residual)
 
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 1;
     Point refRatio = Point::Ones(2);
 
@@ -190,7 +191,7 @@ TEST(MBMultigridTests, RelaxSingleIter)
 
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 4;
+    constexpr int numBlocks = 4;
     int numLevels = 1;
     Point refRatio = Point::Ones(2);
 
@@ -247,7 +248,7 @@ TEST(MBMultigridTests, AverageDown)
 
     int domainSize = 64;
     int boxSize = 32;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     Point refRatio = Point::Ones(2);
 
@@ -350,31 +351,19 @@ TEST(MBMultigridTests, LaplaceXPoint) {
 
     int domainSize = 16;
     int boxSize = 8;
-    int numBlocks = 4;
+    constexpr int numBlocks = 4;
     int numLevels = log(domainSize)/log(2.0);
     Point refRatio = Point::Ones(2);
    
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
-    for (int lvl = 0; lvl < numLevels; lvl++)
-    {
-        for (BlockIndex bi = 0; bi < numBlocks; bi++)
-        {
-            mg.map(lvl)[bi].setNumBlocks(numBlocks);
-        }
-    }
-
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> mg(layout, refRatio, numLevels);
     MBLevelBoxData<double, 1, HOST> phi(layout, OP::ghost());
     MBLevelBoxData<double, 1, HOST> rhs(layout, Point::Zeros());
     MBLevelBoxData<double, 1, HOST> res(layout, Point::Zeros());
 
-    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map(layout, OP::ghost());
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(layout, OP::ghost());
 
     initializeData(phi, rhs, map);
     
