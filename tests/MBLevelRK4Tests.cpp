@@ -20,12 +20,12 @@ TEST(MBLevelRK4Tests, Construction) {
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, ghost);
     map.initialize();
 
     MBInterpOp interp(map, 4);
-    MBLevelRK4<BoxOp_MBLaplace, MBMap_Shear, double> rk4(map, interp);
+    MBLevelRK4<BoxOp_MBLaplace, MBMap_Shear<HOST>, double> rk4(map, interp);
 }
 
 int main(int argc, char *argv[]) {

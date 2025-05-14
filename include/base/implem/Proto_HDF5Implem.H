@@ -1356,7 +1356,7 @@ void HDF5Handler::writePatch(
 }  
 
 #ifdef PR_MMB
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1371,7 +1371,7 @@ void HDF5Handler::writeMBLevel(
     writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
@@ -1574,7 +1574,7 @@ void HDF5Handler::writeMBAMRData(
 
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBAMRData(
         std::vector<std::string> a_varNames,
         const MBAMRMap<MAP, MEM>& a_map,

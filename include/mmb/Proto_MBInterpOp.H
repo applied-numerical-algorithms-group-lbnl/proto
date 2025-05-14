@@ -78,7 +78,7 @@ namespace Proto
          *
          *  TODO: order can probably be inferred from the footprint or vice versa
          */
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         inline MBPointInterpOp(
             MBDataPoint                 a_dst,
             Point                       a_ghost,
@@ -133,11 +133,11 @@ namespace Proto
             Point ghostSizes);
         inline void computeExponents();
         inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
-        template <template <MemType> typename MAP, MemType MEM>
+        template <typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,
             Array<double, DIM>& xCenter) const;
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         std::unordered_map<BlockIndex, std::vector<BoxData<double>>> computeMoments(
             const MBLevelMap<MAP, MEM>& map) const;
         void computeCoefficients(std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData);
@@ -163,7 +163,7 @@ namespace Proto
         /** This function does not create any operators. The user must call define separately */
         inline MBInterpOp(Point a_ghost, unsigned int a_order = 4);
 
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         inline MBInterpOp(
                 const MBLevelMap<MAP, MEM>& a_map,
                 int                         a_order = 4);
@@ -174,7 +174,7 @@ namespace Proto
          *  with (see constructor). This function only defines the operators used to interpolate
          *  into the specified block. A user may choose to specify a different version of
          *  physical space when building the operators for each block */
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 int                         a_order = 4);
@@ -185,13 +185,13 @@ namespace Proto
          *  with (see constructor). This function only defines the operators used to interpolate
          *  into the specified block. A user may choose to specify a different version of
          *  physical space when building the operators for each block */
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         inline void define(
                 const MBLevelMap<MAP, MEM>& a_map,
                 MBInterpLayout              a_interpLayout,
                 int                         a_order = 4);
 
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         inline void define(
                 const std::vector<std::shared_ptr<MBLevelMap<MAP, MEM>>>& a_maps,
                 MBInterpLayout              a_interpLayout,
@@ -244,10 +244,10 @@ namespace Proto
 
         private:
      
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         void addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map);
         bool containsOp(Point dataPoint, const MBIndex& index) const;
-        template<template<MemType> typename MAP, MemType MEM>
+        template<typename MAP, MemType MEM>
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
@@ -266,12 +266,12 @@ namespace Proto
     };
 
     // Interpolate Block Boundaries
-    template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+    template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(
             MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order = 4);
     
     // Interpolate Block Boundaries
-    template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+    template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
     inline void interpBoundaries(
             MBLevelBoxData<T, C, MEM, CTR>& a_data,
             MBLevelMap<MAP, MEM>& a_map,

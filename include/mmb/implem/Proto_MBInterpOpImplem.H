@@ -26,7 +26,7 @@ MBPointInterpOp::MBPointInterpOp(
     m_coefs = a_coefs;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
@@ -157,7 +157,7 @@ void MBPointInterpOp::validateMatrixDimensions(
     }
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 std::unordered_map<BlockIndex, std::vector<BoxData<double>>>
 MBPointInterpOp::computeMoments(
     const MBLevelMap<MAP, MEM>& map) const
@@ -207,7 +207,7 @@ MBPointInterpOp::computeMoments(
     return momentData;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 double MBPointInterpOp::computeSourceDataRadius(
     const MBLevelMap<MAP, MEM>& map,
     Array<double, DIM>& xCenter) const
@@ -325,7 +325,7 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
     m_ghost = a_ghost;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBInterpOp::MBInterpOp(
         const MBLevelMap<MAP,MEM>&    a_map,
         int a_order)
@@ -334,7 +334,7 @@ MBInterpOp::MBInterpOp(
     define(a_map, a_order);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&    a_map,
         int a_order)
@@ -343,7 +343,7 @@ void MBInterpOp::define(
     define(a_map, interpLayout, a_order);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&  a_map,
         MBInterpLayout              a_interpLayout,
@@ -365,7 +365,7 @@ void MBInterpOp::define(
     }
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBInterpOp::define(
         const std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>>&  a_maps,
         MBInterpLayout              a_interpLayout,
@@ -396,7 +396,7 @@ void MBInterpOp::define(
     }
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<MAP,MEM>& map)
 {
     PR_TIME("MBInterpOp::addPointOps");
@@ -430,7 +430,7 @@ bool MBInterpOp::containsOp(Point dataPoint, const MBIndex& index) const
     return (m_points.count(key) > 0);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBInterpOp::addPointOp(
     Point dataPoint,
     const MBIndex& index,
@@ -591,14 +591,14 @@ void MBInterpOp::printErrorPoints(
 }
 
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(MBLevelBoxData<T, C, MEM, CTR>& a_data, unsigned int a_order)
 {
     MBLevelMap<MAP, MEM> map(a_data.layout(), a_data.ghost());
     interpBoundaries<MAP, T, C, MEM, CTR>(a_data, map, a_order);
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,
         MBLevelMap<MAP, MEM>& a_map,

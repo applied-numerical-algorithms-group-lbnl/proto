@@ -23,7 +23,7 @@ namespace Proto
         : data(std::move(d)) {}
     };
 
-    template<template<MemType> typename MAP, MemType MEM>
+    template<typename MAP, MemType MEM>
     class MBLevelArgs {
     private:
 

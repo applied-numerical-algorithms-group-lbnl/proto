@@ -189,7 +189,7 @@ parse_mb_level_arg(
 }
 
 // HELPER FUNCTION FOR INITIALIZE
-template<typename Func, template<MemType> typename MAP, MemType MEM>
+template<typename Func, typename MAP, MemType MEM>
 const BoxData<double,DIM,MEM>
 parse_mb_level_arg(
         MBIndex& a_index, 

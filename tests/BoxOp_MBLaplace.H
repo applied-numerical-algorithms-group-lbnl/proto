@@ -4,7 +4,7 @@
 using namespace Proto;
 
 template<typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 {

@@ -9,7 +9,7 @@ using namespace Proto;
 
 namespace
 {
-    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<HOST>> OP;
 
     PROTO_KERNEL_START
     void f_linearF(Var<double> &a_data, Var<double, DIM> &a_X, double a_slope, int a_comp)
@@ -18,7 +18,7 @@ namespace
     }
     PROTO_KERNEL_END(f_linearF, f_linear)
 
-    template <typename T, unsigned int C, MemType MEM, Centering CTR, template<MemType> typename MAP>
+    template <typename T, unsigned int C, MemType MEM, Centering CTR, typename MAP>
     void initializeData(
         MBLevelBoxData<T, C, MEM, CTR> &phi,
         MBLevelBoxData<T, C, MEM, CTR> &lphi,
@@ -46,7 +46,7 @@ namespace
         }
     }
 }
-#if 0
+#if 1
 TEST(MBMultigridTests, Construction) 
 {
     int domainSize = 16;
@@ -57,7 +57,7 @@ TEST(MBMultigridTests, Construction)
 
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
 
     std::vector<Point> refRatios;
     for (int bi = 0; bi < numBlocks; bi++)
@@ -94,7 +94,7 @@ TEST(MBMultigridTests, BlockBoundaryInterpolate)
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -103,7 +103,6 @@ TEST(MBMultigridTests, BlockBoundaryInterpolate)
         }
         mg.map(lvl).initialize();
     }
-    mg.interpOp().writeFootprint("BB_INTERP");
     MBLevelBoxData<double, 1, HOST> phi(layout, OP::ghost());
 
     interpTestInit(phi);
@@ -140,7 +139,7 @@ TEST(MBMultigridTests, Residual)
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -198,7 +197,7 @@ TEST(MBMultigridTests, RelaxSingleIter)
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -260,7 +259,7 @@ TEST(MBMultigridTests, AverageDown)
         auto domain = buildXPoint(domainSize, numBlocks);
         MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-        MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+        MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
         for (int lvl = 0; lvl < numLevels; lvl++)
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -322,14 +321,14 @@ TEST(MBMultigridTests, LaplaceIdentity) {
     auto domain = buildIdentity(domainSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_Identity, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_Identity<HOST>, double> mg(layout, refRatio, numLevels);
 
 
     MBLevelBoxData<double, 1, HOST> phi(layout, OP::ghost());
     MBLevelBoxData<double, 1, HOST> rhs(layout, Point::Zeros());
     MBLevelBoxData<double, 1, HOST> res(layout, Point::Zeros());
 
-    MBLevelMap<MBMap_Identity, HOST> map(layout, OP::ghost());
+    MBLevelMap<MBMap_Identity<HOST>, HOST> map(layout, OP::ghost());
 
     initializeData(phi, rhs, map);
     
@@ -358,7 +357,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     auto domain = buildXPoint(domainSize, numBlocks);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid, double> mg(layout, refRatio, numLevels);
+    MBMultigrid<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> mg(layout, refRatio, numLevels);
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -371,7 +370,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     MBLevelBoxData<double, 1, HOST> rhs(layout, Point::Zeros());
     MBLevelBoxData<double, 1, HOST> res(layout, Point::Zeros());
 
-    MBLevelMap<MBMap_XPointRigid, HOST> map(layout, OP::ghost());
+    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map(layout, OP::ghost());
     for (BlockIndex bi = 0; bi < numBlocks; bi++)
     {
         map[bi].setNumBlocks(numBlocks);

@@ -373,7 +373,7 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
         #if PR_VERBOSE > 0
         HDF5Handler h5;
         MBLevelBoxData<int, 1, HOST> data(layout, Point::Zeros());
-        MBLevelMap<MBMap_XPointRigid, HOST> map;
+        MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
         map.define(layout, Point::Zeros());
         for (BlockIndex bi = 0; bi < numBlocks; bi++) { map[bi].setNumBlocks(numBlocks); }
         map.initialize();

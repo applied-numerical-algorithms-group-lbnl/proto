@@ -6,10 +6,10 @@
 namespace Proto {
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBAMR
 {

@@ -12,7 +12,7 @@ TEST(Suite, Test) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
-    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostSize));
     for (auto bi = 0; bi < numBlocks; bi++)
     {

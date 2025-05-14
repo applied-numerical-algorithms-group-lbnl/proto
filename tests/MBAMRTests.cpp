@@ -7,7 +7,7 @@
 using namespace Proto;
 
 namespace {
-    template< typename T, unsigned int C, MemType MEM, Centering CTR, template<MemType> typename MAP>
+    template< typename T, unsigned int C, MemType MEM, Centering CTR, typename MAP>
     void initializeData(
         MBAMRData<T,C,MEM,CTR>& data,
         MBAMRMap<MAP,MEM>& map)
@@ -51,8 +51,8 @@ TEST(MBAMR, AverageDown) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout layout = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(layout, Point::Ones(refRatio)); 
-        MBAMRMap<MBMap_XPointRigid, HOST> map(layout, ghostWidths);
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(layout, Point::Ones(refRatio)); 
+        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(layout, ghostWidths);
         for (int li = 0; li < numLevels; li++)
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -125,10 +125,10 @@ TEST(MBAMR, InterpBounds) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(
                 grid, Point::Ones(refRatio)); 
 
-        MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
         for (int li = 0; li < numLevels; li++)
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -205,7 +205,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid> OP;
+    typedef BoxOp_MBLaplace<double, MBMap_XPointRigid<HOST>> OP;
     int domainSize = 16;
     int boxSize = 16;
     int numBlocks = 5;
@@ -216,10 +216,10 @@ TEST(MBAMRTests, LaplaceXPoint) {
     for (int nn = 0; nn < 1; nn++)
     {
         MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
-        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid, double> amr(
+        MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> amr(
             grid, Point::Ones(refRatio));
 
-        MBAMRMap<MBMap_XPointRigid, HOST> map(grid, OP::ghost());
+        MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, OP::ghost());
         for (int li = 0; li < numLevels; li++)
         {
             for (BlockIndex bi = 0; bi < numBlocks; bi++)

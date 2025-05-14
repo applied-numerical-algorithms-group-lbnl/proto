@@ -1,5 +1,5 @@
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBAMRMap<MAP,MEM>::MBAMRMap(
         const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
@@ -8,7 +8,7 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
     define(a_grid, a_ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBAMRMap<MAP,MEM>::MBAMRMap(
         const MBAMRLayout&            a_grid,
         Point                       a_ghost,
@@ -17,7 +17,7 @@ MBAMRMap<MAP,MEM>::MBAMRMap(
     define(a_grid, a_ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
         const MBAMRLayout&            a_grid,
         Point                       a_ghost,
@@ -29,7 +29,7 @@ void MBAMRMap<MAP,MEM>::define(
     define(a_grid, ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
         const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
@@ -52,7 +52,7 @@ void MBAMRMap<MAP,MEM>::define(
     m_J.define(a_grid, jLevels);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::initialize()
 {
     for (int li = 0; li < m_grid->numLevels(); li++)
@@ -61,7 +61,7 @@ void MBAMRMap<MAP,MEM>::initialize()
     }
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 const MBLevelMap<MAP,MEM>& MBAMRMap<MAP,MEM>::getLevel(unsigned int a_level) const
 {
     PROTO_ASSERT(a_level < m_grid->numLevels(),

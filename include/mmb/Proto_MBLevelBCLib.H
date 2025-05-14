@@ -10,7 +10,7 @@ namespace Proto {
      *  and it does nothing
      */
     template<typename T, unsigned int C, 
-        template<MemType> typename MAP, 
+        typename MAP, 
         MemType MEM, Centering CTR>
     class NullBC : public MBLevelBC<T,C,MAP,MEM,CTR>
     {
@@ -25,7 +25,7 @@ namespace Proto {
      *  purposes.
      */
     template<typename T, unsigned int C,
-        template<MemType> typename MAP,
+        typename MAP,
         MemType MEM, Centering CTR>
     class ConstBC : public MBLevelBC<T,C,MAP,MEM,CTR>
     {

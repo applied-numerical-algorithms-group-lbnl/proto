@@ -1,4 +1,4 @@
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
         const MBDisjointBoxLayout&  a_layout,
         const Array<Point, DIM+1>&  a_ghost,
@@ -7,7 +7,7 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
     define(a_layout, a_ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBLevelMap<MAP,MEM>::MBLevelMap(
         const MBDisjointBoxLayout&  a_layout,
         Point                       a_ghost,
@@ -16,7 +16,7 @@ MBLevelMap<MAP,MEM>::MBLevelMap(
     define(a_layout, a_ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
         const MBDisjointBoxLayout& a_layout,
         Point                      a_ghost,
@@ -28,7 +28,7 @@ void MBLevelMap<MAP,MEM>::define(
     define(a_layout, ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::define(
         const MBDisjointBoxLayout& a_layout,
         const Array<Point, DIM+1>& a_ghost,
@@ -43,14 +43,14 @@ void MBLevelMap<MAP,MEM>::define(
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         Box domainBox = a_layout.domain().getBlock(bi).box();
-        m_ops[bi] = std::make_shared<MAP<MEM>>(dx(bi), bi, a_focalBlock);
+        m_ops[bi] = std::make_shared<MAP>(dx(bi), bi, a_focalBlock);
     }
     m_c2c = Stencil<double>::CornersToCells(4);
     m_X = std::make_shared<MBLevelBoxData<double, DIM, MEM, PR_NODE>>(m_layout, m_ghost);
     m_J = std::make_shared<MBLevelBoxData<double, 1, MEM, PR_CELL>>(m_layout, m_ghost);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::initialize() const
 {
     m_X->setVal(0);
@@ -71,13 +71,13 @@ void MBLevelMap<MAP,MEM>::initialize() const
     m_initialized = true;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
-MAP<MEM>& MBLevelMap<MAP,MEM>::operator[](BlockIndex block)
+template<typename MAP, MemType MEM>
+MAP& MBLevelMap<MAP,MEM>::operator[](BlockIndex block)
 {
     return *m_ops[block];
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
@@ -87,7 +87,7 @@ void MBLevelMap<MAP,MEM>::apply(
     m_ops[a_block]->_apply(a_X, a_J);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::apply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
@@ -98,7 +98,7 @@ void MBLevelMap<MAP,MEM>::apply(
     m_ops[a_block]->_apply(a_X, a_J, a_NT);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBLevelMap<MAP,MEM>::doApply(
         BoxData<double, DIM, MEM>& a_X,
         BoxData<double, 1, MEM>& a_J,
@@ -122,7 +122,7 @@ void MBLevelMap<MAP,MEM>::doApply(
     }
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellAveraged(
         const Box&   a_box,
         unsigned int a_computeBlock,
@@ -136,7 +136,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellAveraged(
     return m_c2c(X0);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellCentered(
         const Box&   a_box,
         unsigned int a_computeBlock,
@@ -147,7 +147,7 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::cellCentered(
     return Operator::deconvolve(X0);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point) const
 {
     PR_TIME("MBLevelMap::cellAveraged(MBDataPoint)");
@@ -158,7 +158,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
     return X.array(a_point.point());
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point) const
 {
     PR_TIME("MBLevelMap::cellCentered(MBDataPoint)");
@@ -169,7 +169,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
     return X.array(a_point.point());
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
@@ -183,7 +183,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
     return X;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
         const MBDataPoint& a_point) const
 {
@@ -192,7 +192,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
     return mappedCoords(a_point, offset);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
@@ -202,7 +202,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
     return op(block).apply(xi); 
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
         const MBDataPoint& a_point) const
 {
@@ -212,7 +212,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
 }
 
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& a_point) const
 {
     return cellCentered(a_point);
@@ -231,23 +231,23 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::analyticCellCentered(const MBDataPoint& 
   */
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 const MBDisjointBoxLayout& MBLevelMap<MAP,MEM>::layout() const { return m_layout; }
     
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 const Array<double, DIM> MBLevelMap<MAP,MEM>::dx(BlockIndex a_blockID) const 
 {
     return layout().dx(a_blockID);
     //return m_dx[a_blockID];
 }
 
-template<template<MemType> typename MAP, MemType MEM>
-MAP<MEM>& MBLevelMap<MAP,MEM>::op(BlockIndex a_blockID) const
+template<typename MAP, MemType MEM>
+MAP& MBLevelMap<MAP,MEM>::op(BlockIndex a_blockID) const
 {
     return *m_ops[a_blockID];
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
         const Box& a_box,
         const Array<double, DIM>& a_dx) const
@@ -265,13 +265,13 @@ BoxData<double, DIM, MEM> MBLevelMap<MAP,MEM>::X(
     return XOut;
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map()
 {
     if (!m_initialized) { initialize(); }
     return *m_X;
 }
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 const MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map() const
 {
     // PROTO_ASSERT(m_initialized,
@@ -279,13 +279,13 @@ const MBLevelBoxData<double, DIM, MEM, PR_NODE>& MBLevelMap<MAP,MEM>::map() cons
     if (!m_initialized) { initialize(); }
     return *m_X;
 }
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian()
 {
     if (!m_initialized) { initialize(); }
     return *m_J;
 }
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() const
 {
     // PROTO_ASSERT(m_initialized,

@@ -36,7 +36,7 @@ TEST(MBAMRData, Construction) {
         grid[li].define(domain, patches, boxSizeVect);
     }
 
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
     for (int li = 0; li < numLevels; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)

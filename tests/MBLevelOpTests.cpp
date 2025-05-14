@@ -30,10 +30,10 @@ TEST(MBLevelOp, Iteration) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, mapGhost);
 
-    MBLevelOp<BoxOp_MBLaplace, MBMap_Shear, double> op(map);
+    MBLevelOp<BoxOp_MBLaplace, MBMap_Shear<HOST>, double> op(map);
 
     for (auto iter : layout)
     {
@@ -73,7 +73,7 @@ TEST(MBLevelOp, ShearLaplace) {
         MBLevelBoxData<double, 1, HOST> hostSln(layout, dstGhost);
         MBLevelBoxData<double, 1, HOST> hostErr(layout, dstGhost);
         
-        MBLevelMap<MBMap_Shear, HOST> map;
+        MBLevelMap<MBMap_Shear<HOST>, HOST> map;
         map.define(layout, mapGhost);
 
         auto C2C = Stencil<double>::CornersToCells(4);
@@ -102,7 +102,7 @@ TEST(MBLevelOp, ShearLaplace) {
         hostDst.setVal(0);
         hostErr.setVal(0);
        
-        MBLevelOp<BoxOp_MBLaplace, MBMap_Shear, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_Shear<HOST>, double> op;
         op.define(map);
         for (auto iter : layout) { op[iter].toggleBC(false); }
         op(hostDst, hostSrc);
@@ -173,7 +173,7 @@ TEST(MBLevelOp, XPointLaplace) {
         Point boxSizes = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizes);
 
-        MBLevelMap<MBMap_XPointRigid, HOST> map;
+        MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
         map.define(layout, ghostWidths);
         
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, ghostWidths);
@@ -211,7 +211,7 @@ TEST(MBLevelOp, XPointLaplace) {
         hostErr.setVal(0);
         hostFlx.setVal(0);
 
-        MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
+        MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> op;
         op.define(map);
         op(hostDst, hostSrc);
         //hostDst.exchange();
@@ -278,7 +278,7 @@ TEST(MBLevelOp, FluxMatching) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
     map.define(layout, Point::Ones(numGhost));
     
     MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(numGhost));
@@ -312,7 +312,7 @@ TEST(MBLevelOp, FluxMatching) {
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "FluxMatch_Phi_%i",0);
 #endif
-    MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid, double> op;
+    MBLevelOp<BoxOp_MBLaplace, MBMap_XPointRigid<HOST>, double> op;
     op.define(map);
     op(hostDst, hostSrc);
 #if PR_VERBOSE > 0

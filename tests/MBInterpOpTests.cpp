@@ -33,7 +33,7 @@ TEST(MBInterpOp, MBDataPoint)
     hostSrc.setVal(1);
     hostDst.setVal(2);
 
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostSize));
     map.initialize();
     
@@ -94,7 +94,7 @@ TEST(MBInterpOp, ShearTest)
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-        MBLevelMap<MBMap_Shear, HOST> map;
+        MBLevelMap<MBMap_Shear<HOST>, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
         map.initialize();
 
@@ -202,7 +202,7 @@ TEST(MBInterpOp, XPointTest)
             MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
             MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
             MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-            MBLevelMap<MBMap_XPointRigid, HOST> map;
+            MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
             map.define(layout, Point::Ones(ghostSize));
             for (auto bi = 0; bi < numBlocks; bi++)
             {

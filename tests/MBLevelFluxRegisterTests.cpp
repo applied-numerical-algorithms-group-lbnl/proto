@@ -576,7 +576,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     ghost.fill(Point::Ones(numGhost));
 
     auto grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
     for (int li = 0; li < numLevels; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -638,7 +638,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     ghost.fill(Point::Ones(numGhost));
 
     auto grid = refinedBlockBoundaryXPointGrid(domainSize, numLevels, refRatio, boxSize);
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghost);
+    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghost);
     for (int li = 0; li < numLevels; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -718,7 +718,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
+    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghostWidths);
     for (int li = 0; li < 2; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
@@ -777,7 +777,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 
-    MBAMRMap<MBMap_XPointRigid, HOST> map(grid, ghostWidths);
+    MBAMRMap<MBMap_XPointRigid<HOST>, HOST> map(grid, ghostWidths);
     for (int li = 0; li < 2; li++)
     {
         for (BlockIndex bi = 0; bi < numBlocks; bi++)
