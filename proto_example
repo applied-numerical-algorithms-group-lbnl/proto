@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import shutil
+import re
+import argparse
+
+EXAMPLES_DIR = "./examples"
+
+def usage():
+    """Display usage instructions"""
+    print(f"Usage: {sys.argv[0]} [options]")
+    print("")
+    print("Options:")
+    print("  -add N         Create a new example N with necessary files and directories")
+    print("  -amr           Use AMR headers instead of Base headers (with -add)")
+    print("  -mmb           Use MMB headers instead of Base headers (with -add)")
+    print("  -remove N      Remove example N and its entry in CMakeLists.txt")
+    print("")
+    print("Examples:")
+    print(f"  {sys.argv[0]}                         List all examples and show usage")
+    print(f"  {sys.argv[0]} -add MyExample          Add a new example called MyExample")
+    print(f"  {sys.argv[0]} -add MyExample -amr     Add a new AMR example")
+    print(f"  {sys.argv[0]} -add MyExample -mmb     Add a new MMB example")
+    print(f"  {sys.argv[0]} -add MyExample -amr -mmb  Add an example that uses both AMR and MMB")
+    print(f"  {sys.argv[0]} -remove MyExample       Remove the MyExample example")
+
+def list_examples():
+    """List all examples that don't start with underscore"""
+    print("Available examples:")
+    if os.path.isdir(EXAMPLES_DIR):
+        examples = [d for d in os.listdir(EXAMPLES_DIR) 
+                   if os.path.isdir(os.path.join(EXAMPLES_DIR, d)) and not d.startswith('_')]
+        for example in sorted(examples):
+            print(example)
+    else:
+        print("No examples directory found.")
+
+def add_example(name, use_amr, use_mmb):
+    """Add a new example with the given name"""
+    # Create the main example directory and subdirectories
+    os.makedirs(os.path.join(EXAMPLES_DIR, name, "exec"), exist_ok=True)
+    os.makedirs(os.path.join(EXAMPLES_DIR, name, "src"), exist_ok=True)
+    
+    # Add the entry to examples/CMakeLists.txt
+    cmake_path = os.path.join(EXAMPLES_DIR, "CMakeLists.txt")
+    if not os.path.exists(cmake_path):
+        open(cmake_path, 'w').close()
+    
+    with open(cmake_path, 'a') as f:
+        if use_amr and use_mmb:
+            f.write(f"if (AMR AND MMB)\n  add_subdirectory({name})\nendif()\n")
+            headers = "Headers_Base Headers_AMR Headers_MMB"
+        elif use_amr:
+            f.write(f"if (AMR)\n  add_subdirectory({name})\nendif()\n")
+            headers = "Headers_AMR"
+        elif use_mmb:
+            f.write(f"if (MMB)\n  add_subdirectory({name})\nendif()\n")
+            headers = "Headers_MMB"
+        else:
+            f.write(f"add_subdirectory({name})\n")
+            headers = "Headers_Base"
+    
+    # Create CMakeLists.txt in the example directory
+    with open(os.path.join(EXAMPLES_DIR, name, "CMakeLists.txt"), 'w') as f:
+        f.write("add_subdirectory(exec)\n")
+        f.write("add_subdirectory(src)\n")
+    
+    # Create empty source files
+    open(os.path.join(EXAMPLES_DIR, name, "src", f"{name}.cpp"), 'w').close()
+    open(os.path.join(EXAMPLES_DIR, name, "src", f"{name}.H"), 'w').close()
+    
+    # Create src/CMakeLists.txt
+    with open(os.path.join(EXAMPLES_DIR, name, "src", "CMakeLists.txt"), 'w') as f:
+        f.write(f"blt_add_library(NAME {name}_Src HEADERS {name}.H SOURCES {name}.cpp\n")
+        f.write(f"    DEPENDS_ON {headers} common ${{LIB_DEP}} INCLUDES ${{CMAKE_CURRENT_SOURCE_DIR}})\n")
+    
+    # Create main.cpp with empty main function
+    with open(os.path.join(EXAMPLES_DIR, name, "exec", "main.cpp"), 'w') as f:
+        f.write(f"""#include "{name}.H"
+#include "Proto.H"
+
+int main(int argc, char* argv[])
+{{
+    return 0;
+}}
+""")
+    
+    # Create exec/CMakeLists.txt
+    with open(os.path.join(EXAMPLES_DIR, name, "exec", "CMakeLists.txt"), 'w') as f:
+        f.write(f"blt_add_executable(NAME {name} SOURCES main.cpp\n")
+        f.write(f"    DEPENDS_ON {name}_Src ${{LIB_DEP}})\n")
+    
+    print(f"Example {name} created successfully.")
+
+def remove_example(name):
+    """Remove an example and its CMakeLists.txt entry"""
+    example_path = os.path.join(EXAMPLES_DIR, name)
+    
+    if os.path.isdir(example_path):
+        # Remove the directory
+        shutil.rmtree(example_path)
+        
+        # Remove the entry from CMakeLists.txt
+        cmake_path = os.path.join(EXAMPLES_DIR, "CMakeLists.txt")
+        if os.path.exists(cmake_path):
+            with open(cmake_path, 'r') as f:
+                content = f.read()
+            
+            # This handles simple entries and conditional entries
+            patterns = [
+                re.compile(f"if \\(AMR AND MMB\\)[\\s]*add_subdirectory\\({name}\\)[\\s]*endif\\(\\)", re.MULTILINE),
+                re.compile(f"if \\(AMR\\)[\\s]*add_subdirectory\\({name}\\)[\\s]*endif\\(\\)", re.MULTILINE),
+                re.compile(f"if \\(MMB\\)[\\s]*add_subdirectory\\({name}\\)[\\s]*endif\\(\\)", re.MULTILINE),
+                re.compile(f"add_subdirectory\\({name}\\)", re.MULTILINE)
+            ]
+            
+            for pattern in patterns:
+                content = pattern.sub("", content)
+            
+            with open(cmake_path, 'w') as f:
+                f.write(content)
+            
+        print(f"Example {name} removed successfully.")
+    else:
+        print(f"Error: Example {name} not found.")
+        sys.exit(1)
+
+def main():
+    """Main function to handle command line arguments"""
+    # Make sure the examples directory exists
+    os.makedirs(EXAMPLES_DIR, exist_ok=True)
+    
+    # Create argument parser
+    parser = argparse.ArgumentParser(description='Manage examples', add_help=False)
+    parser.add_argument('-add', metavar='N', help='Add a new example')
+    parser.add_argument('-remove', metavar='N', help='Remove an existing example')
+    parser.add_argument('-amr', action='store_true', help='Use AMR headers')
+    parser.add_argument('-mmb', action='store_true', help='Use MMB headers')
+    
+    # If no arguments, list examples and show usage
+    if len(sys.argv) == 1:
+        list_examples()
+        print("")
+        usage()
+        return
+    
+    args = parser.parse_args()
+    
+    # Validate arguments
+    if args.add and args.remove:
+        print("Error: Cannot specify both -add and -remove")
+        usage()
+        sys.exit(1)
+    
+    # Perform the requested action
+    if args.add:
+        add_example(args.add, args.amr, args.mmb)
+    elif args.remove:
+        remove_example(args.remove)
+    else:
+        print("Error: Must specify either -add or -remove")
+        usage()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
