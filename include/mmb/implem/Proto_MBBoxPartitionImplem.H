@@ -180,8 +180,13 @@ void MBBoxPartition::updateRefinementBoundaries()
             for (auto adjPatch : boundInfo.adjacentPatches)
             {
                 bool adjPatchExists = contains(adjPatch.point, adjPatch.block);
-                boundInfo.isRefinementBoundary = (patchExists ^ adjPatchExists);
 
+                // once we have found at least one pair of patches which constitute a
+                // refinement boundary, we stop looking. Otherwise, we update here.
+                if (!boundInfo.isRefinementBoundary) 
+                {
+                    boundInfo.isRefinementBoundary = (patchExists ^ adjPatchExists);
+                }
             }
         }
         patchInfo.exists = patchExists;

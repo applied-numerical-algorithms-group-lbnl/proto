@@ -154,14 +154,14 @@ TEST(MBDisjointBoxLayout, Coarsen)
         EXPECT_EQ(crseLayout[iter], crseLayoutSoln[iter]);
     }
 }
-#if 0
+#if 1
 TEST(MBDisjointBoxLayout, BoundaryQueries)
 {
     for (int testNum = 0; testNum < 2; testNum++)
     {
         int domainSize = 16;
         int boxSize = 4;
-        constexpr int numBlocks = 3 + 2 * testNum;
+        int numBlocks = 3 + 2 * testNum;
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -288,14 +288,14 @@ TEST(MBDisjointBoxLayout, PatchOnBoundaryQueries)
         }
     }
 }
-#if 0
+#if 1
 TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
 {
     int domainSize = 16;
     int boxSize = 4;
     for (int testNum = 0; testNum < 3; testNum++)
     {
-        constexpr int numBlocks = 3+testNum;
+        int numBlocks = 3+testNum;
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -346,14 +346,14 @@ TEST(MBDisjointBoxLayout, PatchInBoundaryQueries)
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
 {
-    for (int testNum = 0; testNum < 1; testNum++)
+    for (int testNum = 0; testNum < 2; testNum++)
     {
         int domainSize = 16;
         int boxSize = 4;
-        constexpr int numBlocks = 3 + 2 * testNum;
+        int numBlocks = 3 + 2 * testNum;
 
         auto domain = buildXPoint(domainSize, numBlocks);
         Point boxSizeVect = Point::Ones(boxSize);
@@ -371,24 +371,6 @@ TEST(MBDisjointBoxLayout, RefinementBoundaryQueries)
             }
         }
         MBDisjointBoxLayout layout(domain, patches, boxSizes);
-        #if PR_VERBOSE > 0
-        HDF5Handler h5;
-        MBLevelBoxData<int, 1, HOST> data(layout, Point::Zeros());
-        MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
-        map.define(layout, Point::Zeros());
-        map.initialize();
-        data.setVal(0);
-        for (auto index : layout)
-        {
-            auto patch = layout.patch(index);
-            if (layout.isPatchOnRefinementBoundary(patch))
-            {
-                auto& di = data[index];
-                di.setVal(1);
-            }
-        }
-        h5.writeMBLevel(map, data, "MBDBL_TestRefBounds_T%i", testNum);
-        #endif
         for (auto index : layout)
         {
             auto patch = layout.patch(index);
