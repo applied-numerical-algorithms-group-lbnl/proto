@@ -44,22 +44,22 @@ MBProblemDomain CubedSphereShell::Domain(
 }
     
 template<MemType MEM>
-MBLevelMap<MBMap_CubedSphereShell, MEM>
+MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>
 CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
         Point   a_ghost)
 {
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
     map.define(a_layout, a_ghost);
     return map;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-MBLevelMap<MBMap_CubedSphereShell, MEM>
+MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>
 CubedSphereShell::Map(
         const MBLevelBoxData<T,C,MEM,CTR>& a_data)
 {
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
     map.define(a_data.layout(), a_data.ghost());
     return map;
 }
@@ -67,11 +67,11 @@ CubedSphereShell::Map(
 template<template<typename, typename, MemType> class OpType,
     typename T,
     MemType MEM>
-MBLevelOp<OpType, MBMap_CubedSphereShell, T>
+MBLevelOp<OpType, MBMap_CubedSphereShell<MEM>, T>
 CubedSphereShell::Operator(
-    MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map)
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map)
 {
-    MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
+    MBLevelOp<OpType, MBMap_CubedSphereShell<MEM>, T> op;
     op.define(a_map);
     return op;
 }
@@ -87,10 +87,10 @@ CubedSphereShell::InterpOp(
     interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
     interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
 
-    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>> polarMaps;
+    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>> polarMaps;
     for (int bi = 0; bi < 6; bi++)
     {
-      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar, MEM>>());
+      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>());
       polarMaps[bi]->define(a_layout, a_ghost, bi);
     }
     MBInterpOp op;
@@ -170,7 +170,7 @@ Point _getPolarImage(Box b, Point p)
 template<typename T, MemType MEM>
 MBInterpOp
 CubedSphereShell::BCInterpOp(
-        const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
         Side::LoHiSide             a_side)

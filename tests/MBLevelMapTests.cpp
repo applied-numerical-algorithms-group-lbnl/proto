@@ -338,7 +338,7 @@ TEST(MBLevelMapTests, CubeSphereShell)
     Point ghost = Point::Ones(ghostSize);
 
     // initialize map
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
 
 #if PR_VERBOSE > 0
@@ -365,7 +365,7 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell)
     ghost[0] = Point::Ones(0);
 
     // initialize map
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
 
     const auto &graph = layout.domain().graph();
