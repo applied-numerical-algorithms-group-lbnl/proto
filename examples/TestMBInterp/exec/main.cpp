@@ -22,6 +22,10 @@ int main(int argc, char* argv[])
     MBInterpOp iop;
     iop = CubedSphereShell::InterpOp<HOST>(layout, ghost);
     MBLevelBoxData<double, 1, HOST> UComp(layout, ghost);
+    MBDisjointBoxLayout readLayout;
+    h5.readMBLayout(readLayout, domain.graphPtr(), "UComp");
+    layout.print();
+    readLayout.print();
     h5.readMBLevel(UComp, "UComp");
     h5.writeMBLevel(map, UComp, "UCompPre");
     UComp.exchange();
