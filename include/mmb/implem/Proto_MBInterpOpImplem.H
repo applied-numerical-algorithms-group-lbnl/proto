@@ -116,6 +116,7 @@ void MBPointInterpOp::validateMatrixDimensions(
     int M = m_srcs.size();
     if (N == 0)
     {
+        std::cout << "MBInterpOp | Invalid system detected: N = 0 (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Invalid system detected" << std::endl;
         pr_out() << "\tNo exponents were computed" << std::endl;
@@ -125,6 +126,7 @@ void MBPointInterpOp::validateMatrixDimensions(
     }
     if (M == 0)
     {
+        std::cout << "MBInterpOp | Invalid system detected: M = 0 (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Invalid system detected" << std::endl;
         pr_out() << "\tNo source points were found" << std::endl;
@@ -134,6 +136,7 @@ void MBPointInterpOp::validateMatrixDimensions(
     }
     if (N > M)
     {
+        std::cout << "MBInterpOp | Undetermined system detected: N > M (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Underdetermined system detected" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
@@ -223,10 +226,6 @@ double MBPointInterpOp::computeSourceDataRadius(
         auto xSrc = map.apply(src);
         auto dist = xSrc - xCenter;
         radius += dist.norm();
-        if (std::isnan(radius) || std::isinf(radius))
-        {
-            std::cout << "debug handle" << std::endl;
-        }
     }
     radius /= (m_srcs.size());
     PROTO_ASSERT(!(radius == 0 || std::isnan(radius) || std::isinf(radius)),
@@ -270,6 +269,10 @@ void MBPointInterpOp::computeCoefficients(
     }
     //#if PR_DEBUG
     double coefSum = std::accumulate(m_coefs.begin(), m_coefs.end(), 0.0);
+    if (abs(coefSum - 1.0) > 1e-12)
+    {
+        std::cout << "debug handle" << std::endl;
+    }
     PROTO_ASSERT(abs(coefSum - 1.0) < 1e-12,
         "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Observed: %f for target point %s in block %i",
         coefSum, m_dst.point().str().c_str(), m_dst.dstBlock());

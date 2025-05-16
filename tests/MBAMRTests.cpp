@@ -51,10 +51,6 @@ TEST(MBAMR, AverageDown) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout layout = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
-        for (int li = 0; li < numLevels; li++)
-        {
-            layout[li].print();
-        }
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(layout, Point::Ones(refRatio)); 
         MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(layout, ghostWidths);
         MBAMRData<double, 1, HOST> phi(layout, ghostWidths);
