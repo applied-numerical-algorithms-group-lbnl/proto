@@ -40,7 +40,7 @@ TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
     int domainSize = 16;
     int boxSize = 16;
-    constexpr int numBlocks = 5;
+    constexpr int numBlocks = 4;
     int numLevels = 2;
     int refRatio = 2;
     int ghostWidth = 1;
@@ -51,6 +51,10 @@ TEST(MBAMR, AverageDown) {
     for (int nn = 0; nn < N; nn++)
     {
         MBAMRLayout layout = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
+        for (int li = 0; li < numLevels; li++)
+        {
+            layout[li].print();
+        }
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(layout, Point::Ones(refRatio)); 
         MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(layout, ghostWidths);
         MBAMRData<double, 1, HOST> phi(layout, ghostWidths);
@@ -99,7 +103,6 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
-
 #if 1
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;

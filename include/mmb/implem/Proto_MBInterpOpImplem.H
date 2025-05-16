@@ -77,6 +77,9 @@ void MBPointInterpOp::computeSourcePoints(
             }
         }
     }
+    PROTO_ASSERT(m_srcs.size() > 0,
+        "MBPointInterpOp::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
+        m_dst.point().str(), m_dst.dstBlock());
 }
 
 void MBPointInterpOp::computeExponents()
@@ -163,10 +166,7 @@ MBPointInterpOp::computeMoments(
     const MBLevelMap<MAP, MEM>& map) const
 {
     PR_TIME("MBPointInterpOp::computeMoments");
-    // the radius in physical space of the neighborhood containing
-    // the source data points
-    auto xCenter = map.apply(m_dst);
-    double sourceDataRadius = computeSourceDataRadius(map, xCenter);
+    
 
     std::unordered_map<BlockIndex, Box> momentDomains;
 
@@ -187,7 +187,11 @@ MBPointInterpOp::computeMoments(
             momentDomains[bi] &= si.point();
         }
     }
-
+    
+    // the radius in physical space of the neighborhood containing
+    // the source data points
+    auto xCenter = map.apply(m_dst);
+    double sourceDataRadius = computeSourceDataRadius(map, xCenter);
     auto C2C = Stencil<double>::CornersToCells(4);
     for (auto& [block, momentDomain] : momentDomains)
     {
@@ -214,14 +218,20 @@ double MBPointInterpOp::computeSourceDataRadius(
 {
     PR_TIME("MBPointInterpOp::computeSourceDataRadius");
     double radius = 0.0;
-    
     for (auto& src : m_srcs)
     {
         auto xSrc = map.apply(src);
         auto dist = xSrc - xCenter;
         radius += dist.norm();
+        if (std::isnan(radius) || std::isinf(radius))
+        {
+            std::cout << "debug handle" << std::endl;
+        }
     }
     radius /= (m_srcs.size());
+    PROTO_ASSERT(!(radius == 0 || std::isnan(radius) || std::isinf(radius)),
+        "MBPointInterpOp::computeSourceDataRadius | Error: Invalid radius");
+
     return radius;
 }
 
@@ -258,6 +268,13 @@ void MBPointInterpOp::computeCoefficients(
     {
         m_coefs[ii] = S(0,ii);
     }
+    //#if PR_DEBUG
+    double coefSum = std::accumulate(m_coefs.begin(), m_coefs.end(), 0.0);
+    PROTO_ASSERT(abs(coefSum - 1.0) < 1e-12,
+        "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Observed: %f for target point %s in block %i",
+        coefSum, m_dst.point().str().c_str(), m_dst.dstBlock());
+    //TODO: Check for coefficients with values greater than some value
+    //#endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
