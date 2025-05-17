@@ -42,7 +42,7 @@ MBPointInterpOp::MBPointInterpOp(
     validateMatrixDimensions(a_footprint);
     auto momentData = computeMoments(a_map);
     computeCoefficients(momentData);
-    writeFootprint("Interp_B" + to_string(m_dst.block()) + "_P" + m_dst.point().str());
+    //writeFootprint("Interp_B" + to_string(m_dst.block()) + "_P" + m_dst.point().str());
 }
 
 void MBPointInterpOp::computeSourcePoints(
