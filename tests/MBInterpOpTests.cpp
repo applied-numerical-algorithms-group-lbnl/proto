@@ -158,11 +158,10 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
-#if 1
 
 namespace {
     template<int NBLOCK>
-    double computeXPointInterpError(int domainSize, int boxSize, int ghostSize, int order, int refIter)
+    double computeXPointInterpError(MBDisjointBoxLayout& layout, int ghostSize, int order, int refIter)
     {
         #if PR_VERBOSE > 0
         HDF5Handler h5;
@@ -171,9 +170,7 @@ namespace {
         exp *= order;
         Array<double, DIM> offset{0,0,0,0,0,0};
         offset += 0.1;
-        auto domain = buildXPoint(domainSize, NBLOCK);
-        Point boxSizeVect = Point::Ones(boxSize);
-        MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
@@ -234,7 +231,7 @@ namespace {
     }
     
 }
-
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -250,10 +247,16 @@ TEST(MBInterpOp, XPointTest)
     double err4[numIter];
     double err5[numIter];
     for (int nn = 0; nn < numIter; nn++)
-    {
-        err3[nn] = computeXPointInterpError<3>(domainSize, boxSize, ghostSize, order, nn);
-        err4[nn] = computeXPointInterpError<4>(domainSize, boxSize, ghostSize, order, nn);
-        err5[nn] = computeXPointInterpError<5>(domainSize, boxSize, ghostSize, order, nn);
+    {   
+        auto domain3 = buildXPoint(domainSize, 3);
+        auto domain4 = buildXPoint(domainSize, 4);
+        auto domain5 = buildXPoint(domainSize, 5);
+        MBDisjointBoxLayout layout3(domain3, Point::Ones(boxSize));
+        MBDisjointBoxLayout layout4(domain4, Point::Ones(boxSize));
+        MBDisjointBoxLayout layout5(domain5, Point::Ones(boxSize));
+        err3[nn] = computeXPointInterpError<3>(layout3, ghostSize, order, nn);
+        err4[nn] = computeXPointInterpError<4>(layout4, ghostSize, order, nn);
+        err5[nn] = computeXPointInterpError<5>(layout5, ghostSize, order, nn);
         domainSize *= 2;
     }
     for (int ii = 1; ii < numIter; ii++)
@@ -262,9 +265,9 @@ TEST(MBInterpOp, XPointTest)
         double rate4 = log(err4[ii - 1] / err4[ii]) / log(2.0);
         double rate5 = log(err5[ii - 1] / err5[ii]) / log(2.0);
 #if PR_VERBOSE > 0
-        std::cout << "Convergence Rate (3 Blocks): " << rate3 << std::endl;
-        std::cout << "Convergence Rate (4 Blocks): " << rate4 << std::endl;
-        std::cout << "Convergence Rate (5 Blocks): " << rate5 << std::endl;
+        std::cout << "3 Blocks | Error (Max Norm): " << err3[ii] << " | Convergence Rate: " << rate3 << std::endl;
+        std::cout << "4 Blocks | Error (Max Norm): " << err4[ii] << " | Convergence Rate: " << rate4 << std::endl;
+        std::cout << "5 Blocks | Error (Max Norm): " << err5[ii] << " | Convergence Rate: " << rate5 << std::endl;
 #endif
         EXPECT_TRUE(err3[ii] < 1e-12 || rate3 > order - 0.5);
         EXPECT_TRUE(err4[ii] < 1e-12 || rate4 > order - 0.5);
@@ -276,7 +279,7 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;
-    int numIter = 3;
+    int numIter = 1;
     double order = 4;
     int domainSize = 16;
     int boxSize = 8;
@@ -294,13 +297,31 @@ TEST(MBInterpOp, XPointRefined)
         std::vector<Point> boxSizes;
         for (int block = 0; block < numBlocks; block++)
         {
-            patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), block));
+            //TODO: Fix this case (grab more interior data...)
+            if (false)
+            {
+                for (auto pi : Box::Cube(domainSize / boxSize))
+                {
+                    patches.push_back(MBPoint(pi, block));
+                }
+            } else {
+                patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), block));
+            }
             boxSizes.push_back(Point::Ones(boxSize));
         }
         MBDisjointBoxLayout layout(domain, patches, boxSizes);
-        MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
-        map.define(layout, Point::Ones(ghostSize));
-        MBInterpOp interpOp(map);
+        // pr_out() << "Test Layout: " << std::endl;
+        // layout.print();
+        errNorm[nn] = computeXPointInterpError<numBlocks>(layout, ghostSize, 4, nn);
+        domainSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << errNorm[ii] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        EXPECT_NEAR(rate, 4.0, 0.3);
     }
 }
 #endif

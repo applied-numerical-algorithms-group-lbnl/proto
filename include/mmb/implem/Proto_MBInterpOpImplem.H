@@ -42,6 +42,7 @@ MBPointInterpOp::MBPointInterpOp(
     validateMatrixDimensions(a_footprint);
     auto momentData = computeMoments(a_map);
     computeCoefficients(momentData);
+    writeFootprint("Interp_B" + to_string(m_dst.block()) + "_P" + m_dst.point().str());
 }
 
 void MBPointInterpOp::computeSourcePoints(
@@ -77,7 +78,7 @@ void MBPointInterpOp::computeSourcePoints(
             }
         }
     }
-    // std::cout << "dst point: " << m_dst.point() << " | block: " << m_dst.dstBlock() << std::endl;
+    // std::cout << "dst point: " << m_dst.point() <<" | patch: " << layout.point(m_dst.index()) << " | block: " << m_dst.dstBlock() << std::endl;
     // for (auto si : m_srcs)
     // {
     //     std::cout << "\tsrc point: " << si.point() << " | block: " << si.srcBlock() << std::endl;
