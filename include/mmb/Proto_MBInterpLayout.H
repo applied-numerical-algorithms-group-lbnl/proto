@@ -33,7 +33,7 @@ namespace Proto
             Point triplePointBoundary,
             MBIndex index) const;
         
-        inline void addDomainBoundaryFootprint(
+        inline void addBoundaryFootprint(
             std::set<Point>& footprint,
             Point center,
             MBIndex index) const;
@@ -107,7 +107,7 @@ namespace Proto
         PatchID adjPatch = patch + boundaryDir;
         Box patchBox = m_layout[index];
         std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
-        addDomainBoundaryFootprint(footprint, center, index);
+        addBoundaryFootprint(footprint, center, index);
         if (patchDomain.isPointInTriplePoint(adjPatch, block))
         {
             addTriplePointFootprint(footprint, center, boundaryDir, index);
@@ -165,7 +165,7 @@ namespace Proto
         }
     }
 
-    void MBInterpLayout::addDomainBoundaryFootprint(
+    void MBInterpLayout::addBoundaryFootprint(
         std::set<Point>& footprint,
         Point point,
         MBIndex index) const
@@ -176,7 +176,8 @@ namespace Proto
         for (auto dir : Point::DirectionsOfCodim(1))
         {
             if (dir * footprintMask() == Point::Zeros()) { continue; }
-            if (m_layout.isPatchOnDomainBoundary(patch, dir))
+            if (m_layout.isPatchOnDomainBoundary(patch, dir) ||
+                m_layout.isRefinementBoundary(patch, dir))
             {
                 int coord = dir.firstNonZeroIndex();
                 Box faceBox = patchBox.edge(dir);

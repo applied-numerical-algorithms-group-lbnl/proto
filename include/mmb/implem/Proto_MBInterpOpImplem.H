@@ -77,6 +77,12 @@ void MBPointInterpOp::computeSourcePoints(
             }
         }
     }
+    // std::cout << "dst point: " << m_dst.point() << " | block: " << m_dst.dstBlock() << std::endl;
+    // for (auto si : m_srcs)
+    // {
+    //     std::cout << "\tsrc point: " << si.point() << " | block: " << si.srcBlock() << std::endl;
+    // }
+    // std::cout << std::endl;
     PROTO_ASSERT(m_srcs.size() > 0,
         "MBPointInterpOp::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
         m_dst.point().str(), m_dst.dstBlock());
@@ -421,13 +427,14 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
 {
     PR_TIME("MBInterpOp::addPointOps");
     auto& layout = m_interpLayout.layout();
-    PatchID patch = layout.point(index);
-    PatchID adjPatch = patch + dir;
-    BlockIndex block = layout.block(index);
+    auto patch = layout.patch(index);
+    PatchID adjPatch = patch.point + dir;
+    BlockIndex block = patch.block;
     auto& patchDomain = layout.patchDomain();
 
     if (patchDomain.isPointInInterior(adjPatch, block)) { return; }
     else if (patchDomain.isPointInDomainBoundary(adjPatch, block)) { return; }
+    else if (layout.isRefinementBoundary(patch, dir)) { return; }
     else {
         Box patchBox = layout[index];
         Box boundBox = patchBox.adjacent(m_ghost * dir);
