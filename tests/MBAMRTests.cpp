@@ -46,7 +46,7 @@ TEST(MBAMR, AverageDown) {
     int ghostWidth = 1;
     Point ghostWidths = Point::Ones(ghostWidth);
   
-    int N = 1;
+    int N = 2;
     double error[N];
     for (int nn = 0; nn < N; nn++)
     {

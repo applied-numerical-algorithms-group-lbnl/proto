@@ -44,6 +44,7 @@ void MBAMRMap<MAP,MEM>::define(
     {
         auto levelMap = std::make_shared<MBLevelMap<MAP,MEM>>(
                 m_grid->getLevel(li), a_ghost, a_focalBlock);
+        levelMap->initialize();
         m_maps.push_back(levelMap);
         xLevels.push_back(levelMap->mapData());
         jLevels.push_back(levelMap->jacobianData());

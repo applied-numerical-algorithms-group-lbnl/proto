@@ -101,7 +101,6 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
             
             MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
-            crseFineLayout.print();
             m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
         }
     }
