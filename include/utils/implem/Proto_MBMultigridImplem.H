@@ -45,6 +45,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     PR_TIME("MBMultigrid::define");
 
     m_numLevels = a_numLevels;
+    m_refRatios = a_refRatios;
 
     // delete any existing data
     m_state_0.clear();
@@ -62,95 +63,46 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_CFInterp.clear();
 
     // create coarse domains
-    std::vector<MBProblemDomain>      problemDomains;
-    std::vector<std::vector<Point>>   boxSizes;
-    std::vector<MBDisjointBoxLayout> layouts;
-    {
-        PR_TIME("MBMultigrid::define::build_layouts");
-        problemDomains.resize(a_numLevels);
-        boxSizes.resize(a_numLevels);
-        MBProblemDomain nextDomain = a_fineLayout.domain();
-        std::vector<Point> nextBoxSizes = a_fineLayout.boxSizes();
-        int level = a_numLevels-1;
-        while (level >= 0)
-        {
-            problemDomains[level] = nextDomain;
-            boxSizes[level] = nextBoxSizes;
-            if (level > 0)
-            {
-                // create the next coarser domain
-                nextDomain = nextDomain.coarsen(a_refRatios);
-                // make sure boxSize <= domainSize
-                for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
-                {
-                    Box domainBox = nextDomain.getBlock(bi).box();
-                    if (domainBox.sizes() < nextBoxSizes[bi])
-                    {
-                        nextBoxSizes[bi] = domainBox.sizes();
-                    }
-                }
-            }
-            level--;
-        }
+    auto layouts = computeLayouts(a_fineLayout);
+    initializeDataHolders(layouts);
+    //std::vector<MBProblemDomain>      problemDomains;
+    //std::vector<std::vector<Point>>   boxSizes;
+    //std::vector<MBDisjointBoxLayout> layouts;
+    // {
+    //     PR_TIME("MBMultigrid::define::build_layouts");
+    //     problemDomains.resize(a_numLevels);
+    //     boxSizes.resize(a_numLevels);
+    //     MBProblemDomain nextDomain = a_fineLayout.domain();
+    //     std::vector<Point> nextBoxSizes = a_fineLayout.boxSizes();
+    //     int level = a_numLevels-1;
+    //     while (level >= 0)
+    //     {
+    //         problemDomains[level] = nextDomain;
+    //         boxSizes[level] = nextBoxSizes;
+    //         if (level > 0)
+    //         {
+    //             // create the next coarser domain
+    //             nextDomain = nextDomain.coarsen(a_refRatios);
+    //             // make sure boxSize <= domainSize
+    //             for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
+    //             {
+    //                 Box domainBox = nextDomain.getBlock(bi).box();
+    //                 if (domainBox.sizes() < nextBoxSizes[bi])
+    //                 {
+    //                     nextBoxSizes[bi] = domainBox.sizes();
+    //                 }
+    //             }
+    //         }
+    //         level--;
+    //     }
 
-        // Build the layouts
-        for (int li = 0; li < a_numLevels; li++)
-        {
-            layouts.push_back(MBDisjointBoxLayout(problemDomains[li], boxSizes[li]));
-        }
-    }
+    //     // Build the layouts
+    //     for (int li = 0; li < a_numLevels; li++)
+    //     {
+    //         layouts.push_back(MBDisjointBoxLayout(problemDomains[li], boxSizes[li]));
+    //     }
+    // }
     // initialize all of the state data
-    Array<Point,DIM+1> ghost;
-    Array<Point,DIM+1> noGhost;
-    ghost.fill(OP::ghost());
-    noGhost.fill(Point::Zeros());
-
-    m_residual.resize(a_numLevels);
-    m_state.resize(a_numLevels-1);
-    m_state_0.resize(a_numLevels-1);
-    m_force.resize(a_numLevels-1);
-    m_local.resize(a_numLevels-1);
-    
-    for (int li = 0; li < a_numLevels; li++)
-    {
-        PR_TIME("MBMultigrid::define::allocate_data");
-        m_residual[li] = std::make_shared<LevelStateData>(layouts[li], Point::Zeros());
-        
-        // we don't need these quantities on the finest level
-        if (li < a_numLevels-1)
-        {
-            m_state[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
-            m_state[li]->setVal(0);
-            m_state_0[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
-            m_state_0[li]->setVal(0);
-            m_force[li] = std::make_shared<LevelStateData>(layouts[li], Point::Zeros());
-           
-            // fine index space, coarse grid. Used for CF operations.
-            auto crseFineLayout = layouts[li+1].coarsen(a_refRatios);
-            m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, Point::Zeros());
-        }
-    }
-
-    // build maps, operators, lambda, and increment stencils
-    m_maps.resize(a_numLevels);
-    m_ops.resize(a_numLevels);
-    m_lambda.resize(a_numLevels);
-    for (int li = 0; li < a_numLevels; li++)
-    {
-        PR_TIME("MBMultigrid::define::build_maps");
-        m_maps[li].define(layouts[li], OP::ghost());
-        
-        m_ops[li].define(m_maps[li]);
-        m_lambda[li] = 0.5 / m_ops[li].spectralRadius();
-    }
-
-    // allocate space for block interpolation operators
-    m_blockInterp.resize(a_numLevels);
-    for (int li = 0; li < a_numLevels; li++)
-    {
-        PR_TIME("MBMultigrid::define::build_interp_ops");
-        m_blockInterp[li] = std::make_shared<MBInterpOp>(m_maps[li], 5);
-    }
 
     // define the coarse-fine stencil operators
     for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
@@ -169,18 +121,126 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     m_solveLevel = m_numLevels-1;
 
     // print domains
-    // for (int li = 0; li < a_numLevels; li++)
-    // {
-    //     pr_out() << std::endl << "LEVEL: " << li << std::endl;
-    //     pr_out() << "Layout of state, state_0, force, residual: (size = " << layouts[li].numBoxes() << ")" << std::endl;
-    //     layouts[li].print();
-    //     if (li < a_numLevels-1)
-    //     {
-    //         pr_out() << "Layout of local: (size = " << m_local[li]->layout().numBoxes() << ")" << std::endl;
-    //         m_local[li]->layout().print();
-    //     }
-    // }
+    pr_out() << "MBMultigrid Domains" << std::endl;
+    for (int li = 0; li < a_numLevels; li++)
+    {
+        pr_out() << std::endl << "LEVEL: " << li << std::endl;
+        pr_out() << "Layout of state, state_0, force, residual: (size = " << layouts[li].numBoxes() << ")" << std::endl;
+        layouts[li].print();
+        if (li < a_numLevels-1)
+        {
+            pr_out() << "Layout of local: (size = " << m_local[li]->layout().numBoxes() << ")" << std::endl;
+            m_local[li]->layout().print();
+        }
+    }
     PROTO_ASSERT(validate(a_fineLayout, a_refRatios, a_numLevels), "MBMultigrid Object Failed Validation on Construction");
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+std::vector<MBDisjointBoxLayout>
+MBMultigrid<OPType, MAP, T, BCType, MEM>::computeLayouts(const MBDisjointBoxLayout& fineLayout) const
+{
+    PR_TIME("MBMultigrid::computeLayouts");
+    
+    std::stack<MBDisjointBoxLayout> stack;
+    stack.push(fineLayout);
+    for (int level = m_numLevels-2; level >= 0; level--)
+    {
+        Point refRatio = m_refRatios[level];
+        MBDisjointBoxLayout& fLayout = stack.top();
+        bool canCombine = canCombineCoarsePatches(fLayout, refRatio);
+        if (canCombine) {
+            auto domain = fLayout.domain().coarsen(refRatio);
+            std::set<MBPoint> cPatchSet;
+            for (auto fp : fLayout.patches())
+            {
+                cPatchSet.insert(MBPoint(fp.point / refRatio, fp.block));
+            }
+            std::vector<MBPoint> cPatches(cPatchSet.begin(), cPatchSet.end());
+            stack.push(MBDisjointBoxLayout(domain, cPatches, fLayout.boxSizes()));
+        } else {
+            stack.push(fLayout.coarsen(refRatio));
+        }
+
+    }
+    std::vector<MBDisjointBoxLayout> layouts;
+    while (!stack.empty())
+    {
+        layouts.push_back(stack.top());
+        stack.pop();
+    }
+    return layouts;
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+bool MBMultigrid<OPType, MAP, T, BCType, MEM>::canCombineCoarsePatches(const MBDisjointBoxLayout& fineLayout, Point refRatio) const
+{
+    std::vector<MBPoint> tmp = fineLayout.patches();
+    std::set<MBPoint> finePatches(tmp.begin(), tmp.end());
+    for (auto fp : finePatches)
+    {
+        BlockIndex block = fp.block;
+        Point lowCorner = (fp.point / refRatio) * refRatio; //low corner
+        Box fineRegion(lowCorner, lowCorner + refRatio - Point::Ones());
+        for (auto pi : fineRegion)
+        {
+            MBPoint queryPatch(pi, block);
+            if (finePatches.count(queryPatch) == 0) { return false; }
+        }
+    }
+    return true;
+}
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void 
+MBMultigrid<OPType, MAP, T, BCType, MEM>::initializeDataHolders(const std::vector<MBDisjointBoxLayout>& layouts)
+{
+    m_residual.resize(m_numLevels);
+    m_state.resize(m_numLevels-1);
+    m_state_0.resize(m_numLevels-1);
+    m_force.resize(m_numLevels-1);
+    m_local.resize(m_numLevels-1);
+    m_maps.resize(m_numLevels);
+    m_ops.resize(m_numLevels);
+    m_lambda.resize(m_numLevels);
+    m_blockInterp.resize(m_numLevels);
+
+    for (int li = 0; li < m_numLevels; li++)
+    {
+        m_maps[li].define(layouts[li], OP::ghost());
+        m_ops[li].define(m_maps[li]);
+        m_lambda[li] = 0.5 / m_ops[li].spectralRadius();
+        m_blockInterp[li] = std::make_shared<MBInterpOp>(m_maps[li]);
+        m_residual[li] = std::make_shared<LevelStateData>(layouts[li], Point::Zeros());
+        
+        // we don't need these quantities on the finest level
+        if (li < m_numLevels-1)
+        {
+            m_state[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
+            m_state[li]->setVal(0);
+            m_state_0[li] = std::make_shared<LevelStateData>(layouts[li], OP::ghost());
+            m_state_0[li]->setVal(0);
+            m_force[li] = std::make_shared<LevelStateData>(layouts[li], Point::Zeros());
+           
+            // fine index space, coarse grid. Used for CF operations.
+            auto crseFineLayout = layouts[li+1].coarsen(m_refRatios);
+            m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, Point::Zeros());
+        }
+    }
 }
 
 template <
@@ -231,7 +291,7 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
     int fineLevel = numLevels()-1;
     T res0 = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
     T res = res0;
-#if PR_VERBOSE > 0
+#if PR_VERBOSE > 1
     HDF5Handler h5;
     pr_out()  << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
     std::cout << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
@@ -243,7 +303,7 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
         vCycle(a_state, a_force, fineLevel);
         res = resnorm(*m_residual[fineLevel], a_state, a_force, fineLevel);
         m_solveIter++;
-#if PR_VERBOSE > 0
+#if PR_VERBOSE > 1
         if (procID() == 0)
         {
             pr_out()  << "MBMultigrid::solve | after iter: " << ii << " | residual: " << res << std::endl;
@@ -364,23 +424,23 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
     m_relaxIter = 0;
     // lambda ~ 0.5 / spectral radius
     Stencil<T> INCR = (-lambda(a_level))*Shift::Zeros();
-    #if PR_VERBOSE > 1
+    #if PR_VERBOSE > 2
     HDF5Handler h5;
     h5.writeMBLevel(m_maps[a_level], a_force, "MBMultigrid_Relax_Force_S%i_L%i", m_solveIter, m_solveLevel);
     #endif
     for (int ii = 0; ii < a_numIter; ii++)
     {
-        #if PR_VERBOSE > 1
+        #if PR_VERBOSE > 2
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
         interpBlockBoundaries(a_state, a_level);
-        #if PR_VERBOSE > 1
+        #if PR_VERBOSE > 2
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
         residual(*m_residual[a_level], a_state, a_force, a_level);
-        #if PR_VERBOSE > 1
+        #if PR_VERBOSE > 2
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_2", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevel(m_maps[a_level], *m_residual[a_level], "MBMultigrid_Relax_Residual_S%i_L%i_R%i", m_solveIter, m_solveLevel, m_relaxIter);
         std::cout << "Relax | Iter: " << m_relaxIter << " | Level: " << a_level << " | Residual: " << m_residual[a_level]->absMax() << std::endl;
@@ -391,7 +451,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
             auto& res_i = (*m_residual[a_level])[iter];
             state_i += INCR(res_i);
         }
-        #if PR_VERBOSE > 1
+        #if PR_VERBOSE > 2
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_3", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
         m_relaxIter++;
@@ -411,35 +471,35 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::vCycle(
 {
     HDF5Handler h5;
     m_solveLevel = a_level;
-    h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
+    //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_0", m_solveIter, m_solveLevel);
     if (a_level > 0)
     {
         //pre relax
         relax(a_state, a_force, m_numPreRelax, a_level);
         //average down state
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
         averageDown(*m_state[a_level-1], a_state, a_level);
-        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //save copy of coarse state
         m_state[a_level-1]->copyTo(*m_state_0[a_level-1]);
-        h5.writeMBLevel(m_maps[a_level-1], *m_state_0[a_level-1], "MBMultigrid_vCycle_PhiC0_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state_0[a_level-1], "MBMultigrid_vCycle_PhiC0_S%i_L%i_0", m_solveIter, m_solveLevel);
         //compute coarse RHS
         crseForce(*m_force[a_level-1], a_state, a_force, *m_state[a_level-1], a_level);
-        h5.writeMBLevel(m_maps[a_level-1], *m_force[a_level-1], "MBMultigrid_vCycle_FC_S%i_L%i_0", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_force[a_level-1], "MBMultigrid_vCycle_FC_S%i_L%i_0", m_solveIter, m_solveLevel);
         //recursive vcycle on coarse state/RHS
         vCycle(*m_state[a_level-1], *m_force[a_level-1], a_level-1);
         m_solveLevel = a_level;
-        h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level-1], *m_state[a_level-1], "MBMultigrid_vCycle_PhiC_S%i_L%i_1", m_solveIter, m_solveLevel);
         //correct this level's state
         fineCorrect(a_state, *m_state[a_level-1], *m_state_0[a_level-1], a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_2", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_2", m_solveIter, m_solveLevel);
         //post relax
         relax(a_state, a_force, m_numPostRelax, a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_3", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_3", m_solveIter, m_solveLevel);
     } else {
         // bottom relax
         relax(a_state, a_force, m_numBottomRelax, a_level);
-        h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
+        //h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_vCycle_Phi_S%i_L%i_1", m_solveIter, m_solveLevel);
     }
 }
 

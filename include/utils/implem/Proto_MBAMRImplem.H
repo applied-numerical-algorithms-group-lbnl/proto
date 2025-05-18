@@ -38,7 +38,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 {
     PROTO_ASSERT(a_refRatios.size() == a_grid.numBlocks(),
             "MBAMR::define | Error: must provide a refinement ratio for each block.");
-
+    
     m_numLevels = a_grid.numLevels(); 
     
     // clear and reallocate memory for temporaries
@@ -75,6 +75,9 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 
     for (int li = 0; li < m_numLevels; li++)
     {
+        pr_out() << "Constructing MBAMR MG ops | AMR Level: " << li << std::endl;
+        pr_out() << "Level layout of input state: " << std::endl;
+        a_grid[li].print();
         // build multigrid operators
         if (li == 0)
         {
@@ -99,9 +102,26 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 
             auto crseFineLayout = a_grid.getLevel(li+1).coarsen(a_refRatios);
             m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
+            m_local[li]->setVal(0);
             
             MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
             m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
+        }
+    }
+    
+    // print domains
+    pr_out() << "MBAMR Domains" << std::endl;
+    for (int li = 0; li < a_grid.numLevels(); li++)
+    {
+        auto& layout = a_grid.getLevel(li);
+        pr_out() << std::endl << "LEVEL: " << li << std::endl;
+        pr_out() << "Layout of state, state_0, force, residual: (size = " << layout.numBoxes() << ")" << std::endl;
+        layout.print();
+        if (li < a_grid.numLevels()-1)
+        {
+            auto& localLayout = m_local[li]->layout();
+            pr_out() << "Layout of local: (size = " << localLayout.numBoxes() << ")" << std::endl;
+            localLayout.print();
         }
     }
 }
@@ -133,6 +153,12 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     T r0 = m_mg[0].resnorm(crseRes, crseState, crseForce);
     T r = r0;
     m_solveIter = 0;
+    #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        h5.writeMBLevel({"residual"}, m_map[0], crseRes, "MBAMR_Solve_Residual_0");
+        h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_0");
+        std::cout << "initial residual: " << r0 << std::endl;
+    #endif
     for (int ii = 0; ii < a_maxIter; ii++)
     {
         vCycle(a_state, a_force, fineForce, m_numLevels-1);
@@ -140,7 +166,9 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
         //TODO: need to average down onto coarsest level first
         r = m_mg[0].resnorm(crseRes, crseState, crseForce);
 #if PR_VERBOSE > 0
-        std::cout << "ii = " << ii << " | residual: " << r << std::endl;
+        h5.writeMBLevel({"residual"}, m_map[0], crseRes, "MBAMR_Solve_Residual_%i",ii+1);
+        h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_%i", ii+1);
+        std::cout << "MBAMR::solve | after iter: " << ii << " | residual: " << r << std::endl;
 #endif
         if (r/r0 < a_tolerance) {
             return r;

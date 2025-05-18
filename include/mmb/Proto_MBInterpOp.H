@@ -232,9 +232,6 @@ namespace Proto
             }
             MayDay<void>::Abort("Failed to find op at target");
         }
-
-        inline void copyAxis(unsigned int a_axis, bool a_flag);
-
         void print() const;
         void writeFootprint(std::string filename) const;
         template<typename T, unsigned int C, MemType MEM>

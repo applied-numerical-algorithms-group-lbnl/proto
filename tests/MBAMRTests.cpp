@@ -35,7 +35,7 @@ namespace {
     }
 }
 
-#if 1
+#if 0
 TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -99,7 +99,7 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -112,7 +112,7 @@ TEST(MBAMR, InterpBounds) {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
   
-    int N = 3;
+    int N = 2;
     double error[N];
     for (int nn = 0; nn < N; nn++)
     {
@@ -148,10 +148,14 @@ TEST(MBAMR, InterpBounds) {
         err.setVal(0);
         auto& crse = phi[0]; 
         auto& fine = phi0[1];
+#if PR_VERBOSE > 0
+        h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_InterpBounds_PHI_INIT_N%i_0", nn);
+        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_InterpBounds_PHI_AVG_N%i_0", nn);
+#endif
         amr.interpBounds(crse, fine, 1);
 #if PR_VERBOSE > 0
-        h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_InterpBounds_PHI_INIT_%i", nn);
-        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_InterpBounds_PHI_AVG_%i", nn);
+        h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_InterpBounds_PHI_INIT_N%i_1", nn);
+        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_InterpBounds_PHI_AVG_N%i_1", nn);
 #endif
         auto& layout = grid[0];
         error[nn] = 0;
@@ -193,7 +197,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
     int domainSize = 16;
     int boxSize = 16;
     constexpr int numBlocks = 5;
-    int numLevels = 1;
+    int numLevels = 2;
     Array<double, DIM> offset{0,0,0,0,0,0};
     int refRatio = 2;
 

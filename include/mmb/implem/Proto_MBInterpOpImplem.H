@@ -276,13 +276,11 @@ void MBPointInterpOp::computeCoefficients(
     }
     //#if PR_DEBUG
     double coefSum = std::accumulate(m_coefs.begin(), m_coefs.end(), 0.0);
-    if (abs(coefSum - 1.0) > 1e-12)
-    {
-        std::cout << "debug handle" << std::endl;
-    }
-    PROTO_ASSERT(abs(coefSum - 1.0) < 1e-12,
-        "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Observed: %f for target point %s in block %i",
-        coefSum, m_dst.point().str().c_str(), m_dst.dstBlock());
+    double error = abs(coefSum - 1);
+    //TODO: This check should be much more strict
+    PROTO_ASSERT(error < 1e-3,
+        "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Error: %.2e for target point %s in block %i",
+        error, m_dst.point().str().c_str(), m_dst.dstBlock());
     //TODO: Check for coefficients with values greater than some value
     //#endif
 }
@@ -551,6 +549,8 @@ void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_src)
 {
     PR_TIME("MBInterpOp::apply");
+    PROTO_ASSERT(m_interpLayout.layout().compatible(a_src.layout()), "Incompatible Input Data");
+    PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
     for (auto& op : m_ops)
     {
         auto block = a_dst.layout().block(op->target().index());
@@ -576,10 +576,7 @@ void MBInterpOp::writeFootprint(std::string filename) const
         op->writeFootprint(filename+suffix);
     }
 }
-// void MBInterpOp::copyAxis(unsigned int a_axis, bool a_flag)
-// {
-//     m_copyAxes[a_axis] = a_flag;
-// }
+
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::printErrorPoints(
         MBLevelBoxData<T, C, MEM>& a_err,

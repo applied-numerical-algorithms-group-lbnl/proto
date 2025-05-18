@@ -135,6 +135,10 @@ public:
 
     private:
 
+    std::vector<MBDisjointBoxLayout> computeLayouts(const MBDisjointBoxLayout& fineLayout) const;
+    bool canCombineCoarsePatches(const MBDisjointBoxLayout& fineLayout, Point refRatio) const;
+    void initializeDataHolders(const std::vector<MBDisjointBoxLayout>& layouts);
+
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
     std::vector<std::shared_ptr<LevelStateData>>   m_state_0;    
@@ -156,6 +160,7 @@ public:
     int m_numPostRelax;
     int m_numBottomRelax;
     int m_numLevels;
+    std::vector<Point> m_refRatios;
 
     int m_solveIter;
     int m_relaxIter;
