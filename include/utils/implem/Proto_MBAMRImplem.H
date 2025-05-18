@@ -286,11 +286,11 @@ template <
     template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
-        LevelStateData&     a_crseResidual,
-        AMRStateData&       a_state,
-        const LevelStateData&     a_crseForce,
-        const LevelStateData&     a_fineForce,
-        int                 a_fineLevel)
+        LevelStateData&         a_crseResidual,
+        AMRStateData&           a_state,
+        const LevelStateData&   a_crseForce,
+        const LevelStateData&   a_fineForce,
+        int                     a_fineLevel)
 {
     PROTO_ASSERT(a_fineLevel > 0,
             "MBAMR::coarseResidual | Error: Fine Level must be greater than 0");
@@ -302,12 +302,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
     auto& fineOp = op(a_fineLevel);
     
     //interpolate fineState BCs
-    //TODO: potentially redundant
     interpBounds(crseState, fineState, a_fineLevel);
 
     // fineState block boundary interpolation
     fineState.exchange();
-    m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
+    m_mg[a_fineLevel].interpOp().apply(fineState, fineState);
+    // fineState.exchange();
+    // m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
     
     // compute coarse residual everywhere
     crseOp(a_crseResidual, crseState, -1.0); //-LC
@@ -353,12 +354,12 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
         crse_0 *= -1;
     }
     // copy difference into "coarsened fine" temporary
-    a_crseState_0.copyTo(*m_local[a_fineLevel]);
+    a_crseState_0.copyTo(*m_local[a_fineLevel-1]);
     // compute piecewise constant interpolation and increment fine data
     for (auto iter : a_fineState.layout())
     {
         auto block = a_fineState.layout().block(iter);
-        auto& delta = (*m_local[a_fineLevel])[iter];
+        auto& delta = (*m_local[a_fineLevel-1])[iter];
         auto& state = a_fineState[iter];
 
         state += m_constInterp[block](delta);
