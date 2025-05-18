@@ -34,7 +34,7 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
-    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
+    inline double spectralRadius() const {return (2.5*DIM) / pow(this->dxMin(), 2); }
 
     inline void
     apply(
