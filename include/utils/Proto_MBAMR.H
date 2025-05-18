@@ -76,9 +76,16 @@ public:
      *   \param a_fineLevel     The fine level Lf
      */
     inline void interpBounds(
-            const LevelStateData&   a_crseData,   
-            LevelStateData&         a_fineData,   
-            int                     a_fineLevel); 
+        const LevelStateData&   a_crseData,   
+        LevelStateData&         a_fineData,   
+        int                     a_fineLevel); 
+
+    /// @brief Exchange data and interpolate block boundary info
+    /// @param a_data 
+    /// @param a_level 
+    inline void interpBlockBounds(
+        LevelStateData& a_data,
+        int             a_level);
 
     /// Average Down
     /**
@@ -93,10 +100,32 @@ public:
      *   \param a_fineLevel     The fine level Lf
      */
     inline void averageDown(
-            LevelStateData&         a_crseData,  
-            const LevelStateData&   a_fineData, 
-            int                     a_fineLevel); 
+        LevelStateData&         a_crseData,  
+        const LevelStateData&   a_fineData, 
+        int                     a_fineLevel); 
     
+    /// @brief Compute L(phi) on a single level WITHOUT refluxing
+    /// @param a_rhs    The value of L(phi) on the specified level
+    /// @param a_state  The input state (phi) on the specified level
+    /// @param a_level  The specified level
+    inline void levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        int                     a_level,
+        T                       a_scale = 1.0); 
+
+    /// @brief Compute L(phi) on a single level with refluxing at coarse-fine boundaries if necessary
+    /// @param a_rhs        The value of L(phi) on the specified level
+    /// @param a_state      The input state (phi) on the specified level
+    /// @param a_fineState  The input state (phi) on the next finer level (used for refluxing)
+    /// @param a_level      The specfied level
+    inline void levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        LevelStateData&         a_fineState,
+        int                     a_level,
+        T                       a_scale = 1.0); 
+
     /// Compute Coarse Residual
     /**
      *  Computes the coarse residual Rc on Bc. e.g.:
