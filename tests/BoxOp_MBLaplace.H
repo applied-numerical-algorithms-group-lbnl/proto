@@ -66,11 +66,13 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     flux(
             BoxData<T, 1>& flux,
             const BoxData<T, 1>& state,
-            int dir) const
+            int dir,
+            T a_scale = 1.0) const
     {
         auto faceGrad = (*gradOps[dir])(state, state, adjJ_f[dir], adjJ_f[dir], J_f[dir], J_f[dir]);
         (*matProdOps[dir])(flux, faceGrad, N_f[dir], faceGrad, N_f[dir]);
         flux /= this->dx()[dir];
+        flux *= a_scale;
     }
 
     // Cache metric terms and Jacobian

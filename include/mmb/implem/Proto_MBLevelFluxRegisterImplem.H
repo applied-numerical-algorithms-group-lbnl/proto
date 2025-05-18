@@ -658,6 +658,7 @@ void MBLevelFluxRegister<T,C,MEM>::applyRefluxCorrection(
         MBLevelBoxData<T,C,MEM>& a_coarseData,
         const T& a_weight)
 {
+    //NB: grid spacing is applied when the registers are incremented
     PROTO_ASSERT(m_crseLayout.compatible(a_coarseData.layout()),
             "MBLevelFluxRegister::reflux | Error: \
             Input data has incompatible layout.");
