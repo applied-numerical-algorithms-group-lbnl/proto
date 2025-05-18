@@ -53,12 +53,14 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
     m_BCInterp.clear();
     m_average.clear();
     m_localBlockInterp.clear();
+    m_fluxRegisters.clear();
 
     m_residual.resize(m_numLevels);
     m_state_0.resize(m_numLevels-1);
     m_force.resize(m_numLevels-1);
     m_local.resize(m_numLevels-1);
     m_localBlockInterp.resize(m_numLevels-1);
+    m_fluxRegisters.resize(m_numLevels-1);
 
     // define the map
     m_map.define(a_grid, OP::ghost());
@@ -73,6 +75,8 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
    
     Point localGhost = OP::ghost() + m_BCInterp[0].ghost();
 
+    Array<double, DIM> dx;
+    dx.fill(1.0);
     for (int li = 0; li < m_numLevels; li++)
     {
         // build multigrid operators
@@ -101,6 +105,11 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
             m_local[li]->setVal(0);
             
+            std::cout << "dx: " << dx << std::endl;
+            m_fluxRegisters[li] = std::make_unique<FluxRegister>(a_grid.getLevel(li), a_grid.getLevel(li+1), a_refRatios[li], dx);
+            Array<double, DIM> r(a_refRatios[li]);
+            dx = dx / r;
+
             MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
             m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
         }

@@ -21,6 +21,7 @@ public:
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     typedef MBAMRData<T, OP::numState(), MEM, PR_CELL> AMRStateData;
+    typedef MBLevelFluxRegister<T, OP::numState(), MEM> FluxRegister;
 
     /// Constructor
     /**
@@ -190,6 +191,7 @@ private:
     std::vector<std::shared_ptr<LevelStateData>> m_state_0; ///< temporary which holds Sc0
     std::vector<std::shared_ptr<LevelStateData>> m_force;   ///< temporary holding level forces
     std::vector<std::shared_ptr<LevelStateData>> m_local;   ///< temporary data holders for coarsened fine data (e.g. on domains C(Bf) for each fine domain Bf).
+    std::vector<std::unique_ptr<FluxRegister>> m_fluxRegisters;
 
     std::vector<std::shared_ptr<MBInterpOp>>     m_localBlockInterp; ///< block boundary interp ops
     std::vector<Stencil<T>> m_average;          ///< average down ops
