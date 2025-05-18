@@ -75,9 +75,6 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 
     for (int li = 0; li < m_numLevels; li++)
     {
-        pr_out() << "Constructing MBAMR MG ops | AMR Level: " << li << std::endl;
-        pr_out() << "Level layout of input state: " << std::endl;
-        a_grid[li].print();
         // build multigrid operators
         if (li == 0)
         {
@@ -110,20 +107,20 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
     }
     
     // print domains
-    pr_out() << "MBAMR Domains" << std::endl;
-    for (int li = 0; li < a_grid.numLevels(); li++)
-    {
-        auto& layout = a_grid.getLevel(li);
-        pr_out() << std::endl << "LEVEL: " << li << std::endl;
-        pr_out() << "Layout of state, state_0, force, residual: (size = " << layout.numBoxes() << ")" << std::endl;
-        layout.print();
-        if (li < a_grid.numLevels()-1)
-        {
-            auto& localLayout = m_local[li]->layout();
-            pr_out() << "Layout of local: (size = " << localLayout.numBoxes() << ")" << std::endl;
-            localLayout.print();
-        }
-    }
+    // pr_out() << "MBAMR Domains" << std::endl;
+    // for (int li = 0; li < a_grid.numLevels(); li++)
+    // {
+    //     auto& layout = a_grid.getLevel(li);
+    //     pr_out() << std::endl << "LEVEL: " << li << std::endl;
+    //     pr_out() << "Layout of state, state_0, force, residual: (size = " << layout.numBoxes() << ")" << std::endl;
+    //     layout.print();
+    //     if (li < a_grid.numLevels()-1)
+    //     {
+    //         auto& localLayout = m_local[li]->layout();
+    //         pr_out() << "Layout of local: (size = " << localLayout.numBoxes() << ")" << std::endl;
+    //         localLayout.print();
+    //     }
+    // }
 }
 
 template <
@@ -307,8 +304,6 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
     // fineState block boundary interpolation
     fineState.exchange();
     m_mg[a_fineLevel].interpOp().apply(fineState, fineState);
-    // fineState.exchange();
-    // m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
     
     // compute coarse residual everywhere
     crseOp(a_crseResidual, crseState, -1.0); //-LC
