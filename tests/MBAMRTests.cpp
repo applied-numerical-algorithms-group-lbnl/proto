@@ -99,7 +99,7 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -107,7 +107,7 @@ TEST(MBAMR, InterpBounds) {
     constexpr int numBlocks = 5;
     int numLevels = 2;
     int refRatio = 2;
-    int numGhost = 1;
+    int numGhost = 2;
     Array<double, DIM> offset{0,0,0,0,0,0};
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
@@ -201,7 +201,7 @@ TEST(MBAMR, InterpBounds) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     
