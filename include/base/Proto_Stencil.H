@@ -653,9 +653,7 @@ namespace Proto {
           */
         static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
 
-#ifdef PR_OPS
         static std::vector<double> ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage = true);
-#endif
 
         /// Stencil Library: Cell to Face Interpolation
         /**
