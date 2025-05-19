@@ -444,6 +444,65 @@ TEST(Stencil, DestRefine) {
         if (host(it))
             EXPECT_EQ(coef,host(it));
 }
+namespace {
+    double extrapFunc(double x) { return sin(x); }
+}
+TEST(Stencil, ExtrapIntoBoundary)
+{
+    int numIter = 3;
+    int domainSize = 8;
+    int ghostSize = 4;
+
+    double err0[numIter];
+    double err1[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        Box B0 = Box::Cube(domainSize);
+        Box B = B0.grow(ghostSize);
+        double dx = (M_PI/2.0)/domainSize;
+
+        BoxData<double> data(B);
+        data.setVal(0);
+        BoxData<double> slnX0(B0.adjacent(Point::X(), ghostSize));
+        BoxData<double> slnX1(B0.adjacent(-Point::X(), ghostSize));
+        for (auto pi : B0) { data(pi) = extrapFunc(pi[0]*dx); }
+        for (auto pi : slnX0.box()) { slnX0(pi) = extrapFunc(pi[0]*dx); }
+        for (auto pi : slnX1.box()) { slnX1(pi) = extrapFunc(pi[0]*dx); }
+        #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        h5.writePatch(data, "EXTRAP_DATA_0");
+        #endif
+        Stencil<double>::ExtrapIntoBoundary(data, B0, Point::X());
+        Stencil<double>::ExtrapIntoBoundary(data, B0, -Point::X());
+        #if PR_VERBOSE > 0
+        h5.writePatch(data, "EXTRAP_DATA_1");
+        #endif
+        slnX0 -= data;
+        err0[nn] = slnX0.absMax();
+        
+        slnX1 -= data;
+        err1[nn] = slnX1.absMax();
+        
+        #if PR_VERBOSE > 0
+        std::cout << "Error (+X): " << err0[nn] << std::endl;
+        std::cout << "Error (-X): " << err1[nn] << std::endl;
+        #endif
+        domainSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double rate0 = log(err0[ii-1]/err0[ii])/log(2.0);
+        double rate1 = log(err1[ii-1]/err1[ii])/log(2.0);
+        EXPECT_GT(rate0, 3.9);
+        EXPECT_GT(rate1, 3.9);
+        #if PR_VERBOSE > 0
+        std::cout << "Convergence Rate (+X): " << rate0 << std::endl;
+        std::cout << "Convergence Rate (-X): " << rate1 << std::endl;
+        #endif
+    }
+
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

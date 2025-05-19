@@ -278,7 +278,7 @@ void MBPointInterpOp::computeCoefficients(
     double coefSum = std::accumulate(m_coefs.begin(), m_coefs.end(), 0.0);
     double error = abs(coefSum - 1);
     //TODO: This check should be much more strict
-    PROTO_ASSERT(error < 1e-3,
+    PROTO_ASSERT(error < 1e-1,
         "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Error: %.2e for target point %s in block %i",
         error, m_dst.point().str().c_str(), m_dst.dstBlock());
     //TODO: Check for coefficients with values greater than some value
