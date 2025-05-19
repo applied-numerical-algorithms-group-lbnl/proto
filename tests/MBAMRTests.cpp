@@ -119,63 +119,74 @@ TEST(MBAMR, InterpBounds) {
         MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(
                 grid, Point::Ones(refRatio)); 
+        
+        MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, Point::Ones(numGhost));
 
-        MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
-        MBAMRData<double, 1, HOST> phi(grid, ghost);
-        MBAMRData<double, 1, HOST> err(grid, ghost);
-        MBAMRData<double, 1, HOST> phi0(grid, ghost);
+        auto& crseLayout = grid[0];
+        auto& fineLayout = grid[1];
+        MBLevelBoxData<double, 1, HOST> crseData(crseLayout, Point::Ones(numGhost));
+        MBLevelBoxData<double, 1, HOST> fineData(fineLayout, Point::Ones(numGhost));
+        MBLevelBoxData<double, 1, HOST> slnData(fineLayout, Point::Ones(numGhost));
+        MBLevelBoxData<double, 1, HOST> errData(fineLayout, Point::Ones(numGhost));
 
         auto C2C = Stencil<double>::CornersToCells(4);
-        for (int li = 0; li < numLevels; li++)
-        {
-            auto& layout = grid[li];
-            for (auto iter : layout)
-            {
-                auto block = layout.block(iter);
-                auto& phi0_i = phi0[li][iter];
-                auto& phi_i = phi[li][iter];
-                Box b_i = C2C.domain(layout[iter]).grow(numGhost);
-                BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
-                BoxData<double, 1> J_i(b_i);
-                // compute coordinate / jacobian values from map
-                map[li].apply(x_i, J_i, block);
-                BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
 
-                phi_i |= C2C(phi_node);
-                phi0_i |= C2C(phi_node);
-            }
-        }
-        err.setVal(0);
-        auto& crse = phi[0]; 
-        auto& fine = phi0[1];
-#if PR_VERBOSE > 0
-        h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_InterpBounds_PHI_INIT_N%i_0", nn);
-        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_InterpBounds_PHI_AVG_N%i_0", nn);
-#endif
-        amr.interpBounds(crse, fine, 1);
-#if PR_VERBOSE > 0
-        h5.writeMBAMRData({"phi"}, map, phi0, "MBAMRTests_InterpBounds_PHI_INIT_N%i_1", nn);
-        h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_InterpBounds_PHI_AVG_N%i_1", nn);
-#endif
-        auto& layout = grid[0];
-        error[nn] = 0;
-        for (auto iter : layout)
+        for (auto iter : crseLayout)
         {
-            auto& phi0_i = phi0[0][iter];
-            auto& phi_i = phi[0][iter];
-            auto& err_i = err[0][iter];
-            err_i.setVal(0);
-            phi_i.copyTo(err_i);
-            err_i -= phi0_i;
-            error[nn] = max(error[nn], err_i.absMax());
+            auto block = crseLayout.block(iter);
+            auto& phi = crseData[iter];
+            Box b_i = C2C.domain(crseLayout[iter]).grow(numGhost);
+            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+            BoxData<double, 1> J_i(b_i);
+                // compute coordinate / jacobian values from map
+            map[0].apply(x_i, J_i, block);
+            BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
+            phi |= C2C(phi_node);
         }
-        Reduction<double, Max> rxn;
+        for (auto iter : fineLayout)
+        {
+            auto block = fineLayout.block(iter);
+            auto& phi = fineData[iter];
+            auto& sln = slnData[iter];
+            Box b_i = C2C.domain(fineLayout[iter]).grow(numGhost);
+            BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
+            BoxData<double, 1> J_i(b_i);
+            map[1].apply(x_i, J_i, block);
+            BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
+            phi.setVal(1);
+            phi |= C2C(phi_node, fineLayout[iter]);
+            sln |= C2C(phi_node);
+        }
+        errData.setVal(0);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"phi"}, map[0], crseData, "MBAMRTests_InterpBounds_PHI_CRSE_N%i_0", nn);
+        h5.writeMBLevel({"phi"}, map[1], fineData, "MBAMRTests_InterpBounds_PHI_FINE_N%i_0", nn);
+#endif
+        amr.interpBounds(crseData, fineData, 1);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"phi"}, map[0], crseData, "MBAMRTests_InterpBounds_PHI_CRSE_N%i_1", nn);
+        h5.writeMBLevel({"phi"}, map[1], fineData, "MBAMRTests_InterpBounds_PHI_FINE_N%i_1", nn);
+#endif
+        error[nn] = 0;
+        for (auto iter : fineLayout)
+        {
+            auto& sln = slnData[iter];
+            auto& dat = fineData[iter];
+            auto& err = errData[iter];
+            Box mask = fineLayout[iter].extrude(Point::Ones(), numGhost);
+            for (auto pi : dat.box())
+            {
+                err(pi) = (mask.containsPoint(pi)) ? 0 : dat(pi) - sln(pi);
+            }
+            error[nn] = max(err.absMax(), error[nn]);
+        }
+        Reduction<double, Abs> rxn;
         rxn.reduce(&error[nn], 1);
         error[nn] = rxn.fetch();
-#if PR_VERBOSE > 0
+        #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << error[nn] << std::endl;
-        h5.writeMBAMRData({"err"}, map, err, "MBAMRTests_InterpBounds_ERR_%i", nn);
-#endif
+        h5.writeMBLevel({"error"}, map[1], errData, "MBAMRTests_InterpBounds_PHI_ERR_N%i_1", nn);
+        #endif
         domainSize *= 2;
     }
 
@@ -184,6 +195,7 @@ TEST(MBAMR, InterpBounds) {
         double rate = log(error[ii-1]/error[ii])/log(2.0);
         EXPECT_TRUE(error[ii] < 1e-10 || abs(4.0-rate) < 0.3);
 #if PR_VERBOSE > 0
+
         std::cout << "Convergence Rate: " << rate << std::endl;
 #endif
     }
@@ -196,7 +208,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
     // Constants
     int domainSize = 16;
     int boxSize = 16;
-    constexpr int numBlocks = 5;
+    constexpr int numBlocks = 8;
     int numLevels = 2;
     Array<double, DIM> offset{0,0,0,0,0,0};
     int refRatio = 2;
@@ -205,7 +217,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
    
     for (int nn = 0; nn < 1; nn++)
     {
-        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize);
+        MBAMRLayout grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
         MBAMR<BoxOp_MBLaplace, MBMap_XPointRigid<numBlocks, HOST>, double> amr(
             grid, Point::Ones(refRatio));
 
@@ -237,7 +249,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
         h5.writeMBAMRData({"rhs"}, map, rhs, "MBAMRTests_LaplaceXPoint_RHS_%i", nn);
         h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_LaplaceXPoint_PHI_%i_0", nn);
 #endif
-        amr.solve(phi, rhs, 10, 1e-10);
+        amr.solve(phi, rhs, 20, 1e-10);
 #if PR_VERBOSE > 0
         h5.writeMBAMRData({"phi"}, map, phi, "MBAMRTests_LaplaceXPoint_PHI_%i_1", nn);
 #endif
@@ -247,7 +259,6 @@ TEST(MBAMRTests, LaplaceXPoint) {
     }
 }
 #endif
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

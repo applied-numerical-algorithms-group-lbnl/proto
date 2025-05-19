@@ -280,7 +280,40 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
         fine_i.copyTo(fine_0);                  // save fine data on interior
         fine_i |= m_BCInterp[block](crse_i);    // do interpolation on whole patch
         fine_0.copyTo(fine_i);                  // overwrite interior
+
+        auto patch = layout.patch(iter);
+        //extrapolate regions near block boundaries
+        #if 0
+        for (auto dir : Point::DirectionsOfCodim(2))
+        {
+            
+            if (layout.isRefinementBoundary(patch, dir) && layout.isBlockBoundary(iter, dir))
+            {
+                bool finished = false;
+                for (auto n0 : dir.split())
+                {
+                    if (layout.isBlockBoundary(iter, n0))
+                    {
+                        Point n1 = dir - n0;
+                        int extrapCoord = n1.firstNonZeroIndex();
+                        auto coefs = Stencil<double>::ExtrapCoefs({1,2,3,4});
+                        Stencil<double> extrap;
+                        for (int ii = 0; ii < coefs.size(); ii++)
+                        {
+                            extrap += coefs[ii]*Shift(n1*(-ii-1));
+                        }
+                        std::cout << "dir: " << dir << " | block dir: " << n0 << " | extrap dir: " << n1 << std::endl;
+                        extrap.print();
+
+                        // Do the extrapolation
+
+                    }
+                }
+            }
+        }
+        #endif
     }
+    
 }
 
 template <

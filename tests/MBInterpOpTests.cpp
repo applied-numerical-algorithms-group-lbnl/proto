@@ -196,12 +196,18 @@ namespace {
         }
         hostErr.setVal(0);
 #if PR_VERBOSE > 0
-        h5.writeMBLevel({"data"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
+        h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_0", NBLOCK, refIter);
+        h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_0", NBLOCK, refIter);
 #endif
         hostDst.exchange(); // fill boundary data
-
+#if PR_VERBOSE > 0
+        h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_1", NBLOCK, refIter);
+#endif
         MBInterpOp interp(map);
         interp.apply(hostDst, hostDst);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_1", NBLOCK, refIter);
+#endif
         double errNorm = 0;
         for (auto iter : layout)
         {
@@ -223,15 +229,13 @@ namespace {
         }
 
 #if PR_VERBOSE > 0
-        h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
-        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
 #endif
         return errNorm;
     }
     
 }
-#if 1
+#if 0
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -279,7 +283,7 @@ TEST(MBInterpOp, XPointTest)
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;
-    int numIter = 1;
+    int numIter = 2;
     double order = 4;
     int domainSize = 16;
     int boxSize = 8;

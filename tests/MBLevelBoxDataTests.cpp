@@ -127,6 +127,25 @@ TEST(MBLevelBoxData, Construction) {
     }
 }
 #endif
+#if 0
+TEST(MBLevelBoxData, RefinedConstruction)
+{
+    int domainSize = 32;
+    int boxSize = 16;
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
+    std::vector<Point> boxSizes;
+    std::vector<MBPoint> patches;
+    for (BlockIndex block = 0; block < numBlocks; block++)
+    {
+        boxSizes.push_back(Point::Ones(boxSize));
+        patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), block));
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+    MBLevelBoxData<double, 1, HOST> data(layout, Point::Ones(2));
+    // TODO: Finish this test
+}
+#endif
 #if 1
 TEST(MBLevelBoxData, Initialization) {
     int domainSize = 64;
