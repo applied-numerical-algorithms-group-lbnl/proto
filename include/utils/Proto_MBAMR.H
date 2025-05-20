@@ -164,6 +164,12 @@ public:
             const LevelStateData&   a_fineForce,
             int                     a_fineLevel);
 
+    inline T resnorm(
+        AMRStateData& residuals,
+        AMRStateData& state,
+        const AMRStateData& force,
+        int finestLevel = -1);
+
     /// Apply Correction to Fine Level
     /**
      *  Update State Sf on level Lf using data on the next coarser level Lc

@@ -154,14 +154,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     const auto& fineForce = a_force[m_numLevels-1];
     // allocate a temporary for the residual
     AMRStateData amrRes(a_state.grid(), Point::Zeros());
-
-    // compute the initial residual
-    for (int li = 0; li < m_numLevels; li++)
-    {
-        m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
-    }
-    averageDown(amrRes);
-    T r0 = amrRes[0].absMax();
+    T r0 = resnorm(amrRes, a_state, a_force);
     T r = r0;
     m_solveIter = 0;
     #if PR_VERBOSE > 0
@@ -173,13 +166,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     for (int ii = 0; ii < a_maxIter; ii++)
     {
         vCycle(a_state, a_force, fineForce, m_numLevels-1);
-
-        for (int li = 0; li < m_numLevels; li++)
-        {
-            m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
-        }
-        averageDown(amrRes);
-        r = amrRes[0].absMax();
+        r = resnorm(amrRes, a_state, a_force);
 #if PR_VERBOSE > 0
         h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_%i",ii+1);
         h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_%i", ii+1);
@@ -496,6 +483,33 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
 
     // copy crse temp into crseResidual, overwriting the refined region
     m_local[a_fineLevel-1]->copyTo(a_crseResidual);
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+T MBAMR<OPType, MAP, T, BCType, MEM>::resnorm(
+        AMRStateData& residual,
+        AMRStateData& state,
+        const AMRStateData& force,
+        int finestLevel)
+{
+    averageDown(state, finestLevel);
+    int lastLevel = (finestLevel > 0) ? finestLevel : m_numLevels-1;
+    for (int li = 0; li <= lastLevel; li++)
+    {
+        m_mg[li].residual(residual[li], state[li], force[li]);
+    }
+    averageDown(residual, finestLevel);
+    T r = 0;
+    for (int li = 0; li <= lastLevel; li++)
+    {
+        r = max(r, residual[li].absMax());
+    }
+    return r;
 }
 
 template <
