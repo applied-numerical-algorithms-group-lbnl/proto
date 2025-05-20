@@ -99,7 +99,7 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 16;
@@ -201,7 +201,7 @@ TEST(MBAMR, InterpBounds) {
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     

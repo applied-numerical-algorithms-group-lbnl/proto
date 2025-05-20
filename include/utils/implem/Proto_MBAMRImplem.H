@@ -153,15 +153,23 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     const auto& crseForce = a_force[0];
     const auto& fineForce = a_force[m_numLevels-1];
     // allocate a temporary for the residual
-    LevelStateData crseRes(crseState.layout(), Point::Zeros());
+    AMRStateData amrRes(a_state.grid(), Point::Zeros());
+
     // compute the initial residual
-    //TODO: need to average down onto coarsest level first
-    T r0 = m_mg[0].resnorm(crseRes, crseState, crseForce);
+    for (int li = 0; li < m_numLevels; li++)
+    {
+        m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
+    }
+    for (int li = m_numLevels-1; li > 0; li--)
+    {
+        averageDown(amrRes[li-1], amrRes[li], li);
+    }
+    T r0 = amrRes[0].absMax();
     T r = r0;
     m_solveIter = 0;
     #if PR_VERBOSE > 0
         HDF5Handler h5;
-        h5.writeMBLevel({"residual"}, m_map[0], crseRes, "MBAMR_Solve_Residual_0");
+        h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_0");
         h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_0");
         std::cout << "initial residual: " << r0 << std::endl;
     #endif
@@ -169,10 +177,17 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     {
         vCycle(a_state, a_force, fineForce, m_numLevels-1);
 
-        //TODO: need to average down onto coarsest level first
-        r = m_mg[0].resnorm(crseRes, crseState, crseForce);
+        for (int li = 0; li < m_numLevels; li++)
+        {
+            m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
+        }
+        for (int li = m_numLevels-1; li > 0; li--)
+        {
+            averageDown(amrRes[li-1], amrRes[li], li);
+        }
+        r = amrRes[0].absMax();
 #if PR_VERBOSE > 0
-        h5.writeMBLevel({"residual"}, m_map[0], crseRes, "MBAMR_Solve_Residual_%i",ii+1);
+        h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_%i",ii+1);
         h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_%i", ii+1);
         std::cout << "MBAMR::solve | after iter: " << ii << " | residual: " << r << std::endl;
 #endif
@@ -262,7 +277,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
             "MBAMR::interpBounds | Error: Tried to interpolate onto the coarsest level.");
     // copy into "coarsened fine" temporary
     auto& crseTmp = *m_local[a_fineLevel-1];
-    a_crseData.copyTo(crseTmp);
+    a_crseData.copyToFull(crseTmp);
 
     // block boundary interpolation
     crseTmp.exchange();
