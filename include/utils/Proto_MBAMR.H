@@ -104,6 +104,11 @@ public:
         const LevelStateData&   a_fineData, 
         int                     a_fineLevel); 
     
+    /// @brief Average Down Recursively starting from startLevel
+    /// @param data         The data to be averaged down
+    /// @param startLevel   Finest level contributing to the operation. If -1 (default), all levels are used
+    inline void averageDown(AMRStateData& data, int startLevel = -1);
+
     /// @brief Compute L(phi) on a single level WITHOUT refluxing
     /// @param a_rhs    The value of L(phi) on the specified level
     /// @param a_state  The input state (phi) on the specified level

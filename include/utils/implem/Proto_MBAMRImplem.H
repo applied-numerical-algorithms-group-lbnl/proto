@@ -160,10 +160,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     {
         m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
     }
-    for (int li = m_numLevels-1; li > 0; li--)
-    {
-        averageDown(amrRes[li-1], amrRes[li], li);
-    }
+    averageDown(amrRes);
     T r0 = amrRes[0].absMax();
     T r = r0;
     m_solveIter = 0;
@@ -181,10 +178,7 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
         {
             m_mg[li].residual(amrRes[li], a_state[li], a_force[li]);
         }
-        for (int li = m_numLevels-1; li > 0; li--)
-        {
-            averageDown(amrRes[li-1], amrRes[li], li);
-        }
+        averageDown(amrRes);
         r = amrRes[0].absMax();
 #if PR_VERBOSE > 0
         h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_%i",ii+1);
@@ -351,6 +345,24 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
     }
     // copy from temporary
     crseTmp.copyTo(a_crseData);
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(AMRStateData& data, int startLevel)
+{
+    PROTO_ASSERT(startLevel < m_numLevels,
+        "MBAMR::averageDown | Error: Invalid start level specified: %i", startLevel);
+    int fineLevel = (startLevel > 0) ? startLevel : m_numLevels-1;
+    while (fineLevel > 0)
+    {
+        averageDown(data[fineLevel-1], data[fineLevel], fineLevel);
+        fineLevel--;
+    }
 }
 
 template <

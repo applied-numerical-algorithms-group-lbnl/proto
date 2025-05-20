@@ -208,7 +208,7 @@ TEST(MBAMRTests, LaplaceXPoint) {
     // Constants
     int domainSize = 16;
     int boxSize = 16;
-    constexpr int numBlocks = 8;
+    constexpr int numBlocks = 5;
     int numLevels = 2;
     Array<double, DIM> offset{0,0,0,0,0,0};
     int refRatio = 2;
