@@ -65,45 +65,6 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     // create coarse domains
     auto layouts = computeLayouts(a_fineLayout);
     initializeDataHolders(layouts);
-    //std::vector<MBProblemDomain>      problemDomains;
-    //std::vector<std::vector<Point>>   boxSizes;
-    //std::vector<MBDisjointBoxLayout> layouts;
-    // {
-    //     PR_TIME("MBMultigrid::define::build_layouts");
-    //     problemDomains.resize(a_numLevels);
-    //     boxSizes.resize(a_numLevels);
-    //     MBProblemDomain nextDomain = a_fineLayout.domain();
-    //     std::vector<Point> nextBoxSizes = a_fineLayout.boxSizes();
-    //     int level = a_numLevels-1;
-    //     while (level >= 0)
-    //     {
-    //         problemDomains[level] = nextDomain;
-    //         boxSizes[level] = nextBoxSizes;
-    //         if (level > 0)
-    //         {
-    //             // create the next coarser domain
-    //             nextDomain = nextDomain.coarsen(a_refRatios);
-    //             // make sure boxSize <= domainSize
-    //             for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
-    //             {
-    //                 Box domainBox = nextDomain.getBlock(bi).box();
-    //                 if (domainBox.sizes() < nextBoxSizes[bi])
-    //                 {
-    //                     nextBoxSizes[bi] = domainBox.sizes();
-    //                 }
-    //             }
-    //         }
-    //         level--;
-    //     }
-
-    //     // Build the layouts
-    //     for (int li = 0; li < a_numLevels; li++)
-    //     {
-    //         layouts.push_back(MBDisjointBoxLayout(problemDomains[li], boxSizes[li]));
-    //     }
-    // }
-    // initialize all of the state data
-
     // define the coarse-fine stencil operators
     for (int bi = 0; bi < a_fineLayout.numBlocks(); bi++)
     {
@@ -113,9 +74,9 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::define(
     }
     
     // define iteration limits
-    m_numPreRelax = 4;
-    m_numPostRelax = 4;
-    m_numBottomRelax = 2;
+    m_numPreRelax = 8;
+    m_numPostRelax = 8;
+    m_numBottomRelax = 20;
 
     m_solveIter = 0;
     m_solveLevel = m_numLevels-1;

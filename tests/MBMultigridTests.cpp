@@ -343,7 +343,7 @@ TEST(MBMultigridTests, LaplaceIdentity) {
     mg.solve(phi, rhs, 10, 1e-10);
 }
 #endif
-#if 0
+#if 1
 TEST(MBMultigridTests, LaplaceXPoint) {
     #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -351,7 +351,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
 
     int domainSize = 16;
     int boxSize = 8;
-    constexpr int numBlocks = 4;
+    constexpr int numBlocks = 5;
     int numLevels = log(domainSize)/log(2.0);
     Point refRatio = Point::Ones(2);
    
@@ -378,7 +378,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     mg.solve(phi, rhs, 10, 1e-10);
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, LaplaceXPointRefined) {
     #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -386,7 +386,7 @@ TEST(MBMultigridTests, LaplaceXPointRefined) {
 
     int domainSize = 32;
     int boxSize = 16;
-    constexpr int numBlocks = 4;
+    constexpr int numBlocks = 5;
     int numLevels = log(boxSize)/log(2.0);
     Point refRatio = Point::Ones(2);
    
