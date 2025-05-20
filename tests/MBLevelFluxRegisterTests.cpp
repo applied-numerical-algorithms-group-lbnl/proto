@@ -578,6 +578,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     auto grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
     MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
+    data.setVal(7);
 
     #if PR_VERBOSE > 0
         h5.writeMBAMRData({"data"}, map, data, "Telescoping_XPoint_Data");
@@ -633,7 +634,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     auto grid = refinedBlockBoundaryXPointGrid(domainSize, numLevels, refRatio, boxSize);
     MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
-
+    data.setVal(7);
     #if PR_VERBOSE > 0
         h5.writeMBAMRData({"data"}, map, data, "BlockBoundary_XPoint_Data");
     #endif
