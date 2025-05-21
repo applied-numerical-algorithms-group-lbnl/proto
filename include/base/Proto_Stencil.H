@@ -653,10 +653,13 @@ namespace Proto {
           */
         static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
 
+        #ifdef PR_OPS
         static std::vector<double> ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage = true);
 
         template<unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1>
         static void ExtrapIntoBoundary(BoxData<T, C, MEM, D, E>& data, Box interior, Point dir);
+        #endif
+
         /// Stencil Library: Cell to Face Interpolation
         /**
           Interpolates cell averaged values to face averaged values.

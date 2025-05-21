@@ -8,6 +8,7 @@ namespace Proto {
 // Utililties
 //======================
 
+#ifdef PR_OPS
 template<typename T>
 std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage)
 {
@@ -70,6 +71,7 @@ void Stencil<T>::ExtrapIntoBoundary(BoxData<T, C, MEM, D, E>& data, Box interior
       range = range.shift(dir);
     }
 }
+#endif
 
 //========================================================================
 // Stencil Definitions
