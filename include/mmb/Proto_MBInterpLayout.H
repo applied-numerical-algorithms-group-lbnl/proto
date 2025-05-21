@@ -48,6 +48,10 @@ namespace Proto
             Point center,
             MBIndex index) const;
 
+        inline void addInwardPoints(
+            std::set<Point>& footprint,
+            MBIndex index) const;
+
         MBDisjointBoxLayout m_layout;
         std::set<Point> m_baseFootprint;
         Array<bool, DIM> m_copyAxes;
@@ -221,6 +225,19 @@ namespace Proto
         {
             footprint.insert(fi + s0);
             footprint.insert(fi + s1);
+        }
+    }
+
+    void MBInterpLayout::addInwardPoints(
+            std::set<Point>& footprint,
+            MBIndex index) const
+    {
+        std::set<Point> baseFootprint(footprint.begin(), footprint.end());
+        Box patchBox = m_layout[index];
+        for (auto pi : baseFootprint)
+        {
+            Point dir = patchBox.whichBoundaryContains(pi);
+            footprint.insert(pi - dir);
         }
     }
 
