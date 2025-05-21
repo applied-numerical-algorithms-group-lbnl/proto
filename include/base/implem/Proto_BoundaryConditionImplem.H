@@ -65,7 +65,6 @@ void BoundaryCondition::Dirichlet(
         fluxTemp += (S.coef * a_value);
         fluxTemp *= (-a_face.sign());
         fluxTemp.copyTo(a_fluxes[dd]);
-
     }
 }
 
@@ -95,4 +94,51 @@ void BoundaryCondition::Dirichlet(
         fluxTemp *= (-a_face.sign());
         fluxTemp.copyTo(a_fluxes[dd]);
     }
+}
+
+template<class T>
+BCStencil<T> BoundaryCondition::DirichletExtrapStencil(int dist, Face face, int npoints)
+{
+    double d = dist;
+    std::vector<T> shifts;
+    for (int ii = 0; ii < npoints; ii++)
+    {
+        shifts.push_back(d+ii);
+    }
+    shifts.push_back(d-0.5);
+
+    auto coefs = Stencil<T>::ExtrapCoefs(shifts);
+    Stencil<T> S0;
+    for (int ii = 0; ii < npoints; ii++)
+    {
+        S0 += coefs[ii]*Shift(face.dir*(-ii-1));
+    }
+    BCStencil<T> S;
+    S.stencil = S0;
+    S.coef = coefs[npoints];
+    return S;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoundaryCondition::DirichletFillGhost(
+    BoxData<T,C,MEM,D,E>& state,
+    T value,
+    Face face,
+    Box domainBox)
+{
+    if (domainBox.containsBox(state.box())) { return; }
+    Box validRegion = domainBox & state.box();
+    Box boundary = validRegion.adjacent(face.dir, 1);
+    int dist = 1;
+    while (state.box().containsBox(boundary))
+    {
+        BCStencil<T> S = DirichletExtrapStencil(dist, face, 4);
+        BoxData<T,C,MEM,D,E> tmp = S.stencil(state);
+        tmp += S.coef*value;
+        tmp.copyTo(state);
+
+        boundary = boundary.shift(face.dir);
+        dist++;
+    }
+
 }
