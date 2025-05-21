@@ -126,23 +126,23 @@ TEST(BoundaryCondition, ConstDirichletGhost)
             Face fx(0, Side::Lo);
             Face fy(1,Side::Lo);
             BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fx, domainBox);
-            //BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fy, domainBox);
+            BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fy, domainBox);
             if (!(data_i.box() & xBoundBox).empty())
             {
-                BoxData<double, 1> boundaryValues(layout[iter].adjacent(-Point::X()));
+                BoxData<double, 1> boundaryValues(layout[iter].edge(-Point::X()));
                 boundaryValues |= Stencil<double>::CellToFace(0)(data_i);
                 err[nn] = max(err[nn], boundaryValues.absMax());
             }
-            // if (!(data_i.box() & yBoundBox).empty())
-            // {
-            //     BoxData<double, 1> boundaryValues(layout[iter].adjacent(-Point::Y()));
-            //     boundaryValues |= Stencil<double>::CellToFace(1)(data_i);
-            //     err[nn] = max(err[nn], boundaryValues.absMax());
-            // }
+            if (!(data_i.box() & yBoundBox).empty())
+            {
+                BoxData<double, 1> boundaryValues(layout[iter].edge(-Point::Y()));
+                boundaryValues |= Stencil<double>::CellToFace(1)(data_i);
+                err[nn] = max(err[nn], boundaryValues.absMax());
+            }
         }
-        // Reduction<double, Abs> rxn;
-        // rxn.reduce(&err[nn], sizeof(double));
-        // err[nn] = rxn.fetch();
+        Reduction<double, Abs> rxn;
+        rxn.reduce(&err[nn], sizeof(double));
+        err[nn] = rxn.fetch();
 
         #if PR_VERBOSE > 0
         h5.writeMBLevel(data, "DIRICHLET_GHOST_DATA_1");
