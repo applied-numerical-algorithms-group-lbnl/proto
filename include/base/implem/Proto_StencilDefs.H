@@ -42,8 +42,6 @@ std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footpri
             A(ii,jj) = taylorCoefs[ii]*pow(a_footprint[jj], ii);
         }
     }
-    b.print();
-    A.print();
     auto a = A.inverse()*b;
     std::vector<double> ret;
     for (int ii = 0; ii < N; ii++)
