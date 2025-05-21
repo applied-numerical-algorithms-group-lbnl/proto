@@ -5,7 +5,7 @@
 using namespace Proto;
 
 #if DIM==2
-TEST(BoundaryCondition, ConstDirichlet)
+TEST(BoundaryCondition, ConstDirichletFlux)
 {
     int domainSize = 8;
     Array<double, DIM> dx;
@@ -56,6 +56,92 @@ TEST(BoundaryCondition, ConstDirichlet)
     flux[0].printData();
 }
 #endif
+
+namespace {
+    PROTO_KERNEL_START
+    void _f_initInterior(Point& pi, Var<double, 1, MEMTYPE_DEFAULT>& data, BlockIndex block, Array<double, DIM> dx)
+    {
+        Array<double, DIM> x(pi);
+        x += 0.5;
+        x *= dx;
+        data(0) = 1.0;
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            data(0) *= sin(x[ii]); 
+        }
+    }
+    PROTO_KERNEL_END(_f_initInterior, f_initInterior);
+}
+
+TEST(BoundaryCondition, ConstDirichletGhost)
+{
+    int domainSize = 16;
+    int boxSize = 8;
+    int numIter = 3;
+    constexpr int numBlocks = 5;
+
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        auto domain = buildXPoint(domainSize, numBlocks);
+        std::vector<Point> boxSizes;
+        std::vector<MBPoint> patches;
+        for (BlockIndex block = 0; block < numBlocks; block++)
+        {
+            boxSizes.push_back(Point::Ones(boxSize));
+            for (auto pi : Box::Cube(domainSize / boxSize))
+            {
+                if (block == 0 && pi != Point::Ones(domainSize / boxSize - 1))
+                {
+                    continue; 
+                } else {
+                    patches.push_back(MBPoint(pi, block));
+                }
+            }
+        }
+        MBDisjointBoxLayout layout(domain, patches, boxSizes);
+        MBLevelBoxData<double, 1, HOST> data(layout, Point::Ones(4));
+        ConvolveOp<double> C;
+        Array<double, DIM> dx;
+        dx.fill(0.5*M_PI/domainSize);
+        for (auto iter : layout)
+        {
+            data[iter].setVal(0);
+            auto [B0, B1] = C.domains(layout[iter]);
+            auto tmp0 = forall_p<double, 1>(f_initInterior, B1, layout.block(iter), dx);
+            C(data[iter], tmp0, tmp0);
+        }
+
+        #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        h5.writeMBLevel(data, "DIRICHLET_GHOST_DATA_0");
+        #endif
+        Box domainBox = Box::Cube(domainSize);
+        Box xBoundBox = domainBox.adjacent(-Point::X(),1);
+        Box yBoundBox = domainBox.adjacent(-Point::Y(),1);
+        for (auto iter : layout)
+        {
+            auto& data_i = data[iter];
+            Face fx(0, Side::Lo);
+            Face fy(1,Side::Lo);
+            BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fx, domainBox);
+            BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fy, domainBox);
+            if (!(data_i.box() & xBoundBox).empty())
+            {
+                BoxData<double, 1> boundaryValues(layout[iter].adjacent(-Point::X()));
+                boundaryValues |= Stencil<double>::CellToFace(0)(data_i);
+                std::cout << "boundary interp value: " << boundaryValues.absMax() << std::endl;
+            }
+        }
+        #if PR_VERBOSE > 0
+        h5.writeMBLevel(data, "DIRICHLET_GHOST_DATA_1");
+        #endif
+
+        domainSize *= 2;
+        boxSize *= 2;
+    }
+    
+
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

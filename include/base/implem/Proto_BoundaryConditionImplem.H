@@ -100,7 +100,7 @@ template<class T>
 BCStencil<T> BoundaryCondition::DirichletExtrapStencil(int dist, Face face, int npoints)
 {
     double d = dist;
-    std::vector<T> shifts;
+    std::vector<double> shifts;
     for (int ii = 0; ii < npoints; ii++)
     {
         shifts.push_back(d+ii);
@@ -109,9 +109,10 @@ BCStencil<T> BoundaryCondition::DirichletExtrapStencil(int dist, Face face, int 
 
     auto coefs = Stencil<T>::ExtrapCoefs(shifts);
     Stencil<T> S0;
+    Point shiftDir = Point::Basis(face.dir, face.sign());
     for (int ii = 0; ii < npoints; ii++)
     {
-        S0 += coefs[ii]*Shift(face.dir*(-ii-1));
+        S0 += coefs[ii]*Shift(shiftDir*(-dist-ii));
     }
     BCStencil<T> S;
     S.stencil = S0;
@@ -126,18 +127,19 @@ void BoundaryCondition::DirichletFillGhost(
     Face face,
     Box domainBox)
 {
+    Point dir = Point::Basis(face.dir, face.sign());
     if (domainBox.containsBox(state.box())) { return; }
     Box validRegion = domainBox & state.box();
-    Box boundary = validRegion.adjacent(face.dir, 1);
+    Box boundary = validRegion.adjacent(dir, 1);
     int dist = 1;
     while (state.box().containsBox(boundary))
     {
-        BCStencil<T> S = DirichletExtrapStencil(dist, face, 4);
-        BoxData<T,C,MEM,D,E> tmp = S.stencil(state);
+        BCStencil<T> S = DirichletExtrapStencil<T>(dist, face, 3);
+        BoxData<T,C,MEM,D,E> tmp = S.stencil(state, boundary);
         tmp += S.coef*value;
         tmp.copyTo(state);
 
-        boundary = boundary.shift(face.dir);
+        boundary = boundary.shift(dir);
         dist++;
     }
 
