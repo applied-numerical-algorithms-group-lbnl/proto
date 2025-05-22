@@ -142,5 +142,48 @@ void BoundaryCondition::DirichletFillGhost(
         boundary = boundary.shift(dir);
         dist++;
     }
+}
 
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoundaryCondition::ExtrapolateCorners(
+    BoxData<T,C,MEM,D,E>& state,
+    Box domainBox)
+{
+    Box validBox = state.box() & domainBox;
+    for (auto cornerDir : Point::Directions())
+    {
+        if (cornerDir.codim() < 2) { continue; } //assume these boundaries are already filled
+        if (domainBox.edge(cornerDir).containsBox(validBox.edge(cornerDir)))
+        {
+            Box cornerDomain;
+            cornerDomain += validBox.adjacent(cornerDir,1);
+            cornerDomain += state.box().edge(cornerDir, 1);
+            PROTO_ASSERT(state.box().containsBox(cornerDomain), "Geometry Error");
+            BoxData<T,C,MEM,D,E> cornerData(cornerDomain);
+            cornerData.setVal(0);
+            int numContributions = 0;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                if (cornerDir[ii] == 0) { continue; }
+                Point boundDir = cornerDir * (Point::Ones() - Point::Basis(ii));
+                PROTO_ASSERT(boundDir.codim() == cornerDir.codim()-1, "Geometry Error");
+                Point extrapDir = cornerDir - boundDir;
+                
+                Box extrapDataInterior = cornerDomain.adjacent(-extrapDir, 4);
+                Box extrapDataBox = cornerDomain.extrude(-extrapDir, 4);
+                PROTO_ASSERT(state.box().containsBox(extrapDataBox), "Geometry Error");
+
+                BoxData<T,C,MEM,D,E> extrapData(extrapDataBox);
+                state.copyTo(extrapData);
+
+                Stencil<T>::ExtrapIntoBoundary(extrapData, extrapDataInterior, extrapDir);
+                cornerData += extrapData;
+                numContributions++;
+            }
+            PROTO_ASSERT(numContributions > 0, "Geometry Error");
+            T factor = 1.0/numContributions;
+            cornerData *= factor;
+            cornerData.copyTo(state);
+        }
+    }
 }

@@ -4,6 +4,8 @@
 
 using namespace Proto;
 
+
+#if 0 // This test is unfinished
 #if DIM==2
 TEST(BoundaryCondition, ConstDirichletFlux)
 {
@@ -56,7 +58,7 @@ TEST(BoundaryCondition, ConstDirichletFlux)
     flux[0].printData();
 }
 #endif
-
+#endif
 namespace {
     PROTO_KERNEL_START
     void _f_initInterior(Point& pi, Var<double, 1, MEMTYPE_DEFAULT>& data, BlockIndex block, Array<double, DIM> dx)
@@ -78,44 +80,35 @@ TEST(BoundaryCondition, ConstDirichletGhost)
     int domainSize = 16;
     int boxSize = 8;
     int numIter = 3;
+    int ghostSize = 2;
     constexpr int numBlocks = 5;
 
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
         auto domain = buildXPoint(domainSize, numBlocks);
-        std::vector<Point> boxSizes;
-        std::vector<MBPoint> patches;
-        for (BlockIndex block = 0; block < numBlocks; block++)
-        {
-            boxSizes.push_back(Point::Ones(boxSize));
-            for (auto pi : Box::Cube(domainSize / boxSize))
-            {
-                if (block == 0 && pi != Point::Ones(domainSize / boxSize - 1))
-                {
-                    continue; 
-                } else {
-                    patches.push_back(MBPoint(pi, block));
-                }
-            }
-        }
-        MBDisjointBoxLayout layout(domain, patches, boxSizes);
-        MBLevelBoxData<double, 1, HOST> data(layout, Point::Ones(4));
+        MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+        MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
+        map.define(layout, Point::Ones(ghostSize));
+        MBInterpOp interp(map);
+        MBLevelBoxData<double, 1, HOST> data(layout, Point::Ones(ghostSize));
+
         ConvolveOp<double> C;
         Array<double, DIM> dx;
         dx.fill(0.5*M_PI/domainSize);
         for (auto iter : layout)
         {
-            data[iter].setVal(0);
-            auto [B0, B1] = C.domains(layout[iter]);
+            auto [B0, B1] = C.domains(layout[iter].grow(ghostSize));
             auto tmp0 = forall_p<double, 1>(f_initInterior, B1, layout.block(iter), dx);
             C(data[iter], tmp0, tmp0);
         }
+        data.setBoundary(1.0);
 
         #if PR_VERBOSE > 0
         HDF5Handler h5;
         h5.writeMBLevel(data, "DIRICHLET_GHOST_DATA_0");
         #endif
+
         Box domainBox = Box::Cube(domainSize);
         Box xBoundBox = domainBox.adjacent(-Point::X(),1);
         Box yBoundBox = domainBox.adjacent(-Point::Y(),1);
@@ -127,15 +120,19 @@ TEST(BoundaryCondition, ConstDirichletGhost)
             Face fy(1,Side::Lo);
             BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fx, domainBox);
             BoundaryCondition::DirichletFillGhost<double>(data_i, 0, fy, domainBox);
+            BoundaryCondition::ExtrapolateCorners(data_i, domainBox);
+            
             if (!(data_i.box() & xBoundBox).empty())
             {
-                BoxData<double, 1> boundaryValues(layout[iter].edge(-Point::X()));
+                Box validBox = data_i.box() & domainBox;
+                BoxData<double, 1> boundaryValues(validBox.edge(-Point::X()));
                 boundaryValues |= Stencil<double>::CellToFace(0)(data_i);
                 err[nn] = max(err[nn], boundaryValues.absMax());
             }
             if (!(data_i.box() & yBoundBox).empty())
             {
-                BoxData<double, 1> boundaryValues(layout[iter].edge(-Point::Y()));
+                Box validBox = data_i.box() & domainBox;
+                BoxData<double, 1> boundaryValues(validBox.edge(-Point::Y()));
                 boundaryValues |= Stencil<double>::CellToFace(1)(data_i);
                 err[nn] = max(err[nn], boundaryValues.absMax());
             }

@@ -51,6 +51,11 @@ namespace Proto {
             T value,
             Face face,
             Box domainBox);
+
+        template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+        static inline void ExtrapolateCorners(
+            BoxData<T,C,MEM,D,E>& state,
+            Box domainBox);
         #endif
 
     };
