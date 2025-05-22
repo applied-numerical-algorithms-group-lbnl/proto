@@ -348,7 +348,9 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::crseForce(
         int                     a_level)
 {
     interpBlockBoundaries(a_state, a_level);
+    applyHomogeneousBC(a_state);
     interpBlockBoundaries(a_crseState, a_level-1);
+    applyHomogeneousBC(a_crseState);
 
     for (auto iter : a_state.layout())
     {
@@ -395,7 +397,8 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::relax(
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_0", m_solveIter, m_solveLevel, m_relaxIter);
         #endif
-        interpBlockBoundaries(a_state, a_level);
+        //interpBlockBoundaries(a_state, a_level);
+        //applyHomogeneousBC(a_state);
         #if PR_VERBOSE > 2
         h5.writeMBLevel(m_maps[a_level], a_state, "MBMultigrid_Relax_Phi_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
         h5.writeMBLevelBoundsUnified({"phi"}, a_state, "MBMultigrid_Relax_PhiBounds_S%i_L%i_R%i_1", m_solveIter, m_solveLevel, m_relaxIter);
@@ -477,6 +480,7 @@ void MBMultigrid<OPType, MAP, T, BCType, MEM>::residual(
         int                     a_level)
 {
     interpBlockBoundaries(a_state, a_level);
+    applyHomogeneousBC(a_state);
     for (auto iter : a_residual.layout())
     {
         auto& res_i = a_residual[iter];
@@ -502,6 +506,7 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
 {
     LevelStateData LPhi(a_state.layout(), Point::Zeros());
     interpBlockBoundaries(a_state, a_level);
+    applyHomogeneousBC(a_state);
     Reduction<T,Abs> rxn;
     for (auto iter : a_residual.layout())
     {
@@ -521,4 +526,31 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
     h5.writeMBLevel({"force"}, m_maps[a_level], a_force, "RESNORM_RHS");
 #endif
     return rxn.fetch();
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBMultigrid<OPType, MAP, T, BCType, MEM>::applyHomogeneousBC(
+    LevelStateData& data)
+{
+    auto& layout = data.layout();
+    for (auto iter : layout)
+    {
+        auto& state = data[iter];
+        Box domainBox = layout.domain().getBlock(layout.block(iter)).box();
+        for (auto dir : Point::DirectionsOfCodim(1))
+        {
+            if (layout.isDomainBoundary(iter, dir))
+            {
+                int coord = dir.firstNonZeroIndex();
+                Side::LoHiSide side = dir[coord] < 0 ? Side::Lo : Side::Hi;
+                BoundaryCondition::DirichletFillGhost<T>(state, 0, Face(coord, side), domainBox);
+            }
+        }
+        BoundaryCondition::ExtrapolateCorners(state, domainBox);
+    }
 }

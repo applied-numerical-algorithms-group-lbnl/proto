@@ -102,6 +102,8 @@ public:
         m_blockInterp[a_level]->apply(a_data, a_data);
     }
 
+    inline void applyHomogeneousBC(LevelStateData& a_data);
+
     // V Cycle subroutines
     inline void fineCorrect(
             LevelStateData&         a_fine,
