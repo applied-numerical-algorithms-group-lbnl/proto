@@ -375,7 +375,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_XPOINT");
     h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
 #endif
-    mg.solve(phi, rhs, 10, 1e-10);
+    mg.solve(phi, rhs, 20, 1e-10);
 }
 #endif
 #if 0
