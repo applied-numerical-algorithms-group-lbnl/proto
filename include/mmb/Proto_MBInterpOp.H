@@ -157,7 +157,6 @@ namespace Proto
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
-            const std::set<Point>& footprint,
             const MBLevelMap<MAP,MEM>& map);
         void addShiftedOp(
             const MBPointInterpOp& baseOp,

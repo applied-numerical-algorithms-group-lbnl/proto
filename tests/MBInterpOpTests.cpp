@@ -418,7 +418,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
-        op.printErrorPoints(hostErr, 1.0);
+        //op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();

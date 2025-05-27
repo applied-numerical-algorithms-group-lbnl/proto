@@ -29,7 +29,7 @@ namespace Proto
             MBDataPoint                 a_dst,
             Point                       a_ghost,
             const MBLevelMap<MAP, MEM>& a_map,
-            std::set<Point>          a_footprint,
+            const MBInterpLayout&       a_interpLayout,
             unsigned int                a_order);
         
         inline MBPointInterpOp(

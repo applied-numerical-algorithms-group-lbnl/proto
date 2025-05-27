@@ -53,7 +53,7 @@ void MBInterpOp::define(
 template<typename MAP, MemType MEM>
 void MBInterpOp::define(
         const std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>>&  a_maps,
-        MBInterpLayout              a_interpLayout,
+        MBInterpLayout    a_interpLayout,
         int                         a_order)
 {
     PR_TIME("MBInterpOp::define");
@@ -103,8 +103,8 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
             {
                 continue;
             }
-            auto footprint = m_interpLayout.footprint(boundPoint, dir, index);
-            addPointOp(boundPoint, index, footprint, map);
+            //auto footprint = m_interpLayout.footprint(boundPoint, dir, index);
+            addPointOp(boundPoint, index, map);
         }
     }
 }
@@ -120,7 +120,6 @@ template<typename MAP, MemType MEM>
 void MBInterpOp::addPointOp(
     Point dataPoint,
     const MBIndex& index,
-    const std::set<Point>& footprint,
     const MBLevelMap<MAP,MEM>& map)
 {
     PR_TIME("MBInterpOp::addPointOp");
@@ -129,7 +128,7 @@ void MBInterpOp::addPointOp(
     
     MBDataPoint dstDataPoint(index, dataPoint, m_interpLayout.layout());
     auto op = std::make_shared<MBPointInterpOp>(
-        dstDataPoint, m_ghost, map, footprint, m_order);
+        dstDataPoint, m_ghost, map, m_interpLayout, m_order);
     
     m_ops.push_back(op);
     MBPointID key(dataPoint, index.global());

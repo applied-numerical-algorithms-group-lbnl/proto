@@ -30,15 +30,19 @@ MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         Point a_ghost,
         const MBLevelMap<MAP, MEM>& a_map,
-        std::set<Point> a_footprint,
+        const MBInterpLayout& a_interpLayout,
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
     m_order = a_order;
     m_dst = a_dst;
-    computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
+    Box patchBox = a_map.layout()[m_dst.index()];
+    Point boundaryDir = patchBox.whichBoundaryContains(m_dst.point());
+    auto footprint = a_interpLayout.footprint(m_dst.point(), boundaryDir, m_dst.index());
+    m_srcs = a_interpLayout.computeSourcePoints(footprint, a_map, m_dst.point(), m_dst.index());
+    //computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
     computeExponents();
-    validateMatrixDimensions(a_footprint);
+    validateMatrixDimensions(footprint);
     auto momentData = computeMoments(a_map);
     computeCoefficients(momentData);
     //writeFootprint("Interp_B" + to_string(m_dst.block()) + "_P" + m_dst.point().str());

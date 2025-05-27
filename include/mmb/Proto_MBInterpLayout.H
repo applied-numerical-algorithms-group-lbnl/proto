@@ -6,6 +6,7 @@
 
 namespace Proto
 {
+    
     class MBInterpLayout
     {
         public:
@@ -21,6 +22,12 @@ namespace Proto
             Point point,
             Point boundaryDir,
             MBIndex index) const;
+        
+        template<typename MAP, MemType MEM>
+        inline std::vector<MBDataPoint> computeSourcePoints(
+            std::set<Point> footprint,
+            const MBLevelMap<MAP, MEM>& map,
+            Point center, MBIndex index) const;
         inline Point footprintMask() const;
         inline Box footprintSpan() const;
         inline const MBDisjointBoxLayout& layout() const { return m_layout; }
