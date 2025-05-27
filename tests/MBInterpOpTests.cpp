@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-#if 0
+#if 1
 TEST(MBInterpOp, MBDataPoint)
 {
 
@@ -65,7 +65,7 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 0
+#if 1
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
@@ -235,7 +235,7 @@ namespace {
     }
     
 }
-#if 0
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
