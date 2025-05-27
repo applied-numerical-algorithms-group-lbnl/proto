@@ -45,7 +45,6 @@ void MBInterpLayout::ignoreAxis(int dir)
 
 std::set<Point> MBInterpLayout::footprint(
     Point center,
-    Point boundaryDir,
     MBIndex index) const
 {
     PROTO_ASSERT(boundaryDir.abs().max() <= 1,
@@ -53,6 +52,9 @@ std::set<Point> MBInterpLayout::footprint(
     auto patchDomain = m_layout.patchDomain();
     BlockIndex block = m_layout.block(index);
     PatchID patch = m_layout.point(index);
+    Box patchBox = m_layout[index];
+    Point boundaryDir = patchBox.whichBoundaryContains(center);
+    PROTO_ASSERT(boundaryDir != Point::Zeros(), "Center point should be inside of the boundary of a patch");
     PatchID adjPatch = patch + boundaryDir;
     Box patchBox = m_layout[index];
     std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
@@ -89,12 +91,20 @@ MBInterpLayout::computeSourcePoints(
     PR_TIME("MBInterpLayoutOp::computeSourcePoints");
     PROTO_ASSERT(map.layout().compatible(layout()),
         "MBInterpLayout::computeSourcePoints | Error: map layout is incompatible with InterpLayout internals");
-    std::vector<MBDataPoint> srcs;
+
+
+
+    
     auto patch = layout().patch(index);
     Box patchBox = layout()[index];
     patchBox = patchBox.grow(map.ghost()[0]); // all valid data that will be locally available on the destination patch
-    Box domainBox = layout().domain().getBlock(patch.block).box();
+    auto domain = layout().domain();
+    BlockIndex block = patch.block;
+    Box domainBox = layout().domain().getBlock(block).box();
+    
 
+    std::set<MBPoint> srcSet;
+    std::vector<MBDataPoint> srcs;
     for (auto fi : footprint)
     {
         Point pi = center + fi;
@@ -102,6 +112,10 @@ MBInterpLayout::computeSourcePoints(
         // bulk ghost cells which would not be necessary for applying the physics operator
         if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
         {
+            MBPoint srcPoint(pi, block);
+            PROTO_ASSERT(srcSet.count(srcPoint) == 0, "Trying to add a duplicate Point");
+            srcSet.insert(MBPoint(pi, block));
+
             MBDataPoint data(index, pi, layout());
             srcs.push_back(data);
         } else if (!domainBox.containsPoint(pi))
@@ -111,8 +125,48 @@ MBInterpLayout::computeSourcePoints(
             for (auto adjIndex : adjIndices)
             {
                 BlockIndex adjBlock = layout().block(adjIndex);
+
+                #if 0
+                // This is a bit of a hack to get the boundary data box
+                // in the adjacent block's coordinate system
+                Box srcDataBox;
+                for (auto bound : map.map().bounds(index, dir))
+                {
+                    if (bound.adjIndex == adjIndex)
+                    {
+                        srcDataBox = bound.adjBox();
+                    }
+                }
+
+                // Not yet implemented
+                Point adjPoint = map.convertPoint(pi, block, adjBlock);
+                // implement inverse mapping using this signature if possible
+                // BoxData<double, DIM> MBMapOp<...>::inverse(const BoxData<double, DIM>& x);
+
+                if (!srcDataBox.containsPoint(adjPoint))
+                {
+                    // We can't use this point from this block because exchange won't transfer over the data
+                }
+
+                MBPoint srcPoint(adjPoint, adjBlock);
+                if (srcSet.count(srcPoint) > 0)
+                {
+                    // Already added this point from this block (maybe legitimately)
+                    // skip, or throw a warning
+                }
+                srcSet.insert(srcPoint);
+
+                // convert back to local index space. Note that we use domain instead of map here.
+                Point pj = domain.convertPoint(adjPoint, adjBlock, block);
+                
+                // Using pj instead of pi
+                MBDataPoint data(index, pj, layout(), dir, adjBlock);
+                srcs.push_back(data);
+                #else
                 MBDataPoint data(index, pi, layout(), dir, adjBlock);
                 srcs.push_back(data);
+                #endif
+
             }
         }
     }
