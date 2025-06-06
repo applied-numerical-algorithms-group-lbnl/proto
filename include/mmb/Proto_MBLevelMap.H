@@ -224,6 +224,13 @@ class MBLevelMap
 
     inline MAP& operator[](BlockIndex block); 
 
+    /// @brief Convert a Point from one block's index space to another by using forward / inverse mapping
+    /// @param srcPoint Point in the source block's index space
+    /// @param srcBlock Source block
+    /// @param dstBlock Destination block
+    /// @return 
+    inline Point convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const;
+
     private:
         Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
