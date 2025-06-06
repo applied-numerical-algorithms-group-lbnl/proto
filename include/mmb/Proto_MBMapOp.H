@@ -71,21 +71,25 @@ class MBMapOp
     /// Analytic Map
     /** Users should override this function
      */
-    inline virtual Array<double, DIM> apply(const Array<double, DIM>& a_xi) { return a_xi; }
+    inline virtual Array<double, DIM> apply(const Array<double, DIM>& a_xi)
+    {
+        PROTO_ASSERT(false,
+            "MBMapOp::apply (analytic) | Error: function not implemented in subclass");
+    }
 
     inline virtual void inverse(
             BoxData<double, DIM, MEM>& a_XMap,
             const BoxData<double, DIM, MEM>& a_XCart)
     {
         PROTO_ASSERT(false,
-                "MBMapOp::inverse | Error: function not implemented in subclass");
+            "MBMapOp::inverse | Error: function not implemented in subclass");
     }
     /// Analytic Inverse Map
     /** Users should override this function if the inverse map is needed
      */
     inline virtual Array<double, DIM> inverse(const Array<double, DIM>& a_x) {
         PROTO_ASSERT(false,
-                "MBMapOp::inverse | Error: function not implemented in subclass");
+            "MBMapOp::inverse (analytic) | Error: function not implemented in subclass");
     }
 
     // Used internally to fix inheritance of virtual functions
