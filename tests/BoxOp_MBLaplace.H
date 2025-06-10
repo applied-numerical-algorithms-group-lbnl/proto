@@ -4,7 +4,7 @@
 using namespace Proto;
 
 template<typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 {
@@ -14,7 +14,17 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     using MBBoxOp<T, MAP, 1, 0, MEM>::MBBoxOp;
     
     // How many ghost cells does the operator need from the state variables
-    inline static Point ghost() { return Point::Ones(3);}
+    inline static Point ghost()
+    {
+        Point diffGhost = Point::Zeros();
+        Point matProdGhost = Point::Zeros();
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            diffGhost = absMaxPoint(diffGhost, MappedFaceAverageDiffOp<T>(ii).ghost());
+            matProdGhost = absMaxPoint(matProdGhost, FaceAverageMatrixProductOp<T>(ii).ghost());
+        }
+        return Point::Ones() + diffGhost + matProdGhost;
+    }
     
     // How many ghost cells does the operator need from the auxiliary variables
     inline static Point auxGhost() { return Point::Zeros();}
@@ -24,7 +34,7 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
-    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
+    inline double spectralRadius() const {return (2.5*DIM) / pow(this->dxMin(), 2); }
 
     inline void
     apply(
@@ -56,11 +66,13 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     flux(
             BoxData<T, 1>& flux,
             const BoxData<T, 1>& state,
-            int dir) const
+            int dir,
+            T a_scale = 1.0) const
     {
         auto faceGrad = (*gradOps[dir])(state, state, adjJ_f[dir], adjJ_f[dir], J_f[dir], J_f[dir]);
         (*matProdOps[dir])(flux, faceGrad, N_f[dir], faceGrad, N_f[dir]);
         flux /= this->dx()[dir];
+        flux *= a_scale;
     }
 
     // Cache metric terms and Jacobian

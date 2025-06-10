@@ -1359,6 +1359,7 @@ namespace Proto
         bool containsInfOrNAN(Box domain) const;
         bool containsUninitialized() const;
         bool containsUninitialized(Box domain) const;
+        bool containsAddress(T* address) const;
         ///@}
         
         ///////////////////////////////////////////////////////////////////////////////////////

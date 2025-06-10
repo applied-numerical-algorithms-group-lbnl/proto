@@ -1,9 +1,9 @@
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
             const MBAMRLayout&            a_grid,
@@ -14,10 +14,10 @@ MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
             const MBAMRLayout&            a_grid,
@@ -27,10 +27,10 @@ MBAMR<OPType, MAP, T, BCType, MEM>::MBAMR(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             const MBAMRLayout&            a_grid,
@@ -38,7 +38,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 {
     PROTO_ASSERT(a_refRatios.size() == a_grid.numBlocks(),
             "MBAMR::define | Error: must provide a refinement ratio for each block.");
-
+    
     m_numLevels = a_grid.numLevels(); 
     
     // clear and reallocate memory for temporaries
@@ -53,12 +53,14 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
     m_BCInterp.clear();
     m_average.clear();
     m_localBlockInterp.clear();
+    m_fluxRegisters.clear();
 
     m_residual.resize(m_numLevels);
     m_state_0.resize(m_numLevels-1);
     m_force.resize(m_numLevels-1);
     m_local.resize(m_numLevels-1);
     m_localBlockInterp.resize(m_numLevels-1);
+    m_fluxRegisters.resize(m_numLevels-1);
 
     // define the map
     m_map.define(a_grid, OP::ghost());
@@ -73,6 +75,8 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
    
     Point localGhost = OP::ghost() + m_BCInterp[0].ghost();
 
+    Array<double, DIM> dx;
+    dx.fill(1.0);
     for (int li = 0; li < m_numLevels; li++)
     {
         // build multigrid operators
@@ -85,14 +89,13 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
                         a_grid[li], Point::Ones(2), N0));
         } else {
-            //FIXME: assumes no subcycling
+            //FIXME: assumes point relaxation only
             m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
                         a_grid[li], Point::Ones(), 1));
         }
 
         // build data holders
         m_residual[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li), Point::Zeros());
-        //m_boundRegisters[li].define(a_grid.getLevel(li), 1, Point::Zeros());
         if (li < m_numLevels-1)
         {
             m_state_0[li] = std::make_shared<LevelStateData>(a_grid.getLevel(li),Point::Zeros());
@@ -100,18 +103,40 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
 
             auto crseFineLayout = a_grid.getLevel(li+1).coarsen(a_refRatios);
             m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
+            m_local[li]->setVal(0);
             
+            std::cout << "dx: " << dx << std::endl;
+            m_fluxRegisters[li] = std::make_unique<FluxRegister>(a_grid.getLevel(li), a_grid.getLevel(li+1), a_refRatios[li], dx);
+            Array<double, DIM> r(a_refRatios[li]);
+            dx = dx / r;
+
             MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
             m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
         }
     }
+    
+    // print domains
+    // pr_out() << "MBAMR Domains" << std::endl;
+    // for (int li = 0; li < a_grid.numLevels(); li++)
+    // {
+    //     auto& layout = a_grid.getLevel(li);
+    //     pr_out() << std::endl << "LEVEL: " << li << std::endl;
+    //     pr_out() << "Layout of state, state_0, force, residual: (size = " << layout.numBoxes() << ")" << std::endl;
+    //     layout.print();
+    //     if (li < a_grid.numLevels()-1)
+    //     {
+    //         auto& localLayout = m_local[li]->layout();
+    //         pr_out() << "Layout of local: (size = " << localLayout.numBoxes() << ")" << std::endl;
+    //         localLayout.print();
+    //     }
+    // }
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
         AMRStateData&   a_state,
@@ -128,32 +153,38 @@ T MBAMR<OPType, MAP, T, BCType, MEM>::solve(
     const auto& crseForce = a_force[0];
     const auto& fineForce = a_force[m_numLevels-1];
     // allocate a temporary for the residual
-    LevelStateData crseRes(crseState.layout(), Point::Zeros());
-    // compute the initial residual
-    //TODO: need to average down onto coarsest level first
-    T r0 = m_mg[0].resnorm(crseRes, crseState, crseForce);
+    AMRStateData amrRes(a_state.grid(), Point::Zeros());
+    T r0 = resnorm(amrRes, a_state, a_force);
     T r = r0;
+    m_solveIter = 0;
+    #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_0");
+        h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_0");
+        std::cout << "initial residual: " << r0 << std::endl;
+    #endif
     for (int ii = 0; ii < a_maxIter; ii++)
     {
         vCycle(a_state, a_force, fineForce, m_numLevels-1);
-
-        //TODO: need to average down onto coarsest level first
-        r = m_mg[0].resnorm(crseRes, crseState, crseForce);
+        r = resnorm(amrRes, a_state, a_force);
 #if PR_VERBOSE > 0
-        std::cout << "ii = " << ii << " | residual: " << r << std::endl;
+        h5.writeMBAMRData({"residual"}, m_map, amrRes, "MBAMR_Solve_Residual_%i",ii+1);
+        h5.writeMBAMRData({"phi"}, m_map, a_state, "MBAMR_Solve_Phi_%i", ii+1);
+        std::cout << "MBAMR::solve | after iter: " << ii << " | residual: " << r << std::endl;
 #endif
         if (r/r0 < a_tolerance) {
             return r;
         }
+        m_solveIter++;
     }
     return r;
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         AMRStateData&         a_state,
@@ -184,12 +215,37 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::vCycle(
         m_mg[a_level].solve(state, force, 1, 1e-12);                // relax
     }
 }
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::interpBlockBounds(
+        LevelStateData&   a_data,
+        int               a_level)
+{
+    PROTO_ASSERT(a_level >= 0 && a_level < m_numLevels,
+        "MBAMR::interpBlockBounds | Error: Invalid level %i", a_level);
+    if (m_map.getLevel(a_level).layout().compatible(a_data.layout()))
+    {
+        a_data.exchange();
+        m_mg[a_level].interpOp().apply(a_data, a_data);
+    } else if (a_data.layout().compatible(m_local[a_level]->layout()))
+    {
+        a_data.exchange();
+        m_localBlockInterp[a_level]->apply(a_data, a_data);
+    } else {
+        MayDay<void>::Error("Invalid layout configuration");
+    }
+
+}
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
         const LevelStateData&   a_crseData,
@@ -202,7 +258,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
             "MBAMR::interpBounds | Error: Tried to interpolate onto the coarsest level.");
     // copy into "coarsened fine" temporary
     auto& crseTmp = *m_local[a_fineLevel-1];
-    a_crseData.copyTo(crseTmp);
+    a_crseData.copyToFull(crseTmp);
 
     // block boundary interpolation
     crseTmp.exchange();
@@ -220,14 +276,42 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::interpBounds(
         fine_i.copyTo(fine_0);                  // save fine data on interior
         fine_i |= m_BCInterp[block](crse_i);    // do interpolation on whole patch
         fine_0.copyTo(fine_i);                  // overwrite interior
+
+        auto patch = layout.patch(iter);
+        //extrapolate regions near block boundaries
+        #if 0 
+        for (auto dir : Point::DirectionsOfCodim(2))
+        {
+            
+            if (layout.isRefinementBoundary(patch, dir) && layout.isBlockBoundary(iter, dir))
+            {
+                for (auto n0 : dir.split())
+                {
+                    if (layout.isBlockBoundary(iter, n0))
+                    {
+                        Point n1 = dir - n0;
+                        Box interior = layout[iter].adjacent(n1 * a_fineData.ghost()[0]);
+                        std::cout << "dir: " << dir << " | block dir: " << n0 << " | ref dir: " << n1 << std::endl;
+                        std::cout << "layout box: " << layout[iter] << " | patch box: " << fine_i.box() << " | extrap domain: " << interior << std::endl;
+                        
+                        Stencil<double>::ExtrapIntoBoundary(fine_i, interior, n0);
+                        h5.writePatch(fine_i, "INTERP_FINE_4");
+                        break;
+                    }
+                    
+                }
+            }
+        }
+        #endif
     }
+    
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
         LevelStateData&         a_crseData,
@@ -251,17 +335,115 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::averageDown(AMRStateData& data, int startLevel)
+{
+    PROTO_ASSERT(startLevel < m_numLevels,
+        "MBAMR::averageDown | Error: Invalid start level specified: %i", startLevel);
+    int fineLevel = (startLevel > 0) ? startLevel : m_numLevels-1;
+    while (fineLevel > 0)
+    {
+        averageDown(data[fineLevel-1], data[fineLevel], fineLevel);
+        fineLevel--;
+    }
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        int                     a_level,
+        T                       a_scale)
+{
+    PROTO_ASSERT(a_rhs.layout().compatible(a_state.layout()),
+        "MBAMR::levelApply | Error: RHS and state have incompatible layouts");
+    PROTO_ASSERT(a_level < m_numLevels && a_level >= 0,
+        "MBAMR::levelApply | Error: Invalid level: ", a_level);
+
+    auto& layout = a_state.layout();
+
+    for (auto iter : a_state.layout())
+    {
+        auto& state = a_state[iter];
+        auto& rhs = a_rhs[iter];
+        op(a_level)(rhs, state);
+    }
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+void MBAMR<OPType, MAP, T, BCType, MEM>::levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        LevelStateData&         a_fineState,
+        int                     a_level,
+        T                       a_scale)
+{
+    PROTO_ASSERT(a_rhs.layout().compatible(a_state.layout()),
+        "MBAMR::levelApply | Error: RHS and state have incompatible layouts");
+    PROTO_ASSERT(a_level < m_numLevels-1 && a_level >= 0,
+        "MBAMR::levelApply | Error: Invalid level: ", a_level);
+    
+    auto& layout = a_state.layout();
+    auto& fluxRegister = *m_fluxRegisters[a_level];
+    fluxRegister.clearInternalData();
+
+    for (auto citer : layout)
+    {
+        // This is to get around the fact that MBBoxOp isn't written to use FluxBoxData
+        FluxBoxData<T, OP::numState(), MEM> tmpFluxes(layout[citer]);
+        Array<StateData, DIM> fluxes;
+        for (int dd = 0; dd < DIM; dd++) { fluxes[dd].define(tmpFluxes[dd].box()); }
+
+        auto& state = a_state[citer];
+        auto& rhs = a_rhs[citer];
+        op(a_level)[citer](rhs, fluxes, state, a_scale);
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            fluxRegister.incrementCoarseRegister(fluxes[dir], citer, dir);
+        }
+    }
+
+    auto& fineLayout = a_fineState.layout();
+    for (auto fiter : fineLayout)
+    {
+        FluxBoxData<T, OP::numState(), MEM> fluxes(fineLayout[fiter]);
+        auto& state = a_fineState[fiter];
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            op(a_level+1)[fiter].flux(fluxes[dir], state, dir, a_scale);
+            fluxRegister.incrementFineRegister(fluxes[dir], fiter, dir);
+        }
+    }
+    T weight = 1.0;
+    fluxRegister.applyRefluxCorrection(a_rhs, weight);
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
-        LevelStateData&     a_crseResidual,
-        AMRStateData&       a_state,
-        const LevelStateData&     a_crseForce,
-        const LevelStateData&     a_fineForce,
-        int                 a_fineLevel)
+        LevelStateData&         a_crseResidual,
+        AMRStateData&           a_state,
+        const LevelStateData&   a_crseForce,
+        const LevelStateData&   a_fineForce,
+        int                     a_fineLevel)
 {
     PROTO_ASSERT(a_fineLevel > 0,
             "MBAMR::coarseResidual | Error: Fine Level must be greater than 0");
@@ -272,16 +454,15 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
     auto& crseOp = op(a_fineLevel-1);
     auto& fineOp = op(a_fineLevel);
     
-    //interpolate fineState BCs
-    //TODO: potentially redundant
     interpBounds(crseState, fineState, a_fineLevel);
 
     // fineState block boundary interpolation
     fineState.exchange();
-    m_localBlockInterp[a_fineLevel]->apply(fineState, fineState);
+    m_mg[a_fineLevel].interpOp().apply(fineState, fineState);
     
     // compute coarse residual everywhere
     crseOp(a_crseResidual, crseState, -1.0); //-LC
+    //levelApply(a_crseResidual, crseState, fineState, a_fineLevel-1, -1.0); //compute -LC (with refluxing)
     a_crseResidual.increment(a_crseForce);   //GC - LC
     
     // compute average of fine residual in "coarsened fine" temporary
@@ -293,7 +474,7 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
         auto& crseTmp_i = (*m_local[a_fineLevel-1])[iter];
         
         // compute fine level residual
-        BoxData<T, OP::numState(), MEM> fineTmp(fineState.layout()[iter]);
+        StateData fineTmp(fineState.layout()[iter]);
         fineOp[iter](fineTmp, fineState_i, -1.0);
         fineTmp += fineForce_i;
         // average onto crse temp
@@ -305,10 +486,37 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::coarseResidual(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType, MemType MEM>
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
+    MemType MEM>
+T MBAMR<OPType, MAP, T, BCType, MEM>::resnorm(
+        AMRStateData& residual,
+        AMRStateData& state,
+        const AMRStateData& force,
+        int finestLevel)
+{
+    averageDown(state, finestLevel);
+    int lastLevel = (finestLevel > 0) ? finestLevel : m_numLevels-1;
+    for (int li = 0; li <= lastLevel; li++)
+    {
+        m_mg[li].residual(residual[li], state[li], force[li]);
+    }
+    averageDown(residual, finestLevel);
+    T r = 0;
+    for (int li = 0; li <= lastLevel; li++)
+    {
+        r = max(r, residual[li].absMax());
+    }
+    return r;
+}
+
+template <
+    template<typename, typename, MemType> class OPType,
+    class MAP,
+    typename T,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType, MemType MEM>
 void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
         LevelStateData&         a_fineState,
         const LevelStateData&   a_crseState,
@@ -324,12 +532,12 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
         crse_0 *= -1;
     }
     // copy difference into "coarsened fine" temporary
-    a_crseState_0.copyTo(*m_local[a_fineLevel]);
+    a_crseState_0.copyTo(*m_local[a_fineLevel-1]);
     // compute piecewise constant interpolation and increment fine data
     for (auto iter : a_fineState.layout())
     {
         auto block = a_fineState.layout().block(iter);
-        auto& delta = (*m_local[a_fineLevel])[iter];
+        auto& delta = (*m_local[a_fineLevel-1])[iter];
         auto& state = a_fineState[iter];
 
         state += m_constInterp[block](delta);
@@ -337,10 +545,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::fineCorrect(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 {
@@ -350,10 +558,10 @@ MBLevelMap<MAP>& MBAMR<OPType, MAP, T, BCType, MEM>::map(int a_level)
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBInterpOp& MBAMR<OPType, MAP, T, BCType, MEM>::interpOp(int a_level)
 {
@@ -363,10 +571,10 @@ MBInterpOp& MBAMR<OPType, MAP, T, BCType, MEM>::interpOp(int a_level)
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelOp<OPType, MAP, double, BCType, MEM>& MBAMR<OPType, MAP, T, BCType, MEM>::op(int a_level)
 {

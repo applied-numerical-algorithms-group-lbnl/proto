@@ -41,6 +41,23 @@ namespace Proto {
                 Box a_domainBox,
                 Array<T,DIM> a_dx);
 
+        #ifdef PR_OPS
+        template<class T>
+        static inline BCStencil<T> DirichletExtrapStencil(int dist, Face face, int npoints);
+        
+        template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+        static inline void DirichletFillGhost(
+            BoxData<T,C,MEM,D,E>& state,
+            T value,
+            Face face,
+            Box domainBox);
+
+        template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+        static inline void ExtrapolateCorners(
+            BoxData<T,C,MEM,D,E>& state,
+            Box domainBox);
+        #endif
+
     };
 #if 0
     template<class T, unsigned int C=1, MemType MEM=HOST, unsigned int D=1, unsigned int E=1>

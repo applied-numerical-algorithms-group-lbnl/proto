@@ -7,10 +7,10 @@
 namespace Proto {
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBMultigrid
 {
@@ -102,6 +102,8 @@ public:
         m_blockInterp[a_level]->apply(a_data, a_data);
     }
 
+    inline void applyHomogeneousBC(LevelStateData& a_data);
+
     // V Cycle subroutines
     inline void fineCorrect(
             LevelStateData&         a_fine,
@@ -135,6 +137,10 @@ public:
 
     private:
 
+    std::vector<MBDisjointBoxLayout> computeLayouts(const MBDisjointBoxLayout& fineLayout) const;
+    bool canCombineCoarsePatches(const MBDisjointBoxLayout& fineLayout, Point refRatio) const;
+    void initializeDataHolders(const std::vector<MBDisjointBoxLayout>& layouts);
+
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
     std::vector<std::shared_ptr<LevelStateData>>   m_state_0;    
@@ -156,6 +162,7 @@ public:
     int m_numPostRelax;
     int m_numBottomRelax;
     int m_numLevels;
+    std::vector<Point> m_refRatios;
 
     int m_solveIter;
     int m_relaxIter;

@@ -83,8 +83,11 @@ namespace Proto
         MBLevelFluxRegister(){};
         MBLevelFluxRegister(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
-                Point&          a_refRatio,
-                Array<T, DIM>&  a_dxCoarse);
+                const Point&                a_refRatio);
+        MBLevelFluxRegister(const MBDisjointBoxLayout& a_dblCoarse,
+                const MBDisjointBoxLayout&  a_dblFine,
+                const Point&                a_refRatio,
+                Array<T, DIM>&              a_dxCoarse);
         
         MBLevelFluxRegister(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
@@ -93,7 +96,7 @@ namespace Proto
 
         void define(const MBDisjointBoxLayout& a_dblCoarse,
                 const MBDisjointBoxLayout&  a_dblFine,
-                Point&          a_refRatios,
+                const Point&          a_refRatios,
                 Array<T, DIM>&  a_dxCoarse);
         
         void define(const MBDisjointBoxLayout& a_dblCoarse,

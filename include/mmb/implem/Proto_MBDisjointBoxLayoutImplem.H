@@ -606,7 +606,7 @@ void MBDisjointBoxLayout::validateSelf(std::string methodName) const
 void MBDisjointBoxLayout::validateIndex(const MBIndex& index, std::string methodName) const
 {
     #ifndef NDEBUG
-    PROTO_ASSERT(compatible(index), "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName);
+    PROTO_ASSERT(compatible(index), "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName.c_str());
     #endif
 }
 
@@ -615,7 +615,7 @@ void MBDisjointBoxLayout::validateBlock(const BlockIndex& block, std::string met
     #ifndef NDEBUG
     PROTO_ASSERT(block < numBlocks(),
         "MBDisjointBoxLayout::%s | Error: Block index %i is out of bounds (numBlocks = %i)",
-        methodName, block, numBlocks());
+        methodName.c_str(), block, numBlocks());
     #endif
 }
 

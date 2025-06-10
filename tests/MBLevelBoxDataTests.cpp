@@ -127,6 +127,25 @@ TEST(MBLevelBoxData, Construction) {
     }
 }
 #endif
+#if 0
+TEST(MBLevelBoxData, RefinedConstruction)
+{
+    int domainSize = 32;
+    int boxSize = 16;
+    int numBlocks = 5;
+    auto domain = buildXPoint(domainSize, numBlocks);
+    std::vector<Point> boxSizes;
+    std::vector<MBPoint> patches;
+    for (BlockIndex block = 0; block < numBlocks; block++)
+    {
+        boxSizes.push_back(Point::Ones(boxSize));
+        patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), block));
+    }
+    MBDisjointBoxLayout layout(domain, patches, boxSizes);
+    MBLevelBoxData<double, 1, HOST> data(layout, Point::Ones(2));
+    // TODO: Finish this test
+}
+#endif
 #if 1
 TEST(MBLevelBoxData, Initialization) {
     int domainSize = 64;
@@ -270,6 +289,7 @@ TEST(MBLevelBoxData, FillBoundaries) {
     Point ghost = Point::Ones(ghostSize);
     ghost += Point::X();
     MBLevelBoxData<double, DIM, HOST> hostData(layout, ghost);
+    hostData.setVal(0);
     MBLevelBoxData<double, DIM, HOST> hostData0(layout, Point::Zeros());
     hostData0.initialize(f_MBPointID);
     for (auto iter : layout) { hostData0[iter].copyTo(hostData[iter]); }
@@ -344,6 +364,7 @@ TEST(MBLevelBoxData, FillBoundaries_Node) {
     //ghost += Point::X();
     MBLevelBoxData<double, DIM, HOST, PR_NODE> hostData(layout, ghost);
     MBLevelBoxData<double, DIM, HOST, PR_NODE> hostData0(layout, Point::Zeros());
+    hostData.setVal(0);
     hostData0.initialize(f_MBPointID);
     for (auto iter : layout) { hostData0[iter].copyTo(hostData[iter]); }
 #if PR_VERBOSE > 0
@@ -415,17 +436,27 @@ TEST(MBLevelBoxData, CopyTo) {
         }
         MBDisjointBoxLayout srcLayout(domain, srcBoxSize);
         MBDisjointBoxLayout dstLayout(domain, dstBoxSize);
-
+        pr_out() << "srcLayout: " << std::endl;
+        srcLayout.print();
+        pr_out() << "dstLayout: " << std::endl;
+        dstLayout.print();
         Point ghost = Point::Ones(ghostSize) + Point::X();
         MBLevelBoxData<double, DIM, HOST> hostSrc(srcLayout, ghost);
         MBLevelBoxData<double, DIM, HOST> hostDst(dstLayout, ghost);
         hostDst.setVal(7);
         hostSrc.initialize(f_MBPointID);
-        hostSrc.copyTo(hostDst);
-
 #if PR_VERBOSE > 0
-        h5.writeMBLevel({"x", "y", "z"},hostSrc, "CopyTo_Src_T%i", ti);
-        h5.writeMBLevel({"x", "y", "z"},hostDst, "CopyTo_Dst_T%i", ti);
+        h5.writeMBLevel({"x", "y", "z"},hostSrc, "CopyTo_Src_T%i_0", ti);
+        h5.writeMBLevel({"x", "y", "z"},hostDst, "CopyTo_Dst_T%i_0", ti);
+        h5.writePatch({"x", "y", "z"},hostSrc[*srcLayout.begin()], "CopyTo_Src_Patch_T%i_0", ti);
+        h5.writePatch({"x", "y", "z"},hostDst[*dstLayout.begin()], "CopyTo_Dst_Patch_T%i_0", ti);
+#endif
+        hostSrc.copyToFull(hostDst);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"x", "y", "z"},hostSrc, "CopyTo_Src_T%i_1", ti);
+        h5.writeMBLevel({"x", "y", "z"},hostDst, "CopyTo_Dst_T%i_1", ti);
+        h5.writePatch({"x", "y", "z"},hostSrc[*srcLayout.begin()], "CopyTo_Src_Patch_T%i_1", ti);
+        h5.writePatch({"x", "y", "z"},hostDst[*dstLayout.begin()], "CopyTo_Dst_Patch_T%i_1", ti);
 #endif
 
         for (auto iter : dstLayout)

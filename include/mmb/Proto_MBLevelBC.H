@@ -6,7 +6,7 @@
 namespace Proto {
     
     template<typename T, unsigned int C, 
-        template<MemType> typename MAP,
+        typename MAP,
         MemType MEM=MEMTYPE_DEFAULT, Centering CTR=PR_CELL>
     class MBLevelBC : public LevelBC<T,C,MEM,CTR> {
         public:

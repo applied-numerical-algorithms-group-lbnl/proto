@@ -41,8 +41,10 @@ namespace Proto
             const BoxData<T, C, MEM, D, E> &cellCentered_2ndOrder)
         {
             PR_TIME("ConvolveOp::operator()");
-            cellAveraged_4thOrder |= m_L(cellCentered_2ndOrder, 1.0 / 24.0);
-            cellAveraged_4thOrder += cellCentered_4thOrder;
+            Box rangeBox = range({cellCentered_4thOrder.box(), cellCentered_2ndOrder.box()});
+            BoxData<T,C,MEM,D,E> tmp = m_L(cellCentered_2ndOrder, rangeBox, 1.0 / 24.0);
+            tmp += cellCentered_4thOrder;
+            tmp.copyTo(cellAveraged_4thOrder);
         }
 
         template <unsigned int C, MemType MEM, unsigned int D = 1, unsigned int E = 1>

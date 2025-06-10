@@ -7,6 +7,7 @@ namespace Proto {
 //========================================================================
 // Utililties
 //======================
+
 #ifdef PR_OPS
 template<typename T>
 std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage)
@@ -41,8 +42,6 @@ std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footpri
             A(ii,jj) = taylorCoefs[ii]*pow(a_footprint[jj], ii);
         }
     }
-    b.print();
-    A.print();
     auto a = A.inverse()*b;
     std::vector<double> ret;
     for (int ii = 0; ii < N; ii++)
@@ -50,6 +49,25 @@ std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footpri
         ret.push_back(a(ii,0));
     }
     return ret;
+}
+
+template<typename T>
+template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void Stencil<T>::ExtrapIntoBoundary(BoxData<T, C, MEM, D, E>& data, Box interior, Point dir)
+{
+    Stencil<T> extrapOp;
+    auto coefs = Stencil<T>::ExtrapCoefs({1,2,3,4});
+    for (int ii = 0; ii < 4; ii++)
+    {
+        extrapOp += coefs[ii] * Shift(dir*(-ii-1));
+    }
+    Box range = interior.adjacent(dir, 1);
+    while (data.box().containsBox(range))
+    {
+      BoxData<T,C,MEM,D,E> extrapData = extrapOp(data, range);
+      extrapData.copyTo(data);
+      range = range.shift(dir);
+    }
 }
 #endif
 

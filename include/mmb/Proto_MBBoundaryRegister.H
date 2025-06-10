@@ -168,15 +168,16 @@ namespace Proto
         inline void exchange();
         
         // Get Layout
-        inline const MBDisjointBoxLayout& layout() {return *m_layout; }
+        inline const MBDisjointBoxLayout& layout() {return m_layout; }
         
         // Get Ghost Size
         inline Point ghost() {return m_ghost; }
+        
 
         private:
 
         Point m_ghost;
-        const MBDisjointBoxLayout* m_layout;
+        MBDisjointBoxLayout m_layout;
         mutable std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
         MBBoundaryCopier<T,C,MEM,CTR> m_copier; 
     };

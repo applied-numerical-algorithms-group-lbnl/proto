@@ -1,5 +1,5 @@
 template<typename T, unsigned int C,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM, Centering CTR>
 void ConstBC<T,C,MAP,MEM,CTR>::setVal(T a_value, int a_comp)
 {
@@ -13,7 +13,7 @@ void ConstBC<T,C,MAP,MEM,CTR>::setVal(T a_value, int a_comp)
 }
 
 template<typename T, unsigned int C,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM, Centering CTR>
 void ConstBC<T,C,MAP,MEM,CTR>::apply(MBLevelBoxData<T,C,MEM,CTR>& a_data) const
 {

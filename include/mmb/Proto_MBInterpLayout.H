@@ -33,7 +33,7 @@ namespace Proto
             Point triplePointBoundary,
             MBIndex index) const;
         
-        inline void addDomainBoundaryFootprint(
+        inline void addBoundaryFootprint(
             std::set<Point>& footprint,
             Point center,
             MBIndex index) const;
@@ -46,6 +46,10 @@ namespace Proto
         inline void removeTriplePointPoints(
             std::set<Point>& footprint,
             Point center,
+            MBIndex index) const;
+
+        inline void addInwardPoints(
+            std::set<Point>& footprint,
             MBIndex index) const;
 
         MBDisjointBoxLayout m_layout;

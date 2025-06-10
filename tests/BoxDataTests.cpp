@@ -200,6 +200,25 @@ TEST(BoxData, ContainsNAN) {
     EXPECT_FALSE(data.containsInfOrNAN(b));
 }
 
+TEST(BoxData, ContainsAddress) {
+    Box B = Box::Cube(8);
+    BoxData<double, 3, HOST> data(B);
+    int bufferSize = 3*B.size();
+    double* buf = data.data();
+    double* p0 = buf;
+    double* p1 = buf + bufferSize;
+    double* p2 = buf + bufferSize - 1;
+    double* p3 = buf - 1;
+    double* p4 = buf + B.size();
+
+    EXPECT_TRUE(data.containsAddress(p0));
+    EXPECT_FALSE(data.containsAddress(p1));
+    EXPECT_TRUE(data.containsAddress(p2));
+    EXPECT_FALSE(data.containsAddress(p3));
+    EXPECT_TRUE(data.containsAddress(p4));
+
+}
+
 TEST(BoxData, Arithmetic) {
     Box B = Box::Cube(5);
     std::array<int,DIM> dx;

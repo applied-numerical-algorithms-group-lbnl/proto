@@ -33,7 +33,7 @@ namespace Proto {
     \tparam C_AUX   Number of auxiliary (non-state) variables
     \tparam MEM     Proto::MemType of the data holder
 */
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM = MEMTYPE_DEFAULT>
 class MBBoxOp : public BoxOp<T, C_STATE, C_AUX, MEM>
 {

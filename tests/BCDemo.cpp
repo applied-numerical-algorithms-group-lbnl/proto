@@ -267,7 +267,7 @@ TEST(BCDemo, Demo) {
     Point boxSizeV = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeV);
 
-    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<HOST>, HOST> map;
     map.define(layout, ghost);
 
     MBLevelBoxData<double, C, HOST> phi(layout, ghost); 

@@ -187,6 +187,12 @@ DisjointBoxLayout::size() const
 }  
 
 unsigned int
+DisjointBoxLayout::numBoxes() const
+{
+    return m_partition->numBoxes();
+}
+
+unsigned int
 DisjointBoxLayout::localSize() const
 {
     return m_partition->numBoxes(Proto::procID());

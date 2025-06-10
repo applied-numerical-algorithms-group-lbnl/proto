@@ -9,7 +9,7 @@ namespace Proto {
 
   /// Cubed Sphere Shell Utility
   /** This class serves as a catchall namespace for generating Proto data structures
-   *  that use MBMap_CubedSphereShell
+   *  that use MBMap_CubedSphereShell<MEM>
    */
 
   class CubedSphereShell 
@@ -33,7 +33,7 @@ namespace Proto {
      *  \param a_ghost
      */
     template<MemType MEM = MEMTYPE_DEFAULT>
-    static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
+    static MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> Map(
                                                        const MBDisjointBoxLayout& a_layout,
                                                        Point a_ghost);
     
@@ -42,18 +42,18 @@ namespace Proto {
      *  \param a_data
      */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    static MBLevelMap<MBMap_CubedSphereShell, MEM> Map(
+    static MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> Map(
                                                        const MBLevelBoxData<T,C,MEM,CTR>& a_data);
     
     /// Get MB Level Operator
     /** 
      *  \param a_map - The map object produced by one of the Map functions above
      */
-    template<template<typename, template<MemType> typename, MemType> class OpType,
+    template<template<typename, typename, MemType> class OpType,
              typename T,
              MemType MEM = MEMTYPE_DEFAULT>
-    static MBLevelOp<OpType, MBMap_CubedSphereShell, T>
-    Operator(MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map);
+    static MBLevelOp<OpType, MBMap_CubedSphereShell<MEM>, T>
+    Operator(MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map);
     
     /// Get MB Interpolation Operator
     /** 
@@ -74,7 +74,7 @@ namespace Proto {
   
     template<typename T, MemType MEM>
     static MBInterpOp BCInterpOp(
-        const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
         MBDisjointBoxLayout&       a_srcLayout,
         std::vector<T>             a_dtheta,
         Side::LoHiSide             a_side);

@@ -1356,7 +1356,7 @@ void HDF5Handler::writePatch(
 }  
 
 #ifdef PR_MMB
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1371,7 +1371,7 @@ void HDF5Handler::writeMBLevel(
     writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
@@ -1458,6 +1458,30 @@ void HDF5Handler::writeMBLevel(
     addMBLevel(&file, a_data, dx, Point::Ones(), 0); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Fclose(file) >= 0);
 
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevelBoundsUnified(
+        std::vector<std::string> a_varNames,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    MBLevelBoxData<T, C, MEM, CTR> data(a_data.layout(), a_data.ghost()[1]);
+    data.setVal(0);
+    for (auto iter : a_data.layout())
+    {
+        for (auto dir : Point::Directions())
+        {
+            auto bounds = a_data.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                auto& di = data[iter];
+                bound.localData->copyTo(di);
+            }
+        }
+    }
+    writeMBLevel(data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
@@ -1550,7 +1574,7 @@ void HDF5Handler::writeMBAMRData(
 
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBAMRData(
         std::vector<std::string> a_varNames,
         const MBAMRMap<MAP, MEM>& a_map,

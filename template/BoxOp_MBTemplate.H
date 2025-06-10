@@ -11,7 +11,7 @@ using namespace Proto;
 // The third template parameter is the number of state variables
 // The fourth template parameter is the number of auxiliary variables (usually 0)
 template<typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBBoxOp_Template : public MBBoxOp<T, MAP, NSTATE, NAUX, MEM>
 {

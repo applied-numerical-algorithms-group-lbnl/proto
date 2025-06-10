@@ -15,7 +15,7 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
-    template<template<MemType> typename MAP, MemType MEM>
+    template<typename MAP, MemType MEM>
     class MBLevelMap;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
@@ -50,6 +50,37 @@ namespace Proto
                 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
     };
     
+#if 1
+    /// Full Level Copier Operator (Includes all ghost cells)
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelFullCopierOp
+    {
+        public:
+        MBLevelBoxData<T, C, SRC_MEM, CTR>* m_src;
+        MBLevelBoxData<T, C, DST_MEM, CTR>* m_dst;
+        
+        inline MBLevelFullCopierOp(){};
+        inline MBLevelFullCopierOp(
+                MBLevelBoxData<T, C, SRC_MEM, CTR>& a_srcData,
+                MBLevelBoxData<T, C, DST_MEM, CTR>& a_dstData);
+        inline uint64_t linearSize(const Box& a_bx, const MBIndex a_index) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
+    };
+
+    /// Full Level Copier (Includes all ghost cells)
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelFullCopier
+    : public Copier
+      <MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, MBBoxPartition, SRC_MEM, DST_MEM>
+    {
+        public:
+        inline MBLevelFullCopier(){};
+        inline void buildMotionPlans(
+                MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
+    };
+#endif
     /// Exchange Copier Operator
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelExchangeCopierOp
@@ -190,6 +221,9 @@ namespace Proto
          */
         template<MemType DST_MEM>
         inline void copyTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
+
+        template<MemType DST_MEM>
+        inline void copyToFull(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
 
         /// Get Ghost Size Array
         Array<Point, DIM+1> ghost() const;

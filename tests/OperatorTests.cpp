@@ -19,7 +19,7 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     ProblemDomain domain(domainBox, periodicity);
     return DisjointBoxLayout(domain, patches, boxSize);
 }
-#if 0
+#if 1
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);

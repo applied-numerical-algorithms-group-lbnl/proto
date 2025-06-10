@@ -189,7 +189,7 @@ parse_mb_level_arg(
 }
 
 // HELPER FUNCTION FOR INITIALIZE
-template<typename Func, template<MemType> typename MAP, MemType MEM>
+template<typename Func, typename MAP, MemType MEM>
 const BoxData<double,DIM,MEM>
 parse_mb_level_arg(
         MBIndex& a_index, 
@@ -351,6 +351,25 @@ void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CT
     else
     {
         MayDay<void>::Abort("MBLevelBoxData::copyTo is not implemented for SRC_MEM != DST_MEM");
+    }
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template <MemType DST_MEM>
+void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyToFull(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
+{
+    PR_TIME("MBLevelBoxData::copyToFull");
+    if (SRC_MEM == DST_MEM)
+    {
+        auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);
+        MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR> op(*mutableSrc, a_rhs);
+        MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR> copier;
+        copier.define(op);
+        copier.execute();
+    }
+    else
+    {
+        MayDay<void>::Abort("MBLevelBoxData::copyToFull is not implemented for SRC_MEM != DST_MEM");
     }
 }
 
@@ -1109,6 +1128,9 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
     this->sort();
 }
 
+//=================================================================================================
+// Level Copier
+
 template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::MBLevelCopierOp(
     MBLevelBoxData<T, C, SRC_MEM, CTR> &a_src,
@@ -1317,3 +1339,221 @@ void MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     } // end src loop
     this->sort();
 }
+
+#if 1
+//=================================================================================================
+// Full Level Copier
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::MBLevelFullCopierOp(
+    MBLevelBoxData<T, C, SRC_MEM, CTR> &a_src,
+    MBLevelBoxData<T, C, DST_MEM, CTR> &a_dst)
+{
+    PROTO_ASSERT(SRC_MEM == DST_MEM,
+                 "MBLevelFullCopierOp::constructor | Error: \
+        MBLevelFullCopierOp with different MemType src and dst is not yet implemented.");
+    PROTO_ASSERT(a_src.layout().domain() == a_dst.layout().domain(),
+                 "MBLevelFullCopier::Constructor | Error: \
+            src and dst must have the same problem domain");
+    m_src = &a_src;
+    m_dst = &a_dst;
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+uint64_t
+MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(
+    const Box &a_box,
+    const MBIndex a_index) const
+{
+    // TODO: Does this do the right thing?
+    return C * a_box.size() * sizeof(T);
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
+    void *a_buffer, const MBMotionItem &a_info) const
+{
+    MemType mem = pointerMemType(a_buffer);
+    PROTO_ASSERT(mem == SRC_MEM,
+        "MBLevelFullCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
+    auto &patch = (*m_src)[a_info.fromIndex];
+    CInterval cint(0, C - 1);
+    patch.linearOut(a_buffer, a_info.fromRegion, cint);
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
+    void *a_buffer, const MBMotionItem &a_info) const
+{
+    MemType mem = pointerMemType(a_buffer);
+    PROTO_ASSERT(mem == DST_MEM,
+        "MBLevelFullCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+         mem, DST_MEM);
+    auto &patch = (*m_dst)[a_info.toIndex];
+    CInterval cint(0, C - 1);
+    patch.linearIn(a_buffer, a_info.toRegion, cint);
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
+    const MBMotionItem &a_info) const
+{
+    bool linearizationTest = false;
+
+    const auto &domain = a_info.fromRegion;
+    const auto &srcIndex = a_info.fromIndex;
+    const auto &range = a_info.toRegion;
+    const auto &dstIndex = a_info.toIndex;
+
+    if (!linearizationTest)
+    {
+        PR_TIMERS("MBLevelFullCopierOp::localCopy");
+        auto &src = (*m_src)[srcIndex];
+        auto &dst = (*m_dst)[dstIndex];
+        Point shift = range.low() - domain.low();
+        src.copyTo(dst, domain, shift);
+    }
+    else
+    {
+        PR_TIMERS("MBLevelFullCopierOp::localCopy (linearization test)");
+        int sizeSrc = linearSize(domain, srcIndex);
+        int sizeDst = linearSize(range, dstIndex);
+
+        if (sizeSrc != sizeDst)
+        {
+            MayDay<void>::Abort(
+                "LinearizationTest failure: dest and source have different sizes");
+        }
+
+        void *srcBuffer = proto_malloc<SRC_MEM>(sizeSrc);
+        void *dstBuffer = proto_malloc<DST_MEM>(sizeDst);
+        {
+            PR_TIMERS("linearIn / linearOut inside LDOP::op");
+            linearOut(srcBuffer, a_info);
+            proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
+            if (SRC_MEM != DST_MEM)
+            {
+#ifdef PROTO_ACCEL
+                protoThreadSynchronize();
+#endif
+            }
+            linearIn(dstBuffer, a_info);
+        }
+        proto_free<SRC_MEM>(dstBuffer);
+        proto_free<SRC_MEM>(srcBuffer);
+    }
+}
+
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
+    MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR> &a_op)
+{
+    PROTO_ASSERT(SRC_MEM == DST_MEM,
+                 "MBLevelFullCopier::buildMotionPlans | Error: \
+        Copy operations between HOST and DEVICE are not yet implemented.");
+    auto& srcLayout = a_op.m_src->layout();
+    auto& dstLayout = a_op.m_dst->layout();
+    auto dstGhost = a_op.m_dst->ghost()[0];
+    auto srcGhost = a_op.m_src->ghost()[0];
+    Point minGhost;
+    for (int dd = 0; dd < DIM; dd++) { minGhost[dd] = min(srcGhost[dd], dstGhost[dd]); }
+    // For each Box on this processor, compute all the pairs of motionItems that move data
+    // to this Box.
+    for (auto diter : dstLayout)
+    {
+        BlockIndex block = dstLayout.block(diter);
+        auto& srcBlockLayout = srcLayout.getBlock(block);
+        auto& dstBlockLayout = dstLayout.getBlock(block);
+        auto srcBlockDomain = srcBlockLayout.domain();
+        auto dstBlockDomain = dstBlockLayout.domain();
+        auto srcBoxSize = srcBlockLayout.boxSize();
+        auto dstBoxSize = dstBlockLayout.boxSize();
+
+        // destGhost[0] is the ghost size in the bulk of each block
+        // TODO: Make this anisotropic
+        Box bx = dstLayout[diter].grow(minGhost);
+
+        // Compute all the patches (as Points in a bitmap) that might move data to bx.
+
+        Box srcPatches = bx.coarsen(srcBoxSize);
+        // Iterate over the possible source patches to contruct MotionItems.
+
+        for (auto pt : srcPatches)
+        {
+            // Find the possible source patch, or its periodic image.
+
+            auto di = srcLayout.find(pt, block);
+            if (di != *srcLayout.end())
+            {
+                Box destBx = Box(pt, pt).refine(srcBoxSize).grow(minGhost) & bx;
+                if (!destBx.empty())
+                {
+                    // Create MotionItem.
+                    // Compute srcBx to be the shifted image of destBx. If destBx
+                    // is in the ProblemDomain box, srcBx == destBx.
+                    // Box srcBx = Box(srcBlockDomain.image(destBx.low()),
+                    //                 srcBlockDomain.image(destBx.high()));
+                    Box srcBx = destBx;
+                    MBMotionItem toMotionItem(di, diter, srcBx, destBx);
+                    int srcProcID = srcLayout.procID(di);
+                    if (srcProcID == procID())
+                    {
+                        PROTO_ASSERT(srcProcID == dstLayout.procID(diter),
+                                     "LevelCopier::buildMotionPlan | Error: Data corruption.");
+                        this->m_localMotionPlan.push_back(toMotionItem);
+                    }
+                    else
+                    {
+                        PROTO_ASSERT(srcProcID != dstLayout.procID(diter),
+                                     "LevelCopier::buildMotionPlan | Error: Data corruption.");
+                        toMotionItem.procID = srcProcID;
+                        this->m_toMotionPlan.push_back(toMotionItem);
+                    }
+                }
+            }
+        }
+    }
+
+    // Iterate over Boxes in the source to construct fromMotionPlan
+    for (auto siter : srcLayout)
+    {
+        BlockIndex block = srcLayout.block(siter);
+        auto& srcBlockLayout = srcLayout.getBlock(block);
+        auto& dstBlockLayout = dstLayout.getBlock(block);
+        auto srcBlockDomain = srcBlockLayout.domain();
+        auto dstBlockDomain = dstBlockLayout.domain();
+        auto srcBoxSize = srcBlockLayout.boxSize();
+        auto dstBoxSize = dstBlockLayout.boxSize();
+
+        // We grow the source Box by dstGhost to capture all the patches that the
+        // source will copy to. dProbC contains all the points in the bitmap for
+        // the destination.
+        Box srcBox = srcLayout[siter].grow(minGhost);
+        Box dProbC = srcBox.grow(minGhost).coarsen(dstBoxSize);
+        for (auto pt : dProbC)
+        {
+            auto di = dstLayout.find(pt, block);
+            if (di != *dstLayout.end())
+            {
+                Box bxDestShifted = Box(pt, pt).refine(dstBoxSize).grow(minGhost);
+                Box bxDest = dstLayout[di].grow(minGhost);
+                Point shiftSrcDest = bxDest.low() - bxDestShifted.low();
+                bxDest = bxDest & (srcBox.shift(shiftSrcDest));
+                Box bxSrc = bxDestShifted & srcBox;
+                if (!bxSrc.empty())
+                {
+                    int dstProcID = dstLayout.procID(di);
+                    if (dstProcID != procID())
+                    {
+                        MBMotionItem fromMotionItem(siter, di, bxSrc, bxDest);
+                        fromMotionItem.procID = dstProcID;
+                        this->m_fromMotionPlan.push_back(fromMotionItem);
+                    }
+                }
+            }
+        }
+    } // end src loop
+    this->sort();
+}
+#endif

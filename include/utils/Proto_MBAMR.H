@@ -6,10 +6,10 @@
 namespace Proto {
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBAMR
 {
@@ -21,6 +21,7 @@ public:
     typedef BoxData<T, OP::numState(), MEM> StateData;
     typedef MBLevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     typedef MBAMRData<T, OP::numState(), MEM, PR_CELL> AMRStateData;
+    typedef MBLevelFluxRegister<T, OP::numState(), MEM> FluxRegister;
 
     /// Constructor
     /**
@@ -75,9 +76,16 @@ public:
      *   \param a_fineLevel     The fine level Lf
      */
     inline void interpBounds(
-            const LevelStateData&   a_crseData,   
-            LevelStateData&         a_fineData,   
-            int                     a_fineLevel); 
+        const LevelStateData&   a_crseData,   
+        LevelStateData&         a_fineData,   
+        int                     a_fineLevel); 
+
+    /// @brief Exchange data and interpolate block boundary info
+    /// @param a_data 
+    /// @param a_level 
+    inline void interpBlockBounds(
+        LevelStateData& a_data,
+        int             a_level);
 
     /// Average Down
     /**
@@ -92,10 +100,37 @@ public:
      *   \param a_fineLevel     The fine level Lf
      */
     inline void averageDown(
-            LevelStateData&         a_crseData,  
-            const LevelStateData&   a_fineData, 
-            int                     a_fineLevel); 
+        LevelStateData&         a_crseData,  
+        const LevelStateData&   a_fineData, 
+        int                     a_fineLevel); 
     
+    /// @brief Average Down Recursively starting from startLevel
+    /// @param data         The data to be averaged down
+    /// @param startLevel   Finest level contributing to the operation. If -1 (default), all levels are used
+    inline void averageDown(AMRStateData& data, int startLevel = -1);
+
+    /// @brief Compute L(phi) on a single level WITHOUT refluxing
+    /// @param a_rhs    The value of L(phi) on the specified level
+    /// @param a_state  The input state (phi) on the specified level
+    /// @param a_level  The specified level
+    inline void levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        int                     a_level,
+        T                       a_scale = 1.0); 
+
+    /// @brief Compute L(phi) on a single level with refluxing at coarse-fine boundaries if necessary
+    /// @param a_rhs        The value of L(phi) on the specified level
+    /// @param a_state      The input state (phi) on the specified level
+    /// @param a_fineState  The input state (phi) on the next finer level (used for refluxing)
+    /// @param a_level      The specfied level
+    inline void levelApply(
+        LevelStateData&         a_rhs,
+        LevelStateData&         a_state,
+        LevelStateData&         a_fineState,
+        int                     a_level,
+        T                       a_scale = 1.0); 
+
     /// Compute Coarse Residual
     /**
      *  Computes the coarse residual Rc on Bc. e.g.:
@@ -128,6 +163,12 @@ public:
             const LevelStateData&   a_crseForce,
             const LevelStateData&   a_fineForce,
             int                     a_fineLevel);
+
+    inline T resnorm(
+        AMRStateData& residuals,
+        AMRStateData& state,
+        const AMRStateData& force,
+        int finestLevel = -1);
 
     /// Apply Correction to Fine Level
     /**
@@ -181,7 +222,7 @@ public:
             int                   a_level);
 private:
 
-   
+    int m_solveIter;
     MBAMRMap<MAP, MEM> m_map; ///< AMR Map handle
 
     std::vector<MBMultigrid<OPType, MAP, T, BCType, MEM>> m_mg; ///< MG solvers for each level
@@ -190,6 +231,7 @@ private:
     std::vector<std::shared_ptr<LevelStateData>> m_state_0; ///< temporary which holds Sc0
     std::vector<std::shared_ptr<LevelStateData>> m_force;   ///< temporary holding level forces
     std::vector<std::shared_ptr<LevelStateData>> m_local;   ///< temporary data holders for coarsened fine data (e.g. on domains C(Bf) for each fine domain Bf).
+    std::vector<std::unique_ptr<FluxRegister>> m_fluxRegisters;
 
     std::vector<std::shared_ptr<MBInterpOp>>     m_localBlockInterp; ///< block boundary interp ops
     std::vector<Stencil<T>> m_average;          ///< average down ops

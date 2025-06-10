@@ -1,6 +1,6 @@
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
@@ -43,7 +43,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
 }
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline BoxData<T,NUMCOMPS,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
@@ -90,7 +90,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
 }
 template<
   typename T,
-  template<MemType> typename MAP,
+  typename MAP,
   MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
@@ -202,7 +202,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
 }
 template<
   typename T,
-  template<MemType> typename MAP,
+  typename MAP,
   MemType MEM>
 BoxData<T,1,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
@@ -273,7 +273,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
 
 template<
   typename T,
-  template<MemType> typename MAP,
+  typename MAP,
   MemType MEM>
 BoxData<T,1,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::magneticEnergyW(
@@ -343,7 +343,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::magneticEnergyW(
 
 template<
   typename T,
-  template<MemType> typename MAP,
+  typename MAP,
   MemType MEM>
 BoxData<T,1,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::vdotbW(
@@ -423,7 +423,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::vdotbW(
 
 template<
   typename T,
-  template<MemType> typename MAP,
+  typename MAP,
   MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
@@ -474,7 +474,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
 // ====================================================================================
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
@@ -587,7 +587,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
@@ -652,7 +652,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
@@ -794,7 +794,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::
 primToFlux(
@@ -868,7 +868,7 @@ primToFlux(
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline BoxData<T,NUMCOMPS,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::consToSph(State& a_input,
@@ -922,7 +922,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::consToSph(State& a_input,
 }
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline BoxData<T,NUMCOMPS,MEM> 
 BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToCart(State& a_input,
@@ -961,7 +961,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToCart(State& a_input,
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::cartToSph(
@@ -1030,7 +1030,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::cartToSph(
 }
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
@@ -1077,7 +1077,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
 #if 0
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
@@ -1088,7 +1088,7 @@ preStage(
 }
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::
@@ -1100,7 +1100,7 @@ postStage(
 }
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM>
 static inline void
 BoxOp_EulerCubedSphere<T,MAP,MEM>::radialGhost(State& a_U,

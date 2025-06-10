@@ -20,7 +20,7 @@ TEST(MBLevelMapTests, ShearMap)
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
 
 #if PR_VERBOSE > 0
@@ -72,7 +72,7 @@ TEST(MBLevelMapTests, XPointMapSmall)
     int domainSize = 16;
     int boxSize = 8;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
@@ -80,12 +80,8 @@ TEST(MBLevelMapTests, XPointMapSmall)
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
-    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
 }
 #if 1
 TEST(MBLevelMapTests, XPointMap)
@@ -93,7 +89,7 @@ TEST(MBLevelMapTests, XPointMap)
     int domainSize = 16;
     int boxSize = 8;
     int ghostWidth = 2;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
@@ -101,13 +97,8 @@ TEST(MBLevelMapTests, XPointMap)
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
-    MBLevelMap<MBMap_XPointRigid, HOST> map;
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostWidth));
-    for (BlockIndex bi = 0; bi < numBlocks; bi++)
-    {
-        map[bi].setNumBlocks(numBlocks);
-    }
-    
 
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_XPointMap_X");
@@ -170,7 +161,7 @@ TEST(MBLevelMapTests, InterBlockApply_Shear)
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, ghost);
 
     for (unsigned int bi = 0; bi < 4; bi++)
@@ -225,7 +216,7 @@ TEST(MBLevelMapTests, CellApply_Shear)
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, ghost);
 
     auto XAvg = 0.5 * Shift::Zeros() + 0.5 * Shift::Basis(0);
@@ -290,7 +281,7 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
     ghost[0] = Point::Ones(1);
 
     // initialize map
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, ghost);
 
     MBLevelBoxData<double, 1, HOST> data(layout, ghost);
@@ -347,7 +338,7 @@ TEST(MBLevelMapTests, CubeSphereShell)
     Point ghost = Point::Ones(ghostSize);
 
     // initialize map
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
 
 #if PR_VERBOSE > 0
@@ -374,7 +365,7 @@ TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell)
     ghost[0] = Point::Ones(0);
 
     // initialize map
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
 
     const auto &graph = layout.domain().graph();

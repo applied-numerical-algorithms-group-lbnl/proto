@@ -30,7 +30,7 @@ namespace Proto
  *  data such as operators, stencils, or metrics in order to prevent computing these
  *  quantities each time apply is called.
  */
-template<template<MemType> typename MAP, MemType MEM = MEMTYPE_DEFAULT>
+template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelMap
 {
     public:
@@ -206,7 +206,7 @@ class MBLevelMap
     inline const Array<double, DIM> dx(BlockIndex a_block) const;
 
     /// Get Operator
-    inline MAP<MEM>& op(BlockIndex a_block) const;
+    inline MAP& op(BlockIndex a_block) const;
 
     /// Get Ghost Sizes
     inline Array<Point, DIM+1> ghost() const { return m_ghost; }
@@ -222,13 +222,13 @@ class MBLevelMap
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
-    inline MAP<MEM>& operator[](BlockIndex block); 
+    inline MAP& operator[](BlockIndex block); 
 
     private:
         Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
-        mutable std::vector<std::shared_ptr<MAP<MEM>>>   m_ops;  ///< Map operators
+        mutable std::vector<std::shared_ptr<MAP>>   m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
         MBDisjointBoxLayout             m_layout;
         mutable bool                            m_initialized; 

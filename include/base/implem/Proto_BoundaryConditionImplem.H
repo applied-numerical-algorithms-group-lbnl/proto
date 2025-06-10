@@ -65,7 +65,6 @@ void BoundaryCondition::Dirichlet(
         fluxTemp += (S.coef * a_value);
         fluxTemp *= (-a_face.sign());
         fluxTemp.copyTo(a_fluxes[dd]);
-
     }
 }
 
@@ -94,5 +93,97 @@ void BoundaryCondition::Dirichlet(
         fluxTemp += I(a_values, S.coef);
         fluxTemp *= (-a_face.sign());
         fluxTemp.copyTo(a_fluxes[dd]);
+    }
+}
+
+template<class T>
+BCStencil<T> BoundaryCondition::DirichletExtrapStencil(int dist, Face face, int npoints)
+{
+    double d = dist;
+    std::vector<double> shifts;
+    for (int ii = 0; ii < npoints; ii++)
+    {
+        shifts.push_back(d+ii);
+    }
+    shifts.push_back(d-0.5);
+
+    auto coefs = Stencil<T>::ExtrapCoefs(shifts);
+    Stencil<T> S0;
+    Point shiftDir = Point::Basis(face.dir, face.sign());
+    for (int ii = 0; ii < npoints; ii++)
+    {
+        S0 += coefs[ii]*Shift(shiftDir*(-dist-ii));
+    }
+    BCStencil<T> S;
+    S.stencil = S0;
+    S.coef = coefs[npoints];
+    return S;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoundaryCondition::DirichletFillGhost(
+    BoxData<T,C,MEM,D,E>& state,
+    T value,
+    Face face,
+    Box domainBox)
+{
+    Point dir = Point::Basis(face.dir, face.sign());
+    if (domainBox.containsBox(state.box())) { return; }
+    Box validRegion = domainBox & state.box();
+    Box boundary = validRegion.adjacent(dir, 1);
+    int dist = 1;
+    while (state.box().containsBox(boundary))
+    {
+        BCStencil<T> S = DirichletExtrapStencil<T>(dist, face, 3);
+        BoxData<T,C,MEM,D,E> tmp = S.stencil(state, boundary);
+        tmp += S.coef*value;
+        tmp.copyTo(state);
+
+        boundary = boundary.shift(dir);
+        dist++;
+    }
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoundaryCondition::ExtrapolateCorners(
+    BoxData<T,C,MEM,D,E>& state,
+    Box domainBox)
+{
+    Box validBox = state.box() & domainBox;
+    for (auto cornerDir : Point::Directions())
+    {
+        if (cornerDir.codim() < 2) { continue; } //assume these boundaries are already filled
+        if (domainBox.edge(cornerDir).containsBox(validBox.edge(cornerDir)))
+        {
+            Box cornerDomain;
+            cornerDomain += validBox.adjacent(cornerDir,1);
+            cornerDomain += state.box().edge(cornerDir, 1);
+            PROTO_ASSERT(state.box().containsBox(cornerDomain), "Geometry Error");
+            BoxData<T,C,MEM,D,E> cornerData(cornerDomain);
+            cornerData.setVal(0);
+            int numContributions = 0;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                if (cornerDir[ii] == 0) { continue; }
+                Point boundDir = cornerDir * (Point::Ones() - Point::Basis(ii));
+                PROTO_ASSERT(boundDir.codim() == cornerDir.codim()-1, "Geometry Error");
+                Point extrapDir = cornerDir - boundDir;
+                
+                Box extrapDataInterior = cornerDomain.adjacent(-extrapDir, 4);
+                Box extrapDataBox = cornerDomain.extrude(-extrapDir, 4);
+                PROTO_ASSERT(state.box().containsBox(extrapDataBox), "Geometry Error");
+
+                BoxData<T,C,MEM,D,E> extrapData(extrapDataBox);
+                state.copyTo(extrapData);
+
+                Stencil<T>::ExtrapIntoBoundary(extrapData, extrapDataInterior, extrapDir);
+                cornerData += extrapData;
+                numContributions++;
+            }
+            PROTO_ASSERT(numContributions > 0, "Geometry Error");
+            T factor = 1.0/numContributions;
+            cornerData *= factor;
+            cornerData.copyTo(state);
+        }
     }
 }

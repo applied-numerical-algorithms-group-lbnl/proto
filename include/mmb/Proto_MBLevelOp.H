@@ -19,10 +19,10 @@ namespace Proto {
     \tparam BCType  A LevelBC class
     \tparam MEM     Proto::MemType of the data holder
 */
-template<template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> typename MAP,
+template<template<typename, typename, MemType> class OPType,
+    typename MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelOp
 {

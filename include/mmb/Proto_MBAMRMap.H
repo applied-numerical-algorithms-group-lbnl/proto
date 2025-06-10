@@ -7,7 +7,7 @@
 namespace Proto
 {
 
-template<template<MemType> typename MAP, MemType MEM = MEMTYPE_DEFAULT>
+template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBAMRMap
 {
     public:

@@ -219,6 +219,17 @@ template<typename T, unsigned int C, MemType MEM>
 MBLevelFluxRegister<T,C,MEM>::MBLevelFluxRegister(
         const MBDisjointBoxLayout& a_crseLayout,
         const MBDisjointBoxLayout& a_fineLayout,
+        const Point&          a_refRatio)
+{
+    Array<T, DIM> dxCoarse;
+    dxCoarse.fill(1.0);
+    define(a_crseLayout, a_fineLayout, a_refRatio, dxCoarse);
+}
+
+template<typename T, unsigned int C, MemType MEM>
+MBLevelFluxRegister<T,C,MEM>::MBLevelFluxRegister(
+        const MBDisjointBoxLayout& a_crseLayout,
+        const MBDisjointBoxLayout& a_fineLayout,
         const std::vector<Point>&   a_refRatios,
         std::vector<Array<T, DIM>>& a_dxCoarse)
 {
@@ -229,7 +240,7 @@ template<typename T, unsigned int C, MemType MEM>
 MBLevelFluxRegister<T,C,MEM>::MBLevelFluxRegister(
         const MBDisjointBoxLayout& a_crseLayout,
         const MBDisjointBoxLayout& a_fineLayout,
-        Point&          a_refRatio,
+        const Point&          a_refRatio,
         Array<T, DIM>&  a_dxCoarse)
 {
     define(a_crseLayout, a_fineLayout, a_refRatio, a_dxCoarse);
@@ -239,7 +250,7 @@ template<typename T, unsigned int C, MemType MEM>
 void MBLevelFluxRegister<T,C,MEM>::define (
         const MBDisjointBoxLayout& a_crseLayout,
         const MBDisjointBoxLayout& a_fineLayout,
-        Point&          a_refRatio,
+        const Point&          a_refRatio,
         Array<T, DIM>&  a_dxCoarse)
 {
     int numBlocks = a_crseLayout.numBlocks();
@@ -647,6 +658,7 @@ void MBLevelFluxRegister<T,C,MEM>::applyRefluxCorrection(
         MBLevelBoxData<T,C,MEM>& a_coarseData,
         const T& a_weight)
 {
+    //NB: grid spacing is applied when the registers are incremented
     PROTO_ASSERT(m_crseLayout.compatible(a_coarseData.layout()),
             "MBLevelFluxRegister::reflux | Error: \
             Input data has incompatible layout.");

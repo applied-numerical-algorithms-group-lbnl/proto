@@ -69,9 +69,9 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
-#ifndef PR_DISABLE_INIT_CHECKS
+//#ifndef PR_DISABLE_INIT_CHECKS
     setVal(proto_unallocated<T>());
-#endif
+//#endif
     m_alias = false;
 }
 
@@ -1935,6 +1935,13 @@ bool BoxData<T,C,MEM,D,E>::containsUninitialized(Box domain) const
     return false;
 }
 
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsAddress(T* address) const
+{
+    int bufferSize = C*D*E*box().size();
+    T* buffer = m_data.get();
+    return (address >= buffer && address < buffer + bufferSize);
+}
 //=================================================================================================
 // Alias and Slice ||
 //=================++

@@ -13,7 +13,7 @@ TEST(MBLevelArgs, GetAndSet) {
     auto map = XPointMap<HOST>(domainSize, boxSize, numBlocks, ghostWidth);
     auto layout = map->layout();
 
-    MBLevelArgs<MBMap_XPointRigid, HOST> args(map);
+    MBLevelArgs<MBMap_XPointRigid<HOST>, HOST> args(map);
 
     auto d0 = std::make_shared<MBLevelBoxData<double, 2, HOST>>(layout, Point::Ones());
     auto d1 = std::make_shared<MBLevelBoxData<int, 3, HOST>>(layout, Point::Ones(2));

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Proto.H"
-
+//#define XPOINT_NBLOCKS 4
 using namespace Proto;
 
 namespace {
@@ -30,14 +30,12 @@ namespace {
     }
 }
 
-template<MemType MEM>
+template<int NBLOCK, MemType MEM>
 class MBMap_XPointRigid : public MBMapOp<MEM>
 {
     public:
 
     using MBMapOp<MEM>::MBMapOp;
-
-    inline void setNumBlocks(unsigned int N) {m_numBlocks = N;}
 
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
@@ -46,6 +44,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
+        int n = NBLOCK;
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -55,19 +54,17 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
                 f_xpointMap(X, X0, a_block, a_N);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
-            }, a_X, X0, block, m_numBlocks
+            }, a_X, X0, block, n
         );
-        a_J.setVal(sin(2.0*M_PI/m_numBlocks));
+        a_J.setVal(sin(2.0*M_PI/n));
     }
 
     inline Array<double, DIM> apply(const Array<double, DIM>& a_X)
     {
         auto block = this->block();
         Array<double, DIM> X;
-        f_xpointMap(X,a_X, block, m_numBlocks);
+        f_xpointMap(X,a_X, block, NBLOCK);
         return X;
     }
     private:
-
-    int m_numBlocks = 5;
 };
