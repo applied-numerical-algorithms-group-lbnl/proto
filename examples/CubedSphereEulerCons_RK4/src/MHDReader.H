@@ -201,8 +201,8 @@ public:
 		a_dstData.setVal(0);
 
 		// Get the interpolation or Nearest operator
-		auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
-		// auto BCOp = CubedSphereShell::BCBilinearOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
+		// auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
+		auto BCOp = CubedSphereShell::BCBilinearOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
 
 		// Interpolate data
 		BCOp.apply(a_dstData, data);

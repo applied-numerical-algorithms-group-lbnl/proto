@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
       OP::Insert_CME(JU,dVolrLev,iop,layout,time,dt,gamma);
 
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
-      OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
+      // OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
       Write_W(JU, eulerOp, iop, restart_step, time, dt);            
       {
         HDF5Handler h5;

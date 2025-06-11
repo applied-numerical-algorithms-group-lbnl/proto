@@ -108,16 +108,6 @@ CubedSphereShell::InterpOp(
     return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
 
-// template<typename T>
-// int _findIndex(std::vector<T> sorted, T value)
-// {
-//     for (int ii = 0; ii < sorted.size(); ii++)
-//     {
-//         if (sorted[ii] > value) { return ii; }
-//     }
-//     return sorted.size()-1;
-// }
-
 template<typename T>
 int _findIndex(const std::vector<T>& sorted, T value)
 {
@@ -193,7 +183,7 @@ Point _getPolarImage(Box b, Point p)
     return q + shift;
 }
 #endif
-
+#if 0
 template<typename T, MemType MEM>
 MBInterpOp
 CubedSphereShell::BCInterpOp(
@@ -363,7 +353,7 @@ CubedSphereShell::BCInterpOp(
     }
     return op;
 }
-
+#endif
 
 template<typename T, MemType MEM>
 MBInterpOp
@@ -407,7 +397,6 @@ CubedSphereShell::BCNearestOp(
     std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
     for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
     {
-        // thetaArray[ii] = (ii == 0 ? 0 : thetaArray[ii-1] + a_dtheta[ii-1]);
         thetaArray[ii] = (ii == 0 ? a_dtheta[0]/2 : thetaArray[ii-1] + a_dtheta[ii-1]/2 + a_dtheta[ii]/2);
     }
     T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
@@ -455,11 +444,6 @@ CubedSphereShell::BCNearestOp(
             p_src[rCoord] = RIndex;
             p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
             p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
-            if (r_dst[thetaCoord] < a_dtheta[0]/2) {
-                p_src[thetaCoord] = 0; // if dst is too close to the pole, use the first point
-            } else if (r_dst[thetaCoord] > M_PI - a_dtheta[a_dtheta.size() - 1]/2) {
-                p_src[thetaCoord] = a_dtheta.size() - 1; // if dst is too close to the south pole, use the last point
-            }
             std::vector<T> coefs(4);
             for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
             std::vector<MBDataPoint> srcs(4);
@@ -478,13 +462,6 @@ CubedSphereShell::BCNearestOp(
     }
     return op;
 }
-
-
-
-
-
-
-
 
 
 
@@ -584,7 +561,7 @@ CubedSphereShell::BCBilinearOp(
                   break;
               }
           }
-          // Nearest at the poles, bilinear otherwise
+          // Nearest at the poles, bilinear interpolation otherwise
           if (i_theta < 0 || i_theta + 1 >= static_cast<int>(thetaArray.size())) {
             // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
             Point p_src = Point::Zeros();
@@ -592,12 +569,6 @@ CubedSphereShell::BCBilinearOp(
             p_src[rCoord] = RIndex;
             p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
             p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
-            if (r_dst[thetaCoord] < a_dtheta[0]/2) {
-                p_src[thetaCoord] = 0; // if dst is too close to the pole, use the first point
-            } else if (r_dst[thetaCoord] > M_PI - a_dtheta[a_dtheta.size() - 1]/2) {
-                p_src[thetaCoord] = a_dtheta.size() - 1; // if dst is too close to the south pole, use the last point
-            }
-
             std::vector<T> coefs(4);
             for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
             std::vector<MBDataPoint> srcs(4);
