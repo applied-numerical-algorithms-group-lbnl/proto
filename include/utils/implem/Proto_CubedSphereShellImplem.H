@@ -1,3 +1,4 @@
+#include <iomanip>  // include this at the top
 MBProblemDomain CubedSphereShell::Domain(
     int a_domainSize,
     int a_thickness,
@@ -107,14 +108,40 @@ CubedSphereShell::InterpOp(
     return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
 
+// template<typename T>
+// int _findIndex(std::vector<T> sorted, T value)
+// {
+//     for (int ii = 0; ii < sorted.size(); ii++)
+//     {
+//         if (sorted[ii] > value) { return ii; }
+//     }
+//     return sorted.size()-1;
+// }
+
 template<typename T>
-int _findIndex(std::vector<T> sorted, T value)
+int _findIndex(const std::vector<T>& sorted, T value)
 {
-    for (int ii = 0; ii < sorted.size(); ii++)
-    {
-        if (sorted[ii] > value) { return ii; }
+    if (sorted.empty()) return -1;
+
+    // Use lower_bound to find the first element not less than value
+    auto it = std::lower_bound(sorted.begin(), sorted.end(), value);
+    
+    if (it == sorted.begin()) {
+        return 0;
     }
-    return sorted.size()-1;
+    if (it == sorted.end()) {
+        return sorted.size() - 1;
+    }
+
+    int idx_upper = std::distance(sorted.begin(), it);
+    int idx_lower = idx_upper - 1;
+
+    // Compare which is closer
+    if (std::abs(sorted[idx_lower] - value) <= std::abs(sorted[idx_upper] - value)) {
+        return idx_lower;
+    } else {
+        return idx_upper;
+    }
 }
 
 template<typename T>
@@ -380,7 +407,8 @@ CubedSphereShell::BCNearestOp(
     std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
     for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
     {
-        thetaArray[ii] = (ii == 0 ? 0 : thetaArray[ii-1] + a_dtheta[ii-1]);
+        // thetaArray[ii] = (ii == 0 ? 0 : thetaArray[ii-1] + a_dtheta[ii-1]);
+        thetaArray[ii] = (ii == 0 ? a_dtheta[0]/2 : thetaArray[ii-1] + a_dtheta[ii-1]/2 + a_dtheta[ii]/2);
     }
     T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
 
@@ -427,9 +455,11 @@ CubedSphereShell::BCNearestOp(
             p_src[rCoord] = RIndex;
             p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
             p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
-            // p_src[phiCoord] = _findIndex(a_phi, r_dst[phiCoord]);; 
-            // p_src[thetaCoord] = _findIndex(a_theta, r_dst[thetaCoord]); 
-
+            if (r_dst[thetaCoord] < a_dtheta[0]/2) {
+                p_src[thetaCoord] = 0; // if dst is too close to the pole, use the first point
+            } else if (r_dst[thetaCoord] > M_PI - a_dtheta[a_dtheta.size() - 1]/2) {
+                p_src[thetaCoord] = a_dtheta.size() - 1; // if dst is too close to the south pole, use the last point
+            }
             std::vector<T> coefs(4);
             for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
             std::vector<MBDataPoint> srcs(4);
@@ -448,6 +478,192 @@ CubedSphereShell::BCNearestOp(
     }
     return op;
 }
+
+
+
+
+
+
+
+
+
+
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCBilinearOp(
+    const MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map,
+    MBDisjointBoxLayout& a_srcLayout,
+    std::vector<T>             a_dtheta,
+    std::vector<T>             a_theta,
+    std::vector<T>             a_phi,
+    Side::LoHiSide a_side,
+    int a_ghost)
+{
+
+    // SETUP
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+
+
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+    
+    // CACHE THETA ON EACH LATITUDE (used for fast search)
+    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
+    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
+    {
+        thetaArray[ii] = (ii == 0 ? a_dtheta[0]/2 : thetaArray[ii-1] + a_dtheta[ii-1]/2 + a_dtheta[ii]/2);
+    }
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+    int phiSize = srcBoxSizes[phiCoord];
+
+
+    // BUILD THE INTERPOLATION OPERATOR
+    MBInterpOp op;
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // All points in this block (not including ghost)
+        Box blockDomain = layout.domain().getBlock(block).box();
+        // Boundary of this block and this patch respectively
+        Box boundDomain, boundDomain_i;
+
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1);// & boundDomain; // Commenting this so ghost layer of not innermost boxes get BCs too
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1);// & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        boundDomain_i = boundDomain_i.grow(a_ghost*Point::Basis(thetaCoord) + a_ghost*Point::Basis(phiCoord));
+        // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+        // CREATE POINT INTERP OP FOR EACH POINT IN CUBE SPHERE BOUNDARY
+        for (auto p_dst : X.box())
+        {
+          auto x_dst = X.array(p_dst);    //get cartesian coords at this point
+          auto r_dst = _getPolar(x_dst);  //convert cartesian to spherical polar
+
+          T theta_dst = r_dst[thetaCoord];
+          T phi_dst   = r_dst[phiCoord];
+          // cout << "theta_dst: " << theta_dst << ", phi_dst: " << phi_dst << endl;
+          // phi already in [0, 2π]
+
+          // Find theta bracket index
+          int i_theta = -1;
+          for (int i = 0; i < static_cast<int>(thetaArray.size()) - 1; ++i) {
+              if (thetaArray[i] <= theta_dst && theta_dst < thetaArray[i + 1]) {
+                  i_theta = i;
+                  break;
+              }
+          }
+          // Nearest at the poles, bilinear otherwise
+          if (i_theta < 0 || i_theta + 1 >= static_cast<int>(thetaArray.size())) {
+            // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
+            Point p_src = Point::Zeros();
+            
+            p_src[rCoord] = RIndex;
+            p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
+            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            if (r_dst[thetaCoord] < a_dtheta[0]/2) {
+                p_src[thetaCoord] = 0; // if dst is too close to the pole, use the first point
+            } else if (r_dst[thetaCoord] > M_PI - a_dtheta[a_dtheta.size() - 1]/2) {
+                p_src[thetaCoord] = a_dtheta.size() - 1; // if dst is too close to the south pole, use the last point
+            }
+
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(p_src);
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            MBDataPoint d_dst(iter, p_dst, layout);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+          
+            //arguments are dst point, src points, coefficients
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+          } else {
+
+            // Compute phi index (wrap if necessary)
+            int j_phi = static_cast<int>(std::floor(phi_dst / dphi));
+
+            // Extract theta and phi bracket values
+            T theta1 = thetaArray[i_theta];
+            T theta2 = thetaArray[i_theta + 1];
+            T phi1 = j_phi * dphi;
+            T phi2 = ((j_phi + 1) % phiSize) * dphi;
+
+            // Compute bilinear interpolation weights
+            T wt_theta = (theta_dst - theta1) / (theta2 - theta1);
+            T wt_phi   = (phi_dst   - phi1)   / (phi2 - phi1);
+
+            std::vector<T> coefs(4);
+            coefs[0] = (1 - wt_theta) * (1 - wt_phi); // (i, j)
+            coefs[1] = (1 - wt_theta) * wt_phi;       // (i, j+1)
+            coefs[2] = wt_theta * (1 - wt_phi);       // (i+1, j)
+            coefs[3] = wt_theta * wt_phi;             // (i+1, j+1)
+
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            for (int k = 0; k < 4; ++k) {
+                int di = (k == 2 || k == 3) ? 1 : 0; // i+1 or i
+                int dj = (k == 1 || k == 3) ? 1 : 0; // j+1 or j
+                int j_index = (j_phi + dj) % phiSize; // wrap around phi index
+                Point p_src = Point::Zeros();
+                p_src[rCoord] = RIndex;
+                p_src[thetaCoord] = i_theta + di; // i or i+1
+                p_src[phiCoord] = j_index; // j or j+1
+                srcPoints.push_back(p_src);
+            }
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[1], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[2], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[3], a_srcLayout);
+
+            MBDataPoint d_dst(iter, p_dst, layout);
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+          }
+        }
+    }
+
+    return op;
+}
+
+
+
+
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 Array<T,C>
 CubedSphereShell::conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU)

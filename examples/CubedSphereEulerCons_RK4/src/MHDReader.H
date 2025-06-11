@@ -118,7 +118,7 @@ public:
 			int low_frame = time_temp / (h5_cadence * 3600);
 			int next_frame = low_frame + 1;
 			PROTO_ASSERT(low_frame < BC_data.size(),
-									 "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %i", low_frame, BC_data.size());
+									 "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %lu", low_frame, BC_data.size());
 			double needed_fraction = (time_temp - (low_frame * h5_cadence * 3600)) / (h5_cadence * 3600);
 
 			BoxData<double, 8, HOST> data_a(bx2);
@@ -202,6 +202,7 @@ public:
 
 		// Get the interpolation or Nearest operator
 		auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
+		// auto BCOp = CubedSphereShell::BCBilinearOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
 
 		// Interpolate data
 		BCOp.apply(a_dstData, data);
