@@ -47,8 +47,8 @@ std::set<Point> MBInterpLayout::footprint(
     Point center,
     MBIndex index) const
 {
-    PROTO_ASSERT(boundaryDir.abs().max() <= 1,
-        "MBInterpLayout::footprint | Error: boundaryDir is not a valid direction");
+    // PROTO_ASSERT(boundaryDir.abs().max() <= 1,
+    //     "MBInterpLayout::footprint | Error: boundaryDir is not a valid direction");
     auto patchDomain = m_layout.patchDomain();
     BlockIndex block = m_layout.block(index);
     PatchID patch = m_layout.point(index);
@@ -56,7 +56,6 @@ std::set<Point> MBInterpLayout::footprint(
     Point boundaryDir = patchBox.whichBoundaryContains(center);
     PROTO_ASSERT(boundaryDir != Point::Zeros(), "Center point should be inside of the boundary of a patch");
     PatchID adjPatch = patch + boundaryDir;
-    Box patchBox = m_layout[index];
     std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
     addBoundaryFootprint(footprint, center, index);
     if (patchDomain.isPointInTriplePoint(adjPatch, block))

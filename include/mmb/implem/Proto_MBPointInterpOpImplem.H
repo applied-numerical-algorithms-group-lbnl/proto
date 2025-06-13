@@ -37,8 +37,8 @@ MBPointInterpOp::MBPointInterpOp(
     m_order = a_order;
     m_dst = a_dst;
     Box patchBox = a_map.layout()[m_dst.index()];
-    Point boundaryDir = patchBox.whichBoundaryContains(m_dst.point());
-    auto footprint = a_interpLayout.footprint(m_dst.point(), boundaryDir, m_dst.index());
+    //Point boundaryDir = patchBox.whichBoundaryContains(m_dst.point());
+    auto footprint = a_interpLayout.footprint(m_dst.point(), m_dst.index());
     m_srcs = a_interpLayout.computeSourcePoints(footprint, a_map, m_dst.point(), m_dst.index());
     //computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
     computeExponents();
