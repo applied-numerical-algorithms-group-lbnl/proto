@@ -67,6 +67,35 @@ TEST(MBLevelMapTests, ShearMap)
     }
 }
 #endif
+TEST(MBLevelMapTests, ShearInverseMap)
+{
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostWidth = 2;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+
+    for (auto iter : layout)
+    {
+        BlockIndex block = layout.block(iter);
+        Box B0 = layout[iter];
+        BoxData<double, DIM> X(B0);
+        BoxData<double, 1> J(B0);
+        map.op(block).apply(X,J);
+        BoxData<double, DIM> X0(B0);
+        map.op(block).inverse(X0, X);
+        auto X0Sln = map.X(B0, gridSpacing);
+        X0 -= X0Sln;
+        EXPECT_LT(X0.absMax(), 1e-12);
+    }
+}
 TEST(MBLevelMapTests, XPointMapSmall)
 {
     int domainSize = 16;

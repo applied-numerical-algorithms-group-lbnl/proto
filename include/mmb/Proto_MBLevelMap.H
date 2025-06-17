@@ -241,6 +241,7 @@ class MBLevelMap
         mutable bool                            m_initialized; 
         mutable std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
         mutable std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
+        //mutable std::vector<std::unordered_map<MBPoint, MBPoint>>           m_pointMap; ///< Cached Point conversions
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

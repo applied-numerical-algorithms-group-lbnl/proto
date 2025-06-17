@@ -297,11 +297,11 @@ const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() c
 template<typename MAP, MemType MEM>
 Point MBLevelMap<MAP,MEM>::convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const
 {
-    auto h0 = dx(srcBlock);
-    Box b0(srcPoint, srcPoint);
-    b0 = b0.grow(PR_NODE);
-    BoxData<double, DIM> X(b0);
-    BoxData<double, 1> J(b0);
-    apply(X, J);
-
+    Array<double, DIM> offset = Point::Zeros();
+    auto xSrc = mappedCoords(srcPoint, offset);
+    auto X = op(srcBlock).apply(xSrc);
+    auto xDst = op(dstBlock).inverse(X);
+    Point dstPoint;
+    for (int ii = 0; ii < DIM; ii++) { dstPoint[ii] = (int)xDst[ii]; }
+    return dstPoint;
 }

@@ -40,6 +40,40 @@ namespace {
                 break;
         }
     }
+    
+    ACCEL_DECORATION
+    void f_inverseShearMap(Array<double, DIM>& a_X0, const Array<double, DIM>& a_X, int a_block)
+    {
+        for (int dir = 2; dir < DIM; dir++)
+        {
+            a_X0[dir] = a_X[dir];
+        }
+        double X = a_X[0];
+        double Y = a_X[1];
+        switch (a_block)
+        {
+            // lower left
+            case 0:
+                a_X0[0] = X + 1.0;
+                a_X0[1] = Y + 1.0;
+                break;
+            // upper left
+            case 3:
+                a_X0[0] = X + 1.0;
+                a_X0[1] = Y;
+                break;
+            // lower right
+            case 1:
+                a_X0[0] = X;
+                a_X0[1] = Y - MB_MAP_SHEAR_SLOPE * X + 1.0;
+                break;
+            // upper right
+            case 2:
+                a_X0[0] = X;
+                a_X0[1] = Y - MB_MAP_SHEAR_SLOPE * X;
+                break;
+        }
+    }
 }
 
 template<MemType MEM>
@@ -69,12 +103,37 @@ class MBMap_Shear : public MBMapOp<MEM>
         a_J.setVal(1.0);
     }
     
-    inline Array<double, DIM> apply(const Array<double, DIM>& a_X)
+    inline Array<double, DIM> apply(const Array<double, DIM>& a_X0)
     {
         auto block = this->block();
         Array<double, DIM> X;
-        f_shearMap(X, a_X, block);
+        f_shearMap(X, a_X0, block);
         return X;
+    }
+
+    inline void inverse(
+        BoxData<double, DIM, MEM>& a_X0,
+        const BoxData<double, DIM, MEM>& a_X)
+    {
+        auto block = this->block();
+        forallInPlace(
+        [] PROTO_LAMBDA (Var<double, DIM, MEM>& a_X0, Var<double, DIM, MEM>& a_X, int a_block)
+        {
+            Array<double, DIM> X;
+            for (int ii = 0; ii < DIM; ii++) { X[ii] = a_X(ii); }
+            Array<double, DIM> X0;
+            f_inverseShearMap(X0, X, a_block);
+            for (int ii = 0; ii < DIM; ii++) { a_X0(ii) = X0[ii]; }
+        }, a_X0, a_X, block
+        );
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_X)
+    {
+        auto block = this->block();
+        Array<double, DIM> X0;
+        f_inverseShearMap(X0, a_X, block);
+        return X0;
     }
 };
 
