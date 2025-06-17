@@ -503,12 +503,6 @@ CubedSphereShell::BCBilinearOp(
         RIndex = rSize;
     }
     
-    // CACHE THETA ON EACH LATITUDE (used for fast search)
-    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
-    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
-    {
-        thetaArray[ii] = (ii == 0 ? a_dtheta[0]/2 : thetaArray[ii-1] + a_dtheta[ii-1]/2 + a_dtheta[ii]/2);
-    }
     T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
     int phiSize = srcBoxSizes[phiCoord];
 
@@ -555,20 +549,20 @@ CubedSphereShell::BCBilinearOp(
 
           // Find theta bracket index
           int i_theta = -1;
-          for (int i = 0; i < static_cast<int>(thetaArray.size()) - 1; ++i) {
-              if (thetaArray[i] <= theta_dst && theta_dst < thetaArray[i + 1]) {
+          for (int i = 0; i < static_cast<int>(a_theta.size()) - 1; ++i) {
+              if (a_theta[i] <= theta_dst && theta_dst < a_theta[i + 1]) {
                   i_theta = i;
                   break;
               }
           }
           // Nearest at the poles, bilinear interpolation otherwise
-          if (i_theta < 0 || i_theta + 1 >= static_cast<int>(thetaArray.size())) {
+          if (i_theta < 0 || i_theta + 1 >= static_cast<int>(a_theta.size())) {
             // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
             Point p_src = Point::Zeros();
             
             p_src[rCoord] = RIndex;
-            p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
-            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            p_src[phiCoord] = _findIndex(a_phi, r_dst[phiCoord]);
+            p_src[thetaCoord] = _findIndex(a_theta, r_dst[thetaCoord]); 
             std::vector<T> coefs(4);
             for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
             std::vector<MBDataPoint> srcs(4);
@@ -584,19 +578,23 @@ CubedSphereShell::BCBilinearOp(
             //arguments are dst point, src points, coefficients
             op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
           } else {
-
+            // This assumes that the phi data is given on cell faces
             // Compute phi index (wrap if necessary)
             int j_phi = static_cast<int>(std::floor(phi_dst / dphi));
 
             // Extract theta and phi bracket values
-            T theta1 = thetaArray[i_theta];
-            T theta2 = thetaArray[i_theta + 1];
+            T theta1 = a_theta[i_theta];
+            T theta2 = a_theta[i_theta + 1];
             T phi1 = j_phi * dphi;
             T phi2 = ((j_phi + 1) % phiSize) * dphi;
 
             // Compute bilinear interpolation weights
             T wt_theta = (theta_dst - theta1) / (theta2 - theta1);
             T wt_phi   = (phi_dst   - phi1)   / (phi2 - phi1);
+            // Handle wrap-around for phi
+            if (j_phi == phiSize-1) {
+              wt_phi = (phi_dst   - phi1)   / (phi2 + 2*M_PI - phi1);
+            }
 
             std::vector<T> coefs(4);
             coefs[0] = (1 - wt_theta) * (1 - wt_phi); // (i, j)

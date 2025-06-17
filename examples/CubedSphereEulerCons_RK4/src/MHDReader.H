@@ -26,8 +26,8 @@ public:
 		int phiCoord = (rCoord + 2) % 3;
 		readData(BC_data, a_filename);
 		readGeom(dtheta, a_filename);
-		// readTheta(theta, a_filename);
-		// readPhi(phi, a_filename);
+		readTheta(theta, a_filename);
+		readPhi(phi, a_filename);
 		Box_BC = readDomain(a_filename);
 		Point LT = Box_BC.low();
 		LT[thetaCoord] = Box_BC.low()[phiCoord];
