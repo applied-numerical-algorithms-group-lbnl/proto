@@ -140,8 +140,8 @@ void MBInterpOp::addPointOp(
 void MBInterpOp::copyAlongSymmetryAxes(const MBPointInterpOp& pointOp)
 {
     PR_TIME("MBInterpOp::copyAlongSymmetryAxis");
-    Point dataPoint = pointOp.target().point();
-    MBIndex index = pointOp.target().index();
+    Point dataPoint = pointOp.target().dstPoint();
+    MBIndex index = pointOp.target().dstIndex();
     Box patchBox = m_interpLayout.layout()[index];
     Point boundaryDir = patchBox.whichBoundaryContains(dataPoint);
     Box patchBoundBox = patchBox.adjacent(boundaryDir * m_ghost);
@@ -172,7 +172,7 @@ void MBInterpOp::addShiftedOp(
     Point shift)
 {
     PR_TIME("MBInterpOp::addShiftedOp");
-    PROTO_ASSERT(containsOp(baseOp.target().point(), baseOp.target().index()),
+    PROTO_ASSERT(containsOp(baseOp.target().dstPoint(), baseOp.target().dstIndex()),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     if (shift == Point::Zeros()) { return; }
     MBDataPoint shiftDst = baseOp.target().shift(shift);
@@ -185,15 +185,15 @@ void MBInterpOp::addShiftedOp(
     auto shiftedOp = std::make_shared<MBPointInterpOp>(shiftDst, shiftSrc, coefs);
     
     m_ops.push_back(shiftedOp);
-    MBPointID key(shiftDst.point(), baseOp.target().index().global());
+    MBPointID key(shiftDst.dstPoint(), baseOp.target().dstIndex().global());
     m_points.insert(key);
 }
 
 void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 {
     PR_TIME("MBInterpOp::insert");
-    Point dst = a_op->target().point();
-    int globalIndex = a_op->target().index();
+    Point dst = a_op->target().dstPoint();
+    int globalIndex = a_op->target().dstIndex();
     MBPointID key(dst, globalIndex);
     PROTO_ASSERT(m_points.count(key) == 0,
             "MBInterpOp::insert | Tried to insert a duplicate MBPointInterpOp");
@@ -212,7 +212,7 @@ void MBInterpOp::apply(
     PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
     for (auto& op : m_ops)
     {
-        auto block = a_dst.layout().block(op->target().index());
+        auto block = a_dst.layout().block(op->target().dstIndex());
         op->apply(a_dst, a_src);
     }
 }
@@ -255,7 +255,7 @@ void MBInterpOp::printErrorPoints(
                     for (auto& op : m_ops)
                     {
                         auto& dst = op->target();
-                        if (dst.point() == pi && dst.dstBlock() == block)
+                        if (dst.dstPoint() == pi && dst.dstBlock() == block)
                         {
                             std::cout << "\nError Point found | error: " << err_i(pi, cc) << " | target: " << pi << " | block: " << block << std::endl;
                             std::cout << "Source Points: " << std::endl;

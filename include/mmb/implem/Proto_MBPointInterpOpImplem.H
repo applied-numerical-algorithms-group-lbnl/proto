@@ -36,10 +36,10 @@ MBPointInterpOp::MBPointInterpOp(
     PR_TIME("MBPointInterpOp::constructor");
     m_order = a_order;
     m_dst = a_dst;
-    Box patchBox = a_map.layout()[m_dst.index()];
+    Box patchBox = a_map.layout()[m_dst.dstIndex()];
     //Point boundaryDir = patchBox.whichBoundaryContains(m_dst.point());
-    auto footprint = a_interpLayout.footprint(m_dst.point(), m_dst.index());
-    m_srcs = a_interpLayout.computeSourcePoints(footprint, a_map, m_dst.point(), m_dst.index());
+    auto footprint = a_interpLayout.footprint(m_dst.dstPoint(), m_dst.dstIndex());
+    m_srcs = a_interpLayout.computeSourcePoints(footprint, a_map, m_dst.dstPoint(), m_dst.dstIndex());
     //computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
     computeExponents();
     validateMatrixDimensions(footprint);
@@ -54,8 +54,8 @@ void MBPointInterpOp::computeSourcePoints(
     Point ghostSizes)
 {
     PR_TIME("MBPointInterpOp::computeSourcePoints");
-    auto index = m_dst.index();
-    auto center = m_dst.point();
+    auto index = m_dst.dstIndex();
+    auto center = m_dst.dstPoint();
     Box patchBox = layout[index];
     patchBox = patchBox.grow(ghostSizes);
     auto patch = layout.patch(index);
@@ -89,7 +89,7 @@ void MBPointInterpOp::computeSourcePoints(
     // std::cout << std::endl;
     PROTO_ASSERT(m_srcs.size() > 0,
         "MBPointInterpOp::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
-        m_dst.point().str(), m_dst.dstBlock());
+        m_dst.dstPoint().str(), m_dst.dstBlock());
 }
 
 void MBPointInterpOp::computeExponents()
@@ -98,7 +98,7 @@ void MBPointInterpOp::computeExponents()
     Box sourceSpanBox;
     for (auto si : m_srcs)
     {
-        sourceSpanBox &= si.point();
+        sourceSpanBox &= si.dstPoint();
     }
     Point maxExponents = Point::Ones(m_order);
 
@@ -187,7 +187,7 @@ MBPointInterpOp::computeMoments(
 
     // The domain of the block containing the destination point must
     // at minimum include that point
-    Box B0(m_dst.point(), m_dst.point());
+    Box B0(m_dst.dstPoint(), m_dst.dstPoint());
     momentDomains[m_dst.dstBlock()] = B0;
 
     for (auto si : m_srcs)
@@ -195,9 +195,9 @@ MBPointInterpOp::computeMoments(
         int bi = si.srcBlock();
         if (momentDomains.find(bi) == momentDomains.end())
         {
-            momentDomains[bi] = Box(si.point(), si.point());
+            momentDomains[bi] = Box(si.dstPoint(), si.dstPoint());
         } else {
-            momentDomains[bi] &= si.point();
+            momentDomains[bi] &= si.dstPoint();
         }
     }
     
@@ -258,7 +258,7 @@ void MBPointInterpOp::computeCoefficients(
         auto srcBlock = src.srcBlock();
         for (int jj = 0; jj < N; jj++)
         {
-            C(ii,jj) = momentData[srcBlock][jj](src.point());
+            C(ii,jj) = momentData[srcBlock][jj](src.dstPoint());
         }
     }
 
@@ -267,7 +267,7 @@ void MBPointInterpOp::computeCoefficients(
     for (int jj = 0; jj < N; jj++)
     {
         PR_TIMERS("build_D_matrix");
-        D(0,jj) = momentData[dstBlock][jj](m_dst.point());
+        D(0,jj) = momentData[dstBlock][jj](m_dst.dstPoint());
     }
     
     auto Cinv = C.inverse();
@@ -283,7 +283,7 @@ void MBPointInterpOp::computeCoefficients(
     //TODO: This check should be much more strict
     PROTO_ASSERT(error < 1e-1,
         "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Error: %.2e for target point %s in block %i",
-        error, m_dst.point().str().c_str(), m_dst.dstBlock());
+        error, m_dst.dstPoint().str().c_str(), m_dst.dstBlock());
     //TODO: Check for coefficients with values greater than some value
     //#endif
 }
@@ -295,7 +295,7 @@ void MBPointInterpOp::apply(
 {
     PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
-    PROTO_ASSERT(a_dst[m_dst.index()].containsAddress(&dst(0)), "Data Corruption");
+    PROTO_ASSERT(a_dst[m_dst.dstIndex()].containsAddress(&dst(0)), "Data Corruption");
     for (int ii = 0; ii < size(); ii++)
     {
         
@@ -303,7 +303,7 @@ void MBPointInterpOp::apply(
         for (int cc = 0; cc < C; cc++)
         {
             if (ii == 0) { dst(cc) = 0.0; }
-            auto& patch = m_srcs[ii].patch(a_src);
+            auto& patch = m_srcs[ii].dstPatch(a_src);
             PROTO_ASSERT(patch.containsAddress(&src(cc)), "Data Corruption");
             dst(cc) += m_coefs[ii]*src(cc);
         }
@@ -326,18 +326,18 @@ void MBPointInterpOp::print() const
 void MBPointInterpOp::writeFootprint(std::string filename) const 
 {
     Box B;
-    B &= target().point();
+    B &= target().dstPoint();
     for (auto si : m_srcs)
     {
-        B &= si.point();
+        B &= si.dstPoint();
     }
     BoxData<double,1> D(B);
     D.setVal(0);
     for (auto si : m_srcs)
     {
-        D(si.point()) = 1 + si.srcBlock();
+        D(si.dstPoint()) = 1 + si.srcBlock();
     }
-    D(target().point()) = -1;
+    D(target().dstPoint()) = -1;
     HDF5Handler h5;
     h5.writePatch(D, filename);
 }

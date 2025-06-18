@@ -708,13 +708,13 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
             if (ii < footprint.size()) { std::cout << footprint[ii] + p0 << " | \t"; } else { std::cout << line; }
             if (ii < soln.size())
             {
-                std::cout << " (" << soln[ii].point() << " | " << soln[ii].block() << ") ";
+                std::cout << " (" << soln[ii].dstPoint() << " | " << soln[ii].block() << ") ";
             } else {
                 std::cout << line << line;
             }
             if (ii < mb_footprint.size())
             {
-                std::cout << " (" << mb_footprint[ii].point() << " | " << mb_footprint[ii].block() << ") " << std::endl;
+                std::cout << " (" << mb_footprint[ii].dstPoint() << " | " << mb_footprint[ii].block() << ") " << std::endl;
             } else {
                 std::cout << line << line << std::endl;
             }
@@ -723,7 +723,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         EXPECT_EQ(soln.size(), mb_footprint.size());
         for (int ii = 0; ii < soln.size(); ii++)
         {
-            EXPECT_EQ(soln[ii].point(), mb_footprint[ii].point());
+            EXPECT_EQ(soln[ii].dstPoint(), mb_footprint[ii].dstPoint());
         }
     }
 }
@@ -805,7 +805,7 @@ TEST(MBLevelBoxData, InterpFootprintDomainBoundary)
         EXPECT_EQ(soln.size(), mb_footprint.size());
         for (int ii = 0; ii < soln.size(); ii++)
         {
-            EXPECT_EQ(soln[ii].point(), mb_footprint[ii].point());
+            EXPECT_EQ(soln[ii].dstPoint(), mb_footprint[ii].dstPoint());
         }
     }
 }

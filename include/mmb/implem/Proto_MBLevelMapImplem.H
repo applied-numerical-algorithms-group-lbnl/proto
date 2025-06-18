@@ -153,9 +153,9 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellAveraged(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.dstPoint(), a_point.dstPoint());
     auto X = cellAveraged(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.dstPoint());
 }
 
 template<typename MAP, MemType MEM>
@@ -164,9 +164,9 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellCentered(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.dstPoint(), a_point.dstPoint());
     auto X = cellCentered(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.dstPoint());
 }
 
 template<typename MAP, MemType MEM>
@@ -198,7 +198,7 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
 {
-    return mappedCoords(a_point.point(), a_point.block(), a_offset);
+    return mappedCoords(a_point.dstPoint(), a_point.block(), a_offset);
 }
 
 template<typename MAP, MemType MEM>

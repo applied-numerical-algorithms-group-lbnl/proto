@@ -1,77 +1,87 @@
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout)
+MBDataPoint::MBDataPoint(MBIndex a_dstIndex, Point a_dstPoint, const MBDisjointBoxLayout& a_layout)
 {
     PROTO_ASSERT(a_layout.defined(),
             "MBDataPoint::constructor | Error: Undefined layout");
-    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+    PROTO_ASSERT(a_dstIndex.compatible(a_layout.partition()),
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
-    m_index = a_index.global();
-    m_point = a_point;
-    m_block = -1;  // this means the block is the same as implied by a_index
+
+    m_dstIndex = a_dstIndex;
+    m_dstPoint = a_dstPoint;
+    m_dstBlock = a_layout.block(a_dstIndex);
     m_boundaryDir = Point::Zeros();
-    m_inBoundary = false;
-    m_partition = a_layout.partitionPtr();
+
+    m_srcIndex = m_dstIndex;
+    m_srcPoint = m_dstPoint;
+    m_srcBlock = m_dstBlock;
 }
-MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
-        Point a_boundaryDir, BlockIndex a_block)
+MBDataPoint::MBDataPoint(MBIndex a_dstIndex, Point a_dstPoint,
+    MBIndex a_srcIndex, Point a_srcPoint,
+    const MBDisjointBoxLayout& a_layout)
 {
-    PROTO_ASSERT(a_block < a_layout.numBlocks(),
-            "MBDataPoint::constructor | Error: Invalid block index");
     PROTO_ASSERT(a_layout.defined(),
             "MBDataPoint::constructor | Error: Undefined layout");
-    PROTO_ASSERT(a_index.compatible(a_layout.partition()),
+    PROTO_ASSERT(a_dstIndex.compatible(a_layout.partition()),
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
-    PROTO_ASSERT(a_boundaryDir.dot(a_boundaryDir) <= DIM,
-            "MBDataPoint::constructor | Error: Invalid boundary direction");
-    m_index = a_index.global();
-    m_block = a_block;
-    m_boundaryDir = a_boundaryDir;
-    m_point = a_point;
-    m_inBoundary = true;
-    m_partition = a_layout.partitionPtr();
+    PROTO_ASSERT(a_srcIndex.compatible(a_layout.partition()),
+            "MBDataPoint::constructor | Error: Invalid index / layout pair");
+    
+    m_dstIndex = a_dstIndex;
+    m_dstPoint = a_dstPoint;
+    m_dstBlock = a_layout.block(a_dstIndex);
+
+    m_srcIndex = a_srcIndex;
+    m_srcPoint = a_srcPoint;
+    m_srcBlock = a_layout.block(a_srcIndex);
+    m_boundaryDir = a_layout.domain().graph().connectivity(m_srcBlock, m_dstBlock);
 }
 
 MBDataPoint::MBDataPoint(const MBDataPoint& a_rhs)
 {
-    m_index = a_rhs.m_index;
+    m_dstIndex = a_rhs.m_dstIndex;
+    m_dstPoint = a_rhs.m_dstPoint;
+    m_dstBlock = a_rhs.m_dstBlock;
+
+    m_srcIndex = a_rhs.m_srcIndex;
+    m_srcPoint = a_rhs.m_srcPoint;
+    m_srcBlock = a_rhs.m_srcBlock;
+
     m_boundaryDir = a_rhs.m_boundaryDir;
-    m_point = a_rhs.m_point;
-    m_block = a_rhs.m_block;
-    m_inBoundary = a_rhs.m_inBoundary;
-    m_partition = a_rhs.m_partition;
-    PROTO_ASSERT(m_block < m_partition->numBlocks(),
-            "MBDataPoint::constructor | Error: Invalid block index");
-    PROTO_ASSERT(m_boundaryDir.dot(m_boundaryDir) <= DIM,
-            "MBDataPoint::constructor | Error: Invalid boundary direction");
 }
 
-MBDataPoint MBDataPoint::shift(Point a_shift) const
+MBDataPoint MBDataPoint::shift(Point a_dstShift, const MBDisjointBoxLayout& a_layout) const
 {
     MBDataPoint ret(*this);
-    ret.m_point = m_point + a_shift;
+    ret.m_dstPoint = m_dstPoint + a_dstShift;
+    if (inBoundary())
+    {
+        auto R = a_layout.domain().graph().rotation(m_dstBlock, m_boundaryDir);
+        ret.m_srcPoint = m_srcPoint + R(a_dstShift);
+    } else {
+        ret.m_srcPoint = m_srcPoint + a_dstShift;
+    }
+    
     return ret;
 }
 
 bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
 {
-    if (m_index != a_rhs.m_index)
+    if (m_dstIndex != a_rhs.m_dstIndex)
     {
-        return m_index < a_rhs.m_index;
+        return m_dstIndex.global() < a_rhs.m_dstIndex.global();
     }
-    else if (m_point != a_rhs.m_point)
+    if (m_dstPoint != a_rhs.m_dstPoint)
     {
-        return m_point < a_rhs.m_point;
+        return m_dstPoint < a_rhs.m_dstPoint;
     }
-    if (m_inBoundary)
+    if (inBoundary())
     {
-        if (m_block != a_rhs.m_block)
+        if (m_srcIndex != a_rhs.m_srcIndex)
         {
-            return m_block < a_rhs.m_block;
+            return m_srcIndex.global() < a_rhs.m_srcIndex.global();
         }
-        else if (m_boundaryDir != a_rhs.m_boundaryDir)
+        if (m_srcPoint != a_rhs.m_srcPoint)
         {
-            return m_boundaryDir < a_rhs.m_boundaryDir;
-        } else {
-            return false;
+            return m_srcPoint < a_rhs.m_srcPoint;
         }
     }
     return false;
@@ -79,56 +89,49 @@ bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
 
 bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
 {
-    if (m_index != a_rhs.m_index)
+    if (m_dstIndex != a_rhs.m_dstIndex)
     {
         return false;
     }
-    if (m_point != a_rhs.m_point)
+    if (m_dstPoint != a_rhs.m_dstPoint)
     {
         return false;
     }
-    if (m_inBoundary)
+    if (inBoundary())
     {
-        if (m_block != a_rhs.m_block)
+        if (m_srcIndex != a_rhs.m_srcIndex)
         {
             return false;
         }
-        if (m_boundaryDir != a_rhs.m_boundaryDir)
+        if (m_srcPoint != a_rhs.m_srcPoint)
         {
             return false;
         }
     }
     return true;
 }
-BlockIndex MBDataPoint::srcBlock() const
-{
-    return m_block >= 0 ? m_block : m_partition->getBlock(m_index); 
-}
 
-BlockIndex MBDataPoint::dstBlock() const
-{
-    return m_partition->getBlock(m_index); 
-}
+// template<typename T, unsigned int C, MemType MEM, Centering CTR>
+// BoxData<T, C, MEM>& MBDataPoint::dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
+// {
+//     return a_data[dstIndex()];
+// }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-{
-    if (m_inBoundary)
-    {
-        auto& boundData = a_data.bound(index(), m_boundaryDir, m_block);
-        return *boundData.localData;
-    } else {
-        return a_data[index()];
-    }
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-{
-    if (m_inBoundary)
-    {
-        auto& boundData = a_data.bound(index(), m_boundaryDir, m_block);
-        return *boundData.adjData;
-    } else {
-        return a_data[index()];
-    }
-}
+// template<typename T, unsigned int C, MemType MEM, Centering CTR>
+// BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
+// {
+//     if (inBoundary())
+//     {
+//         auto& boundData = a_data.bound(dstIndex(), m_boundaryDir, m_srcBlock);
+//         return boundData
+//     } else {
+//         return dstPatch(a_data);
+//     }
+//     if (m_inBoundary)
+//     {
+//         auto& boundData = a_data.bound(dstIndex(), m_boundaryDir, m_block);
+//         return *boundData.adjData;
+//     } else {
+//         return a_data[dstIndex()];
+//     }
+// }

@@ -637,11 +637,11 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
     {
       //PR_TIME("get bulk data");
         // bulk data is requested
-        auto &patch = (*this)[a_point.index()];
-        PROTO_ASSERT(patch.box().containsPoint(a_point.point()),
+        auto &patch = (*this)[a_point.dstIndex()];
+        PROTO_ASSERT(patch.box().containsPoint(a_point.dstPoint()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
-        return patch.var(a_point.point());
+        return patch.var(a_point.dstPoint());
     }
     else
     {
@@ -650,11 +650,11 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
                 "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 input is not in an MBBoundaryData");
         auto &boundData = (*this).bound(
-            a_point.index(), a_point.boundaryDir(), a_point.srcBlock());
-        PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.point()),
+            a_point.dstIndex(), a_point.boundaryDir(), a_point.srcBlock());
+        PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.dstPoint()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");
-        return boundData.localData->var(a_point.point());
+        return boundData.localData->var(a_point.dstPoint());
     }
 }
 

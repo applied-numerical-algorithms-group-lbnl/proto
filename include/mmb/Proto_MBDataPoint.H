@@ -12,43 +12,52 @@ namespace Proto
         public:
         inline MBDataPoint() = default;
         inline MBDataPoint(const MBDataPoint& a_rhs);
-        inline MBDataPoint(MBIndex a_index, Point a_point,
-                const MBDisjointBoxLayout& a_layout);
-        inline MBDataPoint(MBIndex a_index, Point a_point,
-                const MBDisjointBoxLayout& a_layout, 
-                Point a_boundaryDir, BlockIndex a_block);
+        inline MBDataPoint(MBIndex a_dstIndex, Point a_dstPoint,
+            const MBDisjointBoxLayout& a_layout);
+        inline MBDataPoint(MBIndex a_dstIndex, Point a_dstPoint,
+            MBIndex a_srcIndex, Point a_srcPoint,
+            const MBDisjointBoxLayout& a_layout);
+        
+        // Comparitors
         inline MBDataPoint& operator=(const MBDataPoint& a_rhs) = default;
         inline bool operator==(const MBDataPoint& a_rhs) const;
-
         inline bool operator<(const MBDataPoint& a_rhs) const;
-        inline bool inBoundary() const {return m_inBoundary; }
-        inline const Point& point() const { return m_point; }
-        inline MBIndex index() const { return MBIndex(m_partition, m_index); }
-        inline const BlockIndex& block() const { return m_block; }
+
+        // Accessors
+        inline bool inBoundary() const {return m_boundaryDir != Point::Zeros(); }
+        inline const Point& dstPoint() const { return m_dstPoint; }
+        inline MBIndex dstIndex() const { return m_dstIndex; }
+        inline const BlockIndex& dstBlock() const { return m_dstBlock; }
+        inline const Point& srcPoint() const { return m_srcPoint; }
+        inline MBIndex srcIndex() const { return m_srcIndex; }
+        inline const BlockIndex& srcBlock() const { return m_srcBlock; }
         inline const Point& boundaryDir() const { return m_boundaryDir; }
-        inline BlockIndex srcBlock() const;
-        inline BlockIndex dstBlock() const;
-        inline MBDataPoint shift(Point a_shift) const; 
-        template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>&
-            patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
-        template<typename T, unsigned int C, MemType MEM, Centering CTR>
-            inline BoxData<T, C, MEM>&
-            srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+
+        // template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        // inline BoxData<T, C, MEM>&
+        // dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+
+        // template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        // inline BoxData<T, C, MEM>&
+        // srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+
+        inline MBDataPoint shift(Point a_dstShift, const MBDisjointBoxLayout& a_layout) const; 
 
         // MEMBER DATA
         private:
-        unsigned int    m_index;
+        MBIndex     m_dstIndex;
+        MBIndex     m_srcIndex;
+        Point       m_srcPoint;
+        Point       m_dstPoint;
+
+        BlockIndex  m_srcBlock;
+        BlockIndex  m_dstBlock;
         Point       m_boundaryDir;
-        Point       m_point;
-        BlockIndex  m_block;
-        bool        m_inBoundary;
-        std::shared_ptr<MBBoxPartition> m_partition;
     };
 
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
    {
-       a_os << "point: " << a_point.point() << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir();
+       a_os << ": " << a_point.dstPoint() << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir();
        return a_os;
    }
 
