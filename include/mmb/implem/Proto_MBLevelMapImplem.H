@@ -171,16 +171,34 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
 
 template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+        const Point&          a_point,
+        const BlockIndex&     a_block) const
+{
+    Array<double, DIM> offset;
+    offset.fill(0);
+    return mappedCoords(a_point, a_block, offset);
+}
+
+template<typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+        const Point&          point,
+        const BlockIndex&     block,
+        const Array<double, DIM>&   offset) const
+{
+    auto dx = this->dx(block);
+    Array<double, DIM> X = point;
+    X += 0.5; //default is cell center
+    X += offset;
+    X *= dx;
+    return X;
+}
+
+template<typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
 {
-    auto block = a_point.srcBlock();
-    auto dx = this->dx(block);
-    Array<double, DIM> X = a_point.point();
-    X += 0.5; //default is cell center
-    X += a_offset;
-    X *= dx;
-    return X;
+    return mappedCoords(a_point.point(), a_point.block(), a_offset);
 }
 
 template<typename MAP, MemType MEM>
@@ -297,11 +315,12 @@ const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() c
 template<typename MAP, MemType MEM>
 Point MBLevelMap<MAP,MEM>::convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const
 {
-    Array<double, DIM> offset = Point::Zeros();
-    auto xSrc = mappedCoords(srcPoint, offset);
+    auto xSrc = mappedCoords(srcPoint, srcBlock);
     auto X = op(srcBlock).apply(xSrc);
     auto xDst = op(dstBlock).inverse(X);
     Point dstPoint;
-    for (int ii = 0; ii < DIM; ii++) { dstPoint[ii] = (int)xDst[ii]; }
+    Box dstDomainBox = layout().getBlock(dstBlock).domain().box();
+    Point dstDomainSizes = dstDomainBox.sizes();
+    for (int ii = 0; ii < DIM; ii++) { dstPoint[ii] = std::floor(xDst[ii]*dstDomainSizes[ii]); }
     return dstPoint;
 }

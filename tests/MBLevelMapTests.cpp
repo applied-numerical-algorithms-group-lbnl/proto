@@ -96,6 +96,36 @@ TEST(MBLevelMapTests, ShearInverseMap)
         EXPECT_LT(X0.absMax(), 1e-12);
     }
 }
+TEST(MBLevelMapTests, ShearConvertPoint)
+{
+    int domainSize = 8;
+    int boxSize = domainSize;
+    int ghostWidth = domainSize / 2;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+
+    Box boundPoints = Box::Cube(domainSize).adjacent(Point::X(), ghostWidth);
+
+    h5.writeMBLevel(map, map.map(), "SHEAR_CONVERT_POINT");
+    for (auto pi : boundPoints)
+    {
+        Point pj = map.convertPoint(pi, 0, 1);
+        Point p0 = pi - Point(domainSize, 0);
+        double x = p0[0] + 0.5;
+        double y = p0[1] + 0.5;
+        Point _pj(std::floor(x), std::floor(y - MB_MAP_SHEAR_SLOPE*x));
+        EXPECT_EQ(pj, _pj);
+    }
+
+
+}
 TEST(MBLevelMapTests, XPointMapSmall)
 {
     int domainSize = 16;
@@ -260,8 +290,14 @@ TEST(MBLevelMapTests, InterBlockApply_Shear)
         EXPECT_LT(EXj.absMax(), 1e-10);
     }
 }
+
 TEST(MBLevelMapTests, CellApply_Shear)
 {
+    if (MB_MAP_SHEAR_SLOPE != 1.0)
+    {
+        std::cout << "Skipping Test: CellApply_Shear | MB_MAP_SHEAR_SLOPE != 1" << std::endl;
+        return;
+    }
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;

@@ -168,6 +168,14 @@ class MBLevelMap
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
     
+    inline Array<double, DIM> mappedCoords(
+        const Point& point,
+        const BlockIndex& block) const;
+
+    inline Array<double, DIM> mappedCoords(
+        const Point& point,
+        const BlockIndex& block,
+        const Array<double, DIM>& offset) const;
     /// Compute Mapped Coordinates
     /** Returns coordinates in mapped space of a given data point. The Coordinates
      *  are of the cell center of the point plus the offset which is in units of the grid spacing. 
