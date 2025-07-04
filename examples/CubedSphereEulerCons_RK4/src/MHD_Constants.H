@@ -1,4 +1,4 @@
 #define c_AU 14959787070000.0 // cm
-#define c_SR 69570000000 // cm
+#define c_SR 69600000000 // cm
 #define c_MP 1.67262192e-24 // gm
 #define c_PI 3.14159265358979323846
