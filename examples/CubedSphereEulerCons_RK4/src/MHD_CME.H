@@ -463,7 +463,6 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
                 // a_W(iP) = beta*a_Bmag_CME(0)*a_Bmag_CME(0)/8.0/M_PI;
                 }
             },W_point, W_CME, Bmag_CME, a_gamma);
-            MPI_Barrier(MPI_COMM_WORLD);
 
             // W_point.copyTo(Wout[dit]);
             // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME3");

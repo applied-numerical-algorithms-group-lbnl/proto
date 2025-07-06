@@ -127,6 +127,8 @@ class MBMapOp
 
     ///
     inline unsigned int focalBlock() const { return m_focalBlock; }
+  inline virtual MBPoint findValid(MBProblemDomain a_domain,
+                                   MBPoint a_mbpt) const{cout << "in base class findValid" << endl;};
     private:
    
 

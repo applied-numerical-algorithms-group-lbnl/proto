@@ -812,7 +812,7 @@ T* BoxData<T,C,MEM,D,E>::data(
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
-    PR_TIME("BoxData::var");
+  //PR_TIME("BoxData::var");
     PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;

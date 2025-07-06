@@ -6,10 +6,10 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
             "MBDataPoint::constructor | Error: Invalid index / layout pair");
     m_index = a_index.global();
     m_point = a_point;
-    m_block = -1;  // this means the block is the same as implied by a_index
     m_boundaryDir = Point::Zeros();
     m_inBoundary = false;
     m_partition = a_layout.partitionPtr();
+    m_block = m_partition->block(m_index);
 }
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
         Point a_boundaryDir, BlockIndex a_block)
@@ -26,7 +26,7 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
     m_block = a_block;
     m_boundaryDir = a_boundaryDir;
     m_point = a_point;
-    m_inBoundary = true;
+    m_inBoundary = m_inBoundary = (m_boundaryDir != Point::Zeros());
     m_partition = a_layout.partitionPtr();
 }
 

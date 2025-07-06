@@ -21,10 +21,10 @@ namespace Proto
 
         inline bool operator<(const MBDataPoint& a_rhs) const;
         inline bool inBoundary() const {return m_inBoundary; }
-        inline const Point& point() const { return m_point; }
+        inline const Point point() const { return m_point; }
         inline MBIndex index() const { return MBIndex(m_partition, m_index); }
-        inline const BlockIndex& block() const { return m_block; }
-        inline const Point& boundaryDir() const { return m_boundaryDir; }
+        inline const BlockIndex block() const { return m_block; }
+        inline const Point boundaryDir() const { return m_boundaryDir; }
         inline BlockIndex srcBlock() const;
         inline BlockIndex dstBlock() const;
         inline MBDataPoint shift(Point a_shift) const; 

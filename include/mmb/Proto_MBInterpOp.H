@@ -7,6 +7,7 @@
 #include "Proto_MBLevelMap.H"
 #include "Proto_Matrix.H"
 #include "Proto_Operator.H"
+#include "MBMap_CubedSphereShell.H"
 #include <unordered_set>
 #include <algorithm>
 
@@ -83,7 +84,6 @@ namespace Proto
             MBDataPoint                 a_dst,
             Point                       a_ghost,
             const MBLevelMap<MAP, MEM>& a_map,
-            std::set<Point>          a_footprint,
             unsigned int                a_order);
         
         inline MBPointInterpOp(
@@ -120,13 +120,16 @@ namespace Proto
         inline void print() const; 
         
         private:
-
+#if 0
         inline void computeSourcePoints(
             const std::set<Point>& footprint,
             const MBDisjointBoxLayout& layout,
             Point ghostSizes);
-        inline void computeExponents();
-        inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
+#endif
+      template<template<MemType> typename MAP, MemType MEM>
+      inline void computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map);
+      inline void computeExponents();
+      inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
         template <template <MemType> typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,
@@ -134,10 +137,16 @@ namespace Proto
         template<template<MemType> typename MAP, MemType MEM>
         std::unordered_map<BlockIndex, std::vector<BoxData<double>>> computeMoments(
             const MBLevelMap<MAP, MEM>& map) const;
-        void computeCoefficients(std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData);
+        void computeCoefficients
+        (std::unordered_map<BlockIndex, std::vector<BoxData<double>>>& momentData,
+         MBDisjointBoxLayout a_layout);
         
         MBDataPoint m_dst;
-        std::vector<MBDataPoint> m_srcs;
+      // Set of Source MBDataPoints.Used to compute the interpolation coefficients. 
+      std::vector<MBDataPoint> m_srcs;
+      // m_footprint contains the points in the dest index space where the source
+      // values are stored.
+        std::set<Point> m_footprint;
         std::vector<Point> m_exponents;
         std::vector<double> m_coefs;
         int m_order;
@@ -255,7 +264,6 @@ namespace Proto
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
-            const std::set<Point>& footprint,
             const MBLevelMap<MAP,MEM>& map);
         void addShiftedOp(
             const MBPointInterpOp& baseOp,

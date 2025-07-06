@@ -1,7 +1,7 @@
 VARS_OLD := $(.VARIABLES)
 DEPXX=clang++
-#CXX=clang++
-CXX=mpicxx
+CXX=clang++
+#CXX=mpicxx
 DIM=3
 USE_HDF5=TRUE
 PROTO=../../..
@@ -21,7 +21,7 @@ HDF5_INC=/usr/local/include
 CXXOPTFLAGS+=-DPR_CFD
 #HDF5_LIB=/usr/lib
 #HDF5_INC=/usr/include
-CXXOPTFLAGS+= -DPR_MPI=TRUE
+#CXXOPTFLAGS+= -DPR_MPI=TRUE
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=cubedSphereTest.exe
 

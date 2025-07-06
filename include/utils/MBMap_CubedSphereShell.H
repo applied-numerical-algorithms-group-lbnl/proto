@@ -2,15 +2,15 @@
 #define _PROTO_MBMAP_CUBED_SPHERE_SHELL_
 
 #if 1
-#define CUBED_SPHERE_SHELL_R0 1496400000000
-#define CUBED_SPHERE_SHELL_R1 1.54164e13
+#define CUBED_SPHERE_SHELL_R0 1495978707000.0
+#define CUBED_SPHERE_SHELL_R1 17951744484000.0
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
 #else
 #define CUBED_SPHERE_SHELL_R0 0.1
 #define CUBED_SPHERE_SHELL_R1 2.0
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 0
 #endif
-#define CUBED_SPHERE_RADIAL_STRETCH 1e-11
+#define CUBED_SPHERE_RADIAL_STRETCH 1.5
 #include <cmath> //for atan2
 
 namespace Proto
@@ -250,16 +250,107 @@ template<MemType MEM>
 class MBMap_CubedSphereShell : public MBMapOp<MEM>
 {
 public:
-
-    using MBMapOp<MEM>::MBMapOp;
-
-    inline void apply(
-            BoxData<double, DIM, MEM>& a_X,
-            BoxData<double, 1, MEM>& a_J,
-            FluxBoxData<double, DIM, MEM>& a_NT)
+  using MBMapOp<MEM>::MBMapOp;
+  Array<Array<uint,DIM>,6> m_permvals
+        =  {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6> m_signvals
+        = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  Array<unsigned int,6> m_blockNormal = {2,2,1,0,1,0};
+  
+  inline Array<double,DIM> MBPointToNormal(MBPoint a_mbpt,
+                                            double a_offset) const
+  {
+    Point pt = a_mbpt.point;
+    int block = a_mbpt.block;
+    auto perm = m_permvals[block];
+    auto sign = m_signvals[block];
+    Array<double,DIM> nlocal,normal;
+    double dxtan = (this -> dx())[2];
+    double angle1 = .5*M_PI*(pt[1]*dxtan + a_offset*dxtan - .5);
+    double angle2 = .5*M_PI*(pt[2]*dxtan + a_offset*dxtan - .5);
+    double tan1 = tan(angle1);
+    double tan2 = tan(angle2);
+    double normalization  = 1./sqrt(1.0 + tan1*tan1 + tan2*tan2);
+    nlocal[0] = normalization;
+    nlocal[1] = tan1*normalization;
+    nlocal[2] = tan2*normalization;
+    for (int dir = 0; dir < DIM; dir++)
     {
-        PROTO_ASSERT(a_X.box() == a_J.box(),
-                "MBMap_CubedSphereShell::apply | Error: J and X should both have the same (node centered) box");
+      normal[dir] = nlocal[perm[dir]]*sign[dir];
+    }
+    return normal;
+  }
+  inline MBPoint normalToMBPoint(Array<double,DIM> a_normal,
+                                 MBProblemDomain a_domain) const
+  {
+    unsigned int retblock = 0;
+    double offset = .5;
+    Array<double,DIM> retNormal;
+    
+    for (unsigned int block = 0; block < 6; block++)
+      {
+        auto perm = m_permvals[block];
+        auto sign = m_signvals[block];
+        auto signBlockNormal = sign[m_blockNormal[retblock]];
+        for (int dir = 0; dir < DIM; dir++)
+          {
+            retNormal[perm[dir]] = sign[dir]*a_normal[dir];
+          }
+        if ((abs(retNormal[1]) <= abs(retNormal[0])) &&
+            (abs(retNormal[2]) <= abs(retNormal[0])) &&
+            (a_normal[m_blockNormal[retblock]]*signBlockNormal > 0)
+            )
+          {
+            break;
+          }
+        retblock++;
+      }
+     PROTO_ASSERT((retblock < 6),
+     "MBMap_CubedSphereShell::normalToMBPoint | Error: normal not in any block");
+    double dxi = (this->dx())[2];
+    double angle1 = atan(retNormal[1]/retNormal[0]);
+    double angle2 = atan(retNormal[2]/retNormal[0]);
+    double xi1 = angle1*(2.0/M_PI) + .5;
+    double xi2 = angle2*(2.0/M_PI) + .5;
+    Point pt;   
+    pt[0] = 0;
+    pt[1] = xi1/dxi;
+    pt[2] = xi2/dxi;
+    Point highBlock = a_domain.getBlock(retblock).box().high();
+    Point lowBlock = a_domain.getBlock(retblock).box().low();
+    pt[1] = max(min(pt[1],highBlock[1]),lowBlock[1]);
+    pt[2] = max(min(pt[2],highBlock[2]),lowBlock[2]);
+    return MBPoint(pt,retblock);
+  }
+  inline MBPoint findValid(MBProblemDomain a_domain,
+                                   MBPoint a_mbpt) const
+  {
+    auto block = a_mbpt.block;
+    Box domainBox = a_domain.getBlock(block).box();
+    Point pt = a_mbpt.point;
+    //cout << "domainBox = " << domainBox << endl;
+    //cout << "pt = " << pt << endl;
+    if (domainBox.containsPoint(pt))
+      {
+        return a_mbpt;
+      }
+    else
+      {
+        auto normal = MBPointToNormal(a_mbpt,.5);
+        //cout << "normal = " << normal << endl;
+        auto retval = normalToMBPoint(normal,a_domain);
+        //cout << "retval  = " << retval.point << " , " << retval.block << endl;
+        retval.point[0] = a_mbpt.point[0];
+        return retval;
+      }
+  }
+  inline void apply(
+                    BoxData<double, DIM, MEM>& a_X,
+                    BoxData<double, 1, MEM>& a_J,
+                    FluxBoxData<double, DIM, MEM>& a_NT)
+  {
+    PROTO_ASSERT(a_X.box() == a_J.box(),
+                 "MBMap_CubedSphereShell::apply | Error: J and X should both have the same (node centered) box");
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
@@ -373,7 +464,101 @@ public:
         
         a_J *= Jc;
     }
+  Array<Array<uint,DIM>,6> m_permvals
+        =  {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6> m_signvals
+        = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  Array<unsigned int,6> m_blockNormal = {2,2,1,0,1,0};
+  
+  inline Array<double,DIM> MBPointToNormal(MBPoint a_mbpt,
+                                            double a_offset) const
+  {
+    Point pt = a_mbpt.point;
+    int block = a_mbpt.block;
+    auto perm = m_permvals[block];
+    auto sign = m_signvals[block];
+    Array<double,DIM> nlocal,normal;
+    double dxtan = (this -> dx())[2];
+    double angle1 = .5*M_PI*(pt[1]*dxtan + a_offset*dxtan - .5);
+    double angle2 = .5*M_PI*(pt[2]*dxtan + a_offset*dxtan - .5);
+    double tan1 = tan(angle1);
+    double tan2 = tan(angle2);
+    double normalization  = 1./sqrt(1.0 + tan1*tan1 + tan2*tan2);
+    nlocal[0] = normalization;
+    nlocal[1] = tan1*normalization;
+    nlocal[2] = tan2*normalization;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+      normal[dir] = nlocal[perm[dir]]*sign[dir];
+    }
+    return normal;
+  }
+  inline MBPoint normalToMBPoint(Array<double,DIM> a_normal,
+                                 MBProblemDomain a_domain) const
+  {
+    unsigned int retblock = 0;
+    double offset = .5;
+    Array<double,DIM> retNormal;
     
+    for (unsigned int block = 0; block < 6; block++)
+      {
+        auto perm = m_permvals[block];
+        auto sign = m_signvals[block];
+        auto signBlockNormal = sign[m_blockNormal[retblock]];
+        for (int dir = 0; dir < DIM; dir++)
+          {
+            retNormal[perm[dir]] = sign[dir]*a_normal[dir];
+          }
+        if ((abs(retNormal[1]) <= abs(retNormal[0])) &&
+            (abs(retNormal[2]) <= abs(retNormal[0])) &&
+            (a_normal[m_blockNormal[retblock]]*signBlockNormal > 0)
+            )
+          {
+            break;
+          }
+        retblock++;
+      }
+    
+  
+     PROTO_ASSERT((retblock < 6),
+     "MBMap_CubedSphereShell::normalToMBPoint | Error: normal not in any block");
+    double dxi = (this->dx())[2];
+    double angle1 = atan(retNormal[1]/retNormal[0]);
+    double angle2 = atan(retNormal[2]/retNormal[0]);
+    double xi1 = angle1*(2.0/M_PI) + .5;
+    double xi2 = angle2*(2.0/M_PI) + .5;
+    Point pt;   
+    pt[0] = 0;
+    pt[1] = xi1/dxi;
+    pt[2] = xi2/dxi;
+    Point highBlock = a_domain.getBlock(retblock).box().high();
+    Point lowBlock = a_domain.getBlock(retblock).box().low();
+    pt[1] = max(min(pt[1],highBlock[1]),lowBlock[1]);
+    pt[2] = max(min(pt[2],highBlock[2]),lowBlock[2]);
+    return MBPoint(pt,retblock);
+  }
+  inline MBPoint findValid(MBProblemDomain a_domain,
+                                   MBPoint a_mbpt) const override
+  {
+    auto block = a_mbpt.block;
+    Box domainBox = a_domain.getBlock(block).box();
+    Point pt = a_mbpt.point;
+    //cout << "srcvalExtracted  = " << pt << " , " << block << endl;
+    if (domainBox.containsPoint(pt))
+      {
+        return a_mbpt;
+      }
+    else
+      {
+        //cout << "srcval  = " << a_mbpt.point << " , " << a_mbpt.block << endl;
+        auto normal = MBPointToNormal(a_mbpt,.5);
+        //cout << "normal = " << normal << endl;
+        auto retval = normalToMBPoint(normal,a_domain);
+        //cout << "retval  = " << retval.point << " , " << retval.block << endl;
+        retval.point[0] = a_mbpt.point[0];
+        return retval;
+      }
+  }
     inline Array<double, DIM> apply(const Array<double, DIM>& a_Xi)
     {
         Array<double, DIM> Xc;
