@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
   if (init_condition_type == 3) BC_global.file_to_BoxData_vec(BC_file);
   
   double probe_cadence = ParseInputs::get_Probe_cadence();
+  double write_time_cadence = ParseInputs::get_write_time_cadence();
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
@@ -161,6 +162,7 @@ int main(int argc, char *argv[])
   
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
+    double write_time_cadence_temp = 0;
 #if 0 // Begin debug comment.
     auto initialCons = CubedSphereShell::conservationSum(JU);
     for (int comp = 0; comp< 8; comp++)
@@ -234,9 +236,11 @@ int main(int argc, char *argv[])
             }
         }
 #endif
-      if (iter % write_cadence == 0)
+      int write_time_cadence_new = floor(time/write_time_cadence);
+      if (iter % write_cadence == 0 || write_time_cadence_new > write_time_cadence_temp)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt);
+          write_time_cadence_temp = write_time_cadence_new;
           // Check conservation.
 #if 0
           if (convTestType < 3)
