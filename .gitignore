@@ -15,6 +15,7 @@ blt
 *.out
 *.sh
 *.jpeg
+*.png
 *.mpg
 pout.*
 myjob.o*

@@ -1,15 +1,16 @@
 ## See Inputs_Parsing.H file for supported input values
 -convTestType                    0
 -init_condition_type             3
--domainSize                      50
--thickness                       100
--boxSize_nonrad                  50
--boxSize_rad                     100
--max_iter                        1
+-domainSize                      30
+-thickness                       60
+-boxSize_nonrad                  30
+-boxSize_rad                     60
+-max_iter                        100
 -CFL                             0.5
 -limiter                         1
 -strength                        100.
--write_cadence                   1
+-write_cadence                   50
+-write_time_cadence              1800
 -checkpoint_cadence              50
 -P_floor_cadence                 5000000
 -data_file_prefix                data
@@ -26,7 +27,7 @@
 -operator_switchiv               0
 -operator_switchln               0
 -MBInterp_define                 1
--BC_file                         SWQU_Tutorial_SWiG.h5
+-BC_file                         swig_wsa2_smooth5_r21_5_bc.h5
 -Probe_trajectory_file           trajEarth2020.dat
 -Probe_data_file                 probed_data_no_interp.dat
 -Probe_cadence                   3600
