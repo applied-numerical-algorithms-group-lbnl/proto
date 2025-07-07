@@ -198,7 +198,7 @@ Array<double, DIM> MBDisjointBoxLayout::dx(MBIndex a_index) const
 
 unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
-    PR_TIME("MBDisjointBoxLayout::block");
+  //PR_TIME("MBDisjointBoxLayout::block");
     PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::block | Error: Layout is not defined");
     PROTO_ASSERT(compatible(a_index),
         "MBDisjointBoxLayout::block | Error: Index not compatible with layout");

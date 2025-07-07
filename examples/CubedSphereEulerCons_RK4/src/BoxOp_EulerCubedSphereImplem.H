@@ -556,6 +556,7 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       MBInterpOp& a_iop,
       MBLevelBoxData<T,1,MEM>& a_dVolr)
 {
+  PR_TIMERS("BoxOp_Euler::dtCFL");
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
