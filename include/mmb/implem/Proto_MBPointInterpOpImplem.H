@@ -37,60 +37,57 @@ MBPointInterpOp::MBPointInterpOp(
     m_order = a_order;
     m_dst = a_dst;
     Box patchBox = a_map.layout()[m_dst.dstIndex()];
-    //Point boundaryDir = patchBox.whichBoundaryContains(m_dst.point());
     auto footprint = a_interpLayout.footprint(m_dst.dstPoint(), m_dst.dstIndex());
     m_srcs = a_interpLayout.computeSourcePoints(footprint, a_map, m_dst.dstPoint(), m_dst.dstIndex());
-    //computeSourcePoints(a_footprint, a_map.layout(), a_ghost);
     computeExponents();
     validateMatrixDimensions(footprint);
     auto momentData = computeMoments(a_map);
     computeCoefficients(momentData);
-    //writeFootprint("Interp_B" + to_string(m_dst.block()) + "_P" + m_dst.point().str());
 }
 
-void MBPointInterpOp::computeSourcePoints(
-    const std::set<Point>& footprint,
-    const MBDisjointBoxLayout& layout,
-    Point ghostSizes)
-{
-    PR_TIME("MBPointInterpOp::computeSourcePoints");
-    auto index = m_dst.dstIndex();
-    auto center = m_dst.dstPoint();
-    Box patchBox = layout[index];
-    patchBox = patchBox.grow(ghostSizes);
-    auto patch = layout.patch(index);
-    Box domainBox = layout.domain().getBlock(patch.block).box();
-    m_srcs.clear();
+// void MBPointInterpOp::computeSourcePoints(
+//     const std::set<Point>& footprint,
+//     const MBDisjointBoxLayout& layout,
+//     Point ghostSizes)
+// {
+//     PR_TIME("MBPointInterpOp::computeSourcePoints");
+//     auto index = m_dst.dstIndex();
+//     auto center = m_dst.dstPoint();
+//     Box patchBox = layout[index];
+//     patchBox = patchBox.grow(ghostSizes);
+//     auto patch = layout.patch(index);
+//     Box domainBox = layout.domain().getBlock(patch.block).box();
+//     m_srcs.clear();
 
-    for (auto fi : footprint)
-    {
-        Point pi = center + fi;
-        if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
-        {
-            MBDataPoint data(index, pi, layout);
-            m_srcs.push_back(data);
-        } else if (!domainBox.containsPoint(pi))
-        {
-            Point dir = layout[index].whichBoundaryContains(pi);
-            auto adjIndices = layout.adjacentIndices(patch, dir);
-            for (auto adjIndex : adjIndices)
-            {
-                BlockIndex adjBlock = layout.block(adjIndex);
-                MBDataPoint data(index, pi, layout, dir, adjBlock);
-                m_srcs.push_back(data);
-            }
-        }
-    }
-    // std::cout << "dst point: " << m_dst.point() <<" | patch: " << layout.point(m_dst.index()) << " | block: " << m_dst.dstBlock() << std::endl;
-    // for (auto si : m_srcs)
-    // {
-    //     std::cout << "\tsrc point: " << si.point() << " | block: " << si.srcBlock() << std::endl;
-    // }
-    // std::cout << std::endl;
-    PROTO_ASSERT(m_srcs.size() > 0,
-        "MBPointInterpOp::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
-        m_dst.dstPoint().str(), m_dst.dstBlock());
-}
+//     for (auto fi : footprint)
+//     {
+//         Point pi = center + fi;
+//         if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
+//         {
+//             MBDataPoint data(index, pi, layout);
+//             m_srcs.push_back(data);
+//         } else if (!domainBox.containsPoint(pi))
+//         {
+//             Point dir = layout[index].whichBoundaryContains(pi);
+//             auto adjIndices = layout.adjacentIndices(patch, dir);
+//             for (auto adjIndex : adjIndices)
+//             {
+//                 BlockIndex adjBlock = layout.block(adjIndex);
+//                 MBDataPoint data(index, pi, layout, dir, adjBlock);
+//                 m_srcs.push_back(data);
+//             }
+//         }
+//     }
+//     // std::cout << "dst point: " << m_dst.point() <<" | patch: " << layout.point(m_dst.index()) << " | block: " << m_dst.dstBlock() << std::endl;
+//     // for (auto si : m_srcs)
+//     // {
+//     //     std::cout << "\tsrc point: " << si.point() << " | block: " << si.srcBlock() << std::endl;
+//     // }
+//     // std::cout << std::endl;
+//     PROTO_ASSERT(m_srcs.size() > 0,
+//         "MBPointInterpOp::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
+//         m_dst.dstPoint().str(), m_dst.dstBlock());
+// }
 
 void MBPointInterpOp::computeExponents()
 {

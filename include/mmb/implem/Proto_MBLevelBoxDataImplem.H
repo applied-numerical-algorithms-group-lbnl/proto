@@ -574,7 +574,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 bool MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
-    MBIndex a_index, Point a_dir, BlockIndex a_block)
+    MBIndex a_index, Point a_dir, BlockIndex a_block) const
 {
     auto patch = layout().patch(a_index);
     return layout().isBlockBoundary(patch, a_dir, a_block);
@@ -584,7 +584,11 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 const MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block) const
 {
-  //PR_TIME("MBLevelBoxData::bound");
+    //PR_TIME("MBLevelBoxData::bound");
+    if (!isBlockBoundary(a_index, a_dir, a_block))
+    {
+        std::cout << layout().point(a_index) << " | " << layout().block(a_index) << " | " << a_dir << " | " << a_block << std::endl;
+    }
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -605,7 +609,13 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, BlockIndex a_block)
 {
-  //PR_TIME("MBLevelBoxData::bound");
+    //PR_TIME("MBLevelBoxData::bound");
+    if (!isBlockBoundary(a_index, a_dir, a_block))
+    {
+        auto patchInfo = layout().partition().patchInfo(layout().patch(a_index));
+        auto boundInfo = patchInfo.boundaries[a_dir];
+        std::cout << layout().point(a_index) << " | " << layout().block(a_index) << " | " << a_dir << " | " << a_block << std::endl;
+    }
     PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
                  "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
     auto &boundaries = bounds(a_index, a_dir);
@@ -646,14 +656,15 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
     else
     {
       //PR_TIME("get boundary data");
-        PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
-                "MBLevelBoxData::operator[](MBDataPoint) | Error: \
-                input is not in an MBBoundaryData");
+        // PROTO_ASSERT(a_point.srcBlock() != a_point.dstBlock(),
+        //         "MBLevelBoxData::operator[](MBDataPoint) | Error: \
+        //         input is not in an MBBoundaryData");
+        
         auto &boundData = (*this).bound(
             a_point.dstIndex(), a_point.boundaryDir(), a_point.srcBlock());
-        PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.dstPoint()),
-                     "MBLevelBoxData::operator[](MBDataPoint) | Error: \
-                The requested MBDataPoint is not valid.");
+        // PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.dstPoint()),
+        //              "MBLevelBoxData::operator[](MBDataPoint) | Error: \
+        //         The requested MBDataPoint is not valid.");
         return boundData.localData->var(a_point.dstPoint());
     }
 }

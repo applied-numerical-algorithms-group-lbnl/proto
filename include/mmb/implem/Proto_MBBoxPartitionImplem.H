@@ -118,6 +118,7 @@ void MBBoxPartition::loadBalance()
 void MBBoxPartition::findAdjacencies() {
     
     m_patchAdjacencies.clear();
+    std::cout << "MBBoxPartition::findAdjacencies\n";
     for (BlockIndex block = 0; block < numBlocks(); block++)
     {
         for (PatchID pi : m_patchDomain.getBlock(block).box())
@@ -127,7 +128,11 @@ void MBBoxPartition::findAdjacencies() {
             MBPatchInfo patchInfo(patch, exists);
 
             getBoundaryInfo(patchInfo);
-            
+            std::cout << "\tpatch: " << pi << " | block: " << block << "\n";
+            for (auto dir : Point::Directions())
+            {
+                std::cout << "\t\tBoundary: " << dir << " ==> " << patchInfo.boundaries[dir].typeString() << "\n";
+            }
             m_patchAdjacencies[patch] = patchInfo;
         }
     }

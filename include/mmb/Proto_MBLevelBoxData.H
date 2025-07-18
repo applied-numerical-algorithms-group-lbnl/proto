@@ -300,7 +300,7 @@ namespace Proto
         /** Determine if a specified index and direction correspond to a block boundary with a
          *  specified block index */
         inline bool isBlockBoundary(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock) const;
         
         /// Get Block Boundary
         /** Retrieve the block boundary buffer associated with the specified block boundary

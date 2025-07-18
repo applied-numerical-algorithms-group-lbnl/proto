@@ -31,7 +31,6 @@ MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
     }
 }
 
-
 void MBInterpLayout::ignoreAxis(int dir)
 {
     std::vector<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
@@ -42,13 +41,10 @@ void MBInterpLayout::ignoreAxis(int dir)
     }
 }
 
-
 std::set<Point> MBInterpLayout::footprint(
     Point center,
     MBIndex index) const
 {
-    // PROTO_ASSERT(boundaryDir.abs().max() <= 1,
-    //     "MBInterpLayout::footprint | Error: boundaryDir is not a valid direction");
     auto patchDomain = m_layout.patchDomain();
     BlockIndex block = m_layout.block(index);
     PatchID patch = m_layout.point(index);
@@ -91,9 +87,6 @@ MBInterpLayout::computeSourcePoints(
     PROTO_ASSERT(map.layout().compatible(layout()),
         "MBInterpLayout::computeSourcePoints | Error: map layout is incompatible with InterpLayout internals");
 
-
-
-    
     auto patch = layout().patch(index);
     Box patchBox = layout()[index];
     patchBox = patchBox.grow(map.ghost()[0]); // all valid data that will be locally available on the destination patch
@@ -101,12 +94,12 @@ MBInterpLayout::computeSourcePoints(
     BlockIndex block = patch.block;
     Box domainBox = layout().domain().getBlock(block).box();
     
-
     std::set<MBPoint> srcSet;
     std::vector<MBDataPoint> srcs;
     for (auto fi : footprint)
     {
         Point pi = center + fi;
+        std::cout << "Processing Point: " << pi << std::endl;
         // interior Points in adjacent patches are ignored to avoid the need for extra
         // bulk ghost cells which would not be necessary for applying the physics operator
         if (domainBox.containsPoint(pi) && patchBox.containsPoint(pi))
@@ -119,55 +112,33 @@ MBInterpLayout::computeSourcePoints(
             srcs.push_back(data);
         } else if (!domainBox.containsPoint(pi))
         {
-            Point dir = layout()[index].whichBoundaryContains(pi);
-            auto adjIndices = layout().adjacentIndices(patch, dir);
-            for (auto adjIndex : adjIndices)
+            for (auto dir : Point::Directions())
             {
-                BlockIndex adjBlock = layout().block(adjIndex);
-
-                #if 0
-                // This is a bit of a hack to get the boundary data box
-                // in the adjacent block's coordinate system
-                Box srcDataBox;
-                for (auto bound : map.map().bounds(index, dir))
+                for (auto adjIndex : layout().adjacentIndices(patch, dir))
                 {
-                    if (bound.adjIndex == adjIndex)
+                    BlockIndex adjBlock = layout().block(adjIndex);
+                    if (!layout().isBlockBoundary(index, dir)) { continue; }
+                    if (layout().point(index) == Point::X() && block == 0)
                     {
-                        srcDataBox = bound.adjBox();
+                        auto patchInfo = layout().partition().patchInfo(patch);
+                        auto boundInfo = patchInfo.boundaries[dir];
+                        int _dummy_ = 0;
+                    }
+                    Box adjDomainBox = layout().domain().getBlock(adjBlock).box();
+                    Box srcDataBox = map.map().bound(index, dir, adjBlock).adjBox();
+
+                    // convert pi into a Point in the adjacent Block by calling the 
+                    // forward and inverse transforms. 
+                    Point pj = map.convertPoint(pi, block, adjBlock);
+                    if (srcDataBox.containsPoint(pj))
+                    {
+                        PROTO_ASSERT(adjDomainBox.containsPoint(pj), "data corruption");
+                        MBDataPoint data(index, pi, adjIndex, pj, layout());
+                        srcs.push_back(data);
                     }
                 }
-
-                // Not yet implemented
-                Point adjPoint = map.convertPoint(pi, block, adjBlock);
-                // implement inverse mapping using this signature if possible
-                // BoxData<double, DIM> MBMapOp<...>::inverse(const BoxData<double, DIM>& x);
-
-                if (!srcDataBox.containsPoint(adjPoint))
-                {
-                    // We can't use this point from this block because exchange won't transfer over the data
-                }
-
-                MBPoint srcPoint(adjPoint, adjBlock);
-                if (srcSet.count(srcPoint) > 0)
-                {
-                    // Already added this point from this block (maybe legitimately)
-                    // skip, or throw a warning
-                }
-                srcSet.insert(srcPoint);
-
-                // convert back to local index space. Note that we use domain instead of map here.
-                Point pj = domain.convertPoint(adjPoint, adjBlock, block);
-                
-                // Using pj instead of pi
-                MBDataPoint data(index, pj, layout(), dir, adjBlock);
-                srcs.push_back(data);
-                #else
-                MBDataPoint data(index, pi, layout(), dir, adjBlock);
-                srcs.push_back(data);
-                #endif
-
             }
-        }
+        } 
     }
     PROTO_ASSERT(srcs.size() > 0,
         "MBInterpLayout::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",

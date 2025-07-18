@@ -111,11 +111,11 @@ bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
     return true;
 }
 
-// template<typename T, unsigned int C, MemType MEM, Centering CTR>
-// BoxData<T, C, MEM>& MBDataPoint::dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-// {
-//     return a_data[dstIndex()];
-// }
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T, C, MEM>& MBDataPoint::dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
+{
+    return a_data[dstIndex()];
+}
 
 // template<typename T, unsigned int C, MemType MEM, Centering CTR>
 // BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const

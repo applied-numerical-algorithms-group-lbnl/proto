@@ -175,11 +175,12 @@ void MBInterpOp::addShiftedOp(
     PROTO_ASSERT(containsOp(baseOp.target().dstPoint(), baseOp.target().dstIndex()),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     if (shift == Point::Zeros()) { return; }
-    MBDataPoint shiftDst = baseOp.target().shift(shift);
+    auto& layout = m_interpLayout.layout();
+    MBDataPoint shiftDst = baseOp.target().shift(shift, layout);
     std::vector<MBDataPoint> shiftSrc;
     for (auto si : baseOp.sources())
     {
-        shiftSrc.push_back(si.shift(shift));
+        shiftSrc.push_back(si.shift(shift, layout));
     }
     auto coefs = baseOp.coefs();
     auto shiftedOp = std::make_shared<MBPointInterpOp>(shiftDst, shiftSrc, coefs);

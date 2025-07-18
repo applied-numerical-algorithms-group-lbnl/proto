@@ -193,30 +193,30 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
     return X;
 }
 
-template<typename MAP, MemType MEM>
-Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
-        const MBDataPoint&          a_point,
-        const Array<double, DIM>&   a_offset) const
-{
-    return mappedCoords(a_point.dstPoint(), a_point.block(), a_offset);
-}
+// template<typename MAP, MemType MEM>
+// Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+//         const MBDataPoint&          a_point,
+//         const Array<double, DIM>&   a_offset) const
+// {
+//     return mappedCoords(a_point.dstPoint(), a_point.block(), a_offset);
+// }
 
-template<typename MAP, MemType MEM>
-Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
-        const MBDataPoint& a_point) const
-{
-    Array<double, DIM> offset;
-    offset.fill(0);
-    return mappedCoords(a_point, offset);
-}
+// template<typename MAP, MemType MEM>
+// Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+//         const MBDataPoint& a_point) const
+// {
+//     Array<double, DIM> offset;
+//     offset.fill(0);
+//     return mappedCoords(a_point, offset);
+// }
 
 template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
 {
-    auto xi = mappedCoords(a_point, a_offset);
     auto block = a_point.srcBlock();
+    auto xi = mappedCoords(a_point.srcPoint(), block, a_offset);
     return op(block).apply(xi); 
 }
 

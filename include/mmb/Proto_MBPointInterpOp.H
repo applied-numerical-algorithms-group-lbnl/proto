@@ -73,10 +73,10 @@ namespace Proto
         
         private:
 
-        inline void computeSourcePoints(
-            const std::set<Point>& footprint,
-            const MBDisjointBoxLayout& layout,
-            Point ghostSizes);
+        // inline void computeSourcePoints(
+        //     const std::set<Point>& footprint,
+        //     const MBDisjointBoxLayout& layout,
+        //     Point ghostSizes);
         inline void computeExponents();
         inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
         template <typename MAP, MemType MEM>

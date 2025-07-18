@@ -33,8 +33,8 @@ namespace Proto
 		inline Face adjFace() const;
         inline void fill(const BoxData<T, C, MEM>& a_data);
 
-        inline Box localBox() {return localData->box().grow(-localGhost);}
-        inline Box adjBox() {return adjData->box().grow(-adjGhost);}
+        inline Box localBox() const  {return localData->box().grow(-localGhost);}
+        inline Box adjBox() const {return adjData->box().grow(-adjGhost);}
 
         inline void print();
 

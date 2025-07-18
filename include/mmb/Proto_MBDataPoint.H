@@ -33,9 +33,9 @@ namespace Proto
         inline const BlockIndex& srcBlock() const { return m_srcBlock; }
         inline const Point& boundaryDir() const { return m_boundaryDir; }
 
-        // template<typename T, unsigned int C, MemType MEM, Centering CTR>
-        // inline BoxData<T, C, MEM>&
-        // dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+        template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        inline BoxData<T, C, MEM>&
+        dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
 
         // template<typename T, unsigned int C, MemType MEM, Centering CTR>
         // inline BoxData<T, C, MEM>&

@@ -60,6 +60,16 @@ namespace Proto
             std::set<MBPoint> adjacentPatches;
             BoundaryType boundaryType;
             bool isRefinementBoundary;
+            std::string typeString()
+            {
+                switch(boundaryType)
+                {
+                    case PR_BLOCK_BOUNDARY: return "BLOCK_BOUNDARY";
+                    case PR_DOMAIN_BOUNDARY: return "DOMAIN_BOUNDARY";
+                    case PR_INTERIOR_BOUNDARY: return "INTERIOR_BOUNDARY";
+                    default: return "UNKNOWN_BOUNDARY";
+                }
+            }
         };
         struct MBPatchInfo {
             MBPatchInfo() : patch(Point::Zeros(), 0) {}
@@ -131,7 +141,7 @@ namespace Proto
         inline bool isRefinementBoundary(
                 MBPoint patch,
                 Point dir) const;
-
+        inline const MBPatchInfo& patchInfo(MBPoint patchID) const { return m_patchAdjacencies[patchID]; }
         inline const std::vector<std::pair<MBPoint, unsigned int>>& partition() const
         { return m_partition; }
         inline std::shared_ptr<BoxPartition> blockPartition(BlockIndex a_block) const;
