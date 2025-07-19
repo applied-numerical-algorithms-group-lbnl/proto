@@ -295,6 +295,8 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
+add_subdirectory(perf)
+
 if(ENABLE_DOCUMENTATION)
     add_subdirectory(docs)
 endif()

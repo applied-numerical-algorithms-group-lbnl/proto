@@ -31,9 +31,11 @@ args = parser.parse_args()
 
 # Retrieve Targets
 test_files = glob.glob('./tests/*Tests.cpp')
+perf_files = glob.glob('./perf/*Perf.cpp')
 example_dirs = os.listdir('./examples')
 tests = []
 examples = []
+perfs = []
 
 targets = ['ALL (build everything)', 'TEST (build everything and run all tests)']
 if (args.OPS == 'ON'):
@@ -45,6 +47,8 @@ if (args.OPS == 'ON'):
         examples.append(e)
 for f in test_files:
     tests.append(f.split('/')[-1].split('.')[0])
+for f in perf_files:
+    perfs.append(f.split('/')[-1].split('.')[0])
 
 # Print targets if TARGET == LIST
 
@@ -80,6 +84,17 @@ if (args.TARGET == 'LIST'):
     print(dash)
     for t in tests:
         print('{:<30}'.format(t),)
+        ii += 1
+        if ii % print_width == 0:
+            print('')
+            ii = 0
+    if (ii > 0): print('')
+    print(dash)
+    print('\nPerformance Targets:')
+    ii = 0
+    print(dash)
+    for p in perfs:
+        print('{:<30}'.format(p),)
         ii += 1
         if ii % print_width == 0:
             print('')
