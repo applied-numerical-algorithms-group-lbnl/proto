@@ -300,7 +300,7 @@ void MBPointInterpOp::apply(
         for (int cc = 0; cc < C; cc++)
         {
             if (ii == 0) { dst(cc) = 0.0; }
-            auto& patch = m_srcs[ii].dstPatch(a_src);
+            auto& patch = m_srcs[ii].srcPatch(a_src);
             PROTO_ASSERT(patch.containsAddress(&src(cc)), "Data Corruption");
             dst(cc) += m_coefs[ii]*src(cc);
         }

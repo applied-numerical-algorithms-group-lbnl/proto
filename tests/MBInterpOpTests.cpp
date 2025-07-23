@@ -65,7 +65,49 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 1
+
+TEST(MBInterpOp, ShearTest)
+{
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
+    
+    // initialize data
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    // initialize data and map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostSize));
+    map.initialize();
+
+    MBInterpOp interp(map);
+    Box boundBox = Box::Cube(domainSize).adjacent(Point::X(), ghostSize);
+    int ii = 0;
+    for (auto iter : layout)
+    {
+        if (layout.block(iter) != 0) { continue; }
+        Box patchBox = layout[iter].grow(ghostSize);
+        for (auto pi : patchBox)
+        {
+            if (boundBox.containsPoint(pi))
+            {
+                MBDataPoint di(iter, pi, layout);
+                auto& pointOp = interp(di);
+                string filename = "INTERP_" + std::to_string(ii);
+                pointOp.writeFootprint(filename);
+                ii++;
+            }
+        }
+    }
+    HDF5Handler h5;
+    h5.writeMBLevel(map, map.map(), "MAP");
+}
+
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0

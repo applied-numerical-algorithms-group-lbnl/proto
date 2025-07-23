@@ -660,8 +660,9 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
         //         "MBLevelBoxData::operator[](MBDataPoint) | Error: \
         //         input is not in an MBBoundaryData");
         
+        Point patchBoundaryDir = layout().connectivity(a_point.dstIndex(), a_point.srcIndex());
         auto &boundData = (*this).bound(
-            a_point.dstIndex(), a_point.boundaryDir(), a_point.srcBlock());
+            a_point.dstIndex(), patchBoundaryDir, a_point.srcBlock());
         // PROTO_ASSERT(boundData.localData->box().containsPoint(a_point.dstPoint()),
         //              "MBLevelBoxData::operator[](MBDataPoint) | Error: \
         //         The requested MBDataPoint is not valid.");

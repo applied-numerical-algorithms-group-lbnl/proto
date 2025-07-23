@@ -32,7 +32,8 @@ MBDataPoint::MBDataPoint(MBIndex a_dstIndex, Point a_dstPoint,
     m_srcIndex = a_srcIndex;
     m_srcPoint = a_srcPoint;
     m_srcBlock = a_layout.block(a_srcIndex);
-    m_boundaryDir = a_layout.domain().graph().connectivity(m_srcBlock, m_dstBlock);
+
+    m_boundaryDir = a_layout.domain().graph().connectivity(m_dstBlock, m_srcBlock);
 }
 
 MBDataPoint::MBDataPoint(const MBDataPoint& a_rhs)
@@ -117,21 +118,15 @@ BoxData<T, C, MEM>& MBDataPoint::dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data
     return a_data[dstIndex()];
 }
 
-// template<typename T, unsigned int C, MemType MEM, Centering CTR>
-// BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
-// {
-//     if (inBoundary())
-//     {
-//         auto& boundData = a_data.bound(dstIndex(), m_boundaryDir, m_srcBlock);
-//         return boundData
-//     } else {
-//         return dstPatch(a_data);
-//     }
-//     if (m_inBoundary)
-//     {
-//         auto& boundData = a_data.bound(dstIndex(), m_boundaryDir, m_block);
-//         return *boundData.adjData;
-//     } else {
-//         return a_data[dstIndex()];
-//     }
-// }
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T, C, MEM>& MBDataPoint::srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
+{
+    if (inBoundary())
+    {
+        Point patchBoundaryDir = a_data.layout().connectivity(m_dstIndex, m_srcIndex);
+        auto& boundData = a_data.bound(dstIndex(), patchBoundaryDir, m_srcBlock);
+        return (*boundData.localData);
+    } else {
+        return dstPatch(a_data);
+    }
+}

@@ -37,9 +37,9 @@ namespace Proto
         inline BoxData<T, C, MEM>&
         dstPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
 
-        // template<typename T, unsigned int C, MemType MEM, Centering CTR>
-        // inline BoxData<T, C, MEM>&
-        // srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
+        template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        inline BoxData<T, C, MEM>&
+        srcPatch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
 
         inline MBDataPoint shift(Point a_dstShift, const MBDisjointBoxLayout& a_layout) const; 
 
