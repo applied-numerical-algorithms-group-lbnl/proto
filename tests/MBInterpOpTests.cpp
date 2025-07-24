@@ -277,7 +277,7 @@ namespace {
     }
     
 }
-#if 0
+#if 1
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -321,7 +321,7 @@ TEST(MBInterpOp, XPointTest)
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;
