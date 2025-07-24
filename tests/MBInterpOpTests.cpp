@@ -65,8 +65,8 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-
-TEST(MBInterpOp, ShearTest)
+#if 0
+TEST(MBInterpOp, ShearDebug)
 {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -106,8 +106,8 @@ TEST(MBInterpOp, ShearTest)
     HDF5Handler h5;
     h5.writeMBLevel(map, map.map(), "MAP");
 }
-
-#if 0
+#endif
+#if 1
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0

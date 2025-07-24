@@ -49,6 +49,8 @@ namespace Proto
             const MBLevelMap<MAP, MEM>& map,
             Point center, MBIndex index) const;
 
+
+
         /// @brief Return contains 1 for axes participating in interpolation and 0 for axes not participating
         /// @return 
         inline Point footprintMask() const;
@@ -84,6 +86,18 @@ namespace Proto
         // Currently unused
         inline void addInwardPoints(
             std::set<Point>& footprint,
+            MBIndex index) const;
+
+        inline void augmentFootprint(
+            Point shift,
+            std::set<Point>& augmentedFootprint,
+            const std::set<Point>& footprint) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourceFromShiftedPoint(
+            Point shiftedPoint,
+            std::vector<MBDataPoint>& sources,
+            const MBLevelMap<MAP, MEM>& map,
             MBIndex index) const;
 
         MBDisjointBoxLayout m_layout;
