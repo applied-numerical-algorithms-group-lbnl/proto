@@ -334,6 +334,22 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::exchange0()
+{
+    if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
+    PR_TIME("MBLevelBoxData::exchange");
+#ifdef PR_MPI
+    {
+        PR_TIME("MBLevelBoxData::exchange (MPI barrier)");
+        barrier();
+    }
+#endif
+    for (int bi = 0; bi < layout().numBlocks(); bi++)
+    {
+        m_data[bi]->exchange();
+    }
+}
 template <typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
 template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
@@ -626,11 +642,19 @@ Var<T, C, MEM>
 MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
   //PR_TIME("MBLevelBoxData::operator[](MBDataPoint)");
-    if (!a_point.inBoundary())
+    if (a_point.srcBlock() == a_point.dstBlock())
     {
       //PR_TIME("get bulk data");
         // bulk data is requested
         auto &patch = (*this)[a_point.index()];
+        if (!(patch.box().containsPoint(a_point.point())))
+          {
+            cout << "a_point.point() = " << a_point.point() << endl;
+            cout << "patch.box() = "<< patch.box() << endl;
+            cout << "a_point.index() = " << a_point.index() << endl;
+            cout <<  "a_point.srcBlock() = " << a_point.srcBlock() << endl;
+            cout << "a_point.dstBlock() = " << a_point.dstBlock() << endl;
+          }
         PROTO_ASSERT(patch.box().containsPoint(a_point.point()),
                      "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 The requested MBDataPoint is not valid.");

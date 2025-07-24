@@ -23,10 +23,11 @@ namespace Proto
         inline bool inBoundary() const {return m_inBoundary; }
         inline const Point point() const { return m_point; }
         inline MBIndex index() const { return MBIndex(m_partition, m_index); }
-        inline const BlockIndex block() const { return m_block; }
+        
         inline const Point boundaryDir() const { return m_boundaryDir; }
         inline BlockIndex srcBlock() const;
         inline BlockIndex dstBlock() const;
+      inline const BlockIndex block() const { return srcBlock(); }
         inline MBDataPoint shift(Point a_shift) const; 
         /*
         template<typename T, unsigned int C, MemType MEM, Centering CTR>

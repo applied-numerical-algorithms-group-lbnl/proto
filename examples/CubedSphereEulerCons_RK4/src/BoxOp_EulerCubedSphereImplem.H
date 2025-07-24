@@ -560,14 +560,17 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
   auto layout = a_JU.layout();
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-  MBLevelBoxData<T,NUMCOMPS,MEM> JUTemp(layout,a_JU.ghost());
+  MBLevelBoxData<T,NUMCOMPS,MEM,PR_CELL> JUTemp(layout,a_JU.ghost());
   a_JU.copyTo(JUTemp);
   Reduction<T,Operation::Max,MEM> dtinv;
   dtinv.reset();
-  CubedSphereShell::consToSphInterpEuler(JUTemp,a_iop,a_dVolr,4);
+  CubedSphereShell
+    ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(JUTemp,a_iop,a_dVolr,4,0);
+  HDF5Handler h5;
   for (auto dit : layout)
     {
       int block = layout.block(dit);
+      int globalIndex = dit.global();
       BoxData<T,NUMCOMPS,MEM> W(layout[dit]);
       //BoxData<T,NUMCOMPS,MEM> WBar(JUTemp[dit].box());
       BoxData<T,NUMCOMPS,MEM>& sph_i = JUTemp[dit];
@@ -575,6 +578,10 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       sph_i.copyTo(sphTemp);
       eulerOp[dit].sphToPrim_2O(W,sphTemp,block);
       eulerOp[dit].dtInv(dtinv,W);
+      // if (block == 0)
+      //   {
+      //     h5.writePatch(1.,W,"WIndex_" + to_string(globalIndex));
+      //   }
     }
   return 1.0/dtinv.fetch(); 
 }
@@ -612,10 +619,34 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
     fluxes[0].setToZero();
     fluxes[1].setToZero();
     fluxes[2].setToZero();
-    
+    unsigned int block = layout.block(dit);
+    //Point growpt = Point::Basis(1,1) + Point::Basis(2,1);
+    //growpt = 6*growpt;
+    // if (block == 0)
+    //   {
+    //     BoxData<T,NUMCOMPS,MEM>
+    //       dUdx1 =
+    //       Stencil<T>::FluxDivergence(1)(USph_i,layout[dit].grow(growpt));
+    //     BoxData<T,NUMCOMPS,MEM>
+    //       dUdx2 =
+    //       Stencil<T>::FluxDivergence(2)(USph_i,layout[dit].grow(growpt));
+    //     for (int comp = 0; comp < NUMCOMPS; comp++)
+    //       {
+    //         cout << "spherical symmetry check: " << comp << ", "
+    //              << USph_i.box() << ", " << dUdx1.absMax(comp) << ", "
+    //              << dUdx2.absMax(comp) << ", " << USph_i.absMax(comp) << endl;
+    //       }
+    //         if (dUdx2.absMax(4) > 1.e-4)
+    //           {
+    //             HDF5Handler h5;
+    //             h5.writePatch(1.,dUdx1,"dUdx1");
+    //             h5.writePatch(1.,dUdx2,"dUdx2");
+    //             h5.writePatch(1.,USph_i,"USph_i");
+    //             abort();
+    //           }  
+    //   }
     eulerOp[dit](k_i, fluxes, USph_i, 1.0);
     auto dx = eulerOp[dit].dx();
-    unsigned int block = layout.block(dit);
     Box blockBox = layout.getBlock(block).domain().box();
     //auto mbdata = a_blockreg.bounds(dit);
     a_blockreg.increment(fluxes,dit,wgtxdt);
@@ -686,8 +717,9 @@ template<
     template<MemType> typename MAP,
     MemType MEM>
 inline void
-BoxOp_EulerCubedSphere<T,MAP,MEM>::dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,
-                                         const State& a_W) const
+BoxOp_EulerCubedSphere<T,MAP,MEM>::
+dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,
+      const State& a_W) const
 {
   Box bx= this->box();  
   T dxiR = this->dx()[0];
@@ -723,11 +755,37 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::dtInv(Reduction<T,Operation::Max,MEM>& a_dtIn
       forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[block],sign[block],
                       dxiPerp,offseta,offsetb);
       spreadSlice(A_matrix);
+      //speedMax.setVal(0.);
       forallInPlace(f_speedmax,
                     speedMax,a_W,A_matrix,
                     ntrow,adjDrDir,deta,
                     dVolr,Dr,dxiPerp,
                     dxiR,dir,m_gamma);
+    }
+  if (block == 0)
+    {
+        // T speedmaxpatch = speedMax.absMax();
+        // BoxData<T,1,MEM> dUdx1 =
+        //   Stencil<T>::FluxDivergence(1)(speedMax);
+        // BoxData<T,1,MEM> dUdx2 =
+        //   Stencil<T>::FluxDivergence(2)(speedMax);
+        // HDF5Handler h5;
+        // h5.writePatch(1, dUdx1, "dSpeed_dxi1"+to_string();
+        // h5.writePatch(1, dUdx2, "dSpeed_dxi2");
+        // for (int comp = 0; comp < 1; comp++)
+        //   {
+        //     cout << "radial symmetry check - speed: " << comp << ", "
+        //          << speedMax.box() << ", " << dUdx1.absMax(comp) << ", "
+        //          << dUdx2.absMax(comp) << ", "
+        //          << speedmaxpatch << endl;
+        //   }        
+    // if ((speedmaxpatch > .1) || (speedmaxpatch < .001))
+    //   {
+    //     HDF5Handler h5;
+    //     h5.writePatch(1, speedMax, "speedMax");
+    //     h5.writePatch(1,a_W,"W_speed");
+    //     abort();
+    //   }
     }
   speedMax.reduce(a_dtInv);
 }
@@ -817,7 +875,9 @@ P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
   MBLevelBoxData<double, NUMCOMPS, HOST> USph(a_layout, ghost());
   a_JU.exchange();
   a_JU.copyTo(USph);
-  CubedSphereShell::consToSphInterpEuler(USph,a_iop,a_dVolrLev, 4); // Transform a_JU -> USph.
+
+  CubedSphereShell
+    ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(USph,a_iop,a_dVolrLev, 4,0); // Transform a_JU -> USph.
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
   int thetaCoord = (rCoord + 1) % DIM;
   int phiCoord = (rCoord + 2) % DIM;

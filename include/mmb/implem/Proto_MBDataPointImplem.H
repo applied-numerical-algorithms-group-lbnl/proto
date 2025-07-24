@@ -9,7 +9,7 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayo
     m_boundaryDir = Point::Zeros();
     m_inBoundary = false;
     m_partition = a_layout.partitionPtr();
-    m_block = m_partition->block(m_index);
+    m_block = -1;
 }
 MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, const MBDisjointBoxLayout& a_layout,
         Point a_boundaryDir, BlockIndex a_block)

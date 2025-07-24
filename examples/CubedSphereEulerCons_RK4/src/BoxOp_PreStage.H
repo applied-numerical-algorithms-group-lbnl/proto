@@ -101,12 +101,16 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   int thickness = std::round(1.0 / dxradius);
   // Set radial boundary condtions in radial ghost cells.
   int init_condition_type = ParseInputs::get_init_condition_type();
+  Point low = bxGhosted.low();
+  low[0] = a_blockBox.high()[0] + 1;
+  Box bdryBoxHigh(low, bxGhosted.high());
+  Point high = bxGhosted.high();
+  high[0] = a_blockBox.low()[0] - 1;
+  Box bdryBoxLow(bxGhosted.low(), high);
+  
   // Outer BCs
   if (a_blockBox.high()[0] < bxGhosted.high()[0])
   {
-    Point low = bxGhosted.low();
-    low[0] = a_blockBox.high()[0] + 1;
-    Box bdryBoxHigh(low, bxGhosted.high());
     if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4 || init_condition_type == 5){
       forallInPlace_p(f_radialBCs, bdryBoxHigh, a_USphStage, radius, dxradius, m_gamma, thickness);
     } 
@@ -194,14 +198,12 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
         a_a_W(iBY) += a_W_sph(1);
         a_a_W(iBZ) += a_W_sph(2);
       },bdryBoxHigh, a_USphStage, W_sph);
-    }
+    } 
   }
   // Inner BCs
   if (a_blockBox.low()[0] > bxGhosted.low()[0])
   {
-    Point high = bxGhosted.high();
-    high[0] = a_blockBox.low()[0] - 1;
-    Box bdryBoxLow(bxGhosted.low(), high);    
+       
     if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4 || init_condition_type == 5){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
@@ -294,9 +296,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
       },bdryBoxLow, a_USphStage, W_sph);
     }
   }
-
   // if (procID() == 0) h5.writePatch(1,a_USphStage,"a_USphStage_withBC");
-
 }
 
 
@@ -326,7 +326,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   double gamma = ParseInputs::get_gamma();
   auto layout = a_UStage.layout();
   // Transform JU -> USph.
-  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, a_kstage);
+  CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, 0);
 
   // initialize a_k to zero. 
   a_k.setVal(0.);

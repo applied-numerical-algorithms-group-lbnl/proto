@@ -95,7 +95,7 @@ CubedSphereShell::InterpOp(
       polarMaps[bi]->define(a_layout, a_ghost, bi);
     }
     MBInterpOp op;
-    op.define(polarMaps, interpLayout, a_order);
+    op.define(polarMaps, interpLayout, a_ghost, a_order);
     return op; 
 }
 
@@ -105,7 +105,8 @@ CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
         int a_order)
 {
-    return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
+  Point ghost = a_data.ghost()[0] + Point::Ones() - Point::Basis(0,1);
+    return InterpOp<MEM>(a_data.layout(), ghost, a_order);
 }
 
 template<typename T>
@@ -1257,13 +1258,6 @@ void CubedSphereShell::semiSphToSph(
       // WARNING: Eventually we need to replace this with the 4th order product formula.
     }
   bool debug = false;
-  // if ((procID() == 0) && (a_compvec == 1))
-  //{
-  //  T dxiPerp  = 1.0/64;
-  //  HDF5Handler h5;
-  //  debug = true;
-  //  h5.writePatch(dxiPerp,a_detA,"Det(A)");
-  //}
   cellMatrixQuotientMatAndInv(VecSph,VecSphBar,a_ADetA,a_invADetA,tmp,debug);
   BoxData<T,1,MEM> VSphRadial = slice<T,C+2,1,MEM>(a_VSemiSph,a_compradial);
   BoxData<T,1,MEM> VRadial = slice<T,C,1,MEM>(a_VSph,a_compvec);
@@ -1293,7 +1287,9 @@ consToSphInterpEuler(
   // Transform JU to USemiSph.
   JUTemp.setVal(0.);
   a_JU.copyTo(JUTemp);
-  JUTemp.exchange();
+  JUTemp.exchange0();
+  Point offset = Point::Basis(1,1) + Point::Basis(2,1);
+  MBLevelBoxData<T,C+2,MEM> USemiSphIn(layout,ghost+offset);
   MBLevelBoxData<T,C+2,MEM> USemiSph(layout,ghost);
   
   Point size = layout.domain().getBlock(0).sizes();
@@ -1305,19 +1301,44 @@ consToSphInterpEuler(
       unsigned int block = JUTemp.layout().block(dit);
       Box blockBox = JUTemp.layout().getBlock(block).domain().box();
       auto& JU_i = JUTemp[dit];
-      auto& USemiSph_i = USemiSph[dit];
+      auto& USemiSph_i = USemiSphIn[dit];
       USemiSph_i.setToZero();
       auto& dVolr_i = a_dVolr[dit];
       Box bx_i = JUTemp.layout()[dit]; 
       CubedSphereShell::
         consToSemiSphNGEuler(USemiSph_i,JU_i,dVolr_i,bx_i,
                              blockBox,dxiPerp,block,4);
+      USemiSph_i.copyTo(USemiSph[dit],layout[dit]);
       
     }
-
-  USemiSph.exchange();  
-  a_iop.apply(USemiSph,USemiSph);
-
+  USemiSphIn.exchange();
+  a_iop.apply(USemiSph,USemiSphIn);
+  USemiSph.exchange0();
+  HDF5Handler h5;
+  for (auto dit : layout)
+    {
+      BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
+      int globalindex = dit.global();
+      unsigned int block = USemiSph.layout().block(dit);
+      Box blockBox = USemiSph.layout().getBlock(block).domain().box();
+      //radialExtrapolate(USemiSph_i,blockBox);
+    }
+  if (a_counter > 0)
+    {
+      for (auto dit : layout)
+        {
+          BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
+          int globalindex = dit.global();
+          unsigned int block = USemiSph.layout().block(dit);
+          Box blockBox = USemiSph.layout().getBlock(block).domain().box();
+          T one = 1.0;
+          if (block == 0)
+            {
+              h5.writePatch(one,USemiSph_i,"USemiSph_" + to_string(globalindex));
+            }
+        }
+    }
+ 
   for (auto dit : USemiSph.layout())
     {
       PR_TIMERS("CubedSphereShell::consToSphInterpEuler post-exchange");
@@ -1354,7 +1375,10 @@ consToSphInterpEuler(
       BoxData<T,1,MEM> rhoESph = slice(USemiSph_i,DIM+1);
       BoxData<T,1,MEM> rhoEOut = slice(USphere_i,DIM+1);
       rhoESph.copyTo(rhoEOut);
+      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      //radialExtrapolate(USphere_i,blockBox);
     }
+  a_JU.exchange0();
 }
 template<typename T, unsigned int C, MemType MEM>
 void CubedSphereShell::
@@ -1417,6 +1441,8 @@ consToCartInterpEuler(
                         unsigned int a_order)
 {
   //HDF5Handler h5;
+  Point ghostIn = a_JU.ghost()[0] + Point::Basis(1,1) + Point::Basis(2,1);
+  MBLevelBoxData<T,C,MEM,CTR> JUIn(a_JU.layout(),ghostIn);
   auto layout = a_JU.layout();
   Point size = layout.domain().getBlock(0).sizes();
   T dxiPerp = 1.0/size[1];
@@ -1424,14 +1450,17 @@ consToCartInterpEuler(
     {
       unsigned int block = a_JU.layout().block(dit);
       auto& JU_i = a_JU[dit];
+      auto& JUIn_i = JUIn[dit];
+      JU_i.copyTo(JUIn_i);
       auto& dVolr_i = a_dVolr[dit];
-      Box bx_i = a_JU.layout()[dit];      
-      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      Box bx_i = JUIn.layout()[dit];      
+      Box blockBox = JUIn.layout().getBlock(block).domain().box();
       CubedSphereShell::
-        consToCartNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+        consToCartNGEuler(JUIn_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+      JUIn_i.copyTo(JU_i);
     } 
-  a_JU.exchange();
-  a_iop.apply(a_JU,a_JU);
+  JUIn.exchange();
+  a_iop.apply(a_JU,JUIn);
 }
 
 
@@ -2085,3 +2114,61 @@ CubedSphereShell::deriv3case(
     }
     return output;
 }
+ template<typename T, unsigned int C, MemType MEM>
+ void
+ CubedSphereShell::radialExtrapolate( 
+                                     BoxData<T,C,MEM>& a_U,
+                                     Box a_blockBox)
+ {
+   Box bx = a_U.box();
+   if (bx.high()[0] > a_blockBox.high()[0])
+     {
+       Point low = bx.low();
+       Point high = bx.high();
+       low[0] = a_blockBox.high()[0] + 1;
+       Point low0 = low;
+       low0[0] =a_blockBox.high()[0];
+       Point high0 = high;
+       high0[0] = low0[0]; 
+       Box bdryBoxHigh(low,high);
+       Box bx0(low0,high0);
+       for (int c = 0; c < C; c++)
+         {
+           for (auto bit : bx0)
+             {
+               T* data0 = a_U.data(bit,c);
+               for (int i = 1;
+                    i < bdryBoxHigh.high()[0] -  bdryBoxHigh.low()[0]+2; i++)
+                 {
+                   *(data0 + i) = *data0;
+                 }
+             }
+         }
+     }
+   if (bx.low()[0] < a_blockBox.low()[0])
+     {
+       Point low = bx.low();
+       Point high = bx.high();
+       high[0] = a_blockBox.low()[0] - 1;
+       Point low0 = low;
+       Point high0 = high;
+       high0[0] = a_blockBox.low()[0];
+       low0[0] = high0[0]; 
+       Box bdryBoxLow(low,high);
+       Box bx0(low0,high0);
+       for (int c = 0; c < C; c++)
+         {
+           for (auto bit : bx0)
+             {
+               T* data0 = a_U.data(bit,c);
+               for (int i = 1;
+                    i < bdryBoxLow.high()[0] -  bdryBoxLow.low()[0]+2;
+                    i++)
+                 {
+                   *(data0 - i) = *data0;
+                 }
+             }
+         }
+     }
+ }
+   

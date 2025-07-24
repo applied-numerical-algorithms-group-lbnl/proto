@@ -37,7 +37,7 @@ MBPointInterpOp::MBPointInterpOp(
     m_order = a_order;
     m_dst = a_dst;
     // cout << "constructor: m_dst  = " << m_dst.point() << " , " << m_dst.block() << endl;
-    computeSourcePoints(a_map);
+    computeSourcePoints(a_map,a_ghost);
     auto layout = a_map.layout();
     computeExponents();    
     validateMatrixDimensions(m_footprint);
@@ -46,14 +46,15 @@ MBPointInterpOp::MBPointInterpOp(
 }
 
 template<template<MemType> typename MAP, MemType MEM>
-void MBPointInterpOp::computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map)
+void MBPointInterpOp::computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map,
+                                          Point a_ghost)
 {
   PR_TIME("MBPointInterpOp::computeSourcePoints");
   // compute footprint.
   std::set<Point> footprint0;
   footprint0.clear();
   // cout << "m_dst  = " << m_dst.point() << " , " << m_dst.block() << endl;
-  auto destBlock = a_map.layout().block(m_dst.index());
+  
   
   // Special for cubed-sphere, where the stencil is in the spherical direction only.   
   Box kernel2d = Box(Point(0,-1,-1),Point(0,1,1));
@@ -75,6 +76,9 @@ void MBPointInterpOp::computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map)
     }
   auto layout = a_map.layout();  
   auto domain = layout.domain();
+  auto destBlock = layout.block(m_dst.index());
+  auto destBlockBox = layout.domain().getBlock(destBlock).box();
+  auto destPatchBox = layout[m_dst.index()].grow(a_ghost);
   MBPoint mbptTmp(m_dst.point(),m_dst.block());
   auto mbptCenter = a_map.op(0).findValid(domain,mbptTmp); 
   auto centerPoint = mbptCenter.point;
@@ -145,8 +149,11 @@ void MBPointInterpOp::computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map)
         }
       if (!m_footprint.contains(ptPullback))
         {
-          m_srcs.push_back(mbdpt);
-          m_footprint.insert(ptPullback);
+          if (!destBlockBox.containsPoint(ptPullback) || destPatchBox.containsPoint(ptPullback))
+            {
+              m_srcs.push_back(mbdpt);
+              m_footprint.insert(ptPullback);
+            }
         }
       // else
       //   {
@@ -428,25 +435,28 @@ MBInterpOp::MBInterpOp(Point a_ghost, unsigned int a_order)
 template<template<MemType> typename MAP, MemType MEM>
 MBInterpOp::MBInterpOp(
         const MBLevelMap<MAP,MEM>&    a_map,
+        Point a_ghost,
         int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
-    define(a_map, a_order);
+    define(a_map, a_ghost, a_order);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const MBLevelMap<MAP,MEM>&    a_map,
+        Point a_ghost,
         int a_order)
 {
     MBInterpLayout interpLayout(a_map.layout(), a_order);
-    define(a_map, interpLayout, a_order);
+    define(a_map, interpLayout, a_ghost, a_order);
 }
 
 template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
                         const MBLevelMap<MAP,MEM>&  a_map,
                         MBInterpLayout              a_interpLayout,
+                        Point                       a_ghost,
                         int                         a_order)
 {
     PR_TIME("MBInterpOp::define");
@@ -454,7 +464,7 @@ void MBInterpOp::define(
         "MBInterpOp::define | Error: Incompatible layouts among inputs");
 
     m_order = a_order;
-    m_ghost = a_map.ghost()[0];
+    m_ghost = a_ghost;
     m_interpLayout = a_interpLayout;
     for (auto iter : m_interpLayout.layout())
     {
@@ -469,6 +479,7 @@ template<template<MemType> typename MAP, MemType MEM>
 void MBInterpOp::define(
         const std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>>&  a_maps,
         MBInterpLayout              a_interpLayout,
+        Point                       a_ghost,
         int                         a_order)
 {
     PR_TIME("MBInterpOp::define");
@@ -483,7 +494,7 @@ void MBInterpOp::define(
     }
 
     m_order = a_order;
-    m_ghost = a_maps[0]->ghost()[0];
+    m_ghost = a_ghost;
     m_interpLayout = a_interpLayout;
     for (auto iter : m_interpLayout.layout())
     {
@@ -539,10 +550,15 @@ void MBInterpOp::addPointOp(
         "MBInterpOp::addPointOp | Error: Trying to add duplicate op");
     auto layout = map.layout();
     //cout << "partition to block: " << layout.partitionPtr()->block(index) << endl;
+    auto domain = layout.domain();
+    auto destBlock = layout.block(index);
+    auto destBlockBox = domain.getBlock(destBlock).box();
+    if (destBlockBox.containsPoint(dataPoint)) return;
     MBDataPoint dstDataPoint(index, dataPoint, layout);
     // cout << "constructor: dstDataPoint  = " << dstDataPoint.point() <<
-    //  " , " << dstDataPoint.block() << endl;
-    auto op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, map, m_order);
+    //  " , " << dstDataPoint.block() << endl;    
+    auto op =
+      std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, map, m_order);
     
     m_ops.push_back(op);
     MBPointID key(dataPoint, index.global());
@@ -617,14 +633,17 @@ void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::apply(
-        MBLevelBoxData<T, C, MEM>& a_dst,
-        MBLevelBoxData<T, C, MEM>& a_src)
+                       MBLevelBoxData<T, C, MEM>& a_dst,
+                       MBLevelBoxData<T, C, MEM>& a_src)
 {
     PR_TIME("MBInterpOp::apply");
     for (auto& op : m_ops)
-    {
-        auto block = a_dst.layout().block(op->target().index());
-        op->apply(a_dst, a_src);
+    {      
+      // Apply interpolation operator only where a_dst is defined.
+        Point pt = op->target().point();
+        auto index = op->target().index();
+        if (a_dst[index].box().containsPoint(pt))
+          op->apply(a_dst, a_src);
     }
 }
 void MBInterpOp::print() const

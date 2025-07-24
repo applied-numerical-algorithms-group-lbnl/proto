@@ -184,6 +184,10 @@ namespace Proto {
                                     const MBInterpOp& a_op,
                                     unsigned int a_order = 4);
     
+    template<typename T, unsigned int C, MemType MEM>
+    static void radialExtrapolate( 
+                                    BoxData<T,C,MEM>& a_data,
+                                    Box a_blockBox);
   
     /// Average of n x \partial_{xi_2} n over the {xi_1 = const.} face.
 

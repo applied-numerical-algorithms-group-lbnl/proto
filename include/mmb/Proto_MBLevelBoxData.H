@@ -183,6 +183,10 @@ namespace Proto
          */
         inline void exchange();
 
+      /// exchange only the ghost values within a block.
+
+      inline void exchange0();
+
         /// Parallel Data Copy
         /** Executes a parallel copy between two compatible MBLevelBoxData. Only copies valid data;
          *  ghost data will need to be initialized afterwards by calling exchange().

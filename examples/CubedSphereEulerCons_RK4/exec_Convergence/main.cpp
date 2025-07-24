@@ -91,9 +91,10 @@ int main(int argc, char *argv[])
 
       // Point ghostForInterp = OP::ghost() + Point::Ones();
       //MBInterpOp iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),
-      //                                                  ghostForInterp,4);
+      //                                                   ghostForInterp,4);
+      //Point offset = Point::Basis(1,1) + Point::Basis(2,1);
       MBInterpOp iop;
-      iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost(),4);
+      iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost() ,4);
 
       // Set input solution.
       for (auto dit : layout)

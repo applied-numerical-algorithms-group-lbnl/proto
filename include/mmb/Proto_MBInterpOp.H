@@ -127,7 +127,7 @@ namespace Proto
             Point ghostSizes);
 #endif
       template<template<MemType> typename MAP, MemType MEM>
-      inline void computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map);
+      inline void computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map,Point a_ghost);
       inline void computeExponents();
       inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
         template <template <MemType> typename MAP, MemType MEM>
@@ -168,8 +168,9 @@ namespace Proto
 
         template<template<MemType> typename MAP, MemType MEM>
         inline MBInterpOp(
-                const MBLevelMap<MAP, MEM>& a_map,
-                int                         a_order = 4);
+                          const MBLevelMap<MAP, MEM>& a_map,
+                          Point                       a_ghost,
+                          int                         a_order = 4);
 
         /// Define Block
         /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
@@ -179,8 +180,9 @@ namespace Proto
          *  physical space when building the operators for each block */
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
-                const MBLevelMap<MAP, MEM>& a_map,
-                int                         a_order = 4);
+                           const MBLevelMap<MAP, MEM>& a_map,
+                           Point                       a_ghost,
+                           int                         a_order = 4);
         
         /// Define Block
         /** Builds the necessary MBPointInterpOp objects for each block boundary ghost cell
@@ -190,14 +192,16 @@ namespace Proto
          *  physical space when building the operators for each block */
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
-                const MBLevelMap<MAP, MEM>& a_map,
-                MBInterpLayout              a_interpLayout,
-                int                         a_order = 4);
+                           const MBLevelMap<MAP, MEM>& a_map,
+                           MBInterpLayout              a_interpLayout,
+                           Point                       a_ghost,
+                           int                         a_order = 4);
 
         template<template<MemType> typename MAP, MemType MEM>
         inline void define(
                 const std::vector<std::shared_ptr<MBLevelMap<MAP, MEM>>>& a_maps,
                 MBInterpLayout              a_interpLayout,
+                Point                       a_ghost,
                 int                         a_order = 4);
         
         /// Manual Operator Insertion
@@ -255,6 +259,7 @@ namespace Proto
                 MBLevelBoxData<T,C,MEM>& a_err,
                 T                        a_eps = 0);
 
+      std::vector<std::shared_ptr<MBPointInterpOp>>& getOps() {return m_ops;};
         private:
      
         template<template<MemType> typename MAP, MemType MEM>
