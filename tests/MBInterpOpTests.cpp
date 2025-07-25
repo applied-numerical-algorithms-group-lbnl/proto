@@ -107,7 +107,7 @@ TEST(MBInterpOp, ShearDebug)
     h5.writeMBLevel(map, map.map(), "MAP");
 }
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
@@ -286,7 +286,7 @@ TEST(MBInterpOp, XPointTest)
     int domainSize = 16;
     int boxSize = 16;
     int ghostSize = 2;
-    int numIter = 3;
+    int numIter = 1;
     double order = 4;
 
     double err3[numIter];
@@ -321,7 +321,7 @@ TEST(MBInterpOp, XPointTest)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;

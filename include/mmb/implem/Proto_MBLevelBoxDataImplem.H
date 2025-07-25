@@ -131,6 +131,8 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_boundGhost);
                             m_bounds[key].push_back(boundData);
+                            // std::cout << "Built boundary from block " << block << " to adjBlock: " << adjBlock << std::endl;
+                            // std::cout << "\tLocal Box: " << patchBoundary << " | Adj Box: " << adjPatchBoundary << std::endl;
                         }
                     }
                 }

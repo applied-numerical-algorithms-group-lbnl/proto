@@ -161,7 +161,10 @@ bool MBInterpLayout::addSourceFromShiftedPoint(
                 BlockIndex adjBlock = layout().block(adjIndex);
                 
                 Box adjDomainBox = layout().domain().getBlock(adjBlock).box();
-                Box srcDataBox = map.map().bound(index, dir, adjBlock).adjBox();
+                // accessing the bound box using the jacobian is a temporary hack.
+                // this data should be queryable in a cleaner fashion
+                // jacobian is used since that variable is cell centered (coordinates are node centered)
+                Box srcDataBox = map.jacobian().bound(index, dir, adjBlock).adjBox();
 
                 // convert pi -> pj
                 // pj is the point associated with the physical coordinate of pi but in the
@@ -169,9 +172,14 @@ bool MBInterpLayout::addSourceFromShiftedPoint(
                 Point pj = map.convertPoint(pi, block, adjBlock);
                 if (srcDataBox.containsPoint(pj))
                 {
+                    if (!adjDomainBox.containsPoint(pj))
+                    {
+                        Box dstDataBox = map.map().bound(index, dir, adjBlock).localBox();
+                        int _dummy_ = 0;
+                    }
                     PROTO_ASSERT(adjDomainBox.containsPoint(pj), "data corruption");
                     // convert pj -> pk
-                    // pk is associated with the same logical location as pj but
+                    // pk is associated with the same logical cellln  as pj but
                     // is in the local block's index space.
                     // NB: In general: pi != pk
                     Point pk = domain.convertPoint(pj, adjBlock, block, PR_CELL);
