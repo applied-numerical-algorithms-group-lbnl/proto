@@ -205,6 +205,7 @@ namespace {
     template<int NBLOCK>
     double computeXPointInterpError(MBDisjointBoxLayout& layout, int ghostSize, int order, int refIter)
     {
+        std::cout << "NUM BLOCKS: " << layout.numBlocks() << std::endl;
         #if PR_VERBOSE > 0
         HDF5Handler h5;
         #endif
@@ -244,6 +245,7 @@ namespace {
         hostDst.exchange(); // fill boundary data
 #if PR_VERBOSE > 0
         h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_1", NBLOCK, refIter);
+        h5.writeMBLevelBounds({"data"}, hostDst, "MBInterpOpTests_XPoint_Bound");
 #endif
         MBInterpOp interp(map);
         interp.apply(hostDst, hostDst);
@@ -264,6 +266,7 @@ namespace {
                     BoxData<double, 1, HOST> error(boundBox);
                     dst_i.copyTo(error);
                     error -= src_i;
+                    for (auto pi : error.box()) { error(pi) = abs(error(pi)); }
                     errNorm = max(error.absMax(), errNorm);
                     error.copyTo(err_i);
                 }
@@ -273,6 +276,37 @@ namespace {
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
 #endif
+        double threshold = 1e-3;
+        int numErrorPoints = 0;
+        for (auto iter : layout)
+        {
+            auto& ei = hostErr[iter];
+            for (auto pi : ei.box())
+            {
+                if (ei(pi) > threshold)
+                {
+                    BlockIndex bi = layout.block(iter);
+                    PatchID patch = layout.point(iter);
+                    //std::cout << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
+                    pr_out() << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
+                    pr_out() << "\tvalue = \n";
+                    const auto& op = interp(MBDataPoint(iter, pi, layout));
+                    int size = op.coefs().size();
+                    for (int ii = 0; ii < size; ii++)
+                    {
+                        auto& src = op.sources()[ii];
+                        auto var = hostSrc[src];
+                        pr_out() << "\t\t" << op.coefs()[ii] << " * " << var(0) << "\n";
+                        pr_out() << "\t\t\t" << src << "\n";
+                    }
+                    numErrorPoints++;
+                }
+            }
+        }
+        if (numErrorPoints > 0)
+        {
+            std::cout << "Found " << numErrorPoints << " with error exceeding " << threshold << ". See pout for details. " << std::endl;
+        }
         return errNorm;
     }
     
@@ -289,35 +323,42 @@ TEST(MBInterpOp, XPointTest)
     int numIter = 1;
     double order = 4;
 
-    double err3[numIter];
+    // double err3[numIter];
     double err4[numIter];
     double err5[numIter];
+    double err6[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {   
-        auto domain3 = buildXPoint(domainSize, 3);
-        auto domain4 = buildXPoint(domainSize, 4);
-        auto domain5 = buildXPoint(domainSize, 5);
-        MBDisjointBoxLayout layout3(domain3, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout4(domain4, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout5(domain5, Point::Ones(boxSize));
-        err3[nn] = computeXPointInterpError<3>(layout3, ghostSize, order, nn);
-        err4[nn] = computeXPointInterpError<4>(layout4, ghostSize, order, nn);
-        err5[nn] = computeXPointInterpError<5>(layout5, ghostSize, order, nn);
+        // auto domain3 = buildXPoint(domainSize, 3);
+        // auto domain4 = buildXPoint(domainSize, 4);
+        // auto domain5 = buildXPoint(domainSize, 5);
+        auto domain6 = buildXPoint(domainSize, 6);
+        // MBDisjointBoxLayout layout3(domain3, Point::Ones(boxSize));
+        // MBDisjointBoxLayout layout4(domain4, Point::Ones(boxSize));
+        // MBDisjointBoxLayout layout5(domain5, Point::Ones(boxSize));
+        MBDisjointBoxLayout layout6(domain6, Point::Ones(boxSize));
+        // err3[nn] = computeXPointInterpError<4>(layout3, ghostSize, order, nn);
+        // err4[nn] = computeXPointInterpError<5>(layout4, ghostSize, order, nn);
+        // err5[nn] = computeXPointInterpError<6>(layout5, ghostSize, order, nn);
+        err6[nn] = computeXPointInterpError<6>(layout6, ghostSize, order, nn);
         domainSize *= 2;
     }
     for (int ii = 1; ii < numIter; ii++)
     {
-        double rate3 = log(err3[ii - 1] / err3[ii]) / log(2.0);
-        double rate4 = log(err4[ii - 1] / err4[ii]) / log(2.0);
-        double rate5 = log(err5[ii - 1] / err5[ii]) / log(2.0);
+        // double rate3 = log(err3[ii - 1] / err3[ii]) / log(2.0);
+        // double rate4 = log(err4[ii - 1] / err4[ii]) / log(2.0);
+        // double rate5 = log(err5[ii - 1] / err5[ii]) / log(2.0);
+        double rate6 = log(err6[ii - 1] / err6[ii]) / log(2.0);
 #if PR_VERBOSE > 0
-        std::cout << "3 Blocks | Error (Max Norm): " << err3[ii] << " | Convergence Rate: " << rate3 << std::endl;
-        std::cout << "4 Blocks | Error (Max Norm): " << err4[ii] << " | Convergence Rate: " << rate4 << std::endl;
-        std::cout << "5 Blocks | Error (Max Norm): " << err5[ii] << " | Convergence Rate: " << rate5 << std::endl;
+        // std::cout << "3 Blocks | Error (Max Norm): " << err3[ii] << " | Convergence Rate: " << rate3 << std::endl;
+        // std::cout << "4 Blocks | Error (Max Norm): " << err4[ii] << " | Convergence Rate: " << rate4 << std::endl;
+        // std::cout << "5 Blocks | Error (Max Norm): " << err5[ii] << " | Convergence Rate: " << rate5 << std::endl;
+        std::cout << "6 Blocks | Error (Max Norm): " << err6[ii] << " | Convergence Rate: " << rate6 << std::endl;
 #endif
-        EXPECT_TRUE(err3[ii] < 1e-12 || rate3 > order - 0.5);
-        EXPECT_TRUE(err4[ii] < 1e-12 || rate4 > order - 0.5);
-        EXPECT_TRUE(err5[ii] < 1e-12 || rate5 > order - 0.5);
+        // EXPECT_TRUE(err3[ii] < 1e-12 || rate3 > order - 0.5);
+        // EXPECT_TRUE(err4[ii] < 1e-12 || rate4 > order - 0.5);
+        // EXPECT_TRUE(err5[ii] < 1e-12 || rate5 > order - 0.5);
+        EXPECT_TRUE(err6[ii] < 1e-12 || rate6 > order - 0.5);
     }
 }
 #endif

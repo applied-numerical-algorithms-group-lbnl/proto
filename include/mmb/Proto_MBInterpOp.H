@@ -133,7 +133,7 @@ namespace Proto
 
         /// Get Point Operator
         /** Returns the MBPointInterpOp associated with a specified target cell. */
-        inline MBPointInterpOp& operator()(MBDataPoint& a_target)
+        inline MBPointInterpOp& operator()(const MBDataPoint& a_target)
         {
             for (auto& op : m_ops)
             {

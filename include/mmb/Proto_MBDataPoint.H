@@ -26,10 +26,10 @@ namespace Proto
         // Accessors
         inline bool inBoundary() const {return m_boundaryDir != Point::Zeros(); }
         inline const Point& dstPoint() const { return m_dstPoint; }
-        inline MBIndex dstIndex() const { return m_dstIndex; }
+        inline const MBIndex& dstIndex() const { return m_dstIndex; }
         inline const BlockIndex& dstBlock() const { return m_dstBlock; }
         inline const Point& srcPoint() const { return m_srcPoint; }
-        inline MBIndex srcIndex() const { return m_srcIndex; }
+        inline const MBIndex& srcIndex() const { return m_srcIndex; }
         inline const BlockIndex& srcBlock() const { return m_srcBlock; }
         inline const Point& boundaryDir() const { return m_boundaryDir; }
 
@@ -57,8 +57,8 @@ namespace Proto
 
    inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
    {
-       a_os << ": " << a_point.dstPoint() << "| srcBlock: " << a_point.srcBlock() << " dstBlock: " << a_point.dstBlock() << " | bdry: " << a_point.boundaryDir();
-       return a_os;
+        a_os << "dstPoint: " << a_point.dstPoint() << "| dstBlock: " << a_point.dstBlock() << " | srcPoint: " << a_point.srcPoint() << " | srcBlock: " << a_point.srcBlock() << " | boundaryDir: " << a_point.boundaryDir();
+        return a_os;
    }
 
 #include "implem/Proto_MBDataPointImplem.H"

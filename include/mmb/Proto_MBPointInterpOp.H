@@ -66,8 +66,8 @@ namespace Proto
         /** Returns the list of locations used for input data to the interpolation
          *  as a list of MBDataPoint objects. The order of the returnd points corresponds
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
-        inline std::vector<MBDataPoint> sources() const {return m_srcs;}
-        inline std::vector<double> coefs() const {return m_coefs; }
+        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
+        inline const std::vector<double>& coefs() const {return m_coefs; }
         inline void print() const; 
         inline void writeFootprint(std::string filename) const;
         
