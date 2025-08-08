@@ -287,7 +287,6 @@ namespace {
                 {
                     BlockIndex bi = layout.block(iter);
                     PatchID patch = layout.point(iter);
-                    //std::cout << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
                     pr_out() << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
                     pr_out() << "\tvalue = \n";
                     const auto& op = interp(MBDataPoint(iter, pi, layout));
@@ -295,7 +294,7 @@ namespace {
                     for (int ii = 0; ii < size; ii++)
                     {
                         auto& src = op.sources()[ii];
-                        auto var = hostSrc[src];
+                        auto var = hostDst[src];
                         pr_out() << "\t\t" << op.coefs()[ii] << " * " << var(0) << "\n";
                         pr_out() << "\t\t\t" << src << "\n";
                     }
