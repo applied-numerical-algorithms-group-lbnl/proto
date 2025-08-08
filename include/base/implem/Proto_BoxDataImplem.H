@@ -1261,7 +1261,7 @@ void BoxData<T,C,MEM,D,E>::incrementProduct(
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
-    if (box().empty()) { return; }
+    if (numValues() <= 0) { return; }
     PR_TIME("BoxData::setVal");
     if (MEM == HOST)
     {

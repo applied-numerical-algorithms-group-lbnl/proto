@@ -143,6 +143,8 @@ namespace Proto
         }
         void print() const;
         void writeFootprint(std::string filename) const;
+        template<typename MAP, MemType MEM>
+        void writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const;
         template<typename T, unsigned int C, MemType MEM>
         void printErrorPoints(
                 MBLevelBoxData<T,C,MEM>& a_err,

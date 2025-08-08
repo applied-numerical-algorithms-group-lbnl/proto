@@ -83,6 +83,7 @@ MBInterpLayout::computeSourcePoints(
     Point center,
     MBIndex index) const
 {
+    bool doPrint = true;
     PR_TIME("MBInterpLayoutOp::computeSourcePoints");
     PROTO_ASSERT(map.layout().compatible(layout()),
         "MBInterpLayout::computeSourcePoints | Error: map layout is incompatible with InterpLayout internals");
@@ -94,26 +95,50 @@ MBInterpLayout::computeSourcePoints(
     BlockIndex block = patch.block;
     Box domainBox = layout().domain().getBlock(block).box();
     
-    std::vector<MBDataPoint> srcs;
+    std::set<MBDataPoint> srcs;
     std::set<Point> augmentedFootprint;
+    if (doPrint)
+    {
+        pr_out() << "\nComputing source points | CENTER: " << center << " | BLOCK: " << block << std::endl;
+        pr_out() << "Using Footprint: " << std::endl;
+        for (auto fi : footprint) { pr_out() << fi << ", "; } pr_out() << std::endl;
+    }
     for (auto fi : footprint)
     {
         Point pi = center + fi;
+        
         bool success = addSourceFromShiftedPoint(pi, srcs, map, index);
         if (!success)
         {
             augmentFootprint(fi, augmentedFootprint, footprint);
         }
+        if (doPrint) {
+            pr_out() << "\tTrying to add Point: " << pi << " | shift = " << fi;
+            if (success) { pr_out() << "\t\tSUCCESS" << std::endl; }
+            else { pr_out() << "\t\tFAILURE" << std::endl; }
+        }
+    }
+    if (doPrint)
+    {
+        pr_out() << "Augmented Footprint: " << std::endl;
+        for (auto fi : augmentedFootprint) { pr_out() << fi << ", "; } pr_out() << std::endl;
     }
     for (auto fi : augmentedFootprint)
     {
         Point pi = center + fi;
-        addSourceFromShiftedPoint(pi, srcs, map, index);
+        bool success = addSourceFromShiftedPoint(pi, srcs, map, index);
+        if (doPrint)
+        {
+            pr_out() << "\tTrying to add Point: " << pi << " | shift = " << fi;
+            if (success) { pr_out() << "\t\tSUCCESS" << std::endl; }
+            else { pr_out() << "\t\tFAILURE" << std::endl; }
+        }
+
     }
     PROTO_ASSERT(srcs.size() > 0,
         "MBInterpLayout::computeSourcePoints | Error: Could not compute any source data points for interpolation to point %s in block %i",
         center.str(), patch.block);
-    return srcs;
+    return std::vector<MBDataPoint>(srcs.begin(), srcs.end());
 }
 
 void MBInterpLayout::augmentFootprint(
@@ -133,7 +158,7 @@ void MBInterpLayout::augmentFootprint(
 template<typename MAP, MemType MEM>
 bool MBInterpLayout::addSourceFromShiftedPoint(
     Point shiftedPoint,
-    std::vector<MBDataPoint>& sources,
+    std::set<MBDataPoint>& sources,
     const MBLevelMap<MAP,MEM>& map,
     MBIndex index) const
 {
@@ -148,8 +173,8 @@ bool MBInterpLayout::addSourceFromShiftedPoint(
         MBPoint srcPoint(pi, block);
 
         MBDataPoint data(index, pi, layout());
-        sources.push_back(data);
-        return true;
+        auto [_, success] = sources.insert(data);
+        return success;
     } else if (!domainBox.containsPoint(pi))
     {
         // Examine all patches which border this one across a block boundary
@@ -184,8 +209,8 @@ bool MBInterpLayout::addSourceFromShiftedPoint(
                     // NB: In general: pi != pk
                     Point pk = domain.convertPoint(pj, adjBlock, block, PR_CELL);
                     MBDataPoint data(index, pk, adjIndex, pj, layout());
-                    sources.push_back(data);
-                    return true;
+                    auto [_, success] = sources.insert(data);
+                    return success;
                 }
             }
         }

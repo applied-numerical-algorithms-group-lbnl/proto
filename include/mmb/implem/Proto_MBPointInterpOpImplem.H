@@ -42,7 +42,14 @@ MBPointInterpOp::MBPointInterpOp(
     computeExponents();
     validateMatrixDimensions(footprint);
     auto momentData = computeMoments(a_map);
-    computeCoefficients(momentData);
+    try {
+        computeCoefficients(momentData);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        writeLevelFootprint(a_map, "ERROR_FOOTPRINT");
+        std::abort();
+    }
+    
 }
 
 // void MBPointInterpOp::computeSourcePoints(
@@ -278,11 +285,25 @@ void MBPointInterpOp::computeCoefficients(
     double coefSum = std::accumulate(m_coefs.begin(), m_coefs.end(), 0.0);
     double error = abs(coefSum - 1);
     //TODO: This check should be much more strict
+    if (error > 1e-1)
+    {
+        #if PR_VERBOSE > 1
+        pr_out() << "Built operator for point " << m_dst << std::endl;
+        for (int ii = 0; ii < m_srcs.size(); ii++)
+        {
+            pr_out() << "\tcoef: " << m_coefs[ii] << " | src: " << m_srcs[ii] << std::endl;
+        }
+        pr_out() << "\tCoefficients sum to " << coefSum << std::endl;
+        #endif
+        char errorMsg[100];
+        sprintf(errorMsg, "Coefficients must sum to 1. Error: %.2e for target point %s in block %i.", error, m_dst.dstPoint().str().c_str(), m_dst.dstBlock());
+        throw std::runtime_error(std::string(errorMsg));
+    }
     PROTO_ASSERT(error < 1e-1,
-        "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Error: %.2e for target point %s in block %i",
+        "MBPointInterpOp::computeCoeffcients | Error: Coefficients must sum to 1. Error: %.2e for target point %s in block %i. See pout for details.",
         error, m_dst.dstPoint().str().c_str(), m_dst.dstBlock());
-    //TODO: Check for coefficients with values greater than some value
-    //#endif
+    
+    
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -331,9 +352,30 @@ void MBPointInterpOp::writeFootprint(std::string filename) const
     D.setVal(0);
     for (auto si : m_srcs)
     {
-        D(si.dstPoint()) = 1 + si.srcBlock();
+        D(si.dstPoint()) = 5 + si.srcBlock();
     }
     D(target().dstPoint()) = -1;
     HDF5Handler h5;
     h5.writePatch(D, filename);
+}
+template<typename MAP, MemType MEM>
+void MBPointInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const 
+{
+    MBLevelMap<MAP, MEM> _map;
+    _map.define(map.layout(), map.ghost()[1]);
+    MBLevelBoxData<double, 1, HOST> data(map.layout(), map.ghost()[1]);
+    data.setVal(0);
+    data.setBoundary(0);
+    for (auto si : m_srcs)
+    {
+        if (si.inBoundary())
+        {
+            data[si.srcIndex()](si.srcPoint()) = 1.0;
+        } 
+        data[si.dstIndex()](si.dstPoint()) = 1.0;
+    }
+    auto var = data[m_dst];
+    var(0) = -1;
+    HDF5Handler h5;
+    h5.writeMBLevel(_map, data, filename);
 }

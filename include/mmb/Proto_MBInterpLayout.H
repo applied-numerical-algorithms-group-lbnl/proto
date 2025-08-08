@@ -96,7 +96,7 @@ namespace Proto
         template<typename MAP, MemType MEM>
         inline bool addSourceFromShiftedPoint(
             Point shiftedPoint,
-            std::vector<MBDataPoint>& sources,
+            std::set<MBDataPoint>& sources,
             const MBLevelMap<MAP, MEM>& map,
             MBIndex index) const;
 

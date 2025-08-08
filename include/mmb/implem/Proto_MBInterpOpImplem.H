@@ -236,6 +236,18 @@ void MBInterpOp::writeFootprint(std::string filename) const
         op->writeFootprint(filename+suffix);
     }
 }
+template<typename MAP, MemType MEM>
+void MBInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const
+{
+    std::map<int, int> counters;
+    for (auto& op : m_ops)
+    {
+        int block = op->target().dstBlock();
+        int ii = counters[block]++;
+        std::string suffix = ("B" + std::to_string(block) + "_I" + std::to_string(ii));
+        op->writeLevelFootprint(map, filename+suffix);
+    }
+}
 
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::printErrorPoints(
