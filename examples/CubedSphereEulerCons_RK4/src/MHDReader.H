@@ -85,7 +85,8 @@ public:
 		Point high = bx1.high();
 		int domainSizez = high[phiCoord] + 1;
 
-		if (BC_data.size() == 1)
+		int low_frame_now = a_time / (ParseInputs::get_BC_cadence() * 3600);
+		if (BC_data.size() == 1 || low_frame_now >= BC_data.size() - 1)
 		{
 
 			BoxData<double, 8, HOST> data_a(bx2);
@@ -106,7 +107,8 @@ public:
 			cells_to_rotate = domainSizez - cells_to_rotate;
 			static Stencil<double> m_right_shift;
 			m_right_shift = (1.0 - needed_fraction) * Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
-			BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+			if (BC_data.size() == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+			if (low_frame_now >= BC_data.size() - 1) BC_data_extended[BC_data.size() - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
 			BC_data_temp1 = m_right_shift(data_a);
 			BC_data_temp1.copyTo(data_0);
 		}

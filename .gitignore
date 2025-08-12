@@ -17,6 +17,7 @@ blt
 *.jpeg
 *.png
 *.mpg
+*.gif
 pout.*
 myjob.o*
 myjob.e*
