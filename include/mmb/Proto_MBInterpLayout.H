@@ -12,7 +12,7 @@ namespace Proto
         public:
         inline MBInterpLayout(){}
         inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
-        inline void addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
+        inline void addPointToBaseFootprint(Point a_point) { m_baseFootprint.insert(a_point); }
 
         /// @brief Modifies the base footprint so that the designated axis is ignored
         /// @param dir The axis to be ignored
@@ -33,9 +33,11 @@ namespace Proto
         /// @param point The "center" of the stencil. This is the point being interpolated to
         /// @param index The index of the patch which contains point (in its ghost region)
         /// @return 
+        template<typename MAP, MemType MEM>
         inline std::set<Point> footprint(
             Point point,
-            MBIndex index) const;
+            MBIndex index,
+            const MBLevelMap<MAP, MEM>& map) const;
         
         /// @brief Converts a set of shifts (footprint) into a set of MBDataPoint used to access data for interpolation
         /// @param footprint The set of shifts returned from this->footprint above
@@ -45,11 +47,8 @@ namespace Proto
         /// @return 
         template<typename MAP, MemType MEM>
         inline std::vector<MBDataPoint> computeSourcePoints(
-            std::set<Point> footprint,
             const MBLevelMap<MAP, MEM>& map,
             Point center, MBIndex index) const;
-
-
 
         /// @brief Return contains 1 for axes participating in interpolation and 0 for axes not participating
         /// @return 
@@ -99,6 +98,15 @@ namespace Proto
             std::set<MBDataPoint>& sources,
             const MBLevelMap<MAP, MEM>& map,
             MBIndex index) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourcePoint(
+            std::set<MBDataPoint>& sourcePoints,
+            Point localPoint,
+            MBIndex localIndex,
+            Point sourcePoint,
+            MBIndex sourceIndex,
+            const MBLevelMap<MAP,MEM>& map) const;
 
         MBDisjointBoxLayout m_layout;
         std::set<Point> m_baseFootprint;

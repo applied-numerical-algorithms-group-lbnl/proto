@@ -56,7 +56,7 @@ TEST(MBInterpLayout, BaseFootprint)
     {
         if (pi.sumAbs() <= 2)
         {
-            interpLayout.addPoint(pi);
+            interpLayout.addPointToBaseFootprint(pi);
             baseFootprint.insert(pi);
         }
     }
@@ -79,7 +79,7 @@ TEST(MBInterpLayout, BlockBoundary)
     {
         if (pi.sumAbs() <= 2)
         {
-            interpLayout.addPoint(pi);
+            interpLayout.addPointToBaseFootprint(pi);
             baseFootprint.insert(pi);
         }
     }
@@ -126,7 +126,7 @@ TEST(MBInterpLayout, DomainBoundary)
     {
         if (pi.sumAbs() <= 2)
         {
-            interpLayout.addPoint(pi);
+            interpLayout.addPointToBaseFootprint(pi);
             baseFootprint.insert(pi);
         }
     }
@@ -216,7 +216,7 @@ TEST(MBInterpLayout, TriplePointAdjacent)
     {
         if (pi.sumAbs() <= 2)
         {
-            interpLayout.addPoint(pi);
+            interpLayout.addPointToBaseFootprint(pi);
             baseFootprint.insert(pi);
         }
     }
@@ -299,7 +299,7 @@ TEST(MBInterpLayout, TriplePointRegion)
     {
         if (pi.sumAbs() <= 2)
         {
-            interpLayout.addPoint(pi);
+            interpLayout.addPointToBaseFootprint(pi);
             baseFootprint.insert(pi);
         }
     }
@@ -357,7 +357,7 @@ TEST(MBInterpLayout, Visualization) {
 
     for (auto pi : Box::Kernel(2))
     {
-        if (pi.sumAbs() <= 2) { interpLayout.addPoint(pi); }
+        if (pi.sumAbs() <= 2) { interpLayout.addPointToBaseFootprint(pi); }
     }
     MBLevelBoxData<int, 1, HOST> domainData(layout, Point::Zeros());
     domainData.setVal(-1);

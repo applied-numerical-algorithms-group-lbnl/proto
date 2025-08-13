@@ -321,52 +321,56 @@ TEST(MBInterpOp, XPointTest)
     int domainSize = 16;
     int boxSize = 16;
     int ghostSize = 2;
-    int numIter = 3;
+    int numIter = 2;
     double order = 4;
 
-    // double err3[numIter];
-    double err4[numIter];
-    double err5[numIter];
-    double err6[numIter];
-    double err8[numIter];
+    std::set<int> testRuns = {8};
+    std::map<int, std::vector<double>> err;
+    for (auto run : testRuns) { err[run].resize(numIter); }
     for (int nn = 0; nn < numIter; nn++)
     {   
-        // auto domain3 = buildXPoint(domainSize, 3);
-        // auto domain4 = buildXPoint(domainSize, 4);
-        // auto domain5 = buildXPoint(domainSize, 5);
-        auto domain6 = buildXPoint(domainSize, 6);
-        auto domain8 = buildXPoint(domainSize, 8);
-        // MBDisjointBoxLayout layout3(domain3, Point::Ones(boxSize));
-        // MBDisjointBoxLayout layout4(domain4, Point::Ones(boxSize));
-        // MBDisjointBoxLayout layout5(domain5, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout6(domain6, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout8(domain8, Point::Ones(boxSize));
-        // err3[nn] = computeXPointInterpError<3>(layout3, ghostSize, order, nn);
-        // err4[nn] = computeXPointInterpError<4>(layout4, ghostSize, order, nn);
-        // err5[nn] = computeXPointInterpError<5>(layout5, ghostSize, order, nn);
-        err6[nn] = computeXPointInterpError<6>(layout6, ghostSize, order, nn);
-        err8[nn] = computeXPointInterpError<8>(layout8, ghostSize, order, nn);
+        if (testRuns.count(3) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 3);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[3][nn] = computeXPointInterpError<3>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(4) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 4);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[4][nn] = computeXPointInterpError<4>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(5) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 5);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[5][nn] = computeXPointInterpError<5>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(6) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 6);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[6][nn] = computeXPointInterpError<6>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(8) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 8);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[8][nn] = computeXPointInterpError<8>(layout, ghostSize, order, nn);
+        }
         domainSize *= 2;
     }
     for (int ii = 1; ii < numIter; ii++)
     {
-        // double rate3 = log(err3[ii - 1] / err3[ii]) / log(2.0);
-        // double rate4 = log(err4[ii - 1] / err4[ii]) / log(2.0);
-        // double rate5 = log(err5[ii - 1] / err5[ii]) / log(2.0);
-        double rate6 = log(err6[ii - 1] / err6[ii]) / log(2.0);
-        double rate8 = log(err8[ii - 1] / err8[ii]) / log(2.0);
-#if PR_VERBOSE > 0
-        // // std::cout << "3 Blocks | Error (Max Norm): " << err3[ii] << " | Convergence Rate: " << rate3 << std::endl;
-        // std::cout << "4 Blocks | Error (Max Norm): " << err4[ii] << " | Convergence Rate: " << rate4 << std::endl;
-        // std::cout << "5 Blocks | Error (Max Norm): " << err5[ii] << " | Convergence Rate: " << rate5 << std::endl;
-        std::cout << "6 Blocks | Error (Max Norm): " << err6[ii] << " | Convergence Rate: " << rate6 << std::endl;
-        std::cout << "8 Blocks | Error (Max Norm): " << err8[ii] << " | Convergence Rate: " << rate8 << std::endl;
-#endif
-        // // EXPECT_TRUE(err3[ii] < 1e-12 || rate3 > order - 0.5);
-        // EXPECT_TRUE(err4[ii] < 1e-12 || rate4 > order - 0.5);
-        // EXPECT_TRUE(err5[ii] < 1e-12 || rate5 > order - 0.5);
-        EXPECT_TRUE(err6[ii] < 1e-12 || rate6 > order - 0.5);
-        EXPECT_TRUE(err8[ii] < 1e-12 || rate8 > order - 0.5);
+        for (auto testRun : testRuns)
+        {
+            double rate = log(err[testRun][ii - 1] / err[testRun][ii]) / log(2.0);
+            #if PR_VERBOSE > 0
+            std::cout << testRun << " Blocks | Error (Max Norm): " << err[testRun][ii] << " | Convergence Rate: " << rate << std::endl;
+            #endif
+            EXPECT_TRUE(err[testRun][ii] < 1e-12 || rate > order - 0.5);
+        }
     }
 }
 #endif

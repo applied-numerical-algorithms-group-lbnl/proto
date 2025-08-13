@@ -80,7 +80,7 @@ namespace Proto
         //     const MBDisjointBoxLayout& layout,
         //     Point ghostSizes);
         inline void computeExponents();
-        inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
+        inline void validateMatrixDimensions() const;
         template <typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,

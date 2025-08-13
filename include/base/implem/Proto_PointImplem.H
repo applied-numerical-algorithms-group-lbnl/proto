@@ -525,7 +525,7 @@ Point Point::dir() const
     for (int ii = 0; ii < DIM; ii++)
     {
         int di = (*this)[ii];
-        d[ii] = di / std::abs(di);
+        d[ii] = (di == 0) ? 0 : di / std::abs(di);
     }
     return d;
 }
