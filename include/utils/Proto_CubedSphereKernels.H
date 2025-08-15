@@ -488,6 +488,38 @@ void f_cubedSphereMap3_F(
     }
 }
 PROTO_KERNEL_END(f_cubedSphereMap3_F, f_cubedSphereMap3);
+template<typename T,MemType MEM,unsigned int C=1,unsigned int D=1>
+void outpointvalue(ofstream& a_stream,
+                   const BoxData<T,C,MEM,D>& a_data,
+                   Point a_pt,
+                   string a_string)
+{
+  a_stream << a_string + ":matrix(";
+  for (int c = 0;c < C; c++)
+    {
+      a_stream << "[" ;
+      for (int d = 0;d < D; d++)
+        {
+          a_stream << a_data(a_pt,c,d);
+          if (d < D-1)
+            {
+              a_stream << ",";
+            }
+          else
+            {
+              a_stream << "]" << endl;
+            }
+        }
+      if (c < C-1)
+        {
+          a_stream << "," << endl;
+        }
+      else
+        {
+          a_stream << ");\n";
+        }
+    };
+}
 #if 0
 template<typename T, MemType MEM>
 PROTO_KERNEL_START

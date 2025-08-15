@@ -558,14 +558,57 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
 {
   PR_TIMERS("BoxOp_Euler::dtCFL");
   auto layout = a_JU.layout();
+  
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
-  MBLevelBoxData<T,NUMCOMPS,MEM,PR_CELL> JUTemp(layout,a_JU.ghost());
-  a_JU.copyTo(JUTemp);
+  MBLevelBoxData<T,NUMCOMPS,MEM,PR_CELL> USph(layout,Point::Zeros());
+  a_JU.copyTo(USph);
   Reduction<T,Operation::Max,MEM> dtinv;
   dtinv.reset();
-  CubedSphereShell
-    ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(JUTemp,a_iop,a_dVolr,4,0);
+  //CubedSphereShell
+  //  ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(JUTemp,a_iop,a_dVolr,4,0);
+  for (auto dit : layout)
+    {
+      Box bx0 = layout[dit];
+      auto block = layout.block(dit);
+      Box bxblock = layout.domain().getBlock(block).box();
+      T dx = 1./(bxblock.high()[2] + 1);
+      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx0,dx,0); 
+      BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+        ([ ] PROTO_LAMBDA
+         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+         {
+           a_output(0) = 1.0/a_deta(0);
+         }
+         ,deta);
+      BoxData<T,DIM,MEM,DIM> deta_amat =
+        CubedSphereShell::detA_A<T,MEM>(bx0,dx,block,0);
+      BoxData<T,DIM,MEM,DIM> invcoef(bx0);
+      invcoef.setToZero();
+      forallInPlace(f_matinv3by3,invcoef,deta_amat);
+
+      BoxData<T,1,MEM> JRho = slice(USph[dit],0);
+      BoxData<T,1,MEM> JRhoE = slice(USph[dit],DIM+1);
+      BoxData<T,DIM,MEM> JUMom = slice<T,NUMCOMPS,DIM,MEM>(USph[dit],1);
+      BoxData<T,DIM,MEM> JUB = slice<T,NUMCOMPS,DIM,MEM>(USph[dit],DIM+2);
+      JRho *= detaInv;
+      JRhoE *= detaInv;
+      BoxData<T,DIM,MEM> vectemp(layout[dit]);
+      T one = 1.0;
+      forallInPlace(f_matVecProd,vectemp,invcoef,JUMom,one);
+      vectemp.copyTo(JUMom);
+      forallInPlace(f_matVecProd,vectemp,invcoef,JUB,one);
+      vectemp.copyTo(JUB);
+      forallInPlace([] PROTO_LAMBDA(Var<T,NUMCOMPS,MEM>& a_usph,
+                                    Var<T,1,MEM>& a_dvolr)
+                    {
+                      T dvolrInv = 1./a_dvolr(0);
+                      for (int comp = 0; comp < NUMCOMPS; comp++)
+                        {
+                          a_usph(comp) *= dvolrInv;
+                        }
+                    },USph[dit],a_dVolr[dit]);
+     }
   HDF5Handler h5;
   for (auto dit : layout)
     {
@@ -573,15 +616,11 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       int globalIndex = dit.global();
       BoxData<T,NUMCOMPS,MEM> W(layout[dit]);
       //BoxData<T,NUMCOMPS,MEM> WBar(JUTemp[dit].box());
-      BoxData<T,NUMCOMPS,MEM>& sph_i = JUTemp[dit];
+      BoxData<T,NUMCOMPS,MEM>& sph_i = USph[dit];
       BoxData<T,NUMCOMPS,MEM> sphTemp(layout[dit]);
       sph_i.copyTo(sphTemp);
       eulerOp[dit].sphToPrim_2O(W,sphTemp,block);
       eulerOp[dit].dtInv(dtinv,W);
-      // if (block == 0)
-      //   {
-      //     h5.writePatch(1.,W,"WIndex_" + to_string(globalIndex));
-      //   }
     }
   return 1.0/dtinv.fetch(); 
 }
@@ -877,7 +916,8 @@ P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
   a_JU.copyTo(USph);
 
   CubedSphereShell
-    ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(USph,a_iop,a_dVolrLev, 4,0); // Transform a_JU -> USph.
+    ::consToSphInterpEuler<T,NUMCOMPS,MEM,PR_CELL>(USph,a_iop,a_dVolrLev, 4,0);
+  // Transform a_JU -> USph.
   int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
   int thetaCoord = (rCoord + 1) % DIM;
   int phiCoord = (rCoord + 2) % DIM;

@@ -122,14 +122,14 @@ namespace Proto
         private:
 #if 0
         inline void computeSourcePoints(
-            const std::set<Point>& footprint,
+            const std::vector<Point>& footprint,
             const MBDisjointBoxLayout& layout,
             Point ghostSizes);
 #endif
       template<template<MemType> typename MAP, MemType MEM>
       inline void computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map,Point a_ghost);
       inline void computeExponents();
-      inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
+      inline void validateMatrixDimensions(const std::vector<Point> &footprint) const;
         template <template <MemType> typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,
@@ -146,10 +146,10 @@ namespace Proto
       std::vector<MBDataPoint> m_srcs;
       // m_footprint contains the points in the dest index space where the source
       // values are stored.
-        std::set<Point> m_footprint;
-        std::vector<Point> m_exponents;
-        std::vector<double> m_coefs;
-        int m_order;
+      std::vector<Point> m_footprint;
+      std::vector<Point> m_exponents;
+      std::vector<double> m_coefs;
+      int m_order;
     };
 
     /// Mapped Multiblock Block Boundary Interpolation Operator
@@ -217,6 +217,12 @@ namespace Proto
         inline void apply(
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
+
+      /// new apply.
+       template<typename T, unsigned int C, MemType MEM>
+        inline void applyNew(
+                             MBLevelBoxData<T, C, MEM>& a_dst,
+                             MBLevelBoxData<T, C, MEM>& a_src);
         
         /// Coefficients
         /** Writes the first P coefficients of the interpolating polynomial to a specified
@@ -260,6 +266,7 @@ namespace Proto
                 T                        a_eps = 0);
 
       std::vector<std::shared_ptr<MBPointInterpOp>>& getOps() {return m_ops;};
+      shared_ptr<MBLevelBoxData<double,10,HOST> >  m_UOut;
         private:
      
         template<template<MemType> typename MAP, MemType MEM>
@@ -274,12 +281,18 @@ namespace Proto
             const MBPointInterpOp& baseOp,
             Point shift);
         void copyAlongSymmetryAxes(const MBPointInterpOp& pointOp);
+      template<MemType MEM>
+      void mapToPatch(MBDisjointBoxLayout a_layout);
 
         MBInterpLayout m_interpLayout;
         Point m_ghost;
         int m_order;
         std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
         std::unordered_set<MBPointID, MBPointID::Hash> m_points;
+        std::vector<std::shared_ptr<BoxData<Point, 13> > > m_srcPoints;
+        std::vector<std::shared_ptr<BoxData<double, 13> > > m_srcCoefs;
+        std::vector<std::shared_ptr<BoxData<unsigned int, 1> > > m_srcSizes;
+        std::vector<std::shared_ptr<BoxData<MBDataPoint, 13 > > > m_srcDataPoints;
       
         template<template<MemType> typename MAP, MemType MEM>
         void defineInternals(

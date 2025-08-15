@@ -151,7 +151,8 @@ namespace Proto {
     static void consToSphInterpEuler( 
                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
-                                     unsigned int a_order = 4);
+                                     unsigned int a_order = 4,
+                                      uint a_counter = 0);
 #endif 
      template<typename T, unsigned int C, MemType MEM>
     static void consToCartNGEuler( 
