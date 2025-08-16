@@ -157,7 +157,8 @@ void MBPointInterpOp::computeSourcePoints(const MBLevelMap<MAP, MEM>& a_map,
                 convertPoint(ptsrc,srcBlock,m_dst.block(),PR_CELL);
             }
         }
-      if (!footprint.contains(ptPullback))
+      // if (!footprint.contains(ptPullback))
+      if (footprint.count(ptPullback) <= 0)
         {
           if (srcBlock == destBlock)
             {
