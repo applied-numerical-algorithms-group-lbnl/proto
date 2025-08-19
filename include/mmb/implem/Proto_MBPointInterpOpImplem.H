@@ -105,7 +105,7 @@ void MBPointInterpOp::validateMatrixDimensions() const
     }
     if (N > M)
     {
-        std::cout << "MBInterpOp | Undetermined system detected: N > M (see pout for details)" << std::endl;
+        std::cout << "MBInterpOp | Undetermined system detected: N > M | dst: " << m_dst << " | (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Underdetermined system detected" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;

@@ -48,18 +48,13 @@ MBInterpLayout::computeSourcePoints(
     Point localCenter,
     MBIndex localIndex) const
 {
-    
-    //find which block the center corresponds to
-        // need to try all blocks with ANY boundary with this PATCH
-    // find center cell in adjacent block
-        // SHOULD be unique
+
     auto localPatch = layout().patch(localIndex);
     Box localPatchBox = layout()[localIndex];
     Box localDomainBox = layout().domain().getBlock(localPatch.block).box();
     Point adjCenter;
     MBIndex adjIndex;
     PROTO_ASSERT(!localDomainBox.containsPoint(localCenter), "Trying to interpolate to an interior point");
-    // std::cout << "Trying to find the block that contains localCenter " << localCenter << std::endl;
     for (auto neighbor : layout().adjacentIndices(localPatch))
     {
         Box neighborBox = layout()[neighbor];
@@ -68,10 +63,8 @@ MBInterpLayout::computeSourcePoints(
             int _dummy = 0;
         }
         adjCenter = map.convertPoint(localCenter, localPatch.block, layout().block(neighbor));
-        // std::cout << "Computed adjCenter: " << adjCenter << " | neighborBox: " << neighborBox << std::endl;
         if (neighborBox.containsPoint(adjCenter))
         {
-            // std::cout << "Found it. Maps to adjCenter = " << adjCenter << " in block " << layout().block(neighbor) << std::endl;
             adjIndex = neighbor;
             break;
         }
@@ -81,101 +74,10 @@ MBInterpLayout::computeSourcePoints(
     MBPoint adjPatch = layout().patch(adjIndex);
     Box adjPatchBox = layout()[adjIndex];
 
-    pr_out() << "\nComputing sources for POINT: " << localCenter << " | BLOCK: " << localPatch.block << " | PATCH: " << localPatch.point << std::endl;
-    pr_out() << "\tCenter is mapped to POINT: " << adjCenter << " | BLOCK: " << adjPatch.block << " | PATCH:" << adjPatch.point << std::endl;
     std::set<MBDataPoint> sourcePoints;
-    std::set<Point> extendDirs;
 
     Point localTrueCenter = layout().domain().convertPoint(adjCenter, adjPatch.block, localPatch.block, PR_CELL);
-    for (auto fi : baseFootprint())
-    {
-        Point sourcePoint = localTrueCenter + fi;
-        bool success = false;
-        pr_out() << "\t\tTrying to add source point " << sourcePoint << " from shift " << fi;
-        if (localPatchBox.containsPoint(sourcePoint))
-        {
-            success = addSourcePoint(sourcePoints, sourcePoint, localIndex, sourcePoint, localIndex, map);
-            if (success)
-            {
-                pr_out() << "\t\tSUCCESS (found in local patch)" << std::endl;
-            }
-        } else {
-            for (auto adjIndex_ : layout().adjacentIndices(localPatch))
-            {
-                MBPoint adjPatch_ = layout().patch(adjIndex_);
-                Point adjSourcePoint = map.convertPoint(sourcePoint, localPatch.block, adjPatch_.block);
-                Box adjPatchBox = layout()[adjIndex_];
-                if (adjPatchBox.containsPoint(adjSourcePoint))
-                {
-                    success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjSourcePoint, adjIndex_, map);
-                    if (success)
-                    {
-                        pr_out() << "\t\tSUCCESS (found in adjacent patch)" << std::endl;
-                    }
-                    break;
-                }
-            }
-        }
-        if (!success)
-        {
-            pr_out() << "\t\tFAILURE (point is in a domain boundary)" << std::endl;
-            extendDirs.insert(-(fi.dir()));
-        }
-    }
-
-    pr_out() << "Extending footprint in directions: " << std::endl;
-    for (auto dir : extendDirs) { pr_out() << dir << ", "; } pr_out() << std::endl;
-
-    if (extendDirs.size() > 0)
-    {
-        auto tmp = baseFootprint();
-        std::set<Point> footprint(tmp.begin(), tmp.end());
-        for (auto fi : baseFootprint())
-        {
-            for (auto dir : Point::Directions())
-            {
-                if (extendDirs.count(dir) > 0)
-                {
-                    footprint.insert(fi + dir);
-                }
-            }
-        }
-
-        for (auto fi : footprint)
-        {
-            Point sourcePoint = localTrueCenter + fi;
-            bool success = false;
-            pr_out() << "\t\tTrying to add source point " << sourcePoint << " from shift " << fi;
-            if (localPatchBox.containsPoint(sourcePoint))
-            {
-                success = addSourcePoint(sourcePoints, sourcePoint, localIndex, sourcePoint, localIndex, map);
-                if (success)
-                {
-                    pr_out() << "\t\tSUCCESS (found in local patch)" << std::endl;
-                }
-            } else {
-                for (auto adjIndex_ : layout().adjacentIndices(localPatch))
-                {
-                    MBPoint adjPatch_ = layout().patch(adjIndex_);
-                    Point adjSourcePoint = map.convertPoint(sourcePoint, localPatch.block, adjPatch_.block);
-                    Box adjPatchBox = layout()[adjIndex_];
-                    if (adjPatchBox.containsPoint(adjSourcePoint))
-                    {
-                        success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjSourcePoint, adjIndex_, map);
-                        if (success)
-                        {
-                            pr_out() << "\t\tSUCCESS (found in adjacent patch)" << std::endl;
-                        }
-                        break;
-                    }
-                }
-            }
-            if (!success)
-            {
-                pr_out() << "\t\tFAILURE (point is duplicate or in a domain boundary)" << std::endl;
-            }
-        }
-    }
+    addSourcePointsNear(localTrueCenter, localIndex, sourcePoints, map);
 
     // for (auto fi : footprint)
     // {
@@ -218,8 +120,75 @@ MBInterpLayout::computeSourcePoints(
     //     }
     // }
 
-
     return std::vector<MBDataPoint>(sourcePoints.begin(), sourcePoints.end());
+}
+
+template<typename MAP, MemType MEM>
+void MBInterpLayout::addSourcePointsNear(
+    Point localTrueCenter,
+    MBIndex localIndex,
+    std::set<MBDataPoint>& sourcePoints,
+    const MBLevelMap<MAP,MEM>& map) const
+{
+    auto localPatch = layout().patch(localIndex);
+    Box localPatchBox = layout()[localIndex];
+    std::set<Point> extendDirs;
+    
+    // Add all nearby points based on the base footprint
+    pr_out() << "\nAdd Source Points Near | CENTER: " << localTrueCenter << " | BLOCK: " << localPatch.block << " | PATCH: " << localPatch.point << std::endl; 
+    for (auto fi : baseFootprint())
+    {
+        Point sourcePoint = localTrueCenter + fi;
+        pr_out() << "\tChecking adjacent point " << sourcePoint << std::endl;
+        auto adjIndexQuery = map.whichNeighborContains(localIndex, sourcePoint);
+        if (adjIndexQuery.has_value())
+        {
+            auto adjIndex = adjIndexQuery.value().first;
+            auto adjPoint = adjIndexQuery.value().second;
+            pr_out() << "\t\tSUCCESS | block: " << layout().block(adjIndex) << " | patch: " << layout().point(adjIndex) << " | mapped point: " << adjPoint << std::endl;
+            bool success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+            if (!success) { pr_out() << "\t\t\tPoint not added (possibly a duplucate)" << std::endl; }
+        } else {
+            // if unable to add this point, store the opposite direction for extending the footprint away from the "hole"
+            pr_out() << "\t\tFAILURE" << std::endl;
+            extendDirs.insert(-(fi.dir()));
+        }
+    }
+
+    // if necessary, extend the footprint away from boundaries etc using stored extendDirs
+    if (extendDirs.size() > 0)
+    {
+        pr_out() << "\nExtending the footprint in directions: ";
+        for (auto di : extendDirs) { pr_out() << di << ", "; } pr_out() << std::endl;
+        auto tmp = baseFootprint();
+        std::set<Point> footprint(tmp.begin(), tmp.end());
+        for (auto fi : baseFootprint())
+        {
+            for (auto dir : Point::Directions())
+            {
+                if (extendDirs.count(dir) > 0)
+                {
+                    footprint.insert(fi + dir);
+                }
+            }
+        }
+
+        for (auto fi : footprint)
+        {
+            Point sourcePoint = localTrueCenter + fi;
+            auto adjIndexQuery = map.whichNeighborContains(localIndex, sourcePoint);
+            if (adjIndexQuery.has_value())
+            {
+                auto adjIndex = adjIndexQuery.value().first;
+                auto adjPoint = adjIndexQuery.value().second;
+                bool success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+                if (success)
+                {
+                    pr_out() << "\t\tFound new source | block: " << layout().block(adjIndex) << " | patch: " << layout().point(adjIndex) << " | mapped point: " << adjPoint << std::endl;
+                }
+            }
+        }
+    }
 }
 
 template<typename MAP, MemType MEM>
@@ -235,23 +204,30 @@ bool MBInterpLayout::addSourcePoint(
     Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
     if (layout().block(localIndex) == layout().block(sourceIndex))
     {
-        if ((localDomainBox.grow(map.ghost()[0]) & localPatchBox).containsPoint(localPoint))
+        pr_out() << "\t\t\tTrying to add source from local patch...";
+        if ((localPatchBox.grow(map.ghost()[0]) & localDomainBox).containsPoint(localPoint))
         {
             MBDataPoint point(localIndex, localPoint, layout());
             auto [_, success] = sourcePoints.insert(point);
+
+            if (success) { pr_out() << "SUCCESS\n"; } else { pr_out() << "FAILURE\n"; }
             return success;
         }
+        pr_out() << "FAILURE\n";
         // otherwise point is in an adjacent patch in the same block but NOT IN THE GHOST REGION of this patch and we ignore it
     } else {
         Point boundaryDir = layout().connectivity(localIndex, sourceIndex);
         Point boundGhost = map.ghost()[boundaryDir.codim()];
         Box boundaryBox = localPatchBox.adjacent(boundaryDir * boundGhost);
+        pr_out() << "\t\t\tTrying to add source from adjacent block...";
         if ( boundaryDir != Point::Zeros() && boundaryBox.containsPoint(localPoint))
         {
             MBDataPoint point(localIndex, localPoint, sourceIndex, sourcePoint, layout());
             auto [_, success] = sourcePoints.insert(point);
+            if (success) { pr_out() << "SUCCESS\n"; } else { pr_out() << "FAILURE\n"; }
             return success;
         }
+        pr_out() << "FAILURE\n";
     }
     return false;
 }

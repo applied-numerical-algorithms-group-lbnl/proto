@@ -324,3 +324,37 @@ Point MBLevelMap<MAP,MEM>::convertPoint(Point srcPoint, BlockIndex srcBlock, Blo
     for (int ii = 0; ii < DIM; ii++) { dstPoint[ii] = std::floor(xDst[ii]*dstDomainSizes[ii]); }
     return dstPoint;
 }
+
+template<typename MAP, MemType MEM>
+std::optional<std::pair<MBIndex, Point>> MBLevelMap<MAP, MEM>::whichNeighborContains(
+    const MBIndex& localIndex,
+    const Point& localPoint,
+    bool checkLocalInteriorGhostCells) const
+{
+    PROTO_ASSERT(layout().compatible(localIndex), "Incompatible layout index");
+    Box localPatchBox = layout()[localIndex];
+    // if flag is true, ghost cells of the local patch which are also within the local
+    // domain are considered to be inside this patch (default behavior)
+    if (checkLocalInteriorGhostCells)
+    {
+        Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
+        localPatchBox = localPatchBox.grow(ghost()[0]) & localDomainBox;
+    }
+    if (localPatchBox.containsPoint(localPoint))
+    {
+        return std::make_pair(localIndex, localPoint);
+    } else {
+        auto localPatch = layout().patch(localIndex);
+        for (auto adjIndex : layout().adjacentIndices(localPatch))
+        {
+            MBPoint adjPatch = layout().patch(adjIndex);
+            Point adjPoint = convertPoint(localPoint, localPatch.block, adjPatch.block);
+            Box adjPatchBox = layout()[adjIndex];
+            if (adjPatchBox.containsPoint(adjPoint))
+            {
+                return std::make_pair(adjIndex, adjPoint);
+            }
+        }
+    }
+    return std::nullopt;
+}

@@ -2,6 +2,8 @@
 #ifndef _PROTO_MB_LEVEL_MAP_
 #define _PROTO_MB_LEVEL_MAP_
 
+#include <optional>
+
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
 #include "Proto_MBMapOp.H"
@@ -238,6 +240,8 @@ class MBLevelMap
     /// @param dstBlock Destination block
     /// @return 
     inline Point convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const;
+
+    inline std::optional<std::pair<MBIndex, Point>> whichNeighborContains(const MBIndex& localIndex, const Point& localPoint, bool checkLocalInteriorGhostCells = true) const;
 
     private:
         Array<Point, DIM+1>             m_ghost;
