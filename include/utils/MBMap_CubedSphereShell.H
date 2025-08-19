@@ -106,16 +106,16 @@ namespace {
         switch (a_block)
         {
             case 0:
-                xi = atan2(-x,z);
-                eta = atan2(y,z);
+                xi = atan2(x,-z);
+                eta = atan2(-y,-z); 
                 break;
             case 1:
                 xi = atan2(x,z);
                 eta = atan2(y,z);
                 break;
             case 2:
-                xi = atan2(-x,y);
-                eta = atan2(-z,y);
+                xi = atan2(x,-y);
+                eta = atan2(z,-y); 
                 break;
             case 3:
                 xi = atan2(y,x);
@@ -126,8 +126,8 @@ namespace {
                 eta = atan2(z,y);
                 break;
             case 5:
-                xi = atan2(y,x);
-                eta = atan2(-z,x);
+                xi = atan2(-y,-x);
+                eta = atan2(z,-x);
                 break;
             default:
                 xi = 0;
