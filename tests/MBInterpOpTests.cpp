@@ -321,7 +321,7 @@ TEST(MBInterpOp, XPointTest)
     int domainSize = 16;
     int boxSize = 16;
     int ghostSize = 2;
-    int numIter = 1;
+    int numIter = 2;
     double order = 4;
 
     std::set<int> testRuns = {8};

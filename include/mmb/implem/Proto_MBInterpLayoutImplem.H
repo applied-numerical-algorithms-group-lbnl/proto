@@ -144,10 +144,14 @@ void MBInterpLayout::addSourcePointsNear(
         if (adjIndexQuery.has_value())
         {
             auto adjIndex = adjIndexQuery.value().first;
-            auto adjPoint = adjIndexQuery.value().second;
+            Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
             pr_out() << "\t\tSUCCESS | block: " << layout().block(adjIndex) << " | patch: " << layout().point(adjIndex) << " | mapped point: " << adjPoint << std::endl;
             bool success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
-            if (!success) { pr_out() << "\t\t\tPoint not added (possibly a duplucate)" << std::endl; }
+            if (!success)
+            {
+                extendDirs.insert(-(fi.dir()));
+                pr_out() << "\t\t\tPoint not added (possibly a duplucate)" << std::endl;
+            }
         } else {
             // if unable to add this point, store the opposite direction for extending the footprint away from the "hole"
             pr_out() << "\t\tFAILURE" << std::endl;
@@ -180,7 +184,7 @@ void MBInterpLayout::addSourcePointsNear(
             if (adjIndexQuery.has_value())
             {
                 auto adjIndex = adjIndexQuery.value().first;
-                auto adjPoint = adjIndexQuery.value().second;
+                Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
                 bool success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
                 if (success)
                 {
