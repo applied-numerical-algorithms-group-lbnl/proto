@@ -417,14 +417,13 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 #if DIM > 2
 TEST(MBLevelMapTests, CubeSphereShell)
 {
-    int domainSize = 32;
+    int domainSize = 16;
     int boxSize = 16;
-    int thickness = 32;
-    int ghostSize = 7;
+    int thickness = 16;
+    int ghostSize = 2;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
-    // auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = domainSize;
@@ -435,10 +434,30 @@ TEST(MBLevelMapTests, CubeSphereShell)
     // initialize map
     MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
-
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_CubeSphereMap_X");
 #endif
+    for (auto iter : layout)
+    {
+        Box b = layout[iter];
+        auto block = layout.block(iter);
+        auto& mapOp = map.op(block);
+        auto dx = map.dx(block);
+        auto xi = map.X(b,dx);
+        for (auto p : b)
+        {
+            auto xi_p = xi.array(p);
+            auto x_p = mapOp.apply(xi_p);
+            auto xi_q = mapOp.inverse(x_p);
+            double err = (xi_p - xi_q).absMax();
+            if (err > 1e-12)
+            {
+                pr_out() << "Error in Cubed Sphere Map | block: " << block << " | point: " << p << " | error: " << err << std::endl;
+                //pr_out() << "Error in Cubed Sphere Map | block: " << block << " | point: " << p << " | xi: " << xi_p << " | x: " << x_p << " | inverse(x): " << xi_q << std::endl;
+            }
+            EXPECT_LT((xi_p - xi_q).absMax(), 1e-12);
+        }
+    }
 }
 
 TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell)
