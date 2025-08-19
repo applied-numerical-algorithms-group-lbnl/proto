@@ -9,10 +9,6 @@
 #include "Proto_Macros.H"
 #include "Proto_Accel.H"
 
-namespace {
-    constexpr int WARP_SIZE = 32;
-    constexpr int WARP_SIZE_BITS = 5;
-}
 
 namespace Proto {
 
@@ -120,8 +116,7 @@ void initKernel(T* ptr)
     *ptr = Reduction<T,OP>::init();
 }
 
-#if 1
-//#ifdef PROTO_ACCEL
+#ifdef PROTO_ACCEL
 
 //=================================================================================================
 // KERNEL AND DEVICE CODE
@@ -129,13 +124,14 @@ void initKernel(T* ptr)
 template<typename T, Operation OP>
 __device__ // reduction within a warp, only lane 0 gets right result
 void warpOp(T& val, size_t idx, size_t size) {
-    for (unsigned int delta = WARP_SIZE >> 1; delta > 0; delta >>= 1)
+    unsigned mask = 0xffffffff; // FULL_MASK
+    for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
     {
 #if defined PROTO_HIP
         // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
         Reduction<T,OP>::update(val, (T)__shfl_down(val,delta));
 #elif defined PROTO_CUDA
-        Reduction<T,OP>::update(val, (T)__shfl_down_sync(0xffffffff,val,delta));
+        Reduction<T,OP>::update(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
     }
 }
@@ -143,12 +139,12 @@ void warpOp(T& val, size_t idx, size_t size) {
 template<typename T, Operation OP>
 __device__ // reduce within a block by storing partial warp reductions in shmem
 void blockOp(T& val, int idx, int size) {
-    PR_assert(blockDim.x <= 1 < (2*WARP_SIZE_BITS)); // otherwise block won't be reduced by end of function
+    PR_assert(blockDim.x <= warpSize*warpSize); // otherwise block won't be reduced by end of function
     extern __shared__ __align__(sizeof(T)) unsigned int shdata[];
     T *shmem = reinterpret_cast<T*>(shdata);
-    int lane = threadIdx.x & WARP_SIZE;
-    int wid = threadIdx.x >> WARP_SIZE_BITS;
-    int warps = (blockDim.x+WARP_SIZE-1)/WARP_SIZE;
+    int lane = threadIdx.x % warpSize;
+    int wid = threadIdx.x / warpSize;
+    int warps = (blockDim.x+warpSize-1)/warpSize;
 
     warpOp<T,OP>(val, idx, size);
     if (warps == 1) return;
