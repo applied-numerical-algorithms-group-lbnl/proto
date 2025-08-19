@@ -317,8 +317,14 @@ template<typename MAP, MemType MEM>
 void MBPointInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const 
 {
     MBLevelMap<MAP, MEM> _map;
-    _map.define(map.layout(), map.ghost()[1]);
-    MBLevelBoxData<double, 1, HOST> data(map.layout(), map.ghost()[1]);
+    Point ghost = map.ghost()[1];
+    Box spanBox = span();
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (spanBox.size(dd) == 1) { ghost[dd] = 0; }
+    }
+    _map.define(map.layout(), ghost);
+    MBLevelBoxData<double, 1, HOST> data(map.layout(), ghost);
     data.setVal(0);
     data.setBoundary(0);
     for (auto si : m_srcs)
@@ -333,4 +339,13 @@ void MBPointInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::
     var(0) = -1;
     HDF5Handler h5;
     h5.writeMBLevel(_map, data, filename);
+}
+
+Box MBPointInterpOp::span() const {
+    Box spanBox;
+    for (auto si : m_srcs)
+    {
+        spanBox &= si.dstPoint();
+    }
+    return spanBox;
 }

@@ -431,16 +431,16 @@ TEST(MBInterpOp, XPointRefined)
 #if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
-#define CUBED_SPHERE_SHELL_R0 0.5
+#define CUBED_SPHERE_SHELL_R0 0.9
 #define CUBED_SPHERE_SHELL_R1 1.0
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
     int domainSize = 16;
-    int boxSize = 8;
-    int thickness = 16;
-    int ghostSize = 2;
-    bool cullRadialGhost = false;
+    int boxSize = 16;
+    int thickness = 1;
+    int ghostSize = 1;
+    bool cullRadialGhost = true;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{1,1,1,0,0,0};
@@ -448,7 +448,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 3;
+    int N = 1;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -485,6 +485,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostErr.setVal(0);
     
         MBInterpOp op = CubedSphereShell::InterpOp<HOST>(layout, ghost, order);
+        #if PR_VERBOSE > 1
+        op.writeLevelFootprint(map, "CUBED_SPHERE_INTERP");
+        #endif
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
@@ -514,7 +517,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
-        //op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();

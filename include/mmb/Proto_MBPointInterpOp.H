@@ -68,7 +68,8 @@ namespace Proto
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
         inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
         inline const std::vector<double>& coefs() const {return m_coefs; }
-        inline void print() const; 
+        inline Box span() const;
+        inline void print() const;
         template<typename MAP, MemType MEM>
         inline void writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const;
         inline void writeFootprint(std::string filename) const;
