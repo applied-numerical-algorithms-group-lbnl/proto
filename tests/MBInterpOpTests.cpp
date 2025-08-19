@@ -324,7 +324,7 @@ TEST(MBInterpOp, XPointTest)
     int numIter = 2;
     double order = 4;
 
-    std::set<int> testRuns = {8};
+    std::set<int> testRuns = {5, 8};
     std::map<int, std::vector<double>> err;
     for (auto run : testRuns) { err[run].resize(numIter); }
     for (int nn = 0; nn < numIter; nn++)
