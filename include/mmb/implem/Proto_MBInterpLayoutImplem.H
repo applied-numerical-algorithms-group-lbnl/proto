@@ -49,18 +49,22 @@ MBInterpLayout::computeSourcePoints(
     MBIndex localIndex) const
 {
     std::set<MBDataPoint> sourcePoints;
-
+    pr_out() << "\nComputing Source Points | CENTER: " << localCenter << " | PATCH: " << layout().point(localIndex) << " | BLOCK: " << layout().block(localIndex) << std::endl;
     auto trueCenterQuery = map.whichNeighborContains(localIndex, localCenter);
     if (trueCenterQuery.has_value())
     {
         auto [adjIndex, adjCenter] = trueCenterQuery.value();
         Point localTrueCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+
         // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
         Point projectedLocalTrueCenter = applyIgnoredAxes(localCenter, localTrueCenter);
+        pr_out() << "\tComputed true center: " << localTrueCenter << " | projected: " << projectedLocalTrueCenter << std::endl;
         addSourcePointsNear(projectedLocalTrueCenter, localIndex, sourcePoints, map);
+        pr_out() << "\tAdded " << sourcePoints.size() << " source points" << std::endl;
     // The else is used for the rare case where a the localCenter doesn't map cleanly to a neighboring patch
     // The best example of this is where 3 mutually symmetric blocks meet
     } else {
+        pr_out() << "\tCould not establish a true center. Examining near center points" << std::endl;
         for (auto dir : Point::DirectionsOfCodim(1))
         {
             dir *= footprintMask();
@@ -70,9 +74,13 @@ MBInterpLayout::computeSourcePoints(
             {
                 auto [adjIndex, adjCenter] = nearCenterQuery.value();
                 Point localNearCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+
                 // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
                 Point projectedLocalNearCenter = applyIgnoredAxes(localCenter, localNearCenter);
+                pr_out() << "\tComputed near center: " << localNearCenter << " | projected: " << projectedLocalNearCenter << std::endl;
+                int before = sourcePoints.size();
                 addSourcePointsNear(projectedLocalNearCenter, localIndex, sourcePoints, map);
+                pr_out() << "\tAdded " << sourcePoints.size() - before << " source points" << std::endl;
             }
         }
     }
