@@ -327,7 +327,7 @@ TEST(MBInterpOp, XPointTest)
     int numIter = 2;
     double order = 4;
 
-    std::set<int> testRuns = {8};
+    std::set<int> testRuns = {4, 5, 8};
     std::map<int, std::vector<double>> err;
     for (auto run : testRuns) { err[run].resize(numIter); }
     for (int nn = 0; nn < numIter; nn++)
@@ -378,7 +378,7 @@ TEST(MBInterpOp, XPointTest)
 }
 #endif
 #endif
-#if 0
+#if 1
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;
@@ -386,7 +386,7 @@ TEST(MBInterpOp, XPointRefined)
     double order = 4;
     int domainSize = 16;
     int boxSize = 8;
-    constexpr int numBlocks = 5;
+    constexpr int numBlocks = 8;
     Array<double, DIM> exp{1.0,1.0,0,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
