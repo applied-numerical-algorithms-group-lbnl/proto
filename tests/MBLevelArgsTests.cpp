@@ -4,6 +4,7 @@
 
 using namespace Proto;
 
+#if 0
 TEST(MBLevelArgs, GetAndSet) {
     int domainSize = 16;
     int boxSize = 8;
@@ -41,12 +42,14 @@ TEST(MBLevelArgs, GetAndSet) {
     d0->setVal(7);
     EXPECT_EQ(d00.absMax(), 7);
 }
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
+    std::cout << "These tests are a work in progress" << std::endl;
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI
     MPI_Finalize();

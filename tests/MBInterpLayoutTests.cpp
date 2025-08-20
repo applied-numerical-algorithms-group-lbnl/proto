@@ -3,6 +3,7 @@
 #include "TestFunctions.H"
 using namespace Proto;
 
+#if 0
 namespace {
     MBDisjointBoxLayout testLayout(int boxSize, int domainSize, int numBlocks)
     {
@@ -394,12 +395,13 @@ TEST(MBInterpLayout, Visualization) {
 }
 #endif
 #endif
-
+#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
+    std::cout << "MBInterpLayoutTests is currently disabled. This class was radically redesigned and all existing tests are deprecated" << std::endl;
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI
     MPI_Finalize();

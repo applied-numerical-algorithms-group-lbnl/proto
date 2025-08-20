@@ -397,7 +397,8 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
                 for (auto bi : boundBox)
                 {
                     MBDataPoint bi_loc(iter, bi, layout);
-                    MBDataPoint bi_adj(iter, bi, layout, dir, adjBlock);
+                    Point bj = layout.domain().convertPoint(bi, locBlock, adjBlock, PR_CELL);
+                    MBDataPoint bi_adj(iter, bi, bound.adjIndex, bj, layout);
 
                     auto XLoc_i = map.cellCentered(bi_loc);
                     auto XAdj_i = map.cellCentered(bi_adj);
