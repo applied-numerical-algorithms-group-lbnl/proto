@@ -454,6 +454,10 @@ namespace Proto
         /// Scaled Unit Vectors
         inline std::vector<Point> split() const;
         
+        /// Returns a vector of Points each of which are this dotted into a subset of unit vectors
+        /// The zero vector is omitted
+        inline std::vector<Point> subset() const;
+
         /// Convert Point to Direction
         /** A "direction" is defined as a Point with values limited to 1, 0, and -1.
          */

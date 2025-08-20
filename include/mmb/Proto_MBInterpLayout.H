@@ -64,7 +64,11 @@ namespace Proto
         private:
 
         inline Point applyIgnoredAxes(Point basePoint, Point sourcePoint) const;
-
+        template<typename MAP, MemType MEM>
+        inline void addRedundantBoundarySources(
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP, MEM>& map) const;
         inline void addTriplePointFootprint(
             std::set<Point>& footprint,
             Point center,

@@ -76,6 +76,7 @@ MBInterpLayout::computeSourcePoints(
             }
         }
     }
+    addRedundantBoundarySources(localIndex, sourcePoints, map);
     return std::vector<MBDataPoint>(sourcePoints.begin(), sourcePoints.end());
 }
 
@@ -153,13 +154,10 @@ bool MBInterpLayout::addSourcePoint(
     Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
     if (layout().block(localIndex) == layout().block(sourceIndex))
     {
-        pr_out() << "\t\t\tTrying to add source from local patch...";
         if ((localPatchBox.grow(map.ghost()[0]) & localDomainBox).containsPoint(localPoint))
         {
             MBDataPoint point(localIndex, localPoint, layout());
             auto [_, success] = sourcePoints.insert(point);
-
-            if (success) { pr_out() << "SUCCESS\n"; } else { pr_out() << "FAILURE\n"; }
             return success;
         }
         pr_out() << "FAILURE\n";
@@ -168,17 +166,54 @@ bool MBInterpLayout::addSourcePoint(
         Point boundaryDir = layout().connectivity(localIndex, sourceIndex);
         Point boundGhost = map.ghost()[boundaryDir.codim()];
         Box boundaryBox = localPatchBox.adjacent(boundaryDir * boundGhost);
-        pr_out() << "\t\t\tTrying to add source from adjacent block...";
         if ( boundaryDir != Point::Zeros() && boundaryBox.containsPoint(localPoint))
         {
             MBDataPoint point(localIndex, localPoint, sourceIndex, sourcePoint, layout());
             auto [_, success] = sourcePoints.insert(point);
-            if (success) { pr_out() << "SUCCESS\n"; } else { pr_out() << "FAILURE\n"; }
             return success;
         }
-        pr_out() << "FAILURE\n";
     }
     return false;
+}
+
+template<typename MAP, MemType MEM>
+void MBInterpLayout::addRedundantBoundarySources(
+    MBIndex localIndex,
+    std::set<MBDataPoint>& sourcePoints,
+    const MBLevelMap<MAP, MEM>& map) const
+{
+    auto localPatch = layout().patch(localIndex);
+    std::set<Point> localSourcePoints;
+    for (auto& si : sourcePoints) { localSourcePoints.insert(si.dstPoint()); }
+    Box localPatchBox = layout()[localIndex];
+    for (auto boundaryDir : Point::Directions())
+    {
+        if (boundaryDir.codim() < 2) { continue; }
+        Box nearBoundaryThreshold = localPatchBox.edge(boundaryDir).grow(boundaryDir.abs());
+        for (auto p0 : localSourcePoints)
+        {
+            if (nearBoundaryThreshold.containsPoint(p0))
+            {
+                Box nearPointThreshold(p0, p0);
+                nearPointThreshold = nearPointThreshold.grow(Point::Ones()*footprintMask());
+                for (auto dir : boundaryDir.subset())
+                {
+                    for (auto adjIndex : layout().adjacentIndices(localPatch, dir))
+                    {
+                        auto adjBlock = layout().block(adjIndex);
+                        Box nearPointThresholdAdj = layout().domain().convertBox(nearPointThreshold, localPatch.block, adjBlock);
+                        nearPointThresholdAdj &= layout()[adjIndex];
+                        for (auto srcPointAdj : nearPointThresholdAdj)
+                        {
+                            Point srcPointLocal = layout().domain().convertPoint(srcPointAdj, adjBlock, localPatch.block, PR_CELL);
+                            bool success = addSourcePoint(sourcePoints, srcPointLocal, localIndex, srcPointAdj, adjIndex, map);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 Point MBInterpLayout::footprintMask() const 
