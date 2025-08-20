@@ -18,6 +18,8 @@ namespace Proto
         /// @param dir The axis to be ignored
         inline void ignoreAxis(int dir);
 
+        inline bool isIgnoredAxis(int dir) const { return footprintSpan().size(dir) == 1; }
+
         /// @brief Allows stencils produced with this layout to be copied along the designated axis (optimization)
         /// @param a_dir 
         /// @param a_flag 
@@ -60,6 +62,8 @@ namespace Proto
         inline const MBDisjointBoxLayout& layout() const { return m_layout; }
 
         private:
+
+        inline Point applyIgnoredAxes(Point basePoint, Point sourcePoint) const;
 
         inline void addTriplePointFootprint(
             std::set<Point>& footprint,

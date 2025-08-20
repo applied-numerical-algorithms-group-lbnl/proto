@@ -55,18 +55,24 @@ MBInterpLayout::computeSourcePoints(
     {
         auto [adjIndex, adjCenter] = trueCenterQuery.value();
         Point localTrueCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
-        addSourcePointsNear(localTrueCenter, localIndex, sourcePoints, map);
+        // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
+        Point projectedLocalTrueCenter = applyIgnoredAxes(localCenter, localTrueCenter);
+        addSourcePointsNear(projectedLocalTrueCenter, localIndex, sourcePoints, map);
     // The else is used for the rare case where a the localCenter doesn't map cleanly to a neighboring patch
     // The best example of this is where 3 mutually symmetric blocks meet
     } else {
         for (auto dir : Point::DirectionsOfCodim(1))
         {
+            dir *= footprintMask();
+            if (dir == Point::Zeros()) { continue; }
             auto nearCenterQuery = map.whichNeighborContains(localIndex, localCenter + dir);
             if (nearCenterQuery.has_value())
             {
                 auto [adjIndex, adjCenter] = nearCenterQuery.value();
                 Point localNearCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
-                addSourcePointsNear(localNearCenter, localIndex, sourcePoints, map);
+                // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
+                Point projectedLocalNearCenter = applyIgnoredAxes(localCenter, localNearCenter);
+                addSourcePointsNear(projectedLocalNearCenter, localIndex, sourcePoints, map);
             }
         }
     }
@@ -175,136 +181,31 @@ bool MBInterpLayout::addSourcePoint(
     return false;
 }
 
-// void MBInterpLayout::removeDomainBoundaryPoints(
-//     std::set<Point>& footprint,
-//     Point center,
-//     MBIndex index) const 
-// {
-//     BlockIndex block = m_layout.block(index);
-//     std::set<Point> tmp(footprint.begin(), footprint.end());
-//     footprint.clear();
-//     for (auto p : tmp)
-//     {
-//         if (!m_layout.domain().isPointInDomainBoundary(p + center,block)) 
-//         {
-//             footprint.insert(p);
-//         } else {
-//         }
-//     }
-// }
+Point MBInterpLayout::footprintMask() const 
+{
+    Point mask = Point::Ones();
+    auto spanBox = footprintSpan();
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        mask[dd] = (spanBox.size(dd) == 1) ? 0 : 1;
+    }
+    return mask;
+}
 
+Box MBInterpLayout::footprintSpan() const 
+{
+    Box spanBox;
+    for (auto fi : m_baseFootprint)
+    {
+        spanBox &= fi;
+    }
+    return spanBox;
+}
 
-// void MBInterpLayout::removeTriplePointPoints(
-//     std::set<Point>& footprint,
-//     Point center,
-//     MBIndex index) const 
-// {
-//     BlockIndex block = m_layout.block(index);
-//     std::set<Point> tmp(footprint.begin(), footprint.end());
-//     footprint.clear();
-//     for (auto p : tmp)
-//     {
-//         if (!m_layout.domain().isPointInTriplePoint(p + center,block)) 
-//         {
-//             footprint.insert(p);
-//         } else {
-//         }
-//     }
-// }
-
-
-// void MBInterpLayout::addBoundaryFootprint(
-//     std::set<Point>& footprint,
-//     Point point,
-//     MBIndex index) const
-// {
-//     auto patch = m_layout.patch(index);
-//     Box patchBox = m_layout[index];
-//     std::vector<Point> initialFootprint(footprint.begin(), footprint.end());
-//     for (auto dir : Point::DirectionsOfCodim(1))
-//     {
-//         if (dir * footprintMask() == Point::Zeros()) { continue; }
-//         if (m_layout.isPatchOnDomainBoundary(patch, dir) ||
-//             m_layout.isRefinementBoundary(patch, dir))
-//         {
-//             int coord = dir.firstNonZeroIndex();
-//             Box faceBox = patchBox.edge(dir);
-//             if (point[coord] == faceBox.low()[coord])
-//             {
-//                 for (auto fi : initialFootprint)
-//                 {
-//                     footprint.insert(fi - dir);
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-// void MBInterpLayout::addTriplePointFootprint(
-//     std::set<Point>& footprint,
-//     Point center,
-//     Point triplePointBoundary,
-//     MBIndex index) const
-// {
-//     BlockIndex block = m_layout.block(index);
-//     Box patchBox = m_layout[index];
-
-//     auto triplePointCircuits = 
-//         m_layout.domain().graph().getTriplePointCircuits(block, triplePointBoundary);
-//     PROTO_ASSERT(triplePointCircuits.size() == 1,
-//         "MBInterpLayout::footprint | Error: The more complex case is not implemented");
-    
-//     // Everything past this point assumes there can only be one triple point circuit
-
-//     Point n0 = triplePointCircuits[0].first;
-//     Point n1 = triplePointCircuits[0].second;
-//     Point inPlaneMask = (n0 + n1).abs();
-//     Point outPlaneMask = Point::Ones() - inPlaneMask;
-//     Point corner = patchBox.edge(n1 + n0).low()*inPlaneMask + center*outPlaneMask;
-//     int maxDist = (center - corner).abs().max();
-//     Point s0 = corner + n0*maxDist - center;
-//     Point s1 = corner + n1*maxDist - center;
-
-//     for (auto fi : m_baseFootprint)
-//     {
-//         footprint.insert(fi + s0);
-//         footprint.insert(fi + s1);
-//     }
-// }
-
-
-// void MBInterpLayout::addInwardPoints(
-//         std::set<Point>& footprint,
-//         MBIndex index) const
-// {
-//     std::set<Point> baseFootprint(footprint.begin(), footprint.end());
-//     Box patchBox = m_layout[index];
-//     for (auto pi : baseFootprint)
-//     {
-//         Point dir = patchBox.whichBoundaryContains(pi);
-//         footprint.insert(pi - dir);
-//     }
-// }
-
-
-// Point MBInterpLayout::footprintMask() const 
-// {
-//     Point mask = Point::Ones();
-//     auto spanBox = footprintSpan();
-//     for (int dd = 0; dd < DIM; dd++)
-//     {
-//         mask[dd] = (spanBox.size(dd) == 1) ? 0 : 1;
-//     }
-//     return mask;
-// }
-
-// Box MBInterpLayout::footprintSpan() const 
-// {
-//     Box spanBox;
-//     for (auto fi : m_baseFootprint)
-//     {
-//         spanBox &= fi;
-//     }
-//     return spanBox;
-// }
+Point MBInterpLayout::applyIgnoredAxes(Point basePoint, Point sourcePoint) const
+{
+    Point diff = sourcePoint - basePoint;
+    Point mask = Point::Ones() - footprintMask();
+    diff = diff * mask;
+    return sourcePoint - diff;
+}

@@ -431,16 +431,16 @@ TEST(MBInterpOp, XPointRefined)
 #if 1
 TEST(MBInterpOp, CubedSphereShellTest)
 {
-#define CUBED_SPHERE_SHELL_R0 0.9
+#define CUBED_SPHERE_SHELL_R0 0.5
 #define CUBED_SPHERE_SHELL_R1 1.0
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
-    int thickness = 1;
-    int ghostSize = 1;
-    bool cullRadialGhost = true;
+    int thickness = 32;
+    int ghostSize = 7;
+    bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     Array<double, DIM> exp{1,1,1,0,0,0};
@@ -448,7 +448,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 1;
+    int N = 2;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -542,7 +542,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
-        //EXPECT_GT(rate, 3.5);
+        EXPECT_GT(rate, 3.5);
         EXPECT_TRUE(err[ii] < 1e-12 || rate >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)

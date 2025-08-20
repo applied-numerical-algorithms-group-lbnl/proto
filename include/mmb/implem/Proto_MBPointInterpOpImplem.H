@@ -49,7 +49,14 @@ MBPointInterpOp::MBPointInterpOp(
         writeLevelFootprint(a_map, "ERROR_FOOTPRINT");
         std::abort();
     }
-    
+    Box spanBox = span();
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        if (a_interpLayout.isIgnoredAxis(dd))
+        {
+            PROTO_ASSERT(span().size(dd) == 1, "Interpolation Operator should be ignoring axis %i but is not", dd);
+        }
+    }
 }
 
 void MBPointInterpOp::computeExponents()
