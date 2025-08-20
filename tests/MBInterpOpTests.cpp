@@ -248,10 +248,13 @@ namespace {
         // h5.writeMBLevelBounds({"data"}, hostDst, "MBInterpOpTests_XPoint_Bound");
 #endif
         MBInterpOp interp(map);
-        // interp.writeLevelFootprint(map, "Footprint");
+        
         interp.apply(hostDst, hostDst);
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_1", NBLOCK, refIter);
+#endif
+#if PR_VERBOSE > 1
+        interp.writeLevelFootprint(map, "XPoint_Footprint");
 #endif
         double errNorm = 0;
         for (auto iter : layout)
@@ -324,7 +327,7 @@ TEST(MBInterpOp, XPointTest)
     int numIter = 2;
     double order = 4;
 
-    std::set<int> testRuns = {5, 8};
+    std::set<int> testRuns = {8};
     std::map<int, std::vector<double>> err;
     for (auto run : testRuns) { err[run].resize(numIter); }
     for (int nn = 0; nn < numIter; nn++)

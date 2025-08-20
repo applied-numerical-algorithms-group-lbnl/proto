@@ -76,7 +76,7 @@ MBInterpLayout::computeSourcePoints(
             }
         }
     }
-    addRedundantBoundarySources(localIndex, sourcePoints, map);
+    // addRedundantBoundarySources(localIndex, sourcePoints, map);
     return std::vector<MBDataPoint>(sourcePoints.begin(), sourcePoints.end());
 }
 
@@ -189,13 +189,13 @@ void MBInterpLayout::addRedundantBoundarySources(
     for (auto boundaryDir : Point::Directions())
     {
         if (boundaryDir.codim() < 2) { continue; }
-        Box nearBoundaryThreshold = localPatchBox.edge(boundaryDir).grow(boundaryDir.abs());
+        Box nearBoundaryThreshold = localPatchBox.edge(boundaryDir).extrude(boundaryDir);
         for (auto p0 : localSourcePoints)
         {
             if (nearBoundaryThreshold.containsPoint(p0))
             {
                 Box nearPointThreshold(p0, p0);
-                nearPointThreshold = nearPointThreshold.grow(Point::Ones()*footprintMask());
+                nearPointThreshold = nearPointThreshold.extrude(boundaryDir * footprintMask());
                 for (auto dir : boundaryDir.subset())
                 {
                     for (auto adjIndex : layout().adjacentIndices(localPatch, dir))
