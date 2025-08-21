@@ -1,4 +1,7 @@
 
+#include "../Proto_Point.H"
+namespace Proto {
+    
 ACCEL_DECORATION
 Point::Point()
 {
@@ -65,6 +68,47 @@ Point Point::Basis(int idir, const Side::LoHiSide a_side)
     } else {
         return Point::Zeros();
     }
+}
+
+std::set<Point> Point::Directions()
+{
+    std::set<Point> returnDirs;
+    for (int codim = 1; codim <= DIM; codim++)
+    {
+        auto dirs = DirectionsOfCodim(codim);
+        for (auto dir : dirs)
+        {
+            returnDirs.insert(dir);
+        }
+    }
+    return returnDirs;
+}
+
+std::set<Point> Point::DirectionsOfCodim(int a_codim)
+{
+    std::set<Point> returnDirs;
+    if (a_codim == 1)
+    {
+        for(int dd = 0; dd < DIM; dd++)
+        {
+            returnDirs.insert(Point::Basis(dd,+1));
+            returnDirs.insert(Point::Basis(dd,-1));
+        }
+    } else {
+        std::set<Point> lowerCodimDirs = DirectionsOfCodim(a_codim-1);
+        for (auto dir : lowerCodimDirs)
+        {
+            for (int dd = 0; dd < DIM; dd++)
+            {
+                if (dir[dd] == 0)
+                {
+                    returnDirs.insert(dir + Point::Basis(dd));
+                    returnDirs.insert(dir - Point::Basis(dd));
+                }
+            }
+        }
+    }
+    return returnDirs;
 }
 
 ACCEL_DECORATION
@@ -404,6 +448,26 @@ std::array<Point, DIM> Point::parallelUnit() const
     return basis;
 }
 
+std::vector<int> Point::coords() const
+{
+    std::vector<int> v;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if ((*this)[ii] != 0) { v.push_back(ii); }
+    }
+    return v;
+}
+
+std::vector<int> Point::perpCoords() const
+{
+    std::vector<int> v;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if ((*this)[ii] == 0) { v.push_back(ii); }
+    }
+    return v;
+}
+
 std::array<Point, DIM> Point::perpUnit() const
 {
     std::array<Point, DIM> basis;
@@ -433,13 +497,46 @@ std::vector<Point> Point::split() const
     return points;
 }
 
+std::vector<Point> Point::subset() const
+{
+    std::set<Point> pointSet;
+    for (auto dir : Box::Cube(2))
+    {
+        Point p = dir * (*this);
+        if (p != Point::Zeros()) { pointSet.insert(p); }
+    }
+    return std::vector<Point>(pointSet.begin(), pointSet.end());
+}
+
+int Point::firstNonZeroIndex() const
+{
+    int ii = 0;
+    while (ii < DIM)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii++;
+    }
+    return ii;
+}
+
+int Point::lastNonZeroIndex() const
+{
+    int ii = DIM-1;
+    while (ii >= 0)
+    {
+        if (m_tuple[ii] != 0) { return ii; }
+        ii--;
+    }
+    return ii;
+}
+
 Point Point::dir() const
 {
     Point d;
     for (int ii = 0; ii < DIM; ii++)
     {
         int di = (*this)[ii];
-        d[ii] = di / std::abs(di);
+        d[ii] = (di == 0) ? 0 : di / std::abs(di);
     }
     return d;
 }
@@ -469,36 +566,54 @@ void Point::linearOut(char* a_buf) const
     }
 }
 
+std::string Point::str() const {
+    std::ostringstream oss;
+    oss << "(";
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        oss << m_tuple[dir];
+        if (dir < DIM-1)
+        {
+            oss << ", ";
+        }
+    }
+    oss << ")";
+    return oss.str();
+}
+
 void Point::print() const
 {
-    using std::cout;
-    using std::endl;
-    cout << "(";
-    for (int dir = 0; dir < DIM ; dir++)
-    {
-        cout << m_tuple[dir];
-        if(dir < DIM-1) cout << ",";
-    }
-    cout <<   ")"  << endl;
+    std::cout << str() << std::endl;
+    // using std::cout;
+    // using std::endl;
+    // cout << "(";
+    // for (int dir = 0; dir < DIM ; dir++)
+    // {
+    //     cout << m_tuple[dir];
+    //     if(dir < DIM-1) cout << ",";
+    // }
+    // cout <<   ")"  << endl;
 }
 
 std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
 {
-    a_os << "(" ;
-    for (int dir = 0; dir < DIM; dir++) 
-    {
-      //keeps positive and negative stuff lined up --dtg
-      if(a_pt[dir] >= 0)
-      {
-        a_os << " ";
-      }
-        a_os << a_pt[dir];
-        if (dir < DIM-1) 
-        {
-            a_os << ",";
-        }
-    }
-    a_os << ")";
+    // a_os << "(" ;
+    // for (int dir = 0; dir < DIM; dir++) 
+    // {
+    //   //keeps positive and negative stuff lined up --dtg
+    //   if(a_pt[dir] >= 0)
+    //   {
+    //     a_os << " ";
+    //   }
+    //     a_os << a_pt[dir];
+    //     if (dir < DIM-1) 
+    //     {
+    //         a_os << ",";
+    //     }
+    // }
+    // a_os << ")";
+    // return a_os;
+    a_os << a_pt.str();
     return a_os;
 }
 
@@ -517,3 +632,4 @@ std::istream& operator >>(std::istream& a_is,  Point& a_pt)
   a_is >> dum;
   return a_is;
 }
+} // end namespace Proto

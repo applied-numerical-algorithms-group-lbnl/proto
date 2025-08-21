@@ -2,9 +2,9 @@
 #ifndef _PROTO_MB_LEVEL_DATA_
 #define _PROTO_MB_LEVEL_DATA_
 
-#include "Proto.H"
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBBoundaryData.H"
+#include "Proto_MBDataPoint.H"
 
 namespace Proto
 {
@@ -15,9 +15,8 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
-    template<template<MemType> typename MAP, MemType MEM>
+    template<typename MAP, MemType MEM>
     class MBLevelMap;
-    class MBDataPoint;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
   
@@ -51,6 +50,37 @@ namespace Proto
                 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
     };
     
+#if 1
+    /// Full Level Copier Operator (Includes all ghost cells)
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelFullCopierOp
+    {
+        public:
+        MBLevelBoxData<T, C, SRC_MEM, CTR>* m_src;
+        MBLevelBoxData<T, C, DST_MEM, CTR>* m_dst;
+        
+        inline MBLevelFullCopierOp(){};
+        inline MBLevelFullCopierOp(
+                MBLevelBoxData<T, C, SRC_MEM, CTR>& a_srcData,
+                MBLevelBoxData<T, C, DST_MEM, CTR>& a_dstData);
+        inline uint64_t linearSize(const Box& a_bx, const MBIndex a_index) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
+    };
+
+    /// Full Level Copier (Includes all ghost cells)
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelFullCopier
+    : public Copier
+      <MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, MBBoxPartition, SRC_MEM, DST_MEM>
+    {
+        public:
+        inline MBLevelFullCopier(){};
+        inline void buildMotionPlans(
+                MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
+    };
+#endif
     /// Exchange Copier Operator
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelExchangeCopierOp
@@ -91,7 +121,7 @@ namespace Proto
     {
         public:
         // PatchID, BlockID, Dir
-        typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
+        typedef std::tuple<Point, BlockIndex, Point> boundsKey_t;
 
         // Friends
         template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>
@@ -139,7 +169,13 @@ namespace Proto
                 const MBDisjointBoxLayout&    a_layout,
                 const Array<Point, DIM+1>&    a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
-       
+        
+        /// Lazy Constructor
+        inline void define(
+                const MBDisjointBoxLayout&    a_layout,
+                Point                         a_ghost,
+                Point                         a_boundGhost = Point::Zeros());
+      
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
          *  be a valid forall kernel with the following signature:
@@ -185,6 +221,9 @@ namespace Proto
          */
         template<MemType DST_MEM>
         inline void copyTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
+
+        template<MemType DST_MEM>
+        inline void copyToFull(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
 
         /// Get Ghost Size Array
         Array<Point, DIM+1> ghost() const;
@@ -235,6 +274,10 @@ namespace Proto
         inline void linearOut(void* a_buffer) const;
         
         /// Linear In
+        inline void linearIn(void* a_buffer, const Box& a_box, const MBIndex& a_index);
+        /// Linear In
+        inline void linearIn(void* a_buffer, const MBIndex& a_index);
+        /// Linear In
         inline void linearIn(void* a_buffer);
         
         /// Linear Offset
@@ -257,7 +300,7 @@ namespace Proto
         /** Determine if a specified index and direction correspond to a block boundary with a
          *  specified block index */
         inline bool isBlockBoundary(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock) const;
         
         /// Get Block Boundary
         /** Retrieve the block boundary buffer associated with the specified block boundary
@@ -283,6 +326,18 @@ namespace Proto
         /** Used by interpolation API. Not recommended for public use. */
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
 
+        /// Get BoxData containing the destination of the DataPoint
+        /** For points inside of block boundaries, this is the localData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the 
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& patch(const MBDataPoint &a_point);
+        
+        /// Get BoxData containing the source of the DataPoint
+        /** For points inside of block boundaries, this is the adjData variable
+         *  of the appropriate MBBoundaryData. Otherwise, this is simply the
+         *  patch associated with the index of the DataPoint */
+        //inline BoxData<T,C,MEM>& srcPatch(const MBDataPoint &a_point);
+
         /// Domain Boundary Check
         /** Determines which domain boundaries - if any - a specified Point in a specified patch
          *  resides on. The output is a vector of directions which correspond to the domain
@@ -292,24 +347,19 @@ namespace Proto
         inline std::vector<Point> onDomainBoundary(
                 const Point& a_point, const MBIndex& a_index) const;
 
-        /// Compute Interpolation Footprint
-        /** Computes the list of data points which will be used as the source data for an interpolation
-         *  operator to the data point specified by a_center and a_index.
-         *
-         *  TODO: a_ghost appears here because of a quirk of organization. In the future, this function
-         *  will live inside of MBInterpOp instead of here. 
-         *
-         *  \param a_center     The point to which interpolation will be computed
-         *  \param a_ghost      The size of the ghost region on the block boundary
-         *  \param a_footprint  A set of Points which represent the interpolation stencil footprint if
-         *                      the stencil were to be used in a pure cartesian context
-         *  \param a_index      The patch that contains a_center (in its ghost region)
+        /// Reduction
+        /**
          */
-        inline std::vector<MBDataPoint> interpFootprint(
-                const Point& a_center,
-                const Point& a_ghost,
-                const std::vector<Point>& a_footprint,
-                const MBIndex& a_index) const;
+        template<Proto::Operation OP>
+        inline T reduce(unsigned int c = 0) const;
+        
+        inline T absMax(unsigned int c = 0) const;
+
+        inline T max(unsigned int c = 0) const;
+
+        inline T min(unsigned int c = 0) const;
+
+        inline T sum(unsigned int c = 0) const;
         
         /// Print Boundary Buffer Data
         /** Prints the contents of the boundary buffers associated with a specified index.

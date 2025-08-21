@@ -4,7 +4,7 @@
 using namespace Proto;
 
 template<typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 {
@@ -14,7 +14,17 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
     using MBBoxOp<T, MAP, 1, 0, MEM>::MBBoxOp;
     
     // How many ghost cells does the operator need from the state variables
-    inline static Point ghost() { return Point::Ones(3);}
+    inline static Point ghost()
+    {
+        Point diffGhost = Point::Zeros();
+        Point matProdGhost = Point::Zeros();
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            diffGhost = absMaxPoint(diffGhost, MappedFaceAverageDiffOp<T>(ii).ghost());
+            matProdGhost = absMaxPoint(matProdGhost, FaceAverageMatrixProductOp<T>(ii).ghost());
+        }
+        return Point::Ones() + diffGhost + matProdGhost;
+    }
     
     // How many ghost cells does the operator need from the auxiliary variables
     inline static Point auxGhost() { return Point::Zeros();}
@@ -24,56 +34,76 @@ class BoxOp_MBLaplace : public MBBoxOp<T, MAP, 1, 0, MEM>
 
     // The approximate spectral radius. Often needed if the operator is to be inverted using 
     // an iterative solver
-    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
-   
-    inline void flux(
-            BoxData<T, 1>& a_flux,
-            const BoxData<T, 1>& a_state,
-            int a_dir) const
+    inline double spectralRadius() const {return (2.5*DIM) / pow(this->dxMin(), 2); }
+
+    inline void
+    apply(
+            BoxData<T,1>& a_output,
+            Array<BoxData<T,1>, DIM>& a_fluxes,
+            const BoxData<T,1>& a_state) const override
     {
-        // Lphi = (1/<J>)*div(<NT>_d*<grad(phi)>_d)
-        // faceGrad = <grad(phi)>_d
-        auto faceGrad =  Operator::_faceGradxPhi(
-                a_state, a_state, m_NTMatrix[a_dir], m_NTMatrix[a_dir],
-                m_Jf[a_dir], m_Jf[a_dir], a_dir);
-        // a_flux == <F>_d = <NT>_d * <grad(phi)>_d
-        auto tmp = Operator::_faceMatrixProductAB(
-                faceGrad,m_NT[a_dir],faceGrad,m_NT[a_dir],a_dir);
-        tmp.copyTo(a_flux);
-        a_flux /= this->dx()[a_dir];
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            flux(a_fluxes[dd], a_state, dd);
+        }
+        //TODO: BCs are not passing tests yet. 
+        //this->boundaryConditions(a_fluxes, a_state);
+        this->divergence(a_output, a_fluxes);
+    }
+
+    inline void applyBC (
+            Array<BoxData<T,1>, DIM>& a_fluxes,
+            const BoxData<T,1>& a_state,
+            Face a_face) const override
+    {
+        if (!m_useBC) { return; }
+        auto _dx = this->dx();
+        Box domainBox = this->layout().getBlock(this->block()).domain().box();
+        BoundaryCondition::Dirichlet(a_fluxes, a_state, 0.0, a_face, domainBox, _dx);
+    }
+
+    inline void
+    flux(
+            BoxData<T, 1>& flux,
+            const BoxData<T, 1>& state,
+            int dir,
+            T a_scale = 1.0) const
+    {
+        auto faceGrad = (*gradOps[dir])(state, state, adjJ_f[dir], adjJ_f[dir], J_f[dir], J_f[dir]);
+        (*matProdOps[dir])(flux, faceGrad, N_f[dir], faceGrad, N_f[dir]);
+        flux /= this->dx()[dir];
+        flux *= a_scale;
     }
 
     // Cache metric terms and Jacobian
     inline void init()
     {
-#if DIM == 2
-        m_NT.define(this->x().box().extrude(Point::Ones(),-1));
-#elif DIM == 3
-        m_NT.define(this->x().box().grow(-2).extrude(Point::Ones(),-1));
-#else
-        MayDay<void>::Error("BoxOp_MBLaplace not implemented for DIM != 2,3");
-#endif
-        m_NTMatrix.clear();
-        m_Jf.clear();
+        auto areas = this->da();
+    
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto C2F = Stencil<double>::CellToFace(dir);
-            // In 2D, NT does not require any ghost cells from X
-            // In 3D, NT requires 2 layers of ghost cells from X
-            auto NT_dir = Operator::cofactor(this->x(), dir, this->dx()); 
-            NT_dir.copyTo(m_NT[dir]);
-            m_Jf.push_back(C2F(this->jacobian()));
+            gradOps[dir] = std::make_unique<MappedFaceAverageDiffOp<T>>(dir);
+            matProdOps[dir] = std::make_unique<FaceAverageMatrixProductOp<T>>(dir);
+
+            auto cellToFaceOp = Stencil<T>::CellToFace(dir);
+            FaceAverageAdjugateMatrixOp<T> adjOp(dir);
+            FaceAverageSurfaceTransformOp<T,DIM> surfOp(dir);
+            J_f[dir] = cellToFaceOp(this->jacobian());
+            N_f[dir] = surfOp(this->x());
+            N_f[dir] /= areas[dir];
+            adjJ_f[dir] = adjOp(this->x());
+            adjJ_f[dir] /= areas[dir];
         }
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            //NT should have (conservative) 2 layers of ghost cells
-            m_NTMatrix.push_back(Operator::cofactorMatrix(m_NT, dir));
-        }
+        m_useBC = true;
     }
 
-    private:
+    inline void toggleBC(bool flag) { m_useBC = flag; }
 
-    FluxBoxData<T,DIM> m_NT;
-    std::vector<BoxData<T,DIM,MEM,DIM>> m_NTMatrix;
-    std::vector<BoxData<T,1,MEM>> m_Jf;
+    private:
+    bool m_useBC;
+    Array<std::unique_ptr<MappedFaceAverageDiffOp<T>>,DIM> gradOps;
+    Array<std::unique_ptr<FaceAverageMatrixProductOp<T>>,DIM> matProdOps;
+    Array<BoxData<T,DIM>,DIM> N_f;
+    Array<BoxData<T,DIM,MEM,DIM>,DIM> adjJ_f;
+    Array<BoxData<T,1,MEM>,DIM> J_f;
 };

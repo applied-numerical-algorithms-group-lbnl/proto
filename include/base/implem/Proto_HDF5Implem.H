@@ -42,9 +42,6 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     unsigned int numPatches_local = a_data.layout().localSize();
     unsigned int numData_local = numPatches_local*patchSize;
 
-    //T   rawData[numData_local];
-    //Box boxData[numPatches_local];
-    
     T* rawData = (T*)malloc(numData_local*sizeof(T));
     Box* boxData = (Box*)malloc(numPatches_local*sizeof(Box));
 
@@ -111,16 +108,33 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     Array<bool, DIM> periodicity;
     for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
     ProblemDomain domain(domainBox, periodicity);
-    DisjointBoxLayout layout(domain, boxSize);
+    DistributedSet<Point> patchSet;
+    for (int ii = 0; ii < numPatches_local; ii++)
+    {
+        patchSet.insert(boxData[ii].coarsen(boxSize).low());
+    }
+    patchSet.exchange();
+    auto patchSetData = patchSet.data();
+    std::vector<Point> patches(patchSetData.begin(), patchSetData.end());
+    DisjointBoxLayout layout(domain, patches, boxSize);
+
+    // VALIDATION
+    PROTO_ASSERT(a_data.layout().compatible(layout),
+        "HDF5Handler::readLevel | Error: input data has incompatible layout");
+    PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
+        "HDF5Handler::readLevel | Error: input data has incorrect box size. Input: %s | Read: %s",
+        a_data.layout().boxSize().str(), boxSize.str());
+    PROTO_ASSERT(a_data.layout().domain().box() == domainBox,
+        "HDF5Handler::readLevel | Error: input data has incorrect domain box. ");
+    PROTO_ASSERT(a_data.ghost() == ghost,
+        "HDF5Handler::readLevel | Error: input data has incorrect ghost size");
 
     // DEFINE LEVEL DATA
-    a_data.define(layout, ghost);
     a_data.linearIn(rawData);
    
     // EXCESS CLEANUP 
     free(rawData);
     free(boxData);
-
     barrier();
     assert(H5Fclose(file) >= 0);
 }
@@ -442,6 +456,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto s_dim = H5Screate_simple(1, spaceDims, NULL);
 
     // GET DATA SIZES
+    unsigned int numBlocks = a_data.layout().numBlocks();
     unsigned int numPatches = a_data.layout().numBoxes();
     unsigned int numPatches_local = a_data.layout().numBoxes(procID());
     unsigned int numData = 0;
@@ -514,6 +529,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     hsize_t offsetDims[] = {numPatches + 1};
     hsize_t boxDims[] = {numPatches};
     hsize_t dataDims[] = {numData};
+    hsize_t blockDims[] = {numBlocks};
 
     hsize_t boxDims_local[] = {numPatches_local};
     hsize_t dataDims_local[] = {numData_local};
@@ -522,6 +538,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto s_offsets    = H5Screate_simple(1, offsetDims, NULL);
     auto s_boxes      = H5Screate_simple(1, boxDims, NULL);
     auto s_data       = H5Screate_simple(1, dataDims, NULL);
+    auto s_blocks     = H5Screate_simple(1, blockDims, NULL);
     
     auto s_boxes_local = H5Screate_simple(1, boxDims_local, NULL);
     auto s_data_local  = H5Screate_simple(1, dataDims_local, NULL);
@@ -536,6 +553,9 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     auto ds_boxes = H5Dcreate2(
             *a_file, (g_level_name + "/boxes").c_str(), H5T_PROTO_BOX(), s_boxes, 
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_blocks = H5Dcreate2(
+            *a_file, (g_level_name + "/blocks").c_str(), H5T_PROTO_BOX(), s_blocks, 
+            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_data = H5Dcreate2(
             *a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -543,6 +563,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     // GET RAW DATA
     long int* offsetData = (long int*)malloc((numPatches+1)*sizeof(long int));
     Box* boxData = (Box*)malloc(numPatches_local*sizeof(Box));
+    Box* blockData = (Box*)malloc(numBlocks*sizeof(Box));
     T* rawData = (T*)malloc(numData_local*sizeof(T));
     
     offsetData[0] = 0;
@@ -559,6 +580,11 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
         offset += a_data.getBlock(block).patchSize();
         offsetData[ii] = offset;
     }
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        blockData[bi] = 
+            a_data.layout().getBlock(bi).domain().box().shift(boxShift*bi);
+    }
     
     a_data.linearOut(rawData);
     
@@ -567,6 +593,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     // WRITE DATA
     // FIXME: write processor data
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG,H5S_ALL,H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    assert(H5Dwrite(ds_blocks, H5T_PROTO_BOX(),H5S_ALL,H5S_ALL, H5P_DEFAULT, blockData) >= 0);
     #ifdef PR_MPI
     hsize_t boxStart[] = {a_data.layout().offset(procID())};
     hsize_t dataStart[] = {a_data.offset(procID())};
@@ -592,12 +619,14 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     // CLEANUP
     assert(H5Dclose(ds_processors) >= 0);
     assert(H5Dclose(ds_boxes) >= 0);
+    assert(H5Dclose(ds_blocks) >= 0);
     assert(H5Dclose(ds_offsets) >= 0);
     assert(H5Dclose(ds_data) >= 0);
 
     assert(H5Sclose(s_offsets) >= 0);
     assert(H5Sclose(s_processors) >= 0);
     assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_blocks) >= 0);
     assert(H5Sclose(s_data) >= 0);
     assert(H5Sclose(s_boxes_local) >= 0);
     assert(H5Sclose(s_data_local) >= 0);
@@ -632,7 +661,192 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     free(offsetData);
     free(boxData);
     free(rawData);
+    free(blockData);
 }
+
+template<typename... Args>
+void HDF5Handler::readMBLayout(
+        MBDisjointBoxLayout& a_layout,
+        std::shared_ptr<MBGraph> a_graph,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::readMBLayout");
+    // PARSE THE FILE NAME
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+    
+    // OPEN THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+#endif
+    auto ds_blocks = H5Dopen2(file, "/level_0/blocks", H5P_DEFAULT);
+    auto ds_boxes = H5Dopen2(file, "/level_0/boxes", H5P_DEFAULT);
+
+    auto s_blocks = H5Dget_space(ds_blocks);
+    auto s_boxes = H5Dget_space(ds_boxes);
+
+    hsize_t n_blocks, n_boxes;
+    H5Sget_simple_extent_dims(s_blocks, &n_blocks, nullptr);
+    H5Sget_simple_extent_dims(s_boxes, &n_boxes, nullptr);
+   
+    Box* boxData = (Box*)malloc(n_boxes*sizeof(Box));
+    Box* blockData = (Box*)malloc(n_blocks*sizeof(Box));
+    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dread(ds_blocks, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, blockData) >= 0);
+
+    std::vector<MBPoint> patches;
+    std::vector<Point> boxSizes;
+    MBProblemDomain domain(a_graph);
+    for (int bi = 0; bi < n_blocks; bi++)
+    {
+        Box domainBox = blockData[bi];
+        Point offset = domainBox.low();
+        Point boxSize = Point::Zeros();
+        for (int bj = 0; bj < n_boxes; bj++)
+        {
+            Box b = boxData[bj];
+            if (domainBox.containsBox(b))
+            {
+                if (boxSize == Point::Zeros()) { boxSize = b.sizes(); }
+                else {
+                    PROTO_ASSERT(boxSize == b.sizes(),
+                            "HDF5Handler::readMBLayout | Error: Non-fixed box size detected.");
+                }
+                Point patch = (b.low()-offset) / boxSize; 
+                patches.push_back(MBPoint(patch, bi));
+            }
+        }
+        if (boxSize == Point::Zeros())
+        {
+            //TODO: if this error is getting tripped, writeMBLevel needs to be modified to add this info to the output file.
+            MayDay<void>::Abort("HDF5Handler::readMBLayout | Error: Unable to detect box size. There is a block with no boxes");
+        }
+        domain.defineDomain(bi, domainBox.sizes());
+        boxSizes.push_back(boxSize);
+    }
+    a_layout.define(domain, patches, boxSizes);
+    free(boxData);
+    free(blockData);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::readMBLevel(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::readMBLevel");
+    // PARSE THE FILE NAME
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+    
+    // OPEN THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+#endif
+    hid_t H5T_T;
+    getH5DataType<T>(&H5T_T);
+    
+    auto ds_blocks = H5Dopen2(file, "/level_0/blocks", H5P_DEFAULT);
+    auto ds_boxes = H5Dopen2(file, "/level_0/boxes", H5P_DEFAULT);
+    auto ds_data = H5Dopen2(file, "/level_0/data:datatype=0", H5P_DEFAULT);
+
+    auto s_blocks = H5Dget_space(ds_blocks);
+    auto s_boxes = H5Dget_space(ds_boxes);
+    auto s_data = H5Dget_space(ds_data);
+
+    hsize_t n_blocks, n_boxes, n_data;
+    H5Sget_simple_extent_dims(s_blocks, &n_blocks, nullptr);
+    H5Sget_simple_extent_dims(s_boxes, &n_boxes, nullptr);
+    H5Sget_simple_extent_dims(s_data, &n_data, nullptr);
+    
+    PROTO_ASSERT(n_blocks == a_data.layout().numBlocks(),
+            "HDF5Handler::readMBLevel | Error: Mismatched number of blocks");
+    PROTO_ASSERT(n_boxes == a_data.layout().numBoxes(),
+            "HDF5Handler::readMBLevel | Error: Mismatchned number of patches");
+    
+    unsigned int n_data_local = 0;
+    unsigned int n_data_input = 0;
+    for (auto iter : a_data.layout())
+    {
+        n_data_local += a_data.patchSize(a_data.layout().block(iter)); 
+    }
+    for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
+    {
+        const auto& blockLayout = a_data.layout().getBlock(bi);
+        const auto& blockData = a_data.getBlock(bi);
+        n_data_input += blockLayout.size()*blockData.patchSize();
+    }
+    PROTO_ASSERT(n_data == n_data_input,
+            "HDF5Handler::readMBLevel | Error: Mismatchned number of data");
+
+    T* rawData = (T*)malloc(n_data_local*sizeof(T));
+#ifdef PR_MPI
+    hsize_t dataStart[] = {a_data.offset(procID())};
+    hsize_t stride[] = {1};
+    hsize_t dataCount[] = {n_data_local};
+
+    auto slab_data = H5Dget_space(ds_data);
+    assert(H5Sselect_hyperslab(slab_data, H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
+    auto s_data_local = H5Screate_simple(1,dataCount, NULL);
+
+    assert(H5Dread(ds_data, H5T_T, s_data_local, slab_data, H5P_DEFAULT, rawData) >= 0);
+
+    assert(H5Sclose(slab_data) >= 0);
+    assert(H5Sclose(s_data_local) >= 0);
+#else
+    assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+#endif
+
+    assert(H5Sclose(s_blocks) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_data) >= 0);
+
+    assert(H5Dclose(ds_blocks) >= 0);
+    assert(H5Dclose(ds_boxes) >= 0);
+    assert(H5Dclose(ds_data) >= 0);
+
+    a_data.linearIn(rawData);
+    free(rawData);
+    barrier();
+    assert(H5Fclose(file) >= 0);
+}
+
 #endif
 #endif
 
@@ -1036,6 +1250,15 @@ void HDF5Handler::writeFluxRegister(
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writePatch(
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    writePatch(1, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
         Array<double, DIM> a_dx,
         const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
@@ -1133,7 +1356,7 @@ void HDF5Handler::writePatch(
 }  
 
 #ifdef PR_MMB
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         const MBLevelMap<MAP, MEM>& a_map,
         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -1148,7 +1371,7 @@ void HDF5Handler::writeMBLevel(
     writeMBLevel(varnames, a_map, a_data, a_filename, a_params...);
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,
         const MBLevelMap<MAP, MEM>& a_map,
@@ -1156,7 +1379,14 @@ void HDF5Handler::writeMBLevel(
         std::string a_filename,
         Args... a_params)
 {
-
+    a_map.initialize();
+    Point ghostDiff = a_map.map().ghost()[0] - a_data.ghost()[0];
+    if(ghostDiff.min() < 0)
+    {
+        std::cout << "WARNING: HDF5Handler::writeMBLevel detected ghost region mismatch between plot data and map data." << \
+        "\n\tGhost region data may not render correctly" << std::endl;
+    }
+        
     std::vector<std::string> a_mapVarNames;
 #if DIM > 0
     a_mapVarNames.push_back("x");
@@ -1167,7 +1397,7 @@ void HDF5Handler::writeMBLevel(
 #if DIM > 2
     a_mapVarNames.push_back("z");
 #endif
-    MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
+    MBLevelBoxData<double, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
     for (auto iter : a_data.layout())
     {
         a_map.map()[iter].copyTo(tmpMap[iter]);
@@ -1228,6 +1458,30 @@ void HDF5Handler::writeMBLevel(
     addMBLevel(&file, a_data, dx, Point::Ones(), 0); //FIXME: NUKES A_DATA'S LAYOUT
     assert(H5Fclose(file) >= 0);
 
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevelBoundsUnified(
+        std::vector<std::string> a_varNames,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    MBLevelBoxData<T, C, MEM, CTR> data(a_data.layout(), a_data.ghost()[1]);
+    data.setVal(0);
+    for (auto iter : a_data.layout())
+    {
+        for (auto dir : Point::Directions())
+        {
+            auto bounds = a_data.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                auto& di = data[iter];
+                bound.localData->copyTo(di);
+            }
+        }
+    }
+    writeMBLevel(data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
@@ -1320,7 +1574,7 @@ void HDF5Handler::writeMBAMRData(
 
 }
 
-template<template<MemType> typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBAMRData(
         std::vector<std::string> a_varNames,
         const MBAMRMap<MAP, MEM>& a_map,

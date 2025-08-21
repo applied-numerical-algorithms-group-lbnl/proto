@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Proto.H"
-
-#define XPOINT_NUM_BLOCKS 3
-
+//#define XPOINT_NBLOCKS 4
 using namespace Proto;
 
 namespace {
@@ -12,12 +10,9 @@ namespace {
     {
         double X = a_X0[0];
         double Y = a_X0[1];
-#if DIM == 3
-        double Z = a_X0[2];
-#endif
+
         double dtheta_mapped = 2*M_PI/a_N;
         double dtheta_unmapped = M_PI/2.0;
-        double theta_ratio = dtheta_mapped/dtheta_unmapped;
 
         double u = (1-X);
         double v = (1-Y);
@@ -27,20 +22,46 @@ namespace {
 
         a_X[0] = r*cos(theta);
         a_X[1] = r*sin(theta);
-#if DIM == 3
-        a_X[2] = Z;
-#endif
+
+        for (int ii = 2; ii < DIM; ii++)
+        {
+            a_X[ii] = a_X0[ii];
+        }
+    }
+
+    ACCEL_DECORATION
+    void f_inverseXPointMap(Array<double, DIM>& a_X0, const Array<double, DIM>& a_X, int a_block, int a_N)
+    {
+
+        double x = a_X[0];
+        double y = a_X[1];
+        
+        double r = sqrt(x*x + y*y);
+        double theta = atan2(y, x);
+        
+        double alpha = 2*M_PI/a_N;
+        
+        double gamma = theta - M_PI - alpha*a_block;
+        double v = r*sin(gamma)/sin(alpha);
+        double u = r*cos(gamma) - v*cos(alpha);
+        
+        a_X0[0] = 1.0 - u;
+        a_X0[1] = 1.0 - v;
+        
+        for (int ii = 2; ii < DIM; ii++)
+        {
+            a_X0[ii] = a_X[ii];
+        }
+
     }
 }
 
-template<MemType MEM>
+template<int NBLOCK, MemType MEM>
 class MBMap_XPointRigid : public MBMapOp<MEM>
 {
     public:
 
     using MBMapOp<MEM>::MBMapOp;
-
-    //inline void setNumBlocks(unsigned int N) {m_numBlocks = N;}
 
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
@@ -49,7 +70,7 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
         auto& dx = this->dx();
         auto X0 = this->X(a_X.box(), dx);
         auto block = this->block();
-        int numBlocks = XPOINT_NUM_BLOCKS;
+        int n = NBLOCK;
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0, int a_block, int a_N)
@@ -59,18 +80,42 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
                 f_xpointMap(X, X0, a_block, a_N);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
-            }, a_X, X0, block, numBlocks
+            }, a_X, X0, block, n
         );
-        a_J.setVal(sin(2.0*M_PI/numBlocks));
+        a_J.setVal(sin(2.0*M_PI/n));
     }
 
     inline Array<double, DIM> apply(const Array<double, DIM>& a_X)
     {
         auto block = this->block();
-        int numBlocks = XPOINT_NUM_BLOCKS;
         Array<double, DIM> X;
-        f_xpointMap(X,a_X, block, numBlocks);
+        f_xpointMap(X,a_X, block, NBLOCK);
         return X;
+    }
+
+    inline void inverse(
+        BoxData<double, DIM, MEM>& a_X0,
+        const BoxData<double, DIM, MEM>& a_X)
+    {
+        auto block = this->block();
+        forallInPlace(
+        [] PROTO_LAMBDA (Var<double, DIM, MEM>& a_X0, Var<double, DIM, MEM>& a_X, int a_block)
+        {
+            Array<double, DIM> X;
+            for (int ii = 0; ii < DIM; ii++) { X[ii] = a_X(ii); }
+            Array<double, DIM> X0;
+            f_inverseXPointMap(X0, X, a_block, NBLOCK);
+            for (int ii = 0; ii < DIM; ii++) { a_X0(ii) = X0[ii]; }
+        }, a_X0, a_X, block
+        );
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_X)
+    {
+        auto block = this->block();
+        Array<double, DIM> X0;
+        f_inverseXPointMap(X0, a_X, block, NBLOCK);
+        return X0;
     }
     private:
 };

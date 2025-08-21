@@ -2,13 +2,15 @@
 #ifndef _PROTO_BOX_
 #define _PROTO_BOX_
 
-#include "Proto_MayDay.H"
-#include "Proto_Point.H"
-#include "Proto_LoHiSide.H"
-#include "Proto_Centering.H"
 #include <cstdlib> //for size_t
-#include <iostream>
+#include <iostream> //pretty printing
+#include <sstream> //pretty printing
 #include <cmath>
+
+#include "Proto_MayDay.H"
+#include "Proto_Face.H"
+#include "Proto_Point.H"
+#include "Proto_Centering.H"
 
 namespace Proto 
 {
@@ -234,7 +236,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Point& a_pt) const;
+            inline bool containsPoint(const Point& a_pt) const;
 
         /// Contains Box Query
         /**
@@ -256,7 +258,7 @@ namespace Proto
           @endcode
         */
         ACCEL_DECORATION
-            inline bool contains(const Box& a_rhs) const;
+            inline bool containsBox(const Box& a_rhs) const;
 
         /// Point on Boundry Query
         /**
@@ -265,6 +267,10 @@ namespace Proto
           \param a_p  A Point
           */
         inline bool onBoundary(const Point& a_p) const;
+
+        /** Returns the direction of the region adjacent to this which contains a point.
+         * Point::Zeros() is returned if a_point is contained inside of this */
+        inline Point whichBoundaryContains(const Point& a_point) const;
 
         /// Empty Query
         /**
@@ -336,6 +342,8 @@ namespace Proto
           */
         inline void operator&=(const Box& a_rhs); 
 
+        inline Box operator+(const Box& box) const;
+        inline void operator+=(const Box& box);
         /// Add Point Operator
         /**
           Returns a new Box which has been grown such that it contains a_pt. 
@@ -365,7 +373,7 @@ namespace Proto
           */
         inline void operator&=(const Point& a_pt);
 
-        //inline void operator&=(const Box& a_rightBox);
+        
 
         /// Equality Operator
         /**
@@ -752,7 +760,7 @@ namespace Proto
             @endcode
         */
         inline Box edge(const Point& a_dir) const;
-
+        inline Box edge(int a_dir, Side::LoHiSide a_side, int a_dist) const;
         /// Face
         /**
           Returns the face (e.g. region of codimension 1) of this box in a specified direction.
@@ -775,6 +783,8 @@ namespace Proto
           @endcode
         */
         inline Box face(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
+        
+        inline Box face(Point a_dir, int a_dist = 1) const;
 
         //TODO: redundant with face, unused
         //Box faceBox(int a_idir, const Side::LoHiSide a_side) const;
@@ -926,6 +936,8 @@ namespace Proto
           Prints *this using the format <code>[low, high]</code>
           */ 
         inline void print() const; 
+
+        inline std::string str() const;
         ///@}
 
         //private:  // these should be treated as private.  Some wise guy needs access.
@@ -941,7 +953,8 @@ namespace Proto
      /// OStream Operator 
     inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
-        a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        //a_os << "[" << a_box.low() << "," << a_box.high() << "]";
+        a_os << a_box.str();
         return a_os;
     }
 
@@ -1032,6 +1045,5 @@ namespace Proto
             int m_pos;
     }; //end class BoxIterator
 
-    #include "implem/Proto_BoxImplem.H"
 } //end namespace Proto
 #endif //end include guard

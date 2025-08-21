@@ -1,14 +1,21 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
-#include "Proto_Timer.H"
-#include "Proto_BoxData.H"
-#include "Proto_DisjointBoxLayout.H"
 
 #include <vector>
 #include <tuple>
 #include <iostream>
 #include <iomanip> //for pretty printing
 #include <set>
+
+#include "Proto_Timer.H"
+#include "Proto_MemType.H"
+#include "Proto_Point.H"
+#include "Proto_BoxData.H"
+#include "Proto_Math.H"
+#ifdef PR_OPS
+#include "Proto_Matrix.H"
+#endif
+
 
 //biggest stencil size I have seen:
 #define PR_MAX_COEFFS 343
@@ -96,6 +103,10 @@ namespace Proto {
               \param a_scale    (Optional) Used to scale the output. (Default: 1).
             */
             inline static Shift Ones(int a_scale=1){return Shift(Point::Ones(a_scale));};
+
+            inline static Shift X(int scale = 1) { return Shift(Point::X()*scale); }
+            inline static Shift Y(int scale = 1) { return Shift(Point::Y()*scale); }
+            inline static Shift Z(int scale = 1) { return Shift(Point::Z()*scale); }
 
             /// Get Shift Point
             inline Point& point(){ return m_shift; }
@@ -606,6 +617,8 @@ namespace Proto {
         /** @name Stencil Library */
         ///@{
 
+        static Stencil<T> Identity() { return ((T)1.0)*Shift::Zeros(); }
+
         /// Stencil Library: Derivative
         /**
           Built in implementation of compact differentiation stencils.
@@ -639,6 +652,13 @@ namespace Proto {
           \param a_order  (Optional) Order of accuracy (default: 2 | supported: 2)
           */
         static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
+
+        #ifdef PR_OPS
+        static std::vector<double> ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage = true);
+
+        template<unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT, unsigned int D=1, unsigned int E=1>
+        static void ExtrapIntoBoundary(BoxData<T, C, MEM, D, E>& data, Box interior, Point dir);
+        #endif
 
         /// Stencil Library: Cell to Face Interpolation
         /**
@@ -980,7 +1000,5 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int
 BoxData<T,C,MEMTYPE,D,E>& operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 ///@}
-#include "implem/Proto_StencilImplem.H"
-#include "implem/Proto_StencilDefs.H"
 } //end Proto namespace
 #endif

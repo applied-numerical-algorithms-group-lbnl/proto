@@ -6,25 +6,128 @@
 
 namespace Proto
 {
+    
     class MBInterpLayout
     {
         public:
-        
-        inline MBInterpLayout(){ m_footprint.clear(); m_copyAxes.fill(false); m_mirrorAxes.fill(false); }
-        inline bool addPoint(Point a_point) { m_footprint.insert(a_point); }
-        inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; if (a_flag) {m_mirrorAxes[a_dir] = false; }}
-        inline void setMirror(int a_dir, bool a_flag) { m_mirrorAxes[a_dir] = a_flag; if (a_flag) {m_copyAxes[a_dir] = false; }}
+        inline MBInterpLayout(){}
+        inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
+        inline void addPointToBaseFootprint(Point a_point) { m_baseFootprint.insert(a_point); }
 
-        inline bool doMirror(int a_dir) const { return m_mirrorAxes[a_dir]; }
-        inline bool doCopy(int a_dir) const { return m_copyAxes[a_dir]; }
-        inline std::vector<Point> footprint() const { return std::vector<Point>(m_footprint.begin(), m_footprint.end()); }
+        /// @brief Modifies the base footprint so that the designated axis is ignored
+        /// @param dir The axis to be ignored
+        inline void ignoreAxis(int dir);
+
+        inline bool isIgnoredAxis(int dir) const { return footprintSpan().size(dir) == 1; }
+
+        /// @brief Allows stencils produced with this layout to be copied along the designated axis (optimization)
+        /// @param a_dir 
+        /// @param a_flag 
+        inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
+
+        inline bool isCopied(int a_dir) const { return m_copyAxes[a_dir]; }
+
+        /// @brief Returns the set of shifts that would be used in the bulk of a regular grid
+        /// @return 
+        inline std::set<Point> baseFootprint() const { return m_baseFootprint; }
+
+        /// @brief Returns the modified base footprint, adding extra points for dealing with boundaries
+        /// @param point The "center" of the stencil. This is the point being interpolated to
+        /// @param index The index of the patch which contains point (in its ghost region)
+        /// @return 
+        template<typename MAP, MemType MEM>
+        inline std::set<Point> footprint(
+            Point point,
+            MBIndex index,
+            const MBLevelMap<MAP, MEM>& map) const;
         
+        /// @brief Converts a set of shifts (footprint) into a set of MBDataPoint used to access data for interpolation
+        /// @param footprint The set of shifts returned from this->footprint above
+        /// @param map Used to convert local index space points into points in adjacent blocks as needed
+        /// @param center The point being interpolated to
+        /// @param index The index of the patch containing center
+        /// @return 
+        template<typename MAP, MemType MEM>
+        inline std::vector<MBDataPoint> computeSourcePoints(
+            const MBLevelMap<MAP, MEM>& map,
+            Point center, MBIndex index) const;
+
+        /// @brief Return contains 1 for axes participating in interpolation and 0 for axes not participating
+        /// @return 
+        inline Point footprintMask() const;
+
+        /// @brief Returns the span of the base footprint (for 4th order this should be Box::Kernel(2) if no axes are ignored)
+        /// @return 
+        inline Box footprintSpan() const;
+        inline const MBDisjointBoxLayout& layout() const { return m_layout; }
+
         private:
-        std::set<Point> m_footprint;
-        Array<bool, DIM> m_copyAxes;
-        Array<bool, DIM> m_mirrorAxes;
-    };
 
-//#include "implem/Proto_MBInterpLayoutImplem.H"
+        inline Point applyIgnoredAxes(Point basePoint, Point sourcePoint) const;
+        template<typename MAP, MemType MEM>
+        inline void addRedundantBoundarySources(
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP, MEM>& map) const;
+        inline void addTriplePointFootprint(
+            std::set<Point>& footprint,
+            Point center,
+            Point triplePointBoundary,
+            MBIndex index) const;
+        
+        inline void addBoundaryFootprint(
+            std::set<Point>& footprint,
+            Point center,
+            MBIndex index) const;
+
+        inline void removeDomainBoundaryPoints(
+            std::set<Point>& footprint,
+            Point center,
+            MBIndex index) const;
+
+        inline void removeTriplePointPoints(
+            std::set<Point>& footprint,
+            Point center,
+            MBIndex index) const;
+
+        // Currently unused
+        inline void addInwardPoints(
+            std::set<Point>& footprint,
+            MBIndex index) const;
+
+        inline void augmentFootprint(
+            Point shift,
+            std::set<Point>& augmentedFootprint,
+            const std::set<Point>& footprint) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourceFromShiftedPoint(
+            Point shiftedPoint,
+            std::set<MBDataPoint>& sources,
+            const MBLevelMap<MAP, MEM>& map,
+            MBIndex index) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourcePoint(
+            std::set<MBDataPoint>& sourcePoints,
+            Point localPoint,
+            MBIndex localIndex,
+            Point sourcePoint,
+            MBIndex sourceIndex,
+            const MBLevelMap<MAP,MEM>& map) const;
+
+        template<typename MAP, MemType MEM>
+        inline void addSourcePointsNear(
+            Point localTrueCenter,
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP,MEM>& map) const;
+
+        MBDisjointBoxLayout m_layout;
+        std::set<Point> m_baseFootprint;
+        Array<bool, DIM> m_copyAxes;
+    };
+    #include "implem/Proto_MBInterpLayoutImplem.H"
+
 } //end namespace Proto
 #endif // end include guard

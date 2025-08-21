@@ -1,3 +1,7 @@
+#include "../Proto_Reduction.H"
+
+namespace Proto {
+
 //// CONSTRUCTOR
 template<typename T, Operation OP, MemType MEM>
 Reduction<T,OP,MEM>::Reduction(bool dynamic) {
@@ -92,6 +96,8 @@ void Reduction<T,OP,MEM>::update(T& a_v1, const T a_v2)
         case SumAbs:
             a_v1 += (a_v2 > 0 ? a_v2 : -a_v2);
             break;
+        case SumSquare:
+            a_v1 += (a_v2 * a_v2);
     }
 }
 
@@ -133,6 +139,7 @@ T Reduction<T,OP,MEM>::fetch() {
             break;
         case Sum:
         case SumAbs:
+        case SumSquare:
             MPI_Allreduce(&local, &global, 1, datatype, MPI_SUM, MPI_COMM_WORLD);
             break;
         default:
@@ -183,3 +190,4 @@ void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
         *m_hostTotal = val;
     }
 }
+} //end namespace Proto

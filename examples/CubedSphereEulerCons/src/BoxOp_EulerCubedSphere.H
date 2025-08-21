@@ -50,7 +50,7 @@ PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
 template<
     typename T,
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_EulerCubedSphere : public MBBoxOp<T, MAP, NUMCOMPS, 0, MEM>
 {

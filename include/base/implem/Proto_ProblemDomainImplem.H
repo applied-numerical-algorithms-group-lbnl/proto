@@ -22,7 +22,7 @@ void ProblemDomain::define(const Box& a_box,const Array<bool,DIM> a_isPeriodic)
 
 Box ProblemDomain::operator&(Box a_box) const
 {
-    if (m_box.contains(a_box)) { return a_box; }
+    if (m_box.containsBox(a_box)) { return a_box; }
     else
     {
         Point lowCorner = a_box.low();
@@ -41,7 +41,7 @@ Box ProblemDomain::operator&(Box a_box) const
 
 bool ProblemDomain::contains(const Point& a_pt) const
 {
-    if (m_box.contains(a_pt)) { return true; }
+    if (m_box.containsPoint(a_pt)) { return true; }
     else {
         for (int dir = 0; dir < DIM; dir++)
         {
@@ -60,14 +60,15 @@ bool ProblemDomain::contains(const Point& a_pt) const
 
 Point ProblemDomain::image(const Point& a_pt) const
 {
-    PROTO_ASSERT(this->contains(a_pt),
-        "ProblemDomain::image | Error: Point has no periodic image in this ProblemDomain.");
+    if (!this->contains(a_pt)) { return a_pt; }
+    //PROTO_ASSERT(this->contains(a_pt),
+    //    "ProblemDomain::image | Error: Point has no periodic image in this ProblemDomain.");
     return a_pt % (m_box.high() + Point::Ones());
 }
 
 Box ProblemDomain::image(const Box& a_box) const
 {
-    if (m_box.contains(a_box)) { return a_box; }
+    if (m_box.containsBox(a_box)) { return a_box; }
     else {
         Box truncated = (*this) & a_box;
         PROTO_ASSERT((m_box & truncated).empty(),

@@ -134,7 +134,7 @@ InterpStencil<T>::operator()(
 {
 #ifndef NDEBUG
     Box b = this->range(a_input.box());
-    PROTO_ASSERT(b.contains(a_box),
+    PROTO_ASSERT(b.containsBox(a_box),
             "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
 #endif
     return LazyInterpStencil<T,C,MEM,D,E>(

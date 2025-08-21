@@ -2,6 +2,8 @@
 #ifndef _PROTO_MB_LEVEL_MAP_
 #define _PROTO_MB_LEVEL_MAP_
 
+#include <optional>
+
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
 #include "Proto_MBMapOp.H"
@@ -30,7 +32,7 @@ namespace Proto
  *  data such as operators, stencils, or metrics in order to prevent computing these
  *  quantities each time apply is called.
  */
-template<template<MemType> typename MAP, MemType MEM = MEMTYPE_DEFAULT>
+template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelMap
 {
     public:
@@ -68,6 +70,8 @@ class MBLevelMap
             const MBDisjointBoxLayout& a_layout,
             Point                      a_ghost,
             unsigned int               a_focalBlock = 0);
+
+    inline void initialize() const;
 
     /// Access Cached Coordinate Values
     /** Returns an MBLevelBoxData containing the cached coordinate data.
@@ -166,16 +170,24 @@ class MBLevelMap
             unsigned int a_computeBlock,
             unsigned int a_outBlock) const;
     
+    inline Array<double, DIM> mappedCoords(
+        const Point& point,
+        const BlockIndex& block) const;
+
+    inline Array<double, DIM> mappedCoords(
+        const Point& point,
+        const BlockIndex& block,
+        const Array<double, DIM>& offset) const;
     /// Compute Mapped Coordinates
     /** Returns coordinates in mapped space of a given data point. The Coordinates
      *  are of the cell center of the point plus the offset which is in units of the grid spacing. 
      */
-    inline Array<double, DIM> mappedCoords(
-            const MBDataPoint&          a_point,
-            const Array<double, DIM>&   a_offset) const;
+//     inline Array<double, DIM> mappedCoords(
+//             const MBDataPoint&          a_point,
+//             const Array<double, DIM>&   a_offset) const;
     
-    /// Compute Mapped Coordinates (No Offset)
-    inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point) const;
+//     /// Compute Mapped Coordinates (No Offset)
+//     inline Array<double, DIM> mappedCoords(const MBDataPoint& a_point) const;
 
     /// Analytic Map (DataPoint Cell Center)
     inline Array<double, DIM> apply(const MBDataPoint& a_point) const;
@@ -201,10 +213,10 @@ class MBLevelMap
     inline const MBDisjointBoxLayout& layout() const;
     
     /// Get Mapped Grid Spacing
-    inline const Array<double, DIM>& dx(int a_block) const;
+    inline const Array<double, DIM> dx(BlockIndex a_block) const;
 
     /// Get Operator
-    inline MAP<MEM>& op(int a_block) const;
+    inline MAP& op(BlockIndex a_block) const;
 
     /// Get Ghost Sizes
     inline Array<Point, DIM+1> ghost() const { return m_ghost; }
@@ -220,14 +232,28 @@ class MBLevelMap
      */
     inline BoxData<double, DIM, MEM> X(const Box& a_box, const Array<double, DIM>& a_dx) const;
 
+    inline MAP& operator[](BlockIndex block); 
+
+    /// @brief Convert a Point from one block's index space to another by using forward / inverse mapping
+    /// @param srcPoint Point in the source block's index space
+    /// @param srcBlock Source block
+    /// @param dstBlock Destination block
+    /// @return 
+    inline Point convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const;
+
+    inline std::optional<std::pair<MBIndex, Point>> whichNeighborContains(const MBIndex& localIndex, const Point& localPoint, bool checkLocalInteriorGhostCells = true) const;
+
     private:
         Array<Point, DIM+1>             m_ghost;
         unsigned int                    m_focalBlock;
         Stencil<double>                 m_c2c;
-        mutable std::vector<MAP<MEM>>   m_ops;  ///< Map operators
+        mutable std::vector<std::shared_ptr<MAP>>   m_ops;  ///< Map operators
         std::vector<Array<double, DIM>> m_dx;   ///< Mapped space grid spacing
-        std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
-        std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
+        MBDisjointBoxLayout             m_layout;
+        mutable bool                            m_initialized; 
+        mutable std::shared_ptr<MBLevelBoxData<double, DIM, MEM, PR_NODE>>  m_X;    ///< Cached coodinate values
+        mutable std::shared_ptr<MBLevelBoxData<double, 1, MEM, PR_CELL>>    m_J;    ///< Cached Jacobian values
+        //mutable std::vector<std::unordered_map<MBPoint, MBPoint>>           m_pointMap; ///< Cached Point conversions
 };
 
 #include "implem/Proto_MBLevelMapImplem.H"

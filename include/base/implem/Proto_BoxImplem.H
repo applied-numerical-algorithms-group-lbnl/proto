@@ -1,3 +1,7 @@
+#include "../Proto_Box.H"
+
+namespace Proto {
+
 //=================================================================================================
 // Constructors ||
 //==============++ 
@@ -133,7 +137,7 @@ inline Point Box::sizes() const
 }
 
 ACCEL_DECORATION
-bool Box::contains(const Point& a_pt) const
+bool Box::containsPoint(const Point& a_pt) const
 {
     if (this->empty()){return false;}
     for(int idir = 0; idir < DIM; idir++)
@@ -151,14 +155,15 @@ bool Box::contains(const Point& a_pt) const
 }
   
 ACCEL_DECORATION
-bool Box::contains(const Box& a_rhs) const
+bool Box::containsBox(const Box& a_rhs) const
 {
-    return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));
+    return (this->containsPoint(a_rhs.m_low) && this->containsPoint(a_rhs.m_high));
 }
 
+ACCEL_DECORATION
 bool Box::onBoundary(const Point& a_p) const
 {
-    if (!(this->contains(a_p))){return false;}
+    if (!(this->containsPoint(a_p))){return false;}
     for (int ii = 0; ii < DIM; ii++)
     {
         if ((a_p[ii] == m_low[ii]) || (a_p[ii] == m_high[ii]))
@@ -170,9 +175,30 @@ bool Box::onBoundary(const Point& a_p) const
 }
 
 ACCEL_DECORATION
+Point Box::whichBoundaryContains(const Point& a_point) const
+{
+    Point hiDiff = a_point - high();
+    Point loDiff = low() - a_point;
+    Point dir = Point::Zeros();
+    for (int di = 0; di < DIM; di++)
+    {
+        if (hiDiff[di] > 0)
+        {
+            dir[di] = 1;
+        } else if (loDiff[di] > 0)
+        {
+            dir[di] = -1;
+        } else {
+            dir[di] = 0;
+        }
+    }
+    return dir;
+}
+
+ACCEL_DECORATION
 inline unsigned int Box::index(const Point& a_pt) const
 {
-    PROTO_ASSERT(contains(a_pt),
+    PROTO_ASSERT(containsPoint(a_pt),
         "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
     return Box::sindex(a_pt, m_low, m_high);
 }
@@ -255,9 +281,22 @@ void Box::operator&=(const Box& a_rhs)
     *this = intersect;
 }
 
+Box Box::operator+(const Box& a_rhs) const
+{
+    Box combined = *this;
+    combined &= a_rhs.low();
+    combined &= a_rhs.high();
+    return combined;
+}
+
+void Box::operator+=(const Box& a_rhs)
+{
+    *this = (*this) + a_rhs;
+}
+
 Box Box::operator&(const Point& a_pt) const
 {
-    if (contains(a_pt)){ return *this; }
+    if (containsPoint(a_pt)){ return *this; }
     else if(empty()) {return Box(a_pt, a_pt); }
     else {
         Point L = m_low;
@@ -273,7 +312,7 @@ Box Box::operator&(const Point& a_pt) const
 
 void Box::operator&=(const Point& a_pt)
 {
-    if (this->contains(a_pt)){return;}
+    if (this->containsPoint(a_pt)){return;}
     Box intersect = (*this) & a_pt;
     *this = intersect;
 }
@@ -594,6 +633,12 @@ Box Box::edge(const Point& a_dir, int a_dist) const
     }
 }
 
+Box Box::edge(int a_dir, Side::LoHiSide a_side, int a_dist) const
+{
+    Point dir = Point::Basis(a_dir, a_side);
+    return edge(dir, a_dist);
+}
+
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
     PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
@@ -609,6 +654,21 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
         return edge(Point::Basis(a_dir, +1), dist);
     } else {
         return Box();
+    }
+}
+
+Box Box::face(Point a_dir, int a_dist) const
+{
+    PROTO_ASSERT(a_dir.codim() == 1,
+            "Box::face | Error: Invalid direction. Must be codimension 1");
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] < 0)
+        {
+            return face(ii, Side::Lo, a_dist);
+        } else if (a_dir[ii] > 0) {
+            return face(ii, Side::Hi, a_dist);
+        }
     }
 }
 
@@ -657,20 +717,6 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
         return adjacent(dir);
     } else {
         return edge(a_dir, -a_dist);
-        /*
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            if (a_dir[ii] > 0)
-            {
-                L[ii] = H[ii] + 1;
-                H[ii] = H[ii] + size(ii);
-            } else if (a_dir[ii] < 0)
-            {
-                H[ii] = L[ii] - 1;
-                L[ii] = L[ii] - size(ii);
-            }
-        }
-        */
     }
     return Box(L,H);
 }
@@ -731,9 +777,17 @@ BoxIterator Box::rend() const
     return BoxIterator(*this, -1);
 }
 
+std::string Box::str() const
+{
+    std::stringstream oss;
+    oss << "[" << low().str() << "," << high().str() << "]";
+    return oss.str();
+}
+
 void Box::print() const 
 {
-    std::cout<<*this<<std::endl;
+    std::cout << str() << std::endl;
+    //std::cout<<*this<<std::endl;
 }
 
 size_t Box::linearSize() const
@@ -834,3 +888,4 @@ BoxIterator BoxIterator::operator--(int)
     m_pos--;
     return ptr;
 }
+} // end namespace Proto

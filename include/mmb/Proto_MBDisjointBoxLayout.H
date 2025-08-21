@@ -28,7 +28,7 @@ namespace Proto
         
         inline MBDisjointBoxLayout(
                 MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t>         a_patches,
+                std::vector<MBPoint>         a_patches,
                 std::vector<Point>               a_boxSizes);
         
         inline MBDisjointBoxLayout(
@@ -41,7 +41,7 @@ namespace Proto
         
         inline void define(
                 MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t>         a_patches,
+                std::vector<MBPoint>         a_patches,
                 std::vector<Point>               a_boxSizes);
 
         inline void define(
@@ -55,51 +55,93 @@ namespace Proto
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
-        inline std::vector<MBPatchID_t> patches() const;
+        inline std::vector<MBPoint> patches() const;
         inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
         inline Box operator[](const MBIndex& a_index) const;
         inline MBIterator begin() const;
         inline MBIterator end() const;
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
+        inline Array<double, DIM> dx(BlockIndex a_block) const;
+        inline Array<double, DIM> dx(MBIndex a_index) const;
         inline Box blockDomainBox(BlockIndex a_block) const { return getBlock(a_block).domain().box(); }
         inline unsigned int block(const MBIndex& a_index) const; 
+        inline MBPoint patch(const MBIndex& a_index) const;
         inline DisjointBoxLayout& getBlock(BlockIndex a_block);
         inline const DisjointBoxLayout& getBlock(BlockIndex a_block) const;
-        //inline std::shared_ptr<DisjointBoxLayout> getBlockPtr(BlockIndex a_block);
-        //inline std::shared_ptr<const DisjointBoxLayout> getBlockPtr(BlockIndex a_block) const;
-        //inline std::shared_ptr<DisjointBoxLayout> levelLayout() const;
         inline MBIndex find(Point a_point, BlockIndex a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
+        inline const MBProblemDomain& patchDomain() const { return partition().domain(); }
         inline std::shared_ptr<MBBoxPartition> partitionPtr() const { return m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         inline bool compatible(const MBDisjointBoxLayout& a_rhs) const;
+        inline bool compatible(const MBIndex& a_index) const;
         inline Point connectivity(
-                const MBIndex&  a_i1,
-                const MBIndex&  a_i2) const;
+            const MBPoint&  patch_1,
+            const MBPoint&  patch_2) const;
+        inline Point connectivity(
+            const MBIndex& i1,
+            const MBIndex& i2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_i1,
-                const MBIndex&  a_i2) const;
+            const MBPoint&  patch_1,
+            const MBPoint&  patch_2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
+            const MBIndex&  patch_1,
+            const MBIndex&  patch_2) const;
         inline bool isBlockBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir,
-                unsigned int    a_block) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isBlockBoundary(
+            const MBIndex&  patch,
+            Point           dir) const;
+        inline bool isBlockBoundary(
+            const MBPoint&  patch,
+            Point           dir,
+            BlockIndex      adjBlock) const;
+        inline bool isPatchOnBlockBoundary( const MBPoint& patch) const;
+        inline bool isPatchOnBlockBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isPatchInBlockBoundary( const MBPoint& patch) const;
+        inline bool isPatchInBlockBoundary( const MBPoint& patch, Point dir) const;
         inline bool isDomainBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isDomainBoundary(
+            const MBIndex&  patch,
+            Point           dir) const;
+        inline bool isPatchOnDomainBoundary( const MBPoint& patch) const;
+        inline bool isPatchOnDomainBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isPatchInDomainBoundary( const MBPoint& patch) const;
+        inline bool isPatchInDomainBoundary(
+            const MBPoint& patch,
+            Point dir) const;
+        inline bool isRefinementBoundary(
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isPatchOnRefinementBoundary( const MBPoint& patch) const;
         inline bool isInteriorBoundary(
-                const MBIndex&  a_index,
-                Point           a_dir) const;
-        inline std::vector<MBIndex> bounds(
-                const MBIndex&  a_index) const;
+            const MBPoint&  patch,
+            Point           dir) const;
+        inline bool isPatchInTriplePointRegion(const MBPoint& patch) const;
+        inline bool isPatchInTriplePointRegion(
+            const MBPoint& patch,
+            Point dir) const;
+        inline std::vector<MBIndex> adjacentIndices( const MBPoint& patch) const;
+        inline std::vector<MBIndex> adjacentIndices(
+            const MBPoint& patch,
+            Point dir) const;
         inline unsigned int size() const;
         inline unsigned int localSize() const;
         inline std::vector<Point> boxSizes() const;
+        inline Point boxSize(BlockIndex a_block) const;
         MBDisjointBoxLayout coarsen(const Point& a_refRatio) const;
         MBDisjointBoxLayout coarsen(const std::vector<Point>& a_refRatios) const;
+        void validateSelf(std::string methodName) const;
+        void validateIndex(const MBIndex& index, std::string methodName) const;
+        void validateBlock(const BlockIndex& block, std::string methodName) const; 
         inline void print() const;
         inline bool defined() const {return m_defined; }
         private:

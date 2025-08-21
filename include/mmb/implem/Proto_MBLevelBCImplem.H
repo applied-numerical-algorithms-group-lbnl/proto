@@ -1,5 +1,5 @@
 template<typename T, unsigned int C, 
-    template<MemType> typename MAP,
+    typename MAP,
     MemType MEM, Centering CTR>
 MBLevelBC<T,C,MAP,MEM,CTR>::MBLevelBC(const MBLevelMap<MAP,MEM>& a_map)
 {

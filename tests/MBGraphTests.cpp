@@ -290,6 +290,61 @@ TEST(MBGraph, TriplePoint) {
     EXPECT_TRUE(g0.isTriplePoint(2,-X-Y-Z));
 #endif
 }
+#if DIM == 3
+TEST(MBGraph, TriplePoint3D) {
+    auto I = CoordPermutation::identity();
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+    auto X = Point::X();
+    auto Y = Point::Y();
+    auto Z = Point::Z();
+
+    MBGraph g0(6);
+
+    g0.defineBoundary(0,1,X, CCW);
+    g0.defineBoundary(0,2,Y, CCW);
+    g0.defineBoundary(1,2,X, CW);
+    g0.defineBoundary(0,3,Z, I);
+    g0.defineBoundary(1,4,Z, I);
+    g0.defineBoundary(2,5,Z, I);
+    g0.defineBoundary(3,4,X, CCW);
+    g0.defineBoundary(3,5,Y, CCW);
+    g0.defineBoundary(4,5,X, CW);
+
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
+    EXPECT_TRUE(g0.isTriplePoint(0,X+Y+Z));
+
+    auto c0 = g0.getTriplePointCircuits(0, X+Y);
+    EXPECT_EQ(c0.size(), 1);
+    EXPECT_TRUE(c0[0] == std::make_pair(X,Y) || c0[0] == std::make_pair(Y,X));
+
+    auto c1 = g0.getTriplePointCircuits(0, X+Y+Z);
+    EXPECT_EQ(c1.size(), 1);
+    EXPECT_TRUE(c0[0] == std::make_pair(X,Y) || c0[0] == std::make_pair(Y,X));
+}
+#endif
+#if 1
+TEST(MBGraph, Equality) {
+    
+    auto CCW = CoordPermutation::ccw();
+    auto CW = CoordPermutation::cw();
+    auto I = CoordPermutation::identity();
+    auto X = Point::X();
+    auto Y = Point::Y();
+    
+    MBGraph G1(3), G2(3);
+
+    G1.defineBoundary(0,1,X, CCW);
+    G1.defineBoundary(0,2,Y, CCW);
+
+    G2.defineBoundary(0,1,X, CCW);
+    G2.defineBoundary(0,2,Y, CCW);
+
+    bool equal = (G1 == G2);
+
+    EXPECT_TRUE(G1 == G2);
+}
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

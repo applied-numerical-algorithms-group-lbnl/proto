@@ -1,23 +1,24 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 using namespace Proto;
 
-DisjointBoxLayout testLayout(int domainSize, Point boxSize)
-{
-    Box domainBox = Box::Cube(domainSize); 
-    Box patchBox = domainBox.coarsen(boxSize);
-    std::vector<Point> patches;
-    for (auto patch : patchBox)
+namespace {
+    DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     {
-        if (patch != Point::Zeros()) { patches.push_back(patch); }
+        Box domainBox = Box::Cube(domainSize); 
+        Box patchBox = domainBox.coarsen(boxSize);
+        std::vector<Point> patches;
+        for (auto patch : patchBox)
+        {
+            if (patch != Point::Zeros()) { patches.push_back(patch); }
+        }
+        std::array<bool, DIM> periodicity;
+        periodicity.fill(true);
+        ProblemDomain domain(domainBox, periodicity);
+        return DisjointBoxLayout(domain, patches, boxSize);
     }
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
-    ProblemDomain domain(domainBox, periodicity);
-    return DisjointBoxLayout(domain, patches, boxSize);
 }
-
 
 TEST(LevelBoxData, SetVal) {
     int domainSize = 32;
@@ -346,10 +347,10 @@ TEST(LevelBoxData, ExchangeHost)
     constexpr unsigned int C = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    int ghostSize = 1;
-    Point boxSize = Point::Ones(16);
+    int ghostSize = 2;
+    Point boxSize = Point::Ones(32);
     auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize));
+    LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize) + Point::X());
     hostData.setToZero();
     for (auto iter : layout)
     {
@@ -361,6 +362,38 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
+#if 1
+TEST(LevelBoxData, ExchangeHost_Node)
+{
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    constexpr unsigned int C = 2;
+    int domainSize = 16;
+    double dx = 1.0/domainSize;
+    int ghostSize = 1;
+    Point boxSize = Point::Ones(8);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, C, HOST, PR_NODE> hostData(layout, Point::Ones(ghostSize) + Point::X());
+    hostData.setVal(-1);
+    for (auto iter : layout)
+    {
+        auto& hostData_i = hostData[iter];
+        BoxData<double, C, HOST> tmpData(layout[iter]);
+        //tmpData.setVal(1);
+        forallInPlace_p(f_pointID, tmpData);
+        tmpData.copyTo(hostData_i);
+    }
+#if PR_VERBOSE > 0
+    h5.writeLevel(1,hostData,"ExchangeHost_Node_0");
+#endif
+    hostData.exchange();
+#if PR_VERBOSE > 0
+    h5.writeLevel(1,hostData,"ExchangeHost_Node_1");
+#endif
+    EXPECT_TRUE(testExchange(hostData));
+}
+#endif
 #ifdef PROTO_ACCEL
 TEST(LevelBoxData, ExchangeDevice)
 {

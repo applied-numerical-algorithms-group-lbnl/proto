@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 
 using namespace Proto;
 #if 1
@@ -129,24 +129,35 @@ TEST(FluxRegister, RefluxCorner) {
     h5.writeLevel(dx/refRatio[0], L1, "LevelFluxRegisterTests_L1_1");
 #endif
 
-    Box xFluxBox = Box(boxSize).adjacent(Point::X(),1);
-    Box yFluxBox = Box(boxSize).adjacent(Point::Y(),1);
-    double xUpdate = -(10 - 1)/dx;
-    double yUpdate = -(20 - 2)/dx;
+    Array<Box, DIM> fluxBoxes;
+    Array<double, DIM> updates;
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        fluxBoxes[dd] = Box(boxSize).adjacent(Point::Basis(dd),1);
+        updates[dd] = -9*(dd+1)/dx;
+    }
+    Box refinedCoarseDomain(boxSize);
     for (auto citer : grid[0])
     {
         auto& patch = L0[citer];
         for (auto pi : grid[0][citer])
         {
-            for (int cc = 0; cc < C; cc++)
+            if (refinedCoarseDomain.containsPoint(pi))
             {
-                if (xFluxBox.contains(pi))
+                for (int cc = 0; cc < C; cc++)  
                 {
-                    EXPECT_NEAR(patch(pi, cc), xUpdate, 1e-12);
-                } else if (yFluxBox.contains(pi)) {
-                    EXPECT_NEAR(patch(pi, cc), yUpdate, 1e-12);
-                } else {
                     EXPECT_NEAR(patch(pi, cc), 0, 1e-12);
+                }
+            } else {
+                for (int dd = 0; dd < DIM; dd++)
+                {
+                    if (fluxBoxes[dd].containsPoint(pi))
+                    {
+                        for (int cc = 0; cc < C; cc++)  
+                        {
+                            EXPECT_NEAR(patch(pi, cc), updates[dd], 1e-12);
+                        }
+                    }
                 }
             }
         }

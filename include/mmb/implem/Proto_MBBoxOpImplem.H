@@ -1,5 +1,5 @@
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::MBBoxOp(
         const MBLevelMap<MAP, MEM>& a_map,
@@ -7,8 +7,10 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::MBBoxOp(
 {
     auto bi = a_map.layout().block(a_index);
     auto bx = a_map.layout()[a_index];
-    this->define(bx, a_map.dx(bi));
-    m_index = a_index;
+    const auto& localLayout = a_map.layout().getBlock(bi);
+    const auto& localIndex = a_map.layout().blockIndex(a_index);
+    this->define(localLayout, localIndex, a_map.dx(bi));
+    m_mbIndex = a_index;
     
     this->m_scaleDiag = 0;
     this->m_scaleFlux = 1;
@@ -19,7 +21,8 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::MBBoxOp(
     init(); //user initialization
 }
 
-template <typename T, template<MemType> typename MAP,
+#if 0 //CURRENTLY UNUSED
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -35,8 +38,9 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     }
     (*this)(a_output, fluxes, a_state, a_aux, a_scale);
 }
+#endif
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -52,7 +56,8 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     (*this)(a_output, fluxes, a_state, a_scale);
 }
 
-template <typename T, template<MemType> typename MAP,
+#if 0
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -65,8 +70,9 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     //TODO: this can be modified later if the base class operation is not sufficient
     BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_aux, a_scale);
 }
+#endif
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -75,11 +81,28 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
         const StateData& a_state,
         T                a_scale)  const
 {
-    //TODO: this can be modified later if the base class operation is not sufficient
-    BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_scale);
+    if (a_scale == 0)
+    {
+        a_output.setVal(0);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            a_fluxes[dd].setVal(0);
+        }
+    }
+    // Call user defined function
+    this->apply(a_output, a_fluxes, a_state);
+    if (a_scale != 1.0)
+    {
+        a_output *= a_scale;
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            a_fluxes[dd] *= a_scale;
+        }
+    }
+    //BoxOp<T,C_STATE,C_AUX,MEM>::operator()(a_output, a_fluxes, a_state, a_scale);
 }
-
-template <typename T, template<MemType> typename MAP,
+#if 0 // CURRENTLY UNUSED
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 typename MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::StateData
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -92,8 +115,9 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     this->operator()(out, a_state, a_aux, a_scale);
     return out; 
 }
+#endif
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 typename MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::StateData
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
@@ -105,8 +129,47 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::operator()(
     this->operator()(out, a_state, a_scale);
     return out; 
 }
+
+template <typename T, typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+void MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::boundaryConditions(
+        Array<StateData, DIM>&  a_fluxes,
+        const StateData&        a_state) const
+{
+    //TODO: Periodicity is assumed to never come up in MMB at the time of writing
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        //TODO: to implement periodic, check if periodic along dd. If so, skip
+        Point lo = Point::Basis(dd,Side::Lo);
+        Point hi = Point::Basis(dd,Side::Hi);
+        if (this->layout().isDomainBoundary(this->index(), lo))
+        {
+            // apply high side
+            this->applyBC(a_fluxes, a_state, Face(dd,Side::Lo));
+        }
+        if (this->layout().isDomainBoundary(this->index(), hi)) 
+        {
+            // apply low side
+            this->applyBC(a_fluxes, a_state, Face(dd,Side::Hi));
+        }
+    }
+}
+
+template <typename T, typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+void MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::divergence(
+        StateData& a_divergence,
+        const Array<StateData, DIM>&  a_fluxes) const
+{
+    for (int dd = 0; dd < DIM; dd++)
+    {
+        auto DIV = Stencil<T>::FluxDivergence(dd);
+        if (dd == 0) { a_divergence |= DIV(a_fluxes[dd], 1.0/(this->dx()[dd]));}
+        else { a_divergence += DIV(a_fluxes[dd], 1.0/(this->dx()[dd])); }
+    }
+}
 #if 0
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::flux(
@@ -120,7 +183,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::flux(
     m_definedFlux = false;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::flux(
@@ -133,7 +196,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::flux(
     m_definedFlux = false;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::source(
@@ -146,7 +209,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::source(
     m_definedSrce = false;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::source(
@@ -158,7 +221,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::source(
     m_definedSrce = false;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::diag(
@@ -169,7 +232,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::diag(
     a_state.copyTo(a_diag);
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 void
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::diag(
@@ -180,7 +243,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::diag(
 }
 #endif
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 const MBDisjointBoxLayout&
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::layout() const
@@ -188,7 +251,7 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::layout() const
     return m_map.layout();
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 const MBLevelMap<MAP,MEM>&
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::map() const
@@ -196,31 +259,31 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::map() const
     return m_map;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 MBIndex
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::index() const
 {
-    return m_index;
+    return m_mbIndex;
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 unsigned int
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::block() const
 {
-    return layout().block(m_index);
+    return layout().block(m_mbIndex);
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 Box
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::box() const
 {
-    return layout()[m_index];
+    return layout()[m_mbIndex];
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 Array<T, DIM>
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::dx() const
@@ -228,18 +291,36 @@ MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::dx() const
     return m_map.dx(block());
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
+         unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+Array<T, DIM>
+MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::da() const
+{
+    auto h = this->dx();
+    Array<T,DIM> areas;
+    areas.fill(1.0);
+    for (int norm = 0; norm < DIM; norm++)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (norm != ii) { areas[norm] *= h[ii]; }
+        }
+    }
+    return areas;
+}
+
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 const BoxData<double, DIM, MEM>&
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::x() const
 {
-    return m_map.map()[m_index];
+    return m_map.map()[m_mbIndex];
 }
 
-template <typename T, template<MemType> typename MAP,
+template <typename T, typename MAP,
          unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
 const BoxData<double, 1, MEM>&
 MBBoxOp<T,MAP,C_STATE,C_AUX,MEM>::jacobian() const
 {
-    return m_map.jacobian()[m_index];
+    return m_map.jacobian()[m_mbIndex];
 }

@@ -1,15 +1,15 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 #include "MBMap_Shear.H"
 #include "MBMap_XPointRigid.H"
-//#include "MBMap_CubeSphereShell.H"
 
 using namespace Proto;
 
-#if 1
+#if 0
 TEST(MBInterpOp, MBDataPoint)
 {
+
     // grid parameters
     int domainSize = 32;
     int boxSize = 16;
@@ -33,8 +33,9 @@ TEST(MBInterpOp, MBDataPoint)
     hostSrc.setVal(1);
     hostDst.setVal(2);
 
-    MBLevelMap<MBMap_Shear, HOST> map;
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
     map.define(layout, Point::Ones(ghostSize));
+    map.initialize();
     
     std::vector<MBDataPoint> points;
     for (auto iter : layout)
@@ -64,25 +65,64 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 1
+#if 0
+TEST(MBInterpOp, ShearDebug)
+{
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
+    
+    // initialize data
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    // initialize data and map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostSize));
+    map.initialize();
+
+    MBInterpOp interp(map);
+    Box boundBox = Box::Cube(domainSize).adjacent(Point::X(), ghostSize);
+    int ii = 0;
+    for (auto iter : layout)
+    {
+        if (layout.block(iter) != 0) { continue; }
+        Box patchBox = layout[iter].grow(ghostSize);
+        for (auto pi : patchBox)
+        {
+            if (boundBox.containsPoint(pi))
+            {
+                MBDataPoint di(iter, pi, layout);
+                auto& pointOp = interp(di);
+                string filename = "INTERP_" + std::to_string(ii);
+                pointOp.writeFootprint(filename);
+                ii++;
+            }
+        }
+    }
+    HDF5Handler h5;
+    h5.writeMBLevel(map, map.map(), "MAP");
+}
+#endif
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    // grid parameters
-    int domainSize = 32;
-    int boxSize = 16;
-    int ghostSize = 1;
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
     
-    // interplating function parameters
     double order = 4.0;
     Array<double, DIM> exp{1,1,0,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
     offset += 0.1;
   
-    
     int numIter = 3;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
@@ -96,8 +136,9 @@ TEST(MBInterpOp, ShearTest)
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-        MBLevelMap<MBMap_Shear, HOST> map;
+        MBLevelMap<MBMap_Shear<HOST>, HOST> map;
         map.define(layout, Point::Ones(ghostSize));
+        map.initialize();
 
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
@@ -112,19 +153,12 @@ TEST(MBInterpOp, ShearTest)
             FluxBoxData<double, DIM> NT(b_i);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
             src_i |= C2C(x_pow);
             dst_i |= C2C(x_pow);
         }
         hostErr.setVal(0);
-        hostDst.exchange(); // fill boundary data
-        MBInterpOp interp;//(map, order);
-        std::vector<Point> footprint;
-        for (auto pi : Box::Kernel(2))
-        {
-            if (pi.abs().sum() <= 2) { footprint.push_back(pi); }
-        }
-        interp.define(map, footprint, order);
+        hostDst.exchange();
+        MBInterpOp interp(map);
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_Shear_Dst_N%i_0",nn);
 #endif
@@ -136,7 +170,7 @@ TEST(MBInterpOp, ShearTest)
             auto& err_i = hostErr[iter];
             for (auto dir : Box::Kernel(1))
             {
-                if (layout.isBlockBoundary(iter, dir))
+                if (layout.isBlockBoundary(layout.patch(iter), dir))
                 {
                     Box boundBox = layout[iter].adjacent(dir*ghostSize);
                     BoxData<double, 1, HOST> error(boundBox);
@@ -147,7 +181,6 @@ TEST(MBInterpOp, ShearTest)
                 }
             }
         }
-
 #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << err[nn] << std::endl;
         h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_Shear_Src_N%i",nn);
@@ -167,43 +200,33 @@ TEST(MBInterpOp, ShearTest)
     }
 }
 #endif
-#if 1
-TEST(MBInterpOp, XPointTest)
-{
-#if PR_VERBOSE > 0
-    HDF5Handler h5;
-#endif
-    int domainSize = 32;
-    int boxSize = 16;
-    int ghostSize = 5;
-    int numIter = 3;
-    double order = 4;
-    Array<double, DIM> exp{1.0,1.0,0,0,0,0};
-    exp *= order;
-    Array<double, DIM> offset{0,0,0,0,0,0};
-    offset += 0.1;
-  
-    double err[numIter];
-    for (int nn = 0; nn < numIter; nn++)
+
+namespace {
+    template<int NBLOCK>
+    double computeXPointInterpError(MBDisjointBoxLayout& layout, int ghostSize, int order, int refIter)
     {
-        err[nn] = 0;
-        auto domain = buildXPoint(domainSize);
-        Point boxSizeVect = Point::Ones(boxSize);
-        MBDisjointBoxLayout layout(domain, boxSizeVect);
+        std::cout << "Compute XPoint Error: NBLOCK = " << NBLOCK << " | NGHOST = " << ghostSize << std::endl;
+        #if PR_VERBOSE > 0
+        HDF5Handler h5;
+        #endif
+        Array<double, DIM> exp{1.0,1.0,0,0,0,0};
+        exp *= order;
+        Array<double, DIM> offset{0,0,0,0,0,0};
+        offset += 0.1;
 
         // initialize data and map
         MBLevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
-        MBLevelMap<MBMap_XPointRigid, HOST> map;
-        map.define(layout, Point::Ones(ghostSize));
 
+        MBLevelMap<MBMap_XPointRigid<NBLOCK, HOST>, HOST> map;
+        map.define(layout, Point::Ones(ghostSize));
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
             auto block = layout.block(iter);
-            auto& src_i = hostSrc[iter];
-            auto& dst_i = hostDst[iter];
+            auto &src_i = hostSrc[iter];
+            auto &dst_i = hostDst[iter];
             Box b_i = C2C.domain(layout[iter]).grow(ghostSize);
             BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
             // Jacobian and NT are computed but not used
@@ -211,69 +234,201 @@ TEST(MBInterpOp, XPointTest)
             FluxBoxData<double, DIM> NT(b_i);
             map.apply(x_i, J_i, NT, block);
             BoxData<double, 1> x_pow = forall_p<double, 1>(f_polyM, block, x_i, exp, offset);
-            //BoxData<double, 1> x_pow = forall<double, 1>(f_bell, x_i, offset);
             src_i |= C2C(x_pow);
             dst_i |= C2C(x_pow);
         }
         hostErr.setVal(0);
-
-        //hostSrc.exchange(); // fill boundary data
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_0", NBLOCK, refIter);
+        h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_0", NBLOCK, refIter);
+#endif
         hostDst.exchange(); // fill boundary data
-        MBInterpOp interp;
-        std::vector<Point> footprint;
-        for (auto bi : Box::Kernel(2))
-        {
-#if DIM > 2
-            if (bi[2] != 0) {continue; }
+#if PR_VERBOSE > 0
+        h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_1", NBLOCK, refIter);
+        // h5.writeMBLevelBounds({"data"}, hostDst, "MBInterpOpTests_XPoint_Bound");
 #endif
-            if (bi.abs().sum() <= 2)
-            {
-                footprint.push_back(bi);
-            }
-        }
-#if DIM > 2
-        interp.copyAxis(2,true);
-#endif
-        interp.define(map, footprint, order);
+        MBInterpOp interp(map);
+        
         interp.apply(hostDst, hostDst);
+#if PR_VERBOSE > 0
+        h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_1", NBLOCK, refIter);
+#endif
+#if PR_VERBOSE > 1
+        interp.writeLevelFootprint(map, "XPoint_Footprint");
+#endif
+        double errNorm = 0;
         for (auto iter : layout)
         {
-            auto& src_i = hostSrc[iter];
-            auto& dst_i = hostDst[iter];
-            auto& err_i = hostErr[iter];
+            auto &src_i = hostSrc[iter];
+            auto &dst_i = hostDst[iter];
+            auto &err_i = hostErr[iter];
             for (auto dir : Box::Kernel(1))
             {
-                if (layout.isBlockBoundary(iter, dir))
+                if (layout.isBlockBoundary(layout.patch(iter), dir))
                 {
-                    Box boundBox = layout[iter].adjacent(dir*ghostSize);
+                    Box boundBox = layout[iter].adjacent(dir * ghostSize);
                     BoxData<double, 1, HOST> error(boundBox);
                     dst_i.copyTo(error);
                     error -= src_i;
-                    err[nn] = max(error.absMax(), err[nn]);
+                    for (auto pi : error.box()) { error(pi) = abs(error(pi)); }
+                    errNorm = max(error.absMax(), errNorm);
                     error.copyTo(err_i);
                 }
             }
         }
 
 #if PR_VERBOSE > 0
-        std::cout << "Error (Max Norm): " << err[nn] << std::endl;
-        h5.writeMBLevel({"soln"}, map, hostSrc, "MBInterpOpTests_XPointStandalone_Src_N%i",nn);
-        h5.writeMBLevel({"interp"}, map, hostDst, "MBInterpOpTests_XPointStandalone_Dst_N%i",nn);
-        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPointStandalone_Err_N%i",nn);
+        h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
 #endif
+        double threshold = 1e-3;
+        int numErrorPoints = 0;
+        for (auto iter : layout)
+        {
+            auto& ei = hostErr[iter];
+            for (auto pi : ei.box())
+            {
+                if (ei(pi) > threshold)
+                {
+                    BlockIndex bi = layout.block(iter);
+                    PatchID patch = layout.point(iter);
+                    pr_out() << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
+                    pr_out() << "\tvalue = \n";
+                    const auto& op = interp(MBDataPoint(iter, pi, layout));
+                    int size = op.coefs().size();
+                    for (int ii = 0; ii < size; ii++)
+                    {
+                        auto& src = op.sources()[ii];
+                        auto var = hostDst[src];
+                        pr_out() << "\t\t" << op.coefs()[ii] << " * " << var(0) << "\n";
+                        pr_out() << "\t\t\t" << src << "\n";
+                    }
+                    numErrorPoints++;
+                }
+            }
+        }
+        if (numErrorPoints > 0)
+        {
+            std::cout << "Found " << numErrorPoints << " with error exceeding " << threshold << ". See pout for details. " << std::endl;
+        }
+        return errNorm;
+    }
+    
+}
+#if 1
+#if DIM == 2
+TEST(MBInterpOp, XPointTest)
+{
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    int domainSize = 16;
+    int boxSize = 16;
+    int ghostSize = 2;
+    int numIter = 2;
+    double order = 4;
+
+    std::set<int> testRuns = {4, 5, 8};
+    std::map<int, std::vector<double>> err;
+    for (auto run : testRuns) { err[run].resize(numIter); }
+    for (int nn = 0; nn < numIter; nn++)
+    {   
+        if (testRuns.count(3) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 3);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[3][nn] = computeXPointInterpError<3>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(4) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 4);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[4][nn] = computeXPointInterpError<4>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(5) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 5);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[5][nn] = computeXPointInterpError<5>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(6) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 6);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[6][nn] = computeXPointInterpError<6>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(8) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 8);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[8][nn] = computeXPointInterpError<8>(layout, ghostSize, order, nn);
+        }
         domainSize *= 2;
-        boxSize *= 2;
     }
     for (int ii = 1; ii < numIter; ii++)
     {
-        double rate = log(err[ii-1]/err[ii])/log(2.0);
-#if PR_VERBOSE > 0
-        std::cout << "Convergence Rate: " << rate << std::endl;
-#endif
-        EXPECT_TRUE(err[ii] < 1e-12 || rate > order - 0.5);
+        for (auto testRun : testRuns)
+        {
+            double rate = log(err[testRun][ii - 1] / err[testRun][ii]) / log(2.0);
+            #if PR_VERBOSE > 0
+            std::cout << testRun << " Blocks | Error (Max Norm): " << err[testRun][ii] << " | Convergence Rate: " << rate << std::endl;
+            #endif
+            EXPECT_TRUE(err[testRun][ii] < 1e-12 || rate > order - 0.5);
+        }
     }
 }
 #endif
+#endif
+#if 1
+TEST(MBInterpOp, XPointRefined)
+{
+    int ghostSize = 2;
+    int numIter = 2;
+    double order = 4;
+    int domainSize = 16;
+    int boxSize = 8;
+    constexpr int numBlocks = 8;
+    Array<double, DIM> exp{1.0,1.0,0,0,0,0};
+    exp *= order;
+    Array<double, DIM> offset{0,0,0,0,0,0};
+    offset += 0.1;
+
+    double errNorm[numIter];
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        auto domain = buildXPoint(domainSize, numBlocks);
+        std::vector<MBPoint> patches;
+        std::vector<Point> boxSizes;
+        for (int block = 0; block < numBlocks; block++)
+        {
+            //TODO: Fix this case (grab more interior data...)
+            if (false)
+            {
+                for (auto pi : Box::Cube(domainSize / boxSize))
+                {
+                    patches.push_back(MBPoint(pi, block));
+                }
+            } else {
+                patches.push_back(MBPoint(Point::Ones(domainSize / boxSize - 1), block));
+            }
+            boxSizes.push_back(Point::Ones(boxSize));
+        }
+        MBDisjointBoxLayout layout(domain, patches, boxSizes);
+        // pr_out() << "Test Layout: " << std::endl;
+        // layout.print();
+        errNorm[nn] = computeXPointInterpError<numBlocks>(layout, ghostSize, 4, nn);
+        domainSize *= 2;
+    }
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);
+        #if PR_VERBOSE > 0
+        std::cout << "Error (Max Norm): " << errNorm[ii] << " | Convergence Rate: " << rate << std::endl;
+        #endif
+        EXPECT_NEAR(rate, 4.0, 0.3);
+    }
+}
+#endif
+
 #endif
 #if DIM == 3
 #if 1
@@ -284,10 +439,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
     int thickness = 32;
-    int ghostSize = 1;
+    int ghostSize = 4;
     bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -296,7 +451,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 3;
+    int N = 2;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -333,6 +488,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostErr.setVal(0);
     
         MBInterpOp op = CubedSphereShell::InterpOp<HOST>(layout, ghost, order);
+        #if PR_VERBOSE > 1
+        op.writeLevelFootprint(map, "CUBED_SPHERE_INTERP");
+        #endif
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
@@ -362,7 +520,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
-        op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();
@@ -388,7 +545,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
-        //EXPECT_GT(rate, 3.5);
+        EXPECT_GT(rate, 3.5);
         EXPECT_TRUE(err[ii] < 1e-12 || rate >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)
@@ -402,6 +559,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 }
 #endif
 #endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

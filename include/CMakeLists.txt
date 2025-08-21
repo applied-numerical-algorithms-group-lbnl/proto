@@ -8,6 +8,7 @@ blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
 blt_add_library(NAME Headers_MMB HEADERS ProtoMMB.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/mmb
+                ${CMAKE_CURRENT_SOURCE_DIR}/utils
                 DEPENDS_ON Headers_Base)
 blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}

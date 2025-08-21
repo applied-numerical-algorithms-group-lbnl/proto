@@ -7,7 +7,7 @@
 namespace Proto
 {
 
-template<template<MemType> typename MAP, MemType MEM = MEMTYPE_DEFAULT>
+template<typename MAP, MemType MEM = MEMTYPE_DEFAULT>
 class MBAMRMap
 {
     public:
@@ -16,26 +16,33 @@ class MBAMRMap
         
         /// Non-Trivial Constructor
         inline MBAMRMap(
-                const MBAMRGrid&            a_grid,
+                const MBAMRLayout&            a_grid,
                 const Array<Point, DIM+1>&  a_ghost,
+                unsigned int                a_focalBlock = 0);
+        
+        /// Non-Trivial Constructor
+        inline MBAMRMap(
+                const MBAMRLayout&            a_grid,
+                Point                       a_ghost,
                 unsigned int                a_focalBlock = 0);
         
         /// Lazy Constructor
         inline void define(
-                const MBAMRGrid&            a_grid,
+                const MBAMRLayout&            a_grid,
                 const Array<Point, DIM+1>&  a_ghost,
                 unsigned int                a_focalBlock = 0);
         
         inline void define(
-                const MBAMRGrid&            a_grid,
+                const MBAMRLayout&            a_grid,
                 const Point                 a_ghost,
                 unsigned int                a_focalBlock = 0);
         
+        inline void initialize();
         /// Get Level Map
         inline const MBLevelMap<MAP,MEM>& getLevel(unsigned int a_level) const;
 
         /// Get Grid
-        inline const MBAMRGrid& grid() const {return *m_grid;}
+        inline const MBAMRLayout& grid() const {return *m_grid;}
 
         /// Get Cached Coordinates
         inline const MBAMRData<double, DIM, MEM, PR_NODE>& map() const {return m_X; }
@@ -46,7 +53,7 @@ class MBAMRMap
         inline MBLevelMap<MAP,MEM>& operator[](unsigned int a_level){ return *m_maps[a_level];}
 
     private:
-        const MBAMRGrid* m_grid; 
+        const MBAMRLayout* m_grid; 
         MBAMRData<double, DIM, MEM, PR_NODE> m_X;
         MBAMRData<double, 1, MEM, PR_CELL> m_J;
         std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>> m_maps;

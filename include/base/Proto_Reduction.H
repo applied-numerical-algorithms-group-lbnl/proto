@@ -1,17 +1,18 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
-//#include "Proto_gpu.H"
-#include "Proto_MemType.H"
-#include "Proto_accel.H"
-#include "Proto_macros.H"
-#include "Proto_SPMD.H"
 #include <limits>
 #include <typeinfo>
 
+#include "Proto_SPMD.H"
+#include "Proto_MemType.H"
+#include "Proto_Macros.H"
+#include "Proto_Accel.H"
+
+
 namespace Proto {
 
-enum Operation { Max, Min, Abs, Sum, SumAbs };
+enum Operation { Max, Min, Abs, Sum, SumAbs, SumSquare };
 enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line
@@ -183,7 +184,6 @@ void kernel(size_t size, const T* in, T* out, T* val)
 }
 #endif
 
-#include "implem/Proto_ReductionImplem.H"
 } // end namespace Proto
 
 #endif  // __PROTO_REDUCTION_H__

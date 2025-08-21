@@ -17,10 +17,10 @@ namespace Proto {
 */
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBLevelRK4
 {
@@ -32,7 +32,7 @@ public:
     
     MBLevelRK4(
             const MBLevelMap<MAP>&      a_map,
-            const MBInterpOp&           a_interp);
+            const MBInterpOp&  a_interp);
 
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
     inline void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
@@ -47,14 +47,14 @@ protected:
     const MBInterpOp&   m_interp;
 };
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     const MBLevelMap<MAP>&      a_map,
-    const MBInterpOp&           a_interp) : m_interp(a_interp)
+    const MBInterpOp&  a_interp) : m_interp(a_interp)
 {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Zeros());
@@ -67,10 +67,10 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
 }
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType,
     MemType MEM>
 void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     LevelStateData& a_state, 

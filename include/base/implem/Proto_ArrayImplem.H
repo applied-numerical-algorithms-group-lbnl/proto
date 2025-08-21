@@ -1,3 +1,6 @@
+#include "../Proto_Array.H"
+
+namespace Proto {
 
 template<typename T, size_t N>
 ACCEL_DECORATION
@@ -362,3 +365,4 @@ inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array)
     a_os << "]";
     return a_os;
 }
+} //end namespace Proto

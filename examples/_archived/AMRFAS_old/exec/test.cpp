@@ -715,7 +715,7 @@ int main(int argc, char** argv)
                 OP::patch soln = Soln[fiter];
                 Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
                         {
-                        if (!fineDomain.contains(a_p))
+                        if (!fineDomain.containsPoint(a_p))
                         {
                         Real x0 = a_p[0]*dx;
                         Real x1 = x0 + dx;
@@ -822,7 +822,7 @@ int main(int argc, char** argv)
             OP::patch LphiC = LPhiC[citer];
             Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_flux, OP::var& a_phiC)
             {
-                if (coarseFineDomain.contains(a_p))
+                if (coarseFineDomain.containsPoint(a_p))
                 {
                     a_flux(0) = 0;
                     //a_phiC(0) = 0;

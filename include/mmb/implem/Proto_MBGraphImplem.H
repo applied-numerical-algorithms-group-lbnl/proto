@@ -204,6 +204,7 @@ unsigned int MBGraph::numBoundaries(BlockIndex a_index, Point& a_dir) const
 
 std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
 {
+    PR_TIME("MBGraph::fullConnectivity(block, block)");
     auto& srcNode = *m_blocks[a_srcBlock];
     std::set<Point> ret;
     Box K = Box::Kernel(1);
@@ -223,6 +224,7 @@ std::vector<Point> MBGraph::fullConnectivity(BlockIndex a_srcBlock, BlockIndex a
 
 Point MBGraph::connectivity(BlockIndex a_srcBlock, BlockIndex a_dstBlock) const
 {
+    PR_TIME("MBGraph::connectivity(block, block)");
     if (a_srcBlock == a_dstBlock) { return Point::Zeros(); }
     auto conns = fullConnectivity(a_srcBlock, a_dstBlock);
     unsigned int minCodim = DIM+1;
@@ -294,6 +296,7 @@ Point MBGraph::reverseDir(
 
 inline CoordPermutation& MBGraph::rotation(BlockIndex a_block, Point a_dir) const
 {
+    PR_TIME("MBGraph::rotation(block, dir)");
     PROTO_ASSERT(a_block < size(),
             "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
     PROTO_ASSERT(a_dir.codim() == 1,
@@ -309,19 +312,25 @@ inline CoordPermutation& MBGraph::rotation(
         Point a_dir,
         BlockIndex a_dstBlock) const
 {
-    PROTO_ASSERT(a_srcBlock < size(),
-            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_srcBlock);
-    PROTO_ASSERT(a_dstBlock < size(),
-            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
-    PROTO_ASSERT(a_dir.codim() > 0,
-            "MBGraph::rotation | Error: Directional input has invalid codimension.");
-    PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
-            "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
-            a_srcBlock);
+    PR_TIME("MBGraph::rotation(block, dir, block)");
+    {
+        PR_TIME("asserts");
+        PROTO_ASSERT(a_srcBlock < size(),
+                     "MBGraph::rotation | Error: Block index %u is out of bounds.", a_srcBlock);
+        PROTO_ASSERT(a_dstBlock < size(),
+                     "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
+        PROTO_ASSERT(a_dir.codim() > 0,
+                     "MBGraph::rotation | Error: Directional input has invalid codimension: %i", a_dir.codim());
+        PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
+                     "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
+                     a_srcBlock);
+    }
     if (a_dir.codim() == 1)
     {
+        PR_TIME("codim1 block");
         return rotation(a_srcBlock, a_dir);
     } else {
+        PR_TIME("codim>1 block");
         return m_blocks[a_srcBlock]->rotation(a_dir, a_dstBlock);
     }
 }
@@ -343,6 +352,18 @@ BlockIndex MBGraph::adjacent(
     if (numBoundaries(a_srcBlock, a_dir) != 1) { return size(); }
     return m_blocks[a_srcBlock]->arcs[a_dir][0].dstBlock;
 }
+
+std::set<BlockIndex> MBGraph::adjacentBlocks(
+    BlockIndex srcBlock,
+    Point dir) const
+    {
+        std::set<BlockIndex> adjBlocks;
+        for (auto arc : boundaries(srcBlock, dir))
+        {
+            adjBlocks.insert(arc.dstBlock);
+        }
+        return adjBlocks;
+    }
 
 std::vector<MBGraphArc> MBGraph::boundaries(BlockIndex a_block, Point a_dir) const
 {
@@ -403,12 +424,19 @@ bool MBGraph::isTriplePoint(
         {
             if (a_dir[ii] == 0) { continue; }
             Point dir = a_dir;
+            // check if the orthogonal arc exists
+            Point orthDir = Point::Basis(ii,1)*a_dir;
+            auto& arcMap = m_blocks[a_srcBlock]->arcs;
+            auto arcs = arcMap.find(orthDir);
+            if (arcs == arcMap.end()) {return false; }
+            else if ((*arcs).second.size() == 0) { return false; }
+
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,
                     "MBGraph::isTriplePoint | Recursion Error");
-            if (!isTriplePoint(a_srcBlock, dir)) { return false; }
+            return (isTriplePoint(a_srcBlock, dir));
         }
-        return true;
+        return false;
     } else {
         auto dirs = a_dir.split();
         auto b0 = adjacent(a_srcBlock, dirs[0]);
@@ -425,11 +453,39 @@ bool MBGraph::isTriplePoint(
 
 }
 
+std::vector<std::pair<Point, Point>>
+MBGraph::getTriplePointCircuits(
+    BlockIndex a_srcBlock,
+    Point a_dir) const
+{
+    std::vector<std::pair<Point, Point>> circuits;
+    if (a_dir.codim() == 2)
+    {
+        if (isTriplePoint(a_srcBlock, a_dir))
+        {
+            auto codim1Dirs = a_dir.split();
+            auto dirPair = std::make_pair(codim1Dirs[0], codim1Dirs[1]);
+            circuits.push_back(dirPair);
+        }
+    } else if (a_dir.codim() > 2)
+    {
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            if (a_dir[dd] == 0) { continue; }
+            Point dir = a_dir;
+            dir[dd] = 0;
+            auto tmpCircuits = getTriplePointCircuits(a_srcBlock, dir);
+            circuits.insert(circuits.end(), tmpCircuits.begin(), tmpCircuits.end());
+        }
+    }
+    return circuits;
+}
+
 bool MBGraph::isDomainBoundary(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
-
+    if (a_dir == Point::Zeros()) { return false; }
     if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
     if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
     return true;
@@ -437,13 +493,26 @@ bool MBGraph::isDomainBoundary(
 
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
-    // TODO: Most applications won't need more than one graph
-    //  We can change this in the future if need be. -CLG
-    return (this == &a_rhs);
+    // return (this == &a_rhs);
+    for (auto n0 : m_blocks)
+    {
+        bool foundMatch = false;
+        for (auto n1 : a_rhs.m_blocks)
+        {
+            if (*n0 == *n1)
+            {
+                foundMatch = true;
+                break;
+            }
+        }
+        if (!foundMatch) { return false; }
+    }
+    return true; 
 }
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
 {
+    if (isTriplePoint(a_srcBlock, a_dir)) { return true; }
     auto& arcMap = m_blocks[a_srcBlock]->arcs;
     if (arcMap.find(a_dir) == arcMap.end()) {return false; }
     for (auto& arc : arcMap[a_dir])

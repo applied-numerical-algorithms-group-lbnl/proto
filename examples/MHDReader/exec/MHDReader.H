@@ -37,18 +37,17 @@ class MHDReader
 #endif
     }
    
-    template<unsigned int C>
-    inline Box readDomain(hid_t* a_file)
+    inline Box _readDomain(hid_t* a_file)
     {
         // READ NUM COMPONENTS
-        int numComps;
-        auto att_comps = H5Aopen(*a_file, "num_components", H5P_DEFAULT);
-        assert(H5Aread(att_comps, H5T_STD_I32LE, &numComps) >= 0); 
-        assert(H5Aclose(att_comps) >= 0);
+        //int numComps;
+        //auto att_comps = H5Aopen(*a_file, "num_components", H5P_DEFAULT);
+        //assert(H5Aread(att_comps, H5T_STD_I32LE, &numComps) >= 0); 
+        //assert(H5Aclose(att_comps) >= 0);
 
-        PROTO_ASSERT(numComps == C,
-                "MHDReader::readLevel | Error: Incorrect number of components. %i != %i",
-                C, numComps);
+        //PROTO_ASSERT(numComps == C,
+        //        "MHDReader::readLevel | Error: Incorrect number of components. %i != %i",
+        //        C, numComps);
 
         // READ DOMAIN SIZES
         int domainSize[2];
@@ -56,7 +55,29 @@ class MHDReader
         assert(H5Aread(att_domain, H5T_STD_I32LE, domainSize) >= 0); 
         assert(H5Aclose(att_domain) >= 0);
         
-        return Box(Point(1, domainSize[0], domainSize[1]));
+        int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        int thetaCoord = (rCoord + 1) % 3;
+        int phiCoord = (rCoord + 2) % 3;
+        
+        // these values are backwards in the data file
+        Point sizes = Point::Ones();
+        sizes[thetaCoord] = domainSize[0];
+        sizes[phiCoord] = domainSize[1];
+
+        return Box(sizes);
+    }
+    
+    template<typename... Args>
+    inline Box readDomain(
+            std::string a_filename,
+            Args... a_params)
+    {
+        hid_t file;
+        readFile(&file, a_filename, a_params...);
+        Box domainBox = _readDomain(&file);
+        barrier();
+        assert(H5Fclose(file) >= 0);
+        return domainBox;
     }
     
     template<typename T, unsigned int C, MemType MEM, typename... Args>
@@ -88,7 +109,7 @@ class MHDReader
     {
         hid_t file;
         readFile(&file, a_filename, a_params...);
-        Box domainBox = readDomain<C>(&file);
+        Box domainBox = _readDomain(&file);
         a_data.define(domainBox);
         readDataset(&file, a_data, 0); 
         barrier();
@@ -103,7 +124,7 @@ class MHDReader
     {
         hid_t file;
         readFile(&file, a_filename, a_params...);
-        Box domainBox = readDomain<C>(&file);
+        Box domainBox = _readDomain(&file);
 
         int numDatasets;
         auto att_domain = H5Aopen(file, "num_datasets", H5P_DEFAULT);

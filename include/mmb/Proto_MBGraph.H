@@ -31,6 +31,15 @@ namespace Proto
 
         inline ~MBGraphArc(){}
 
+        inline bool operator==(const MBGraphArc& a_rhs) const
+        {
+            return (srcBlock == a_rhs.srcBlock)
+                && (dstBlock == a_rhs.dstBlock)
+                && (srcToDst == a_rhs.srcToDst)
+                && (dstToSrc == a_rhs.dstToSrc)
+                && (R        == a_rhs.R);
+        } 
+
         inline void print() {
             std::cout << "srcBlock: " << srcBlock;
             std::cout << " | dstBlock: " << dstBlock;
@@ -62,6 +71,12 @@ namespace Proto
          *  \param a_block  The specified neighboring block 
          */
         inline CoordPermutation& rotation(Point a_dir, BlockIndex a_block);
+
+        inline bool operator==(const MBGraphNode& a_rhs) const
+        {
+            return (index == a_rhs.index)
+                && (arcs == a_rhs.arcs);
+        }
 
         BlockIndex index; ///< The block associated with this node
         mutable std::map<Point, std::vector<MBGraphArc>> arcs; ///< List of arcs
@@ -116,6 +131,8 @@ namespace Proto
                 unsigned int      a_dir,
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
+
+        
 
         /// Post Process Rotations
         /** This function is a postprocessing operation which corrects codimension-2 coordinate
@@ -207,6 +224,9 @@ namespace Proto
                 BlockIndex    a_srcBlock,
                 Point           a_dir) const;
         
+        inline std::set<BlockIndex> adjacentBlocks(
+                BlockIndex srcBlock,
+                Point dir) const;
 
         /// Equality Operator
         inline bool operator==(const MBGraph& a_rhs) const;
@@ -229,6 +249,11 @@ namespace Proto
                 BlockIndex  a_srcBlock,
                 Point        a_dir) const;
 
+        std::vector<std::pair<Point, Point>>
+        getTriplePointCircuits(
+            BlockIndex a_srcBlock,
+            Point a_dir) const;
+
         inline bool isDomainBoundary(
                 BlockIndex  a_srcBlock,
                 Point       a_dir) const;
@@ -244,8 +269,6 @@ namespace Proto
         private:
         bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;
-        
-        
     };
 #include "implem/Proto_MBGraphImplem.H"
 } // end namespace Proto

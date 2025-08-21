@@ -1,4 +1,8 @@
 #pragma once
+
+#include "../Proto_Stencil.H"
+
+namespace Proto {
 //=======================================================================================
 // Constructors ||
 //==============++ 
@@ -254,6 +258,8 @@ Stencil<T>::addCoef(T a_coef, Point a_offset)
     {
         m_coefs.push_back(a_coef);
         m_offsets.push_back(a_offset);
+        m_span &= a_offset;
+        /*
         if (!m_span.contains(a_offset))
         {
             Point low = m_span.low();
@@ -265,6 +271,7 @@ Stencil<T>::addCoef(T a_coef, Point a_offset)
             }
             m_span = Box(low,high);
         }
+        */
     }
 }
 
@@ -438,7 +445,7 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_sc
 {
 #ifndef NDEBUG
     Box b = this->range(a_src.box());
-    PROTO_ASSERT(b.contains(a_box),
+    PROTO_ASSERT(b.containsBox(a_box),
             "Stencil::operator() | Error: User provided Box is larger than the maximum range.");
     PROTO_ASSERT(!a_box.empty(),
             "Stencil::operator() | Error: User explicitly passed an empty Box.");
@@ -727,6 +734,17 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
     PR_TIME("Stencil::hostApply");
     if (m_coefs.size() == 0){return;}
 
+    if (!m_span.containsPoint(Point::Zeros()))
+    {
+        Point s = m_span.low();
+        a_src.shift(-s);
+        Stencil<T> dS = ((T)1)*Shift(-s);
+        Stencil<T> S = (*this)*dS;
+        S.hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
+        a_src.shift(s);
+        return;
+    }
+
     Box cross = a_box.flatten(0);
     int npencil = a_box.size(0);
     if (a_initToZero)
@@ -793,7 +811,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
             for (auto iter = cross.begin(); iter != cross.end(); ++iter)
             {
                 Point dpt = (*iter)*m_destRefratio + m_destShift;
-                if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+                if (!a_dest.box().containsPoint(dpt)){continue;} //can happen when destShift is non-trivial
                 for (int jj = 0; jj < this->size(); jj++)
                 {
                     Point spt = (*iter)*m_srcRefratio;
@@ -875,5 +893,4 @@ void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
     }
 #endif
 }
-
-/**/
+} // end namespace Proto

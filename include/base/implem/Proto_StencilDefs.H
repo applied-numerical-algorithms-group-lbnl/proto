@@ -1,5 +1,75 @@
-#ifndef PRroto_stencildefs
-#define PRroto_stencildefs
+#ifndef _PROTO_STENCIL_DEFS
+#define _PROTO_STENCIL_DEFS
+
+#include "../Proto_Stencil.H"
+
+namespace Proto {
+//========================================================================
+// Utililties
+//======================
+
+#ifdef PR_OPS
+template<typename T>
+std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage)
+{
+    int N = a_footprint.size();
+    if (a_cellAverage)
+    {
+        PROTO_ASSERT(N <= 4,
+            "Stencil::ExtrapCoefs | Error: Higher order version not implemented");
+    }
+    Matrix<double> A(N,N);
+    Matrix<double> b(N,1);
+    b.setVal(0);
+    b(0,0) = 1;
+
+    std::vector<double> taylorCoefs;
+    for (int ii = 0; ii < N; ii++)
+    {
+    
+        double t = taylor<double>(ii);
+        if (a_cellAverage && (ii == 2))
+        {
+            t += (taylor<double>(1)/24.0);
+        }
+        taylorCoefs.push_back(t);
+    }
+
+    for (int ii = 0; ii < N; ii++)
+    {
+        for (int jj = 0; jj < N; jj++)
+        {
+            A(ii,jj) = taylorCoefs[ii]*pow(a_footprint[jj], ii);
+        }
+    }
+    auto a = A.inverse()*b;
+    std::vector<double> ret;
+    for (int ii = 0; ii < N; ii++)
+    {
+        ret.push_back(a(ii,0));
+    }
+    return ret;
+}
+
+template<typename T>
+template<unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void Stencil<T>::ExtrapIntoBoundary(BoxData<T, C, MEM, D, E>& data, Box interior, Point dir)
+{
+    Stencil<T> extrapOp;
+    auto coefs = Stencil<T>::ExtrapCoefs({1,2,3,4});
+    for (int ii = 0; ii < 4; ii++)
+    {
+        extrapOp += coefs[ii] * Shift(dir*(-ii-1));
+    }
+    Box range = interior.adjacent(dir, 1);
+    while (data.box().containsBox(range))
+    {
+      BoxData<T,C,MEM,D,E> extrapData = extrapOp(data, range);
+      extrapData.copyTo(data);
+      range = range.shift(dir);
+    }
+}
+#endif
 
 //========================================================================
 // Stencil Definitions
@@ -456,3 +526,4 @@ Stencil<T> Stencil<T>::CornersToCells(int a_order)
 }
 
 #endif
+} // end namespace Proto

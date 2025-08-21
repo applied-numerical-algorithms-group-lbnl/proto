@@ -1,16 +1,25 @@
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 MBAMRMap<MAP,MEM>::MBAMRMap(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {
     define(a_grid, a_ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
+MBAMRMap<MAP,MEM>::MBAMRMap(
+        const MBAMRLayout&            a_grid,
+        Point                       a_ghost,
+        unsigned int                a_focalBlock)
+{
+    define(a_grid, a_ghost, a_focalBlock);
+}
+
+template<typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         Point                       a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -20,9 +29,9 @@ void MBAMRMap<MAP,MEM>::define(
     define(a_grid, ghost, a_focalBlock);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
 void MBAMRMap<MAP,MEM>::define(
-        const MBAMRGrid&            a_grid,
+        const MBAMRLayout&            a_grid,
         const Array<Point, DIM+1>&  a_ghost,
         unsigned int                a_focalBlock)
 {
@@ -35,6 +44,7 @@ void MBAMRMap<MAP,MEM>::define(
     {
         auto levelMap = std::make_shared<MBLevelMap<MAP,MEM>>(
                 m_grid->getLevel(li), a_ghost, a_focalBlock);
+        levelMap->initialize();
         m_maps.push_back(levelMap);
         xLevels.push_back(levelMap->mapData());
         jLevels.push_back(levelMap->jacobianData());
@@ -43,7 +53,16 @@ void MBAMRMap<MAP,MEM>::define(
     m_J.define(a_grid, jLevels);
 }
 
-template<template<MemType> typename MAP, MemType MEM>
+template<typename MAP, MemType MEM>
+void MBAMRMap<MAP,MEM>::initialize()
+{
+    for (int li = 0; li < m_grid->numLevels(); li++)
+    {
+        m_maps[li]->initialize();
+    }
+}
+
+template<typename MAP, MemType MEM>
 const MBLevelMap<MAP,MEM>& MBAMRMap<MAP,MEM>::getLevel(unsigned int a_level) const
 {
     PROTO_ASSERT(a_level < m_grid->numLevels(),

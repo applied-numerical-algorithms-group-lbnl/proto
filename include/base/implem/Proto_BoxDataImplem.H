@@ -12,6 +12,9 @@ static struct_##local_name app_name;
 //=================================================================================================
 // Constructors ||
 //==============++
+#include "../Proto_BoxData.H"
+
+namespace Proto {
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
@@ -66,6 +69,9 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
+//#ifndef PR_DISABLE_INIT_CHECKS
+    setVal(proto_unallocated<T>());
+//#endif
     m_alias = false;
 }
 
@@ -112,6 +118,12 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(),
+                 "A Stencil output generated uninitialized values");
+    PROTO_ASSERT(!containsInfOrNAN(),
+                 "A Stencil output generated values of inf or nan");
+#endif
 }
 
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -121,6 +133,12 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyInterpStencil<T, C, MEM, D, E>&& a_op)
     if (range.empty()) { range = a_op.inferredRange(); }
     define(range);
     a_op.apply(*this, true);
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(),
+                 "A InterpStencil output generated uninitialized values");
+    PROTO_ASSERT(!containsInfOrNAN(),
+                 "An InterpStencil output generated values of inf or nan");
+#endif
 }
 
 
@@ -479,6 +497,12 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
+#ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsUninitialized(a_srcBox),
+                 "Detected uninitialized values in source data of copyTo operation");
+    PROTO_ASSERT(!containsInfOrNAN(a_srcBox),
+                 "Detected Inf or NAN values in source data of copyTo operation");
+#endif
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "BoxData::copyTo | Error: source and destination components are restricted to \
             be the same pending a bug fix in boxDataIndexer.");
@@ -506,7 +530,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
             Src interval size %i =/= dst interval size %i on axis %i.",
             a_srcComps.size(ii), a_dstComps.size(ii),ii);
     }
-    PROTO_ASSERT(m_box.contains(a_srcBox),
+    PROTO_ASSERT(m_box.containsBox(a_srcBox),
         "BoxData::copyTo | Error: \
         Source Box input is not a subset of source array domain.");
 
@@ -679,7 +703,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
         unsigned int a_d,
         unsigned int a_e) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
             "BoxData::data | Error: Point argument must be in this->box().");   
     PROTO_ASSERT((a_c < C),
             "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
@@ -792,7 +816,7 @@ template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
     PR_TIME("BoxData::var");
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -812,7 +836,7 @@ Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt) const
 {
-    PROTO_ASSERT(m_box.contains(a_pt),
+    PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
     for(unsigned int ee = 0; ee < E; ++ee)
@@ -1003,6 +1027,8 @@ BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
     BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+    PROTO_ASSERT(!containsInfOrNAN(),
+        "A division generated values of inf or nan");
     return ret;
 }
 
@@ -1051,6 +1077,8 @@ BoxData<T,C,MEM,D,E>::operator/=(const BoxData<T,C,MEM,D,E>& a_rhs)
 {
     PR_TIME("BoxData::operator/=");
     this->operatorT<BoxDataOp::Divide>(a_rhs);
+    PROTO_ASSERT(!containsInfOrNAN(),
+    "A division generated values of inf or nan");
     return *this;
 }
 
@@ -1118,6 +1146,10 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
 {
     PR_TIME("BoxData::operator/=(scale)");
     this->operatorT<BoxDataOp::Divide>(a_scale);
+    #ifndef PR_DISABLE_INIT_CHECKS
+    PROTO_ASSERT(!containsInfOrNAN(),
+        "A division generated values of inf or nan");
+    #endif
     return *this;
 }
 
@@ -1179,9 +1211,47 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
         auto data = slice(*this,cc,dd,ee);
         data.template operatorT<BoxDataOp::Divide>(scale);
     }
+    PROTO_ASSERT(!containsInfOrNAN(),
+    "A division generated values of inf or nan");
     return *this;
 }
 
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::increment(const BoxData<T,C,MEM,D,E>& rhs, T scale)
+{
+    forallInPlace([] PROTO_LAMBDA (
+        Var<T,C,MEM,D,E>& v_out,
+        Var<T,C,MEM,D,E>& v_in,
+        T& v_scale)
+    {
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            v_out(cc,dd,ee) += (v_in(cc,dd,ee)*v_scale);
+        }
+    },*this,rhs,scale);
+}
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::incrementProduct(
+    const BoxData<T,C,MEM,D,E>& A,
+    const BoxData<T,C,MEM,D,E>& B,
+    T scale)
+{
+    forallInPlace([] PROTO_LAMBDA (
+        Var<T,C,MEM,D,E>& v_out,
+        Var<T,C,MEM,D,E>& v_A,
+        Var<T,C,MEM,D,E>& v_B,
+        T& v_scale)
+    {
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            v_out(cc,dd,ee) += (v_A(cc,dd,ee)*v_B(cc,dd,ee)*v_scale);
+        }
+    },*this ,A, B, scale);
+}
 
 //=============================================================================================
 // Utility Functions ||
@@ -1191,16 +1261,20 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
+    if (numValues() <= 0) { return; }
     PR_TIME("BoxData::setVal");
-    // PC: replacing with forallInPlace
-    //this->operatorT<BoxDataOp::Assign>(a_val);
-    forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
-                  {
-                    for (int ee = 0; ee < E; ee++)
-                      for (int dd = 0; dd < D; dd++)
-                        for (int cc = 0; cc < C; cc++)
-                          a_out(cc,dd,ee) = a_in;
-                  },*this,a_val);
+    if (MEM == HOST)
+    {
+        std::fill(data(), data()+numValues(), a_val);
+    } else {
+        forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)
+        {
+          for (int ee = 0; ee < E; ee++)
+            for (int dd = 0; dd < D; dd++)
+              for (int cc = 0; cc < C; cc++)
+                a_out(cc,dd,ee) = a_in;
+        },*this,a_val);
+    }
 }
 // Set To Zero
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
@@ -1477,6 +1551,39 @@ T BoxData<T,C,MEM,D,E>::sumAbs(int a_c, int a_d, int a_e) const
     return rxn.fetchLocal();
 }
 
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM,unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::sumSquare(Reduction<T, SumSquare, MEM>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+// Sum of Abs Values (Componentwise)
+template <class T, unsigned int C, MemType MEM,unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::sumSquare( Reduction<T, SumSquare, MEM>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+// Sum of Abs Values (Global)
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+T BoxData<T,C,MEM,D,E>::sumSquare() const
+{
+    Reduction<T,SumSquare,MEM> rxn(true);
+    reduce(rxn);
+    return rxn.fetchLocal();
+}
+
+// Sum of Values (Componentwise)
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+T BoxData<T,C,MEM,D,E>::sumSquare(int a_c, int a_d, int a_e) const
+{
+    Reduction<T,SumSquare,MEM> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetchLocal();
+}
+
+
 // Integrate (Isotropic Grid)
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 T BoxData<T,C,MEM,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
@@ -1495,7 +1602,7 @@ T BoxData<T,C,MEM,D,E>::integrate(Array<T, DIM> a_dx, int a_c, int a_d, int a_e)
 
 // Shift Domain
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
-void BoxData<T,C,MEM,D,E>::shift(const Point& a_shift)
+void BoxData<T,C,MEM,D,E>::shift(const Point& a_shift) const
 {
     m_box = m_box.shift(a_shift);
 }
@@ -1516,7 +1623,7 @@ void BoxData<T,C,MEM,D,E>::linearOut(
 {
 
     PR_TIME("BoxData::linearOut");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearOut | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1559,7 +1666,7 @@ void BoxData<T,C,MEM,D,E>::linearIn(
 {
 
     PR_TIME("BoxData::linearIn");
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
             "BoxData::linearIn | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
@@ -1672,7 +1779,7 @@ void BoxData<T,C,MEM,D,E>::printData(
         return;
     }
 
-    PROTO_ASSERT(m_box.contains(a_box),
+    PROTO_ASSERT(m_box.containsBox(a_box),
         "BoxData::printData(a_box,...) | Error: \
         Box is not a subset of the domain of *this.");
     
@@ -1773,6 +1880,68 @@ void BoxData<T,C,MEM,D,E>::printData(
     out << endl;
 }
 
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsInfOrNAN() const
+{
+    // NAN only applies to floating point data
+    if (!std::is_floating_point<T>::value) { return false; }
+    if (MEM != HOST) { return false; }
+    for (int ii = 0; ii < numValues(); ii++)
+    {
+        if (std::isnan(m_rawPtr[ii]) || std::isinf(m_rawPtr[ii])) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsInfOrNAN(Box domain) const
+{
+    // NAN only applies to floating point data
+    if (!std::is_floating_point<T>::value) { return false; }
+    if (MEM != HOST) { return false; }
+    for (auto pi : domain)
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        for (int ee = 0; ee < E; ee++)
+            if (std::isnan((*this)(pi, cc, dd, ee)) || std::isinf((*this)(pi, cc, dd, ee))) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsUninitialized() const
+{
+    if constexpr (std::is_same_v<T,bool>) { return false; }
+    if (MEM != HOST) { return false; }
+    for (int ii = 0; ii < numValues(); ii++)
+    {
+        if (m_rawPtr[ii] == proto_unallocated<T>()) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsUninitialized(Box domain) const
+{
+    if (MEM != HOST) { return false; }
+    for (auto pi : domain)
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        for (int ee = 0; ee < E; ee++)
+            if ((*this)(pi, cc, dd, ee) == proto_unallocated<T>()) { return true; }
+    }
+    return false;
+}
+
+template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+bool BoxData<T,C,MEM,D,E>::containsAddress(T* address) const
+{
+    int bufferSize = C*D*E*box().size();
+    T* buffer = m_data.get();
+    return (address >= buffer && address < buffer + bufferSize);
+}
 //=================================================================================================
 // Alias and Slice ||
 //=================++
@@ -1836,3 +2005,84 @@ BoxData<T,CC,MEM> slice(
     BoxData<T,CC,MEM> rtn(a_src.m_data, ptr, b);
     return rtn;
 }
+
+template<typename T, unsigned int C, unsigned int D, MemType MEM>
+BoxData<T,C,MEM,1> plane(
+        const BoxData<T,C,MEM,D>& a_src,
+        unsigned int a_d)
+{
+    PR_TIME("plane(BoxData<T,C,1,1>&, int)");
+    PROTO_ASSERT((a_d < D),
+        "plane(const BoxData&, uint) | Error: Invalid slicing range")
+    const Box& b = a_src.box();
+    T* ptr = (T*)(a_src.data(b.low(),0,a_d));
+    BoxData<T,C,MEM,1> rtn(a_src.m_data, ptr, b);
+    return rtn;
+}
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E>
+BoxData<T, CL, MEM, DR, E> matrixProduct(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,CL,MEM,DR,E> AB(A.box() & B.box());
+    AB.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < CL; ii++)
+    for (int jj = 0; jj < DR; jj++)
+    for (int kk = 0; kk < DL; kk++)
+    {
+        auto ABij = slice(AB, ii, jj, ee);
+        const auto Aik = slice(A,  ii, kk, ee);
+        const auto Bkj = slice(B,  kk, jj, ee);
+        ABij.incrementProduct(Aik, Bkj, scale);
+    }
+    return AB;
+}
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E>
+BoxData<T, DL, MEM, DR, E> matrixProductLeftTranspose(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,DL,MEM,DR,E> ATB(A.box() & B.box());
+    ATB.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < DL; ii++)
+    for (int jj = 0; jj < DR; jj++)
+    for (int kk = 0; kk < CL; kk++)
+    {
+        auto ATBij = slice(ATB, ii, jj, ee);
+        const auto Aki = slice(A,  kk, ii, ee);
+        const auto Bkj = slice(B,  kk, jj, ee);
+        ATBij.incrementProduct(Aki, Bkj, scale);
+    }
+    return ATB;
+}
+
+template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+    unsigned int DL, unsigned int DR, unsigned int E>
+BoxData<T, CL, MEM, CR, E> matrixProductRightTranspose(
+    const BoxData<T,CL,MEM,DL,E>& A,
+    const BoxData<T,CR,MEM,DR,E>& B,
+    T scale)
+{
+    BoxData<T,CL,MEM,CR,E> ABT(A.box() & B.box());
+    ABT.setToZero();
+    for (int ee = 0; ee < E;  ee++)
+    for (int ii = 0; ii < CL; ii++)
+    for (int jj = 0; jj < CR; jj++)
+    for (int kk = 0; kk < DL; kk++)
+    {
+        auto ABTij = slice(ABT, ii, jj, ee);
+        const auto Aik = slice(A,  ii, kk, ee);
+        const auto Bjk = slice(B,  jj, kk, ee);
+        ABTij.incrementProduct(Aik, Bjk, scale);
+    }
+    return ABT;
+}
+} // end namespace Proto

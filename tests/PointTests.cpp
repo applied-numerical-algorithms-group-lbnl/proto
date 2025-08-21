@@ -61,6 +61,127 @@ TEST(Point, BinaryReduction) {
 
 }
 
+TEST(Point, DirectionsOfCodim)
+{
+    #if DIM == 2
+        std::set<Point> codim1Soln;
+        std::set<Point> codim2Soln;
+
+        codim1Soln.insert(Point(+1,0));
+        codim1Soln.insert(Point(-1,0));
+        codim1Soln.insert(Point(0,+1));
+        codim1Soln.insert(Point(0,-1));
+
+        codim2Soln.insert(Point(+1,+1));
+        codim2Soln.insert(Point(+1,-1));
+        codim2Soln.insert(Point(-1,+1));
+        codim2Soln.insert(Point(-1,-1));
+
+        auto codim1Test = Point::DirectionsOfCodim(1);
+        EXPECT_EQ(codim1Soln.size(), codim1Test.size());
+        for (auto pi : codim1Soln)
+        {
+            EXPECT_TRUE(codim1Test.find(pi) != codim1Test.end());
+        }
+
+        auto codim2Test = Point::DirectionsOfCodim(2);
+        EXPECT_EQ(codim2Soln.size(), codim2Test.size());
+        for (auto pi : codim2Soln)
+        {
+            EXPECT_TRUE(codim2Test.find(pi) != codim2Test.end());
+        }
+    #endif
+    #if DIM == 3
+        std::set<Point> codim1Soln;
+        std::set<Point> codim2Soln;
+        std::set<Point> codim3Soln;
+
+        codim1Soln.insert(Point(+1,0,0));
+        codim1Soln.insert(Point(-1,0,0));
+        codim1Soln.insert(Point(0,+1,0));
+        codim1Soln.insert(Point(0,-1,0));
+        codim1Soln.insert(Point(0,0,+1));
+        codim1Soln.insert(Point(0,0,-1));
+
+        codim2Soln.insert(Point(+1,+1,0));
+        codim2Soln.insert(Point(+1,-1,0));
+        codim2Soln.insert(Point(-1,+1,0));
+        codim2Soln.insert(Point(-1,-1,0));
+        codim2Soln.insert(Point(+1,0,+1));
+        codim2Soln.insert(Point(+1,0,-1));
+        codim2Soln.insert(Point(-1,0,+1));
+        codim2Soln.insert(Point(-1,0,-1));
+        codim2Soln.insert(Point(0,+1,+1));
+        codim2Soln.insert(Point(0,-1,-1));
+        codim2Soln.insert(Point(0,-1,+1));
+        codim2Soln.insert(Point(0,+1,-1));
+
+        codim3Soln.insert(Point(+1,+1,+1));
+        codim3Soln.insert(Point(+1,-1,+1));
+        codim3Soln.insert(Point(-1,+1,+1));
+        codim3Soln.insert(Point(-1,-1,+1));
+        codim3Soln.insert(Point(+1,+1,-1));
+        codim3Soln.insert(Point(+1,-1,-1));
+        codim3Soln.insert(Point(-1,+1,-1));
+        codim3Soln.insert(Point(-1,-1,-1));
+
+        auto codim1Test = Point::DirectionsOfCodim(1);
+        EXPECT_EQ(codim1Soln.size(), codim1Test.size());
+        for (auto pi : codim1Soln)
+        {
+            EXPECT_TRUE(codim1Test.find(pi) != codim1Test.end());
+        }
+
+        auto codim2Test = Point::DirectionsOfCodim(2);
+        EXPECT_EQ(codim2Soln.size(), codim2Test.size());
+        for (auto pi : codim2Soln)
+        {
+            EXPECT_TRUE(codim2Test.find(pi) != codim2Test.end());
+        }
+
+        auto codim3Test = Point::DirectionsOfCodim(3);
+        EXPECT_EQ(codim3Soln.size(), codim3Test.size());
+        for (auto pi : codim3Soln)
+        {
+            EXPECT_TRUE(codim3Test.find(pi) != codim3Test.end());
+        }
+    #endif
+}
+
+TEST(Point, Directions)
+{
+    auto dirs = Point::Directions();
+    std::set<Point> correctDirs;
+    for (auto p : Box::Kernel(1))
+    {
+        if (p == Point::Zeros()) { continue; }
+        correctDirs.insert(p);
+    }
+    EXPECT_EQ(correctDirs.size(), dirs.size());
+    for (auto dir : dirs)
+    {
+        EXPECT_NE(correctDirs.find(dir), correctDirs.end());
+    }
+}
+
+TEST(Point, NonZeroIndex)
+{
+    Point p0 = Point::Zeros();
+    Point p1 = Point::Basis(0,-1);
+    Point p2 = Point::Basis(DIM-1);
+    Point p3 = Point::Ones();
+
+    EXPECT_EQ(p0.firstNonZeroIndex(), DIM);
+    EXPECT_EQ(p1.firstNonZeroIndex(), 0);
+    EXPECT_EQ(p2.firstNonZeroIndex(), DIM-1);
+    EXPECT_EQ(p3.firstNonZeroIndex(), 0);
+
+    EXPECT_EQ(p0.lastNonZeroIndex(), -1);
+    EXPECT_EQ(p1.lastNonZeroIndex(), 0);
+    EXPECT_EQ(p2.lastNonZeroIndex(), DIM-1);
+    EXPECT_EQ(p3.lastNonZeroIndex(), DIM-1);
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

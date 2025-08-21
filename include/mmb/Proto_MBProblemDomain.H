@@ -7,7 +7,66 @@
 
 namespace Proto
 {
-    typedef std::pair<Point, BlockIndex> MBPatchID_t;
+    struct MBPoint
+    {
+        PatchID point;
+        BlockIndex block;
+
+        inline MBPoint(PatchID a_patch, BlockIndex a_block) : point(a_patch), block(a_block) {}
+        inline MBPoint(const MBPoint& a_rhs) : point(a_rhs.point), block(a_rhs.block) {}
+        MBPoint& operator=(const MBPoint& a_rhs) = default;
+        inline bool operator<(const MBPoint& a_rhs) const
+        {
+            if (block == a_rhs.block)
+            {
+                return (point < a_rhs.point);
+            } else {
+                return (block < a_rhs.block);
+            }
+        }
+        inline bool operator==(const MBPoint a_rhs) const{
+            return point == a_rhs.point && block == a_rhs.block;
+        }
+        struct Hash
+        {
+            std::size_t operator()(const MBPoint &key) const
+            {
+                std::size_t seed = 0;
+
+                // Hash combine function
+                auto hash_combine = [](std::size_t& seed, std::size_t value) {
+                    seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                };
+        
+                // Hash the vector elements
+                for (int dd = 0; dd < DIM; dd++) {
+                    hash_combine(seed, std::hash<int>{}(key.point[dd]));
+                }
+        
+                // Hash the unsigned int
+                hash_combine(seed, std::hash<int>{}(key.block));
+        
+                return seed;
+            }
+        };
+        
+    };
+
+    inline MBPoint operator+(const MBPoint& mbpoint, const Point& p)
+    {
+        return MBPoint(mbpoint.point + p, mbpoint.block);
+    }
+    inline MBPoint operator+(const Point& p, const MBPoint& mbpoint)
+    {
+        return mbpoint + p;
+    }
+    inline MBPoint operator+(const MBPoint& p1, const MBPoint& p2)
+    {
+        PROTO_ASSERT(p1.block == p2.block,
+            "MBPoint::operator+ | Error: MBPoint objects are in different blocks (%i and %i)",
+            p1.block, p2.block);
+        return MBPoint(p1.point + p2.point, p1.block);
+    }
     /// Mapped Multi-Block Problem Domain
     /**
         The ProblemDomain equivalent for a MMB domain. Contains all of the
@@ -21,7 +80,9 @@ namespace Proto
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
-       
+
+        inline MBProblemDomain(std::shared_ptr<MBGraph> a_graph);
+
         // Set Size of Specified Block
         inline void defineDomain(BlockIndex a_blockID, Point a_domainSize);
         
@@ -48,7 +109,7 @@ namespace Proto
         
         // Get Graph Reference
         inline MBGraph& graph() const { return *m_graph; }
-        
+       
         // Get Graph Reference
         inline std::shared_ptr<MBGraph> graphPtr() const { return m_graph; }
         
@@ -67,13 +128,20 @@ namespace Proto
                 Point        a_dir) const;
         
         // Convert a Point Between Block Coordinate Systems
-        inline Point convert(
+        inline Point convertNode(
                 Point a_point,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock) const;
 
+        // Convert a Point Between Block Coordinate Systems
+        inline Point convertPoint(
+                Point a_point,
+                BlockIndex a_srcBlock,
+                BlockIndex a_dstBlock,
+                Centering a_ctr) const;
+
         // Convert a Box Between Block Coordinate Systems
-        inline Box convert(
+        inline Box convertBox(
                 Box a_box,
                 BlockIndex a_srcBlock,
                 BlockIndex a_dstBlock,
@@ -86,19 +154,30 @@ namespace Proto
 
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(BlockIndex a_block, Point a_refRatio) const;
-        inline bool defined();
+        inline bool defined() const;
         inline bool operator==(const MBProblemDomain& a_rhs) const;
-        inline void close();
+        inline void close() const;
         
-        inline std::vector<MBPatchID_t> patches(int a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(Point a_boxSize) const;
-        inline std::vector<MBPatchID_t> patches(const std::vector<Point>& a_boxSizes) const;
+        inline std::vector<MBPoint> patches(int a_boxSize) const;
+        inline std::vector<MBPoint> patches(Point a_boxSize) const;
+        inline std::vector<MBPoint> patches(const std::vector<Point>& a_boxSizes) const;
 
-        inline Point getDir(Point a_point, BlockIndex a_block) const;
-        inline bool inTriplePoint(Point a_point, BlockIndex a_block) const;
-        inline bool inBlockBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inDomainBoundary(Point a_point, BlockIndex a_block) const;
-        inline bool inInterior(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInTriplePoint(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInTriplePoint(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInBlockBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInDomainBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointInDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointInInterior(Point a_point, BlockIndex a_block) const;
+        
+        inline bool isPointOnBlockBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointOnBlockBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
+        
+        inline bool isPointOnDomainBoundary(Point a_point, BlockIndex a_block) const;
+        inline bool isPointOnDomainBoundary(Point a_point, BlockIndex a_block, Point a_dir) const;
 
         private:
 

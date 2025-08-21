@@ -1,4 +1,6 @@
+#include "../Proto_Forall.H"
 
+namespace Proto {
 // Helper API for dynamically determining MemType
 template<typename T>
 struct getMemType
@@ -203,6 +205,10 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 
   BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBase(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
+#ifndef PR_DISABLE_INIT_CHECKS
+  PROTO_ASSERT(!ret.containsInfOrNAN(),
+               "A forall generated values of inf or nan");
+#endif
   return ret;
 }
 
@@ -226,6 +232,10 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,MEMTYPE,D,E> ret(a_box);
   forallInPlaceBase(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
+  #ifndef PR_DISABLE_INIT_CHECKS
+  PROTO_ASSERT(!ret.containsInfOrNAN(),
+  "A forall generated values of inf or nan");
+  #endif
   return ret;
 }
 
@@ -302,6 +312,10 @@ BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 
   BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBase_p(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
+  #ifndef PR_DISABLE_INIT_CHECKS
+  PROTO_ASSERT(!ret.containsInfOrNAN(),
+  "A forall generated values of inf or nan");
+  #endif
   return ret;
 }
 
@@ -314,6 +328,10 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 {
   BoxData<T,C,MEMTYPE,D,E> ret(a_box, true);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
+  #ifndef PR_DISABLE_INIT_CHECKS
+  PROTO_ASSERT(!ret.containsInfOrNAN(),
+  "A forall generated values of inf or nan");
+  #endif
   return ret;
 }
 
@@ -823,4 +841,5 @@ inline void protoForall_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("protoForall_i");
   makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
 }

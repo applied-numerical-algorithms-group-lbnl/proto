@@ -17,7 +17,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
         Point                       a_ghost,    // additional space around each register
         bool                        a_bothSides)// allocate space on both "sides" of the boundary
 {
-    m_layout = &a_layout;
+    m_layout = a_layout;
     m_bounds.clear();
 
     for (auto iter : a_layout)
@@ -40,7 +40,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     continue;
                 }
                 // adjacent patch is in the same block
-                if (patchDomain.contains(patch + di))
+                if (patchDomain.containsPoint(patch + di))
                 {
                     continue;
                 }
@@ -51,7 +51,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
                 }
                 Box k = K.grow(shrinkDirs).shift(di);
-                PROTO_ASSERT(k.contains(di),
+                PROTO_ASSERT(k.containsPoint(di),
                              "MBLevelBoxData::define | Error: Data corruption");
                 // all patches that bound this block in the given direction
                 Box boundaryPatches = patchDomain.adjacent(di, 1);
@@ -73,7 +73,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
                         // found a valid potential neighbor (if it exists)
-                        if (boundaryPatches.contains(neighbor))
+                        if (boundaryPatches.containsPoint(neighbor))
                         {
                             auto adjPatch = R.rotateCell(
                                     neighbor, boundaryPatches, adjBoundaryPatches);
@@ -89,8 +89,6 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             Point kiAdj = a_layout.domain().graph().reverseDir(
                                     block, adjBlock, ki);
-                            //std::cout << "localBlock: " << block << " | adjBlock: " << adjBlock << " | dir: " << ki << std::endl;
-                            // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, a_depth);
                             Box adjPatchBoundary;
                             if (a_bothSides)
@@ -98,12 +96,9 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                                 int sign = a_depth / abs(a_depth);
                                 patchBoundary = patchBoundary.extrude(ki*(-sign),abs(a_depth)); 
                                 adjPatchBoundary = patchBoundary; 
-                                //adjPatchBoundary = a_layout.domain().convert(
-                                //    patchBoundary, block, adjBlock, CTR);
                             } else {
                                 adjPatchBoundary = patchBox.edge(ki, a_depth);
                             }
-                            //std::cout << "localBoundary: " << patchBoundary << " | adjBoundary: " << adjPatchBoundary << std::endl;
 
                             PROTO_ASSERT(patchBoundary.size() == adjPatchBoundary.size(), 
                                     "MBBoundaryRegister::define | Error: data corruption.");
@@ -112,7 +107,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             
                             // redundant check if the adjacent layout contains the desired patch
                             if (adjIter == *a_layout.end()) { continue; }
-                            MBBoundaryData<T, C, MEM> boundData(
+                            MBBoundaryData<T, C, MEM> boundData(a_layout,
                                 iter, adjIter, patchBoundary, adjPatchBoundary,
                                 R.inverse(), a_ghost);
                             m_bounds[key].push_back(boundData);
@@ -132,8 +127,8 @@ std::vector<MBBoundaryData<T,C,MEM>> MBBoundaryRegister<T,C,MEM,CTR>::bounds(
         Point   a_dir)
 {
     std::vector<MBBoundaryData<T,C,MEM>> empty;
-    auto block = m_layout->block(a_index);
-    auto patch = m_layout->point(a_index);
+    auto block = m_layout.block(a_index);
+    auto patch = m_layout.point(a_index);
     boundsKey_t key(patch, block, a_dir);
     if (m_bounds.find(key) == m_bounds.end())
     {
@@ -375,7 +370,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
                 
                 Box localBox_to = bound.localData->box();
-                Box adjBox_to = layout.domain().convert(
+                Box adjBox_to = layout.domain().convertBox(
                         bound.adjData->box(), localBlock, adjBlock);
 
                 MBMotionItem toMotionItem(

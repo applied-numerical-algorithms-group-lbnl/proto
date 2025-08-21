@@ -28,7 +28,7 @@ MBProblemDomain CubedSphereShell::Domain(
                 domain.defineBoundary(srcBlock, 0, -y, RSouth);
                 break;
             default:
-                MayDay<void>::Abort("NOT IMPLEMENTED");
+                MayDay<void>::Abort("Specified radial coordinate is not implemented for CubedSphereShell::Domain");
         }
         RNorth = RNorth*CW;
         RSouth = RSouth*CCW;
@@ -44,34 +44,34 @@ MBProblemDomain CubedSphereShell::Domain(
 }
     
 template<MemType MEM>
-MBLevelMap<MBMap_CubedSphereShell, MEM>
+MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>
 CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
         Point   a_ghost)
 {
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
     map.define(a_layout, a_ghost);
     return map;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-MBLevelMap<MBMap_CubedSphereShell, MEM>
+MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>
 CubedSphereShell::Map(
         const MBLevelBoxData<T,C,MEM,CTR>& a_data)
 {
-    MBLevelMap<MBMap_CubedSphereShell, HOST> map;
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
     map.define(a_data.layout(), a_data.ghost());
     return map;
 }
 
-template<template<typename, template<MemType> typename, MemType> class OpType,
+template<template<typename, typename, MemType> class OpType,
     typename T,
     MemType MEM>
-MBLevelOp<OpType, MBMap_CubedSphereShell, T>
+MBLevelOp<OpType, MBMap_CubedSphereShell<MEM>, T>
 CubedSphereShell::Operator(
-    MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map)
+    MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map)
 {
-    MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
+    MBLevelOp<OpType, MBMap_CubedSphereShell<MEM>, T> op;
     op.define(a_map);
     return op;
 }
@@ -83,23 +83,20 @@ CubedSphereShell::InterpOp(
         Point a_ghost,
         int a_order)
 {
-    std::vector<Point> footprint;
-    for (auto pi : Box::Kernel(2))
-    {
-        if (pi.abs().sum() <= 2 
-            && pi[CUBED_SPHERE_SHELL_RADIAL_COORD] == 0)
-        {
-            footprint.push_back(pi);
-        }
-    }
-    MBInterpOp op(a_ghost, a_order);
-    op.copyAxis(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+    MBInterpLayout interpLayout(a_layout, a_order);
+    interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
+    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+
+    // MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
+    // map.define(a_layout, a_ghost);
+    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>> polarMaps;
     for (int bi = 0; bi < 6; bi++)
     {
-        MBLevelMap<MBMap_CubedSphereShellPolar, MEM> polarMap;
-        polarMap.define(a_layout, a_ghost, bi);
-        op.define(polarMap, footprint, a_order, bi); 
+      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>());
+      polarMaps[bi]->define(a_layout, a_ghost, bi);
     }
+    MBInterpOp op;
+    op.define(polarMaps, interpLayout, a_order);
     return op; 
 }
     
@@ -111,7 +108,237 @@ CubedSphereShell::InterpOp(
 {
     return InterpOp<MEM>(a_data.layout(), a_data.ghost()[0], a_order);
 }
+
+template<typename T>
+int _findIndex(std::vector<T> sorted, T value)
+{
+    for (int ii = 0; ii < sorted.size(); ii++)
+    {
+        if (sorted[ii] > value) { return ii; }
+    }
+    return sorted.size()-1;
+}
+
+template<typename T>
+Array<T, 3> _getPolar(Array<T,3> X)
+{
+    T x = X[0]; T y = X[1]; T z = X[2];
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
     
+    Array<T,3> R;
+    T r = sqrt(x*x + y*y + z*z);
+    R[rCoord] = r;
+    R[thetaCoord] = acos(z/r);
+    T phi = atan2(y,x);
+    if (phi < 0) { phi += 2*M_PI; }
+    R[phiCoord] = phi;
+    return R;
+}
+#if 0
+Point _getPolarImage(Box b, Point p)
+{
+
+    //theta = coordinate 0;
+    //phi = coordinate 1;
+    //origin at north pole
+    Point shift = b.low();
+    Box b0 = b.shift(-shift);
+    Point q = p - shift;
+    
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int o = (rCoord + 1) % 3;
+    int l = (rCoord + 2) % 3;
+    
+    while (q[l] < 0)
+    {
+        q[l] += b0.sizes()[l];
+    }
+    q[l] = q[l] % b0.sizes()[l];
+    if (q[o] < 0)
+    {
+        q[l] = (q[l] + b0.sizes()[l]/2) % b0.sizes()[l];
+        q[o] = -(1 + q[o]);
+    } else if (q[o] >= b0.sizes()[o])
+    {
+        q[l] = (q[l] + b0.sizes()[l]/2) % b0.sizes()[l];
+        q[o] = b0.sizes()[l] - (q[o] % b0.sizes()[l]) - 1;
+    }
+    return q + shift;
+}
+#endif
+
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCInterpOp(
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        Side::LoHiSide             a_side)
+{
+    HDF5Handler h5;
+    PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
+            "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
+
+    // SETUP
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+    std::vector<string> varnames(3);
+    varnames[rCoord] = "R";
+    varnames[thetaCoord] = "Theta";
+    varnames[phiCoord] = "Phi";
+
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+    
+    // CACHE THETA ON EACH LATITUDE (used for fast search)
+    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
+    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
+    {
+        thetaArray[ii] = (ii == 0 ? 0 : thetaArray[ii-1] + a_dtheta[ii-1]);
+    }
+
+    // BUILD POLAR MAP ON SRC BOX
+    BoxData<T,3,MEM> srcMap(srcBox);
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+    for (auto pi : srcBox)
+    {
+        srcMap(pi,rCoord) = R;
+        srcMap(pi,thetaCoord) = thetaArray[pi[thetaCoord]];
+        srcMap(pi,phiCoord) = (pi[phiCoord] + 0.5)*dphi;
+    }
+    h5.writePatch(varnames, srcMap, "SRC_MAP");
+
+
+    // BUILD THE INTERPOLATION OPERATOR
+    MBInterpOp op;
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // All points in this block (not including ghost)
+        Box blockDomain = layout.domain().getBlock(block).box();
+        // Boundary of this block and this patch respectively
+        Box boundDomain, boundDomain_i;
+
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1) & boundDomain;
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1) & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+        // CREATE POINT INTERP OP FOR EACH POINT IN CUBE SPHERE BOUNDARY
+        for (auto p_dst : X.box())
+        {
+            auto x_dst = X.array(p_dst);    //get cartesian coords at this point
+            auto r_dst = _getPolar(x_dst);  //convert cartesian to spherical polar
+            
+            // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
+            Point p_src = Point::Zeros();
+            
+            p_src[rCoord] = RIndex;
+            p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
+            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            auto r_src = srcMap.array(p_src);
+
+            // FIND DIRECTION FROM P_SRC TO P_DST
+            // NB: dr can be very close to zero, so don't divide by it
+            auto dr = r_dst - r_src;
+            Point s0 = dr[thetaCoord] < 0 ? Point::Basis(thetaCoord,-1) : Point::Basis(thetaCoord);
+            Point s1 = dr[phiCoord] < 0 ? Point::Basis(phiCoord,-1) : Point::Basis(phiCoord);
+            // leaving srcBox is forbidden due to polar singularity
+            if (!srcBox.containsPoint(p_src + s0)) { s0 = -s0; }
+            if (!srcBox.containsPoint(p_src + s1)) { s1 = -s1; }
+            
+            // SHIFTS DEFINE 4 POINTS FOR BILINEAR INTERPOLATION
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(p_src);
+            srcPoints.push_back(p_src + s0);
+            srcPoints.push_back(p_src + s1);
+            srcPoints.push_back(p_src + s0 + s1);
+
+            // GET COORDINATES OF INTERPOLATING POINTS
+            std::vector<Array<T,3>> srcData(4);
+            for (int ii = 0; ii < 4; ii++)
+            {
+                srcData[ii] = srcMap.array(srcPoints[ii]);
+            }
+
+            // COMPUTE COEFFICIENTS
+            Array<T,2> y{r_dst[thetaCoord], r_dst[phiCoord]};
+            Array<T,2> y0{srcData[0][thetaCoord], srcData[0][phiCoord]};
+            Array<T,2> y1{srcData[3][thetaCoord], srcData[3][phiCoord]};
+            auto dy = y1 - y0;            
+
+#if 1
+            Matrix<T> A1({{1, y[0], y[1], y[0]*y[1]}});
+            Matrix<T> A2({{y1[0]*y1[1], -y1[0]*y0[1], -y1[1]*y0[0], y0[0]*y0[1]},
+                         {     -y1[1],        y0[1],        y1[1],      -y0[1]},
+                         {     -y1[0],        y1[0],        y0[0],      -y0[0]},
+                         {          1,           -1,           -1,           1}});
+            auto S = A1*A2;
+            S *= (1.0/(dy[0]*dy[1]));
+#else
+            Matrix<T> B({{1, y[0], y[1], y[0]*y[1]}});
+            Matrix<T> A({{1, y0[0], y0[1], y0[0]*y0[1]},
+                         {1, y1[0], y0[1], y1[0]*y0[1]},
+                         {1, y0[0], y1[1], y0[0]*y1[1]},
+                         {1, y1[0], y1[1], y1[0]*y1[1]}});
+            auto Ainv = A.inverse();
+            auto S = B*Ainv;
+#endif
+            
+            PROTO_ASSERT(abs(S.sum()-1) < 1e-10,
+                    "CubedSphereShell::BCInterpOp | Error: Invalide Interpolation Coefficients");
+
+            // BUILD THE OPERATOR
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = S(0,ii); };
+            std::vector<MBDataPoint> srcs(4);
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            MBDataPoint d_dst(iter, p_dst, layout);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[1], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[2], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[3], a_srcLayout);
+           
+            //arguments are dst point, src points, coefficients
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+        }
+    }
+    return op;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 CubedSphereShell::InterpBoundaries(
@@ -804,13 +1031,12 @@ CubedSphereShell::deriv3case(
   Box loBox = a_outputBox.face(a_dir,Side::Lo,1);
   Box hiBox = a_outputBox.face(a_dir,Side::Hi,1);
   output |= Stencil<T>::Derivative(1,a_dir,2)(a_input);
-  if (!a_validBox.contains(loGhostBox))
+  if (!a_validBox.containsBox(loGhostBox))
     {     
       output |= loStencil(a_input,loBox);
     }
-  if (!a_validBox.contains(hiGhostBox))
+  if (!a_validBox.containsBox(hiGhostBox))
     {      
       output |= hiStencil(a_input,hiBox);
     }
-  return output;
 }

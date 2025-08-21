@@ -1,20 +1,6 @@
 #pragma once
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
-#include "Proto_Timer.H"
-
-#include "Proto_Memory.H"
-#include "Proto_MemType.H"
-
-#include "Proto_CInterval.H"
-#include "Proto_Array.H"
-#include "Proto_Box.H"
-#include "Proto_CoordPermutation.H"
-#include "Proto_PowerItoI.H"
-#include "Proto_Stencil.H"
-#include "Proto_Reduction.H"
-#include "Proto_Stack.H"
-#include "Proto_DisjointBoxLayout.H"
 
 #include <memory>   //for shared_ptr
 #include <iostream>
@@ -22,11 +8,26 @@
 #include <iomanip>  // for pretty printing
 #include <limits>   // for max / min functions
 #include <cstdlib>  // for size_t
-#include <cmath>    // floating point abs
+#include <cmath>    // floating point abs, isnan
 #include <map>
 #include <random>   // random initialization
 #include <unordered_map>
+#include <type_traits> // used in containsNAN
 
+#include "Proto_Timer.H"
+
+#include "Proto_Accel.H"
+#include "Proto_MemType.H"
+#include "Proto_Memory.H"
+#include "Proto_Stack.H"
+#include "Proto_Array.H"
+#include "Proto_Box.H"
+#include "Proto_CoordPermutation.H"
+#include "Proto_Stencil.H"
+#include "Proto_CInterval.H"
+#include "Proto_Reduction.H" 
+
+#include "Proto_DisjointBoxLayout.H" //this shouldn't be here
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -91,8 +92,6 @@ namespace Proto
         Subtract, 
         Multiply, 
         Divide, 
-        //ThresholdMax,
-        //ThresholdMin,
         NUM_OP_TYPES
     };
 
@@ -557,7 +556,11 @@ namespace Proto
         void copyTo(
                 BoxData<T, C, MEM, D, E>&   a_dst,
                 const CoordPermutation& a_rotation) const;
-       
+      
+        /// Create a new BoxData that is transposed relative to this
+        /** Very inefficient. Only use this if you have to.  
+         */
+        BoxData<T,C,MEM,D,E> transpose(int c0, int c1) const;
         /// Rotate Coordinates
         /**
          * Permute the coordinates of this BoxData in place
@@ -722,7 +725,7 @@ namespace Proto
           */
 
         inline std::size_t size() const {return m_box.size()*C*D*E;};
-
+        inline std::size_t numValues() const { return m_box.size()*C*D*E; }
         /// Defined Query
         /**
           Returns true if this is defined (e.g., it has memory allocated to it).
@@ -907,6 +910,10 @@ namespace Proto
           \param a_scale  A scalare of type T
           */
         inline BoxData<T,C,MEM,D,E>& operator/=(const Array<T, C*D*E>& a_array);
+
+        inline void increment(const BoxData<T,C,MEM,D,E>& rhs, T scale = 1);
+
+        inline void incrementProduct(const BoxData<T,C,MEM,D,E>& A, const BoxData<T,C,MEM,D,E>& B, T scale = 1);
 
         ///@}
 
@@ -1178,6 +1185,12 @@ namespace Proto
           */
         inline void sumAbs(Reduction<T, SumAbs, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
+        
+        inline T sumSquare() const;
+        inline T sumSquare(int a_c, int a_d = 0, int a_e = 0) const;
+        inline void sumSquare(Reduction<T, SumSquare, MEM>& a_rxn) const;
+        inline void sumSquare(Reduction<T, SumSquare, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+
         /// Integrate (Isotropic Grid)
         /**
           Approximate the definite integral using an isotropic grid spacing as
@@ -1208,10 +1221,11 @@ namespace Proto
         /**
           Shifts the domain Box of this, moving all data along with it.
           e.g. data associated with Point p will now be associated with Point p + a_shift.
+          The function is const because m_box is mutable
 
           \param a_shift  A Point interpreted as a shift vector.
           */
-        inline void shift(const Point& a_shift);
+        inline void shift(const Point& a_shift) const;
 
         /// Buffer Size
         inline size_t linearSize() const;
@@ -1340,6 +1354,12 @@ namespace Proto
           \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2
         */    
         void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
+        
+        bool containsInfOrNAN() const;
+        bool containsInfOrNAN(Box domain) const;
+        bool containsUninitialized() const;
+        bool containsUninitialized(Box domain) const;
+        bool containsAddress(T* address) const;
         ///@}
         
         ///////////////////////////////////////////////////////////////////////////////////////
@@ -1367,6 +1387,11 @@ namespace Proto
             friend BoxData<_T,_CC,_MEM,1,1> slice(
                     const BoxData<_T,_C,_MEM,1,1>& a_src,
                     unsigned int a_nstart);
+        
+        template<typename _T, unsigned int _C, unsigned int _D, MemType _MEM>
+            friend BoxData<_T,_C,_MEM,1,1> plane(
+                    const BoxData<_T,_C,_MEM,_D,1>& a_src,
+                    unsigned int a_d);
 
         // TODO: Why?
         size_t size(const Box&      a_box,
@@ -1384,6 +1409,8 @@ namespace Proto
             return a_bx.size()*sizeof(T)*a_numcomps;
         }
         
+        
+
         // TODO: Chombo Compatibility?
         static int preAllocatable()
         {
@@ -1399,7 +1426,7 @@ namespace Proto
         private:
         bool                    m_alias; ///< was this created as an alias
         bool                    m_stackAlloc;
-        Box                     m_box; ///< Box defining the domain of *this
+        mutable Box             m_box; ///< Box defining the domain of *this
         ::std::shared_ptr<T>    m_data; ///< Data array
         T*                      m_rawPtr; ///< Raw pointer to the data
     }; // end class BoxData
@@ -1456,8 +1483,8 @@ namespace Proto
             }
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() {return m_data;}
             const Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM>& array() const {return m_data;}
-            Box box() {return m_box0; }
-            Box box(int a_dir) {return m_data[a_dir]->box(); }
+            Box box() const { return m_box0; }
+            Box box(int a_dir) const { return m_data[a_dir]->box(); }
         private:
             Box m_box0;
             Array<std::shared_ptr<BoxData<T,C,MEM,D,E>>,DIM> m_data;
@@ -1533,9 +1560,36 @@ namespace Proto
             const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);
 
+    template<typename T, unsigned int C, unsigned int D, MemType MEM=MEMTYPE_DEFAULT>
+    BoxData<T,C,MEM,1,1> plane(
+            const BoxData<T,C,MEM,D,1>& a_src,
+            unsigned int                a_d);
     
 ///@}
 
-#include "implem/Proto_BoxDataImplem.H"
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, DR, E>
+    matrixProduct(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, DL, MEM, DR, E>
+    matrixProductLeftTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
+    template <typename T, unsigned int CL, unsigned int CR, MemType MEM,
+        unsigned int DL, unsigned int DR, unsigned int E = 1>
+    inline BoxData<T, CL, MEM, CR, E>
+    matrixProductRightTranspose(
+        const BoxData<T,CL,MEM,DL,E>& A,
+        const BoxData<T,CR,MEM,DR,E>& B,
+        T scale = 1.0);
+
 } //end Proto namespace
 #endif //end include guard

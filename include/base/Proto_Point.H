@@ -1,13 +1,15 @@
 #pragma once
 #ifndef _PROTO_POINT_
 #define _PROTO_POINT_
-#include "Proto_accel.H"
-#include "Proto_LoHiSide.H"
-
-#include "Proto_PAssert.H"
 
 #include <iostream>
+#include <sstream>
 #include <array>
+#include <set>
+
+#include "Proto_Accel.H"
+#include "Proto_Face.H"
+#include "Proto_PAssert.H"
 
 namespace Proto
 {
@@ -142,6 +144,10 @@ namespace Proto
         ACCEL_DECORATION inline static Point X() { return Basis(0); }
         ACCEL_DECORATION inline static Point Y() { return Basis(1); }
         ACCEL_DECORATION inline static Point Z() { return Basis(2); }
+
+        inline static std::set<Point> Directions();
+        inline static std::set<Point> DirectionsOfCodim(int a_codim);
+        
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -435,9 +441,23 @@ namespace Proto
         */
         inline std::array<Point, DIM> perpUnit() const;
 
+        inline int firstNonZeroIndex() const;
+
+        inline int lastNonZeroIndex() const;
+
+        /// Coordinates of non-zero entries
+        inline std::vector<int> coords() const;
+
+        /// Coordinates of zero entries
+        inline std::vector<int> perpCoords() const;
+
         /// Scaled Unit Vectors
         inline std::vector<Point> split() const;
         
+        /// Returns a vector of Points each of which are this dotted into a subset of unit vectors
+        /// The zero vector is omitted
+        inline std::vector<Point> subset() const;
+
         /// Convert Point to Direction
         /** A "direction" is defined as a Point with values limited to 1, 0, and -1.
          */
@@ -474,7 +494,7 @@ namespace Proto
              Output is formatted: <code>(p1,p2,...)</code>
         */
         inline void print() const;
-
+        inline std::string str() const;
         ///@}
 
 
@@ -517,7 +537,7 @@ namespace Proto
     /// Unary Negation
     inline Point operator-(Point a_pt) { return a_pt*(-1); }
 
-    inline Point minPoint(Point& a_p1, Point& a_p2)
+    inline Point minPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)
@@ -527,7 +547,7 @@ namespace Proto
         return p;
     }
 
-    inline Point maxPoint(Point& a_p1, Point& a_p2)
+    inline Point maxPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)
@@ -537,7 +557,7 @@ namespace Proto
         return p;
     }
 
-    inline Point absMaxPoint(Point& a_p1, Point& a_p2)
+    inline Point absMaxPoint(Point a_p1, Point a_p2)
     {
         Point p;
         for (int ii = 0; ii < DIM; ii++)
@@ -548,7 +568,5 @@ namespace Proto
     }
 
     ///@}
-
-#include "implem/Proto_PointImplem.H"
 } //end namespace Proto
 #endif //end include guard

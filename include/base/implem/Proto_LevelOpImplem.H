@@ -47,7 +47,7 @@ void LevelOp<OpType, T, BCType, MEM>::define(DisjointBoxLayout& a_layout, Array<
     int index = 0;
     for (auto iter : a_layout)
     {
-        auto op = std::make_shared<OpType<T,MEM>>(a_layout[iter], a_dx);
+        auto op = std::make_shared<OpType<T,MEM>>(a_layout, iter, a_dx);
         m_ops.push_back(op);
         // make sure the user-defined initialization is called
         m_ops[index]->init();

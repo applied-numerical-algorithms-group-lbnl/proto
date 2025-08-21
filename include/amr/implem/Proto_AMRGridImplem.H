@@ -222,7 +222,6 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     Point tagRefRatio = crseLayout.boxSize() / patchRefRatio;
     for ( auto iter : a_bufferedTags)
     {
-      //auto& patch = a_bufferedTags[iter];
         auto& patch = hostBufferedTags[iter];
         TagDataHost tags(a_bufferedTags.layout()[iter].coarsen(tagRefRatio));
         tags |= Stencil<short>::Sum(tagRefRatio)(patch);
@@ -236,7 +235,6 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         }
     }
   
-    //ProblemDomain fineProblemDomain = crseLayout.domain().refine(Point::Ones(PR_AMR_REFRATIO));
     ProblemDomain fineProblemDomain = crseLayout.domain().refine(m_refRatios[a_level]);
     DisjointBoxLayout fineLayout(fineProblemDomain, taggedPatches.points(), a_fineBoxSize);
     if (a_level + 1 == m_layouts.size())

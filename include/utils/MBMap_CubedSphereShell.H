@@ -1,10 +1,16 @@
 #ifndef _PROTO_MBMAP_CUBED_SPHERE_SHELL_
 #define _PROTO_MBMAP_CUBED_SPHERE_SHELL_
 
+#include <cmath> //for atan2
+#if 0
+#define CUBED_SPHERE_SHELL_R0 1495978707000.0
+#define CUBED_SPHERE_SHELL_R1 17951744484000.0
+#define CUBED_SPHERE_SHELL_RADIAL_COORD 0
+#else
 #define CUBED_SPHERE_SHELL_R0 0.9
 #define CUBED_SPHERE_SHELL_R1 1.0
 #define CUBED_SPHERE_SHELL_RADIAL_COORD 2
-
+#endif
 namespace Proto
 {
 
@@ -83,6 +89,74 @@ namespace {
     }
     
     ACCEL_DECORATION
+    void f_cubedSphereInverseMap(
+            Array<double, DIM>& a_XMap,
+            const Array<double, DIM>& a_XCart,
+            int a_block)
+    {
+        constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        constexpr double r0 = CUBED_SPHERE_SHELL_R0;
+        constexpr double r1 = CUBED_SPHERE_SHELL_R1;
+        double xi = 0;
+        double eta = 0;
+        double x = a_XCart[0];
+        double y = a_XCart[1];
+        double z = a_XCart[2];
+        double r = sqrt(x*x + y*y + z*z);
+        switch (a_block)
+        {
+            case 0:
+                xi = atan2(x,-z);
+                eta = atan2(-y,-z); 
+                break;
+            case 1:
+                xi = atan2(x,z);
+                eta = atan2(y,z);
+                break;
+            case 2:
+                xi = atan2(x,-y);
+                eta = atan2(z,-y); 
+                break;
+            case 3:
+                xi = atan2(y,x);
+                eta = atan2(z,x);
+                break;
+            case 4:
+                xi = atan2(-x,y);
+                eta = atan2(z,y);
+                break;
+            case 5:
+                xi = atan2(-y,-x);
+                eta = atan2(z,-x);
+                break;
+            default:
+                xi = 0;
+                eta = 0;
+                break;
+        }
+        r = (r - r0)/(r1-r0);
+        xi = (xi + M_PI/4.0)*(2.0/M_PI);
+        eta = (eta + M_PI/4.0)*(2.0/M_PI);
+        switch (r_dir)
+        {
+            case 0:
+                {
+                    a_XMap[0] = r;
+                    a_XMap[1] = xi;
+                    a_XMap[2] = eta;
+                    break;
+                }
+            case 2:
+                {
+                    a_XMap[0] = xi;
+                    a_XMap[1] = eta;
+                    a_XMap[2] = r;
+                    break;
+                }
+        }
+    }
+    
+    ACCEL_DECORATION
     void f_cartesianToPolar(
             Array<double, DIM>&       a_R,
             double&                   a_J,
@@ -152,6 +226,74 @@ namespace {
         a_R[(r_dir + 1) % 3] = theta;
         a_R[(r_dir + 2) % 3] = phi;
     }
+
+    ACCEL_DECORATION
+    void f_polarToCartesian(
+            Array<double, DIM>&       a_X,
+            const Array<double, DIM>& a_R,
+            int                       a_focalBlock)
+    {
+        constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
+        
+        double R = a_R[r_dir];
+        double theta = a_R[(r_dir + 1) % 3];
+        double phi = a_R[(r_dir + 2) % 3];
+
+        double x = R*sin(phi)*cos(theta);
+        double y = R*sin(phi)*sin(theta);
+        double z = R*cos(phi);
+
+        double x0, y0, z0;
+        switch (a_focalBlock)
+        {
+            case 0:
+                {
+                    z0 = -x;
+                    y0 = y;
+                    x0 = z;
+                    break;
+                }
+            case 1:
+                {
+                    z0 = x;
+                    y0 = y;
+                    x0 = -z;
+                    break;
+                }
+            case 2:
+                {
+                    y0 = -x;
+                    x0 = y;
+                    z0 = z;
+                    break;
+                }
+            case 3:
+                {
+                    x0 = x;
+                    y0 = y;
+                    z0 = z;
+                    break;
+                }
+            case 4:
+                {
+                    y0 = x;
+                    x0 = -y;
+                    z0 = z;
+                    break;
+                }
+            case 5:
+                {
+                    x0 = -x;
+                    y0 = -y;
+                    z0 = z;
+                    break;
+                }
+        }
+        
+        a_X[0] = x0;
+        a_X[1] = y0;
+        a_X[2] = z0;
+    }
 }
 
 /// Cubed Sphere Map
@@ -196,6 +338,32 @@ public:
         auto block = this->block();
         f_cubedSphereMap(X, J, a_Xi, block);
         return X;
+    }
+    
+    inline void inverse(
+            BoxData<double, DIM, MEM>& a_XMap,
+            const BoxData<double, DIM, MEM>& a_XCart)
+    {
+        auto block = this->block();
+        forallInPlace(
+            [] PROTO_LAMBDA (
+                Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0,
+                int a_block)
+            {
+                Array<double, DIM> X0;
+                Array<double, DIM> X;
+                for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
+                f_cubedSphereInverseMap(X, X0, a_block);
+                for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
+            }, a_XMap, a_XCart, block);
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_XCart)
+    {
+        Array<double, DIM> XMap;
+        auto block = this->block();
+        f_cubedSphereInverseMap(XMap, a_XCart, block);
+        return XMap;
     }
 };
 
@@ -269,6 +437,48 @@ public:
         f_cubedSphereMap(Xc, J, a_Xi, block);
         f_cartesianToPolar(X, J, Xc, focalBlock);
         return X;
+    }
+
+    inline void inverse(
+        BoxData<double, DIM, MEM>& a_XMap,
+        const BoxData<double, DIM, MEM>& a_R)
+    {
+        auto block = this->block();
+        auto focus = this->focalBlock();
+        BoxData<double, DIM, MEM> XCart(a_R.box());
+        forallInPlace(
+            [] PROTO_LAMBDA (
+                Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_R,
+                int a_focus)
+            {
+                Array<double, DIM> X;
+                Array<double, DIM> R;
+                for (int dir = 0; dir < DIM; dir++) { R[dir] = a_R(dir); };
+                f_polarToCartesian(X, R, a_focus);
+                for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
+            }, XCart, a_R, focus);
+        forallInPlace(
+            [] PROTO_LAMBDA (
+                Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_XCart,
+                int a_block)
+            {
+                Array<double, DIM> X0;
+                Array<double, DIM> X;
+                for (int dir = 0; dir < DIM; dir++) { X[dir] = a_XCart(dir); };
+                f_cubedSphereInverseMap(X0, X, a_block);
+                for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X0[dir]; }
+            }, a_XMap, XCart, block);
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_R)
+    {
+        Array<double, DIM> XMap;
+        Array<double, DIM> X;
+        auto focus = this->focalBlock();
+        auto block = this->block();
+        f_polarToCartesian(X, a_R, focus);
+        f_cubedSphereInverseMap(XMap, X, block);
+        return XMap;
     }
 };
 

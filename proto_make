@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 from argparse import *
 import os
 import glob
@@ -7,7 +7,7 @@ import subprocess
 import shutil
 import sys
 
-home_dir = os.getcwd();
+home_dir = os.getcwd()
 dash = '-' *100
 
 # Parse Arguments
@@ -24,13 +24,19 @@ parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
 parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
 parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
 parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
+parser.add_argument('-n', '--NPROC', type=int, help='Number of CPUS [1]', default='1')
+parser.add_argument('--RESTART', type=int, help="Restart test suite from this test", default='0')
+parser.add_argument('--DISABLE_INIT_CHECKS', help="Disable the automatic checks for uninitialized data", default='0')
 args = parser.parse_args()
 
 # Retrieve Targets
 test_files = glob.glob('./tests/*Tests.cpp')
+perf_files = glob.glob('./perf/*Perf.cpp')
 example_dirs = os.listdir('./examples')
 tests = []
 examples = []
+perfs = []
+
 targets = ['ALL (build everything)', 'TEST (build everything and run all tests)']
 if (args.OPS == 'ON'):
     for e in example_dirs:
@@ -41,8 +47,11 @@ if (args.OPS == 'ON'):
         examples.append(e)
 for f in test_files:
     tests.append(f.split('/')[-1].split('.')[0])
+for f in perf_files:
+    perfs.append(f.split('/')[-1].split('.')[0])
 
 # Print targets if TARGET == LIST
+
 print_width = 3
 if (args.TARGET == 'LIST'):
     print(dash)
@@ -81,6 +90,17 @@ if (args.TARGET == 'LIST'):
             ii = 0
     if (ii > 0): print('')
     print(dash)
+    print('\nPerformance Targets:')
+    ii = 0
+    print(dash)
+    for p in perfs:
+        print('{:<30}'.format(p),)
+        ii += 1
+        if ii % print_width == 0:
+            print('')
+            ii = 0
+    if (ii > 0): print('')
+    print(dash)
     sys.exit()
 
 # Remove existing build directory
@@ -102,6 +122,7 @@ CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
 CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
 CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
 CMAKE_FLAGS += "-D ENABLE_ALL_TESTS=ON" + " "
+CMAKE_FLAGS += "-D DISABLE_INIT_CHECKS=" + args.DISABLE_INIT_CHECKS + " "
 #CMAKE_FLAGS += "-D CMAKE_VERBOSE_MAKEFILE:BOOL=ON"
 
 CMAKE_COMMAND = "cmake -B build " + CMAKE_FLAGS
@@ -109,10 +130,41 @@ print(CMAKE_COMMAND)
 os.system(CMAKE_COMMAND)
 
 # Build Targets
-if ['ALL', 'TEST'].count(args.TARGET) > 0:
-    os.system('cmake --build build/')
-    if args.TARGET == 'TEST':
-        os.system('cmake --build build/ --target test')
+# if ['ALL', 'TEST'].count(args.TARGET) > 0:
+#     os.system('cmake --build build/')
+#     if args.TARGET == 'TEST':
+#         os.system('cmake --build build/ --target test -j 22')
+# else:
+# 	os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
+# 	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
+
+# If TARGET is TEST, build and run tests selectively
+failed_tests = []
+successful_tests = []
+if args.TARGET == 'TEST':
+    #os.system('cmake --build build/')  # General build step
+    for i, test in enumerate(tests):
+        if i < args.RESTART:
+            print(f"Skipping {test} (before restart index {args.RESTART})")
+            continue
+        print(f"\nBuilding {test}...")
+        result = subprocess.run(f'cmake --build build/ --target {test}', shell=True)
+        if result.returncode != 0:
+            print(f"Error: Failed to build {test}!")
+            failed_tests.append(test)
+        else:
+            successful_tests.append(test)
+    
+    if successful_tests:
+        print("Running tests...")
+        test_regex = "|".join(successful_tests)  # Run only successfully built tests
+        test_command = f'ctest --test-dir build --output-on-failure --tests-regex "{test_regex}"'
+        subprocess.run(test_command, shell=True)
+    
+    if failed_tests:
+        print("The following tests failed to build:")
+        for test in failed_tests:
+            print(f" - {test}")
 else:
-	os.system('cmake --build build/ --target ' + args.TARGET)
-	os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')
+    os.system('cmake --build build/ --target ' + args.TARGET + ' -j 22')
+    os.symlink('./build/bin/' + args.TARGET, args.TARGET + '.exe')

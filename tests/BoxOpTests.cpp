@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
+#include "TestFunctions.H"
 #include "BoxOp_TestFlux.H"
 #include "BoxOp_TestSource.H"
 #include "BoxOp_TestDiag.H"
@@ -20,8 +20,12 @@ TEST(BoxOp, Flux) {
     double opScale = 17.0;
 
     Box B0 = Box::Cube(domainSize);
-    
-    OP op(B0, dx);
+    Array<bool, DIM> periodicity;
+    periodicity.fill(false);
+    ProblemDomain domain(B0,periodicity);
+    DisjointBoxLayout layout(domain, B0.sizes());
+
+    OP op(layout, *layout.begin(), dx);
     op.setFluxScale(fluxScale);
     
     Box B1 = B0.grow(OP::ghost());
@@ -85,8 +89,12 @@ TEST(BoxOp, Source) {
     double opScale = 17.0;
 
     Box B0 = Box::Cube(domainSize);
+    Array<bool, DIM> periodicity;
+    periodicity.fill(false);
+    ProblemDomain domain(B0,periodicity);
+    DisjointBoxLayout layout(domain, B0.sizes());
     
-    OP op(B0, dx);
+    OP op(layout, *layout.begin(), dx);
     op.setFluxScale(fluxScale);
     
     Box B1 = B0.grow(op.ghost());
@@ -123,7 +131,12 @@ TEST(BoxOp, Diag) {
     double opScale = 17.0;
 
     Box B0 = Box::Cube(domainSize);
-    OP op(B0, dx);
+    Array<bool, DIM> periodicity;
+    periodicity.fill(false);
+    ProblemDomain domain(B0,periodicity);
+    DisjointBoxLayout layout(domain, B0.sizes());
+    
+    OP op(layout, *layout.begin(), dx);
     op.setDiagScale(fluxScale);
     Box B1 = B0.grow(op.ghost());
     Box B2 = B0.grow(op.auxGhost());

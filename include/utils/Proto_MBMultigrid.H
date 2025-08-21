@@ -7,10 +7,10 @@
 namespace Proto {
 
 template <
-    template<typename, template<MemType> typename, MemType> class OPType,
-    template<MemType> class MAP,
+    template<typename, typename, MemType> class OPType,
+    class MAP,
     typename T,
-    template<typename, unsigned int, template<MemType> typename, MemType, Centering> class BCType = NullBC,
+    template<typename, unsigned int, typename, MemType, Centering> class BCType = NullBC,
     MemType MEM = MEMTYPE_DEFAULT>
 class MBMultigrid
 {
@@ -37,7 +37,7 @@ public:
     
     inline T solve(
             LevelStateData& a_state,
-            LevelStateData& a_force,
+            const LevelStateData& a_force,
             int             a_maxIter,
             T               a_tolerance);
 
@@ -80,6 +80,8 @@ public:
     inline LOP& op() { return op(m_numLevels-1); }
     inline MBInterpOp& interpOp(int a_level) { return *m_blockInterp[a_level]; }
     inline MBInterpOp& interpOp() { return interpOp(m_numLevels-1); }
+    inline double lambda(int a_level) const { return m_lambda[a_level]; }
+    inline double lambda() const { return lambda(m_numLevels-1); }
     inline MBLevelMap<MAP>& map(int a_level) { return m_maps[a_level]; }
     inline MBLevelMap<MAP>& map() { return map(m_numLevels-1); }
     inline void relax(
@@ -94,7 +96,13 @@ public:
     {
         relax(a_state, a_force, a_numIter, m_numLevels-1);
     }
-private:
+    inline void interpBlockBoundaries(LevelStateData& a_data, int a_level)
+    {
+        a_data.exchange();
+        m_blockInterp[a_level]->apply(a_data, a_data);
+    }
+
+    inline void applyHomogeneousBC(LevelStateData& a_data);
 
     // V Cycle subroutines
     inline void fineCorrect(
@@ -127,6 +135,12 @@ private:
         vCycle(a_state, a_force, m_numLevels-1);
     }
 
+    private:
+
+    std::vector<MBDisjointBoxLayout> computeLayouts(const MBDisjointBoxLayout& fineLayout) const;
+    bool canCombineCoarsePatches(const MBDisjointBoxLayout& fineLayout, Point refRatio) const;
+    void initializeDataHolders(const std::vector<MBDisjointBoxLayout>& layouts);
+
     // solver temporaries
     std::vector<std::shared_ptr<LevelStateData>>   m_state;    
     std::vector<std::shared_ptr<LevelStateData>>   m_state_0;    
@@ -134,8 +148,8 @@ private:
     std::vector<std::shared_ptr<LevelStateData>>   m_residual; 
     std::vector<std::shared_ptr<LevelStateData>>   m_local; 
    
-    std::vector<MBLevelMap<MAP>>                   m_maps;
-    std::vector<std::shared_ptr<MBInterpOp>>       m_blockInterp;
+    std::vector<MBLevelMap<MAP>>                        m_maps;
+    std::vector<std::shared_ptr<MBInterpOp>>   m_blockInterp;
 
     std::vector<LOP>              m_ops;
 
@@ -148,6 +162,7 @@ private:
     int m_numPostRelax;
     int m_numBottomRelax;
     int m_numLevels;
+    std::vector<Point> m_refRatios;
 
     int m_solveIter;
     int m_relaxIter;

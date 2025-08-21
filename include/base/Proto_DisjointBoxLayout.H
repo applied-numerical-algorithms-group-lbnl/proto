@@ -123,7 +123,7 @@ namespace Proto
           */
         inline void define(
                 const ProblemDomain   & a_problemDomain,
-                const vector<Point>   & a_coarsenedPatches,
+                const vector<PatchID> & a_patchIDs,
                 const Point           & a_boxSize);
 
         ///  Define (Partial Domaini - Simple)
@@ -258,8 +258,15 @@ namespace Proto
         /// Size
         /**
           Return the number of Boxes contained in *this including those on other processors.
+          Deprecated: Use numBoxes() instead for improved in situe documentation.
         */
         inline unsigned int size() const;
+    
+        /// NumBoxes
+        /** Returns the number of Boxes contained in *this including those on other processors.
+         *  This function is identical to the deprecated function size()
+         */ 
+        inline unsigned int numBoxes() const;
 
         /// Local Size
         /**
