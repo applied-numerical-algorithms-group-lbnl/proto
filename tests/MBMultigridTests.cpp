@@ -352,7 +352,7 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     int domainSize = 16;
     int boxSize = 8;
     constexpr int numBlocks = 5;
-    int numLevels = log(domainSize)/log(2.0);
+    int numLevels = log(domainSize)/log(2.0)-2;
     Point refRatio = Point::Ones(2);
    
     auto domain = buildXPoint(domainSize, numBlocks);
@@ -371,9 +371,9 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     phi.setVal(0);
     res.setVal(0);
 #if PR_VERBOSE > 0
-    h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE_XPOINT");
-    h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_XPOINT");
-    h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
+    // h5.writeMBLevel({"rhs"}, map, rhs, "RHS_LAPLACE_XPOINT");
+    // h5.writeMBLevel({"phi"}, map, phi, "PHI_LAPLACE_XPOINT");
+    // h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
 #endif
     mg.solve(phi, rhs, 20, 1e-10);
 }

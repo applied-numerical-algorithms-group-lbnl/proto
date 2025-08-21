@@ -87,6 +87,8 @@ CubedSphereShell::InterpOp(
     interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
     interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
 
+    // MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
+    // map.define(a_layout, a_ghost);
     std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>> polarMaps;
     for (int bi = 0; bi < 6; bi++)
     {

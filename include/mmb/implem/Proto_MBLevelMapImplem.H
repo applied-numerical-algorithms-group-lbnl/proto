@@ -153,9 +153,9 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellAveraged(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellAveraged(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.dstPoint(), a_point.dstPoint());
     auto X = cellAveraged(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.dstPoint());
 }
 
 template<typename MAP, MemType MEM>
@@ -164,41 +164,59 @@ Array<double, DIM> MBLevelMap<MAP,MEM>::cellCentered(const MBDataPoint& a_point)
     PR_TIME("MBLevelMap::cellCentered(MBDataPoint)");
     auto computeBlock = a_point.srcBlock();
     auto domainBlock = a_point.dstBlock();
-    Box B0(a_point.point(), a_point.point());
+    Box B0(a_point.dstPoint(), a_point.dstPoint());
     auto X = cellCentered(B0, computeBlock, domainBlock);
-    return X.array(a_point.point());
+    return X.array(a_point.dstPoint());
 }
 
 template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
-        const MBDataPoint&          a_point,
-        const Array<double, DIM>&   a_offset) const
+        const Point&          a_point,
+        const BlockIndex&     a_block) const
 {
-    auto block = a_point.srcBlock();
+    Array<double, DIM> offset;
+    offset.fill(0);
+    return mappedCoords(a_point, a_block, offset);
+}
+
+template<typename MAP, MemType MEM>
+Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+        const Point&          point,
+        const BlockIndex&     block,
+        const Array<double, DIM>&   offset) const
+{
     auto dx = this->dx(block);
-    Array<double, DIM> X = a_point.point();
+    Array<double, DIM> X = point;
     X += 0.5; //default is cell center
-    X += a_offset;
+    X += offset;
     X *= dx;
     return X;
 }
 
-template<typename MAP, MemType MEM>
-Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
-        const MBDataPoint& a_point) const
-{
-    Array<double, DIM> offset;
-    offset.fill(0);
-    return mappedCoords(a_point, offset);
-}
+// template<typename MAP, MemType MEM>
+// Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+//         const MBDataPoint&          a_point,
+//         const Array<double, DIM>&   a_offset) const
+// {
+//     return mappedCoords(a_point.dstPoint(), a_point.block(), a_offset);
+// }
+
+// template<typename MAP, MemType MEM>
+// Array<double, DIM> MBLevelMap<MAP,MEM>::mappedCoords(
+//         const MBDataPoint& a_point) const
+// {
+//     Array<double, DIM> offset;
+//     offset.fill(0);
+//     return mappedCoords(a_point, offset);
+// }
 
 template<typename MAP, MemType MEM>
 Array<double, DIM> MBLevelMap<MAP,MEM>::apply(
         const MBDataPoint&          a_point,
         const Array<double, DIM>&   a_offset) const
 {
-    auto xi = mappedCoords(a_point, a_offset);
     auto block = a_point.srcBlock();
+    auto xi = mappedCoords(a_point.srcPoint(), block, a_offset);
     return op(block).apply(xi); 
 }
 
@@ -292,4 +310,51 @@ const MBLevelBoxData<double, 1, MEM, PR_CELL>& MBLevelMap<MAP,MEM>::jacobian() c
     // "MBLevelMap::map() | Error: Coordinates not initialized (try calling MBLevelMap::initialize())");
     if (!m_initialized) { initialize(); }
     return *m_J;
+}
+
+template<typename MAP, MemType MEM>
+Point MBLevelMap<MAP,MEM>::convertPoint(Point srcPoint, BlockIndex srcBlock, BlockIndex dstBlock) const
+{
+    auto xSrc = mappedCoords(srcPoint, srcBlock);
+    auto X = op(srcBlock).apply(xSrc);
+    auto xDst = op(dstBlock).inverse(X);
+    Point dstPoint;
+    Box dstDomainBox = layout().getBlock(dstBlock).domain().box();
+    Point dstDomainSizes = dstDomainBox.sizes();
+    for (int ii = 0; ii < DIM; ii++) { dstPoint[ii] = std::floor(xDst[ii]*dstDomainSizes[ii]); }
+    return dstPoint;
+}
+
+template<typename MAP, MemType MEM>
+std::optional<std::pair<MBIndex, Point>> MBLevelMap<MAP, MEM>::whichNeighborContains(
+    const MBIndex& localIndex,
+    const Point& localPoint,
+    bool checkLocalInteriorGhostCells) const
+{
+    PROTO_ASSERT(layout().compatible(localIndex), "Incompatible layout index");
+    Box localPatchBox = layout()[localIndex];
+    // if flag is true, ghost cells of the local patch which are also within the local
+    // domain are considered to be inside this patch (default behavior)
+    if (checkLocalInteriorGhostCells)
+    {
+        Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
+        localPatchBox = localPatchBox.grow(ghost()[0]) & localDomainBox;
+    }
+    if (localPatchBox.containsPoint(localPoint))
+    {
+        return std::make_pair(localIndex, localPoint);
+    } else {
+        auto localPatch = layout().patch(localIndex);
+        for (auto adjIndex : layout().adjacentIndices(localPatch))
+        {
+            MBPoint adjPatch = layout().patch(adjIndex);
+            Point adjPoint = convertPoint(localPoint, localPatch.block, adjPatch.block);
+            Box adjPatchBox = layout()[adjIndex];
+            if (adjPatchBox.containsPoint(adjPoint))
+            {
+                return std::make_pair(adjIndex, adjPoint);
+            }
+        }
+    }
+    return std::nullopt;
 }

@@ -27,7 +27,7 @@ namespace Proto
         public:
         
         /// Default Constructor
-        DataIndex(){};
+        DataIndex() : m_partition(nullptr), m_currentInt(0) {}
 
         /// Explicit Constructor
         inline DataIndex(const std::shared_ptr<P> a_partition, unsigned int a_index)
@@ -38,6 +38,19 @@ namespace Proto
             m_currentInt = a_index;     
         };
         
+        /// Copy constructor
+        DataIndex(const DataIndex& other)
+            : m_partition(other.m_partition), m_currentInt(other.m_currentInt) {}
+            
+        /// Copy assignment
+        DataIndex& operator=(const DataIndex& other) {
+            if (this != &other) {
+                m_partition = other.m_partition;
+                m_currentInt = other.m_currentInt;
+            }
+            return *this;
+        }
+
         /// Destructor
         ~DataIndex(){};
         

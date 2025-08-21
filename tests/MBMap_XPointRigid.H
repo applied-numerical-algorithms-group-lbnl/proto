@@ -10,9 +10,7 @@ namespace {
     {
         double X = a_X0[0];
         double Y = a_X0[1];
-#if DIM == 3
-        double Z = a_X0[2];
-#endif
+
         double dtheta_mapped = 2*M_PI/a_N;
         double dtheta_unmapped = M_PI/2.0;
 
@@ -24,9 +22,37 @@ namespace {
 
         a_X[0] = r*cos(theta);
         a_X[1] = r*sin(theta);
-#if DIM == 3
-        a_X[2] = Z;
-#endif
+
+        for (int ii = 2; ii < DIM; ii++)
+        {
+            a_X[ii] = a_X0[ii];
+        }
+    }
+
+    ACCEL_DECORATION
+    void f_inverseXPointMap(Array<double, DIM>& a_X0, const Array<double, DIM>& a_X, int a_block, int a_N)
+    {
+
+        double x = a_X[0];
+        double y = a_X[1];
+        
+        double r = sqrt(x*x + y*y);
+        double theta = atan2(y, x);
+        
+        double alpha = 2*M_PI/a_N;
+        
+        double gamma = theta - M_PI - alpha*a_block;
+        double v = r*sin(gamma)/sin(alpha);
+        double u = r*cos(gamma) - v*cos(alpha);
+        
+        a_X0[0] = 1.0 - u;
+        a_X0[1] = 1.0 - v;
+        
+        for (int ii = 2; ii < DIM; ii++)
+        {
+            a_X0[ii] = a_X[ii];
+        }
+
     }
 }
 
@@ -65,6 +91,31 @@ class MBMap_XPointRigid : public MBMapOp<MEM>
         Array<double, DIM> X;
         f_xpointMap(X,a_X, block, NBLOCK);
         return X;
+    }
+
+    inline void inverse(
+        BoxData<double, DIM, MEM>& a_X0,
+        const BoxData<double, DIM, MEM>& a_X)
+    {
+        auto block = this->block();
+        forallInPlace(
+        [] PROTO_LAMBDA (Var<double, DIM, MEM>& a_X0, Var<double, DIM, MEM>& a_X, int a_block)
+        {
+            Array<double, DIM> X;
+            for (int ii = 0; ii < DIM; ii++) { X[ii] = a_X(ii); }
+            Array<double, DIM> X0;
+            f_inverseXPointMap(X0, X, a_block, NBLOCK);
+            for (int ii = 0; ii < DIM; ii++) { a_X0(ii) = X0[ii]; }
+        }, a_X0, a_X, block
+        );
+    }
+    
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_X)
+    {
+        auto block = this->block();
+        Array<double, DIM> X0;
+        f_inverseXPointMap(X0, a_X, block, NBLOCK);
+        return X0;
     }
     private:
 };

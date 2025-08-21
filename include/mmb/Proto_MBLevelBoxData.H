@@ -300,7 +300,7 @@ namespace Proto
         /** Determine if a specified index and direction correspond to a block boundary with a
          *  specified block index */
         inline bool isBlockBoundary(
-                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock);
+                MBIndex a_index, Point a_dir, BlockIndex a_adjBlock) const;
         
         /// Get Block Boundary
         /** Retrieve the block boundary buffer associated with the specified block boundary
@@ -360,25 +360,6 @@ namespace Proto
         inline T min(unsigned int c = 0) const;
 
         inline T sum(unsigned int c = 0) const;
-
-        /// Compute Interpolation Footprint
-        /** Computes the list of data points which will be used as the source data for an interpolation
-         *  operator to the data point specified by a_center and a_index.
-         *
-         *  TODO: a_ghost appears here because of a quirk of organization. In the future, this function
-         *  will live inside of MBInterpOp instead of here. 
-         *
-         *  \param a_center     The point to which interpolation will be computed
-         *  \param a_ghost      The size of the ghost region on the block boundary
-         *  \param a_footprint  A set of Points which represent the interpolation stencil footprint if
-         *                      the stencil were to be used in a pure cartesian context
-         *  \param a_index      The patch that contains a_center (in its ghost region)
-         */
-        inline std::vector<MBDataPoint> interpFootprint(
-                const Point& a_center,
-                const Point& a_ghost,
-                const std::vector<Point>& a_footprint,
-                const MBIndex& a_index) const;
         
         /// Print Boundary Buffer Data
         /** Prints the contents of the boundary buffers associated with a specified index.

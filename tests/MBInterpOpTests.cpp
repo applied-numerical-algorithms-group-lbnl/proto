@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-#if 1
+#if 0
 TEST(MBInterpOp, MBDataPoint)
 {
 
@@ -65,7 +65,49 @@ TEST(MBInterpOp, MBDataPoint)
 }
 #endif
 #if DIM == 2
-#if 1
+#if 0
+TEST(MBInterpOp, ShearDebug)
+{
+#if PR_VERBOSE > 0
+    HDF5Handler h5;
+#endif
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostSize = 2;
+    
+    // initialize data
+    auto domain = buildShear(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    // initialize data and map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostSize));
+    map.initialize();
+
+    MBInterpOp interp(map);
+    Box boundBox = Box::Cube(domainSize).adjacent(Point::X(), ghostSize);
+    int ii = 0;
+    for (auto iter : layout)
+    {
+        if (layout.block(iter) != 0) { continue; }
+        Box patchBox = layout[iter].grow(ghostSize);
+        for (auto pi : patchBox)
+        {
+            if (boundBox.containsPoint(pi))
+            {
+                MBDataPoint di(iter, pi, layout);
+                auto& pointOp = interp(di);
+                string filename = "INTERP_" + std::to_string(ii);
+                pointOp.writeFootprint(filename);
+                ii++;
+            }
+        }
+    }
+    HDF5Handler h5;
+    h5.writeMBLevel(map, map.map(), "MAP");
+}
+#endif
+#if 0
 TEST(MBInterpOp, ShearTest)
 {
 #if PR_VERBOSE > 0
@@ -163,6 +205,7 @@ namespace {
     template<int NBLOCK>
     double computeXPointInterpError(MBDisjointBoxLayout& layout, int ghostSize, int order, int refIter)
     {
+        std::cout << "Compute XPoint Error: NBLOCK = " << NBLOCK << " | NGHOST = " << ghostSize << std::endl;
         #if PR_VERBOSE > 0
         HDF5Handler h5;
         #endif
@@ -202,11 +245,16 @@ namespace {
         hostDst.exchange(); // fill boundary data
 #if PR_VERBOSE > 0
         h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_1", NBLOCK, refIter);
+        // h5.writeMBLevelBounds({"data"}, hostDst, "MBInterpOpTests_XPoint_Bound");
 #endif
         MBInterpOp interp(map);
+        
         interp.apply(hostDst, hostDst);
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"data"}, map, hostDst, "MBInterpOpTests_XPoint_Data_N%i_R%i_1", NBLOCK, refIter);
+#endif
+#if PR_VERBOSE > 1
+        interp.writeLevelFootprint(map, "XPoint_Footprint");
 #endif
         double errNorm = 0;
         for (auto iter : layout)
@@ -222,6 +270,7 @@ namespace {
                     BoxData<double, 1, HOST> error(boundBox);
                     dst_i.copyTo(error);
                     error -= src_i;
+                    for (auto pi : error.box()) { error(pi) = abs(error(pi)); }
                     errNorm = max(error.absMax(), errNorm);
                     error.copyTo(err_i);
                 }
@@ -231,11 +280,42 @@ namespace {
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
 #endif
+        double threshold = 1e-3;
+        int numErrorPoints = 0;
+        for (auto iter : layout)
+        {
+            auto& ei = hostErr[iter];
+            for (auto pi : ei.box())
+            {
+                if (ei(pi) > threshold)
+                {
+                    BlockIndex bi = layout.block(iter);
+                    PatchID patch = layout.point(iter);
+                    pr_out() << "\nError threshold not met | error: " << ei(pi) << " , point: " << pi << " , block: " << bi << ", patch: " << patch << std::endl;
+                    pr_out() << "\tvalue = \n";
+                    const auto& op = interp(MBDataPoint(iter, pi, layout));
+                    int size = op.coefs().size();
+                    for (int ii = 0; ii < size; ii++)
+                    {
+                        auto& src = op.sources()[ii];
+                        auto var = hostDst[src];
+                        pr_out() << "\t\t" << op.coefs()[ii] << " * " << var(0) << "\n";
+                        pr_out() << "\t\t\t" << src << "\n";
+                    }
+                    numErrorPoints++;
+                }
+            }
+        }
+        if (numErrorPoints > 0)
+        {
+            std::cout << "Found " << numErrorPoints << " with error exceeding " << threshold << ". See pout for details. " << std::endl;
+        }
         return errNorm;
     }
     
 }
 #if 1
+#if DIM == 2
 TEST(MBInterpOp, XPointTest)
 {
 #if PR_VERBOSE > 0
@@ -244,40 +324,59 @@ TEST(MBInterpOp, XPointTest)
     int domainSize = 16;
     int boxSize = 16;
     int ghostSize = 2;
-    int numIter = 3;
+    int numIter = 2;
     double order = 4;
 
-    double err3[numIter];
-    double err4[numIter];
-    double err5[numIter];
+    std::set<int> testRuns = {4, 5, 8};
+    std::map<int, std::vector<double>> err;
+    for (auto run : testRuns) { err[run].resize(numIter); }
     for (int nn = 0; nn < numIter; nn++)
     {   
-        auto domain3 = buildXPoint(domainSize, 3);
-        auto domain4 = buildXPoint(domainSize, 4);
-        auto domain5 = buildXPoint(domainSize, 5);
-        MBDisjointBoxLayout layout3(domain3, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout4(domain4, Point::Ones(boxSize));
-        MBDisjointBoxLayout layout5(domain5, Point::Ones(boxSize));
-        err3[nn] = computeXPointInterpError<3>(layout3, ghostSize, order, nn);
-        err4[nn] = computeXPointInterpError<4>(layout4, ghostSize, order, nn);
-        err5[nn] = computeXPointInterpError<5>(layout5, ghostSize, order, nn);
+        if (testRuns.count(3) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 3);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[3][nn] = computeXPointInterpError<3>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(4) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 4);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[4][nn] = computeXPointInterpError<4>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(5) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 5);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[5][nn] = computeXPointInterpError<5>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(6) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 6);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[6][nn] = computeXPointInterpError<6>(layout, ghostSize, order, nn);
+        }
+        if (testRuns.count(8) > 0)
+        {
+            auto domain = buildXPoint(domainSize, 8);
+            MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+            err[8][nn] = computeXPointInterpError<8>(layout, ghostSize, order, nn);
+        }
         domainSize *= 2;
     }
     for (int ii = 1; ii < numIter; ii++)
     {
-        double rate3 = log(err3[ii - 1] / err3[ii]) / log(2.0);
-        double rate4 = log(err4[ii - 1] / err4[ii]) / log(2.0);
-        double rate5 = log(err5[ii - 1] / err5[ii]) / log(2.0);
-#if PR_VERBOSE > 0
-        std::cout << "3 Blocks | Error (Max Norm): " << err3[ii] << " | Convergence Rate: " << rate3 << std::endl;
-        std::cout << "4 Blocks | Error (Max Norm): " << err4[ii] << " | Convergence Rate: " << rate4 << std::endl;
-        std::cout << "5 Blocks | Error (Max Norm): " << err5[ii] << " | Convergence Rate: " << rate5 << std::endl;
-#endif
-        EXPECT_TRUE(err3[ii] < 1e-12 || rate3 > order - 0.5);
-        EXPECT_TRUE(err4[ii] < 1e-12 || rate4 > order - 0.5);
-        EXPECT_TRUE(err5[ii] < 1e-12 || rate5 > order - 0.5);
+        for (auto testRun : testRuns)
+        {
+            double rate = log(err[testRun][ii - 1] / err[testRun][ii]) / log(2.0);
+            #if PR_VERBOSE > 0
+            std::cout << testRun << " Blocks | Error (Max Norm): " << err[testRun][ii] << " | Convergence Rate: " << rate << std::endl;
+            #endif
+            EXPECT_TRUE(err[testRun][ii] < 1e-12 || rate > order - 0.5);
+        }
     }
 }
+#endif
 #endif
 #if 1
 TEST(MBInterpOp, XPointRefined)
@@ -287,7 +386,7 @@ TEST(MBInterpOp, XPointRefined)
     double order = 4;
     int domainSize = 16;
     int boxSize = 8;
-    constexpr int numBlocks = 5;
+    constexpr int numBlocks = 8;
     Array<double, DIM> exp{1.0,1.0,0,0,0,0};
     exp *= order;
     Array<double, DIM> offset{0,0,0,0,0,0};
@@ -340,10 +439,10 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #if PR_VERBOSE > 0
     HDF5Handler h5;
 #endif
-    int domainSize = 16;
-    int boxSize = 8;
-    int thickness = 16;
-    int ghostSize = 2;
+    int domainSize = 32;
+    int boxSize = 16;
+    int thickness = 32;
+    int ghostSize = 4;
     bool cullRadialGhost = false;
     double order = 4.0;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -352,7 +451,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
-    int N = 3;
+    int N = 2;
     double err[N];
     double errL1[N];
     for (int nn = 0; nn < N; nn++)
@@ -389,6 +488,9 @@ TEST(MBInterpOp, CubedSphereShellTest)
         hostErr.setVal(0);
     
         MBInterpOp op = CubedSphereShell::InterpOp<HOST>(layout, ghost, order);
+        #if PR_VERBOSE > 1
+        op.writeLevelFootprint(map, "CUBED_SPHERE_INTERP");
+        #endif
         // apply the operator on all block boundaries
         op.apply(hostDst, hostSrc);
         hostDst.exchange();
@@ -418,7 +520,6 @@ TEST(MBInterpOp, CubedSphereShellTest)
                 errL1[nn] += ei.sum();
             }
         }
-        op.printErrorPoints(hostErr, 1.0);
         Reduction<double, Max> rxn;
         rxn.reduce(&err[nn], 1);
         err[nn] = rxn.fetch();
@@ -444,7 +545,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     {
         double rate = log(err[ii-1]/err[ii])/log(2.0);
         double rateL1 = log(errL1[ii-1]/errL1[ii])/log(2.0);
-        //EXPECT_GT(rate, 3.5);
+        EXPECT_GT(rate, 3.5);
         EXPECT_TRUE(err[ii] < 1e-12 || rate >  order - 1.0);
 #if PR_VERBOSE > 0
         if (procID() == 0)

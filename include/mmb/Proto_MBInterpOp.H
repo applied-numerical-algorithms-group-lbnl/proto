@@ -133,7 +133,7 @@ namespace Proto
 
         /// Get Point Operator
         /** Returns the MBPointInterpOp associated with a specified target cell. */
-        inline MBPointInterpOp& operator()(MBDataPoint& a_target)
+        inline MBPointInterpOp& operator()(const MBDataPoint& a_target)
         {
             for (auto& op : m_ops)
             {
@@ -143,6 +143,8 @@ namespace Proto
         }
         void print() const;
         void writeFootprint(std::string filename) const;
+        template<typename MAP, MemType MEM>
+        void writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const;
         template<typename T, unsigned int C, MemType MEM>
         void printErrorPoints(
                 MBLevelBoxData<T,C,MEM>& a_err,
@@ -157,7 +159,6 @@ namespace Proto
         void addPointOp(
             Point dataPoint,
             const MBIndex& index,
-            const std::set<Point>& footprint,
             const MBLevelMap<MAP,MEM>& map);
         void addShiftedOp(
             const MBPointInterpOp& baseOp,

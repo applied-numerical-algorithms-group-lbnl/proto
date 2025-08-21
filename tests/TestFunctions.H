@@ -1077,4 +1077,48 @@ bool testExchange(const LevelBoxData<T, C, HOST, CTR>& a_data)
     }
     return true;
 }
+
+// enum ErrorAnalysisDomain {
+//     EVERYTHING,
+//     INTERIOR,
+//     GHOST_CELLS,
+//     BLOCK_BOUNDS,
+//     DOMAIN_BOUNDS
+// };
+
+// struct ErrorAnalysis
+// {
+//     double errorMaxNorm;
+//     double errorAvgNorm;
+//     std::unordered_map<MBPoint, std::set<Point>> fineFlagged;
+//     std::unordered_map<MBPoint, std::set<Point>> crseFlagged;
+// };
+
+// template<typename T>
+// ErrorAnalysis analyzeError(
+//     const MBLevelBoxData<T, 1, HOST>& fineError,
+//     const MBLevelBoxData<T, 1, HOST>& crseError,
+//     ErrorAnalysisDomain domain = INTERIOR)
+// {
+//     ErrorAnalysis analysis;
+//     Point ghostSize = fineError.ghost()[0];
+//     auto& layout = fineError.layout();
+//     for (auto iter : layout)
+//     {
+//         Box interiorBox = layout[iter];
+//         switch (domain)
+//         {
+//             case EVERYTHING:
+//             case INTERIOR:
+//                 BoxData<T, 1, HOST> tmp(interiorBox);
+//                 fineError[iter].copyTo(tmp);
+//                 double maxError = tmp.absMax();
+//                 double avgError = tmp.sumAbs() / interiorBox.size();
+//                 analysis.errorAvgNorm = (analysis.errorAvgNorm + avgError) / 2.0;
+//                 analysis.errorMaxNorm = max(analysis.errorMaxNorm, maxError); 
+//         }
+//     }
+// }
+
+
 #endif //end include guard

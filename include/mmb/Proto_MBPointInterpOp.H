@@ -29,7 +29,7 @@ namespace Proto
             MBDataPoint                 a_dst,
             Point                       a_ghost,
             const MBLevelMap<MAP, MEM>& a_map,
-            std::set<Point>          a_footprint,
+            const MBInterpLayout&       a_interpLayout,
             unsigned int                a_order);
         
         inline MBPointInterpOp(
@@ -66,19 +66,22 @@ namespace Proto
         /** Returns the list of locations used for input data to the interpolation
          *  as a list of MBDataPoint objects. The order of the returnd points corresponds
          *  to the order of the coefficients in the operator matrix (outpout of SMatrix) */
-        inline std::vector<MBDataPoint> sources() const {return m_srcs;}
-        inline std::vector<double> coefs() const {return m_coefs; }
-        inline void print() const; 
+        inline const std::vector<MBDataPoint>& sources() const {return m_srcs;}
+        inline const std::vector<double>& coefs() const {return m_coefs; }
+        inline Box span() const;
+        inline void print() const;
+        template<typename MAP, MemType MEM>
+        inline void writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const;
         inline void writeFootprint(std::string filename) const;
         
         private:
 
-        inline void computeSourcePoints(
-            const std::set<Point>& footprint,
-            const MBDisjointBoxLayout& layout,
-            Point ghostSizes);
+        // inline void computeSourcePoints(
+        //     const std::set<Point>& footprint,
+        //     const MBDisjointBoxLayout& layout,
+        //     Point ghostSizes);
         inline void computeExponents();
-        inline void validateMatrixDimensions(const std::set<Point> &footprint) const;
+        inline void validateMatrixDimensions() const;
         template <typename MAP, MemType MEM>
         double computeSourceDataRadius(
             const MBLevelMap<MAP, MEM> &map,

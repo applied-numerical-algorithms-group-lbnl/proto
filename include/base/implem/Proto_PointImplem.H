@@ -497,6 +497,17 @@ std::vector<Point> Point::split() const
     return points;
 }
 
+std::vector<Point> Point::subset() const
+{
+    std::set<Point> pointSet;
+    for (auto dir : Box::Cube(2))
+    {
+        Point p = dir * (*this);
+        if (p != Point::Zeros()) { pointSet.insert(p); }
+    }
+    return std::vector<Point>(pointSet.begin(), pointSet.end());
+}
+
 int Point::firstNonZeroIndex() const
 {
     int ii = 0;
@@ -525,7 +536,7 @@ Point Point::dir() const
     for (int ii = 0; ii < DIM; ii++)
     {
         int di = (*this)[ii];
-        d[ii] = di / std::abs(di);
+        d[ii] = (di == 0) ? 0 : di / std::abs(di);
     }
     return d;
 }

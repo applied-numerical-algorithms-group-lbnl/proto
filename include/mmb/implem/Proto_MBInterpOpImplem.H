@@ -53,7 +53,7 @@ void MBInterpOp::define(
 template<typename MAP, MemType MEM>
 void MBInterpOp::define(
         const std::vector<std::shared_ptr<MBLevelMap<MAP,MEM>>>&  a_maps,
-        MBInterpLayout              a_interpLayout,
+        MBInterpLayout    a_interpLayout,
         int                         a_order)
 {
     PR_TIME("MBInterpOp::define");
@@ -103,8 +103,8 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
             {
                 continue;
             }
-            auto footprint = m_interpLayout.footprint(boundPoint, dir, index);
-            addPointOp(boundPoint, index, footprint, map);
+            //auto footprint = m_interpLayout.footprint(boundPoint, dir, index);
+            addPointOp(boundPoint, index, map);
         }
     }
 }
@@ -120,7 +120,6 @@ template<typename MAP, MemType MEM>
 void MBInterpOp::addPointOp(
     Point dataPoint,
     const MBIndex& index,
-    const std::set<Point>& footprint,
     const MBLevelMap<MAP,MEM>& map)
 {
     PR_TIME("MBInterpOp::addPointOp");
@@ -129,7 +128,7 @@ void MBInterpOp::addPointOp(
     
     MBDataPoint dstDataPoint(index, dataPoint, m_interpLayout.layout());
     auto op = std::make_shared<MBPointInterpOp>(
-        dstDataPoint, m_ghost, map, footprint, m_order);
+        dstDataPoint, m_ghost, map, m_interpLayout, m_order);
     
     m_ops.push_back(op);
     MBPointID key(dataPoint, index.global());
@@ -141,8 +140,8 @@ void MBInterpOp::addPointOp(
 void MBInterpOp::copyAlongSymmetryAxes(const MBPointInterpOp& pointOp)
 {
     PR_TIME("MBInterpOp::copyAlongSymmetryAxis");
-    Point dataPoint = pointOp.target().point();
-    MBIndex index = pointOp.target().index();
+    Point dataPoint = pointOp.target().dstPoint();
+    MBIndex index = pointOp.target().dstIndex();
     Box patchBox = m_interpLayout.layout()[index];
     Point boundaryDir = patchBox.whichBoundaryContains(dataPoint);
     Box patchBoundBox = patchBox.adjacent(boundaryDir * m_ghost);
@@ -173,28 +172,29 @@ void MBInterpOp::addShiftedOp(
     Point shift)
 {
     PR_TIME("MBInterpOp::addShiftedOp");
-    PROTO_ASSERT(containsOp(baseOp.target().point(), baseOp.target().index()),
+    PROTO_ASSERT(containsOp(baseOp.target().dstPoint(), baseOp.target().dstIndex()),
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     if (shift == Point::Zeros()) { return; }
-    MBDataPoint shiftDst = baseOp.target().shift(shift);
+    auto& layout = m_interpLayout.layout();
+    MBDataPoint shiftDst = baseOp.target().shift(shift, layout);
     std::vector<MBDataPoint> shiftSrc;
     for (auto si : baseOp.sources())
     {
-        shiftSrc.push_back(si.shift(shift));
+        shiftSrc.push_back(si.shift(shift, layout));
     }
     auto coefs = baseOp.coefs();
     auto shiftedOp = std::make_shared<MBPointInterpOp>(shiftDst, shiftSrc, coefs);
     
     m_ops.push_back(shiftedOp);
-    MBPointID key(shiftDst.point(), baseOp.target().index().global());
+    MBPointID key(shiftDst.dstPoint(), baseOp.target().dstIndex().global());
     m_points.insert(key);
 }
 
 void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 {
     PR_TIME("MBInterpOp::insert");
-    Point dst = a_op->target().point();
-    int globalIndex = a_op->target().index();
+    Point dst = a_op->target().dstPoint();
+    int globalIndex = a_op->target().dstIndex();
     MBPointID key(dst, globalIndex);
     PROTO_ASSERT(m_points.count(key) == 0,
             "MBInterpOp::insert | Tried to insert a duplicate MBPointInterpOp");
@@ -213,7 +213,7 @@ void MBInterpOp::apply(
     PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
     for (auto& op : m_ops)
     {
-        auto block = a_dst.layout().block(op->target().index());
+        auto block = a_dst.layout().block(op->target().dstIndex());
         op->apply(a_dst, a_src);
     }
 }
@@ -236,6 +236,18 @@ void MBInterpOp::writeFootprint(std::string filename) const
         op->writeFootprint(filename+suffix);
     }
 }
+template<typename MAP, MemType MEM>
+void MBInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const
+{
+    std::map<int, int> counters;
+    for (auto& op : m_ops)
+    {
+        int block = op->target().dstBlock();
+        int ii = counters[block]++;
+        std::string suffix = ("B" + std::to_string(block) + "_I" + std::to_string(ii));
+        op->writeLevelFootprint(map, filename+suffix);
+    }
+}
 
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::printErrorPoints(
@@ -256,7 +268,7 @@ void MBInterpOp::printErrorPoints(
                     for (auto& op : m_ops)
                     {
                         auto& dst = op->target();
-                        if (dst.point() == pi && dst.dstBlock() == block)
+                        if (dst.dstPoint() == pi && dst.dstBlock() == block)
                         {
                             std::cout << "\nError Point found | error: " << err_i(pi, cc) << " | target: " << pi << " | block: " << block << std::endl;
                             std::cout << "Source Points: " << std::endl;

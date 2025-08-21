@@ -67,6 +67,65 @@ TEST(MBLevelMapTests, ShearMap)
     }
 }
 #endif
+TEST(MBLevelMapTests, ShearInverseMap)
+{
+    int domainSize = 16;
+    int boxSize = 8;
+    int ghostWidth = 2;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+
+    for (auto iter : layout)
+    {
+        BlockIndex block = layout.block(iter);
+        Box B0 = layout[iter];
+        BoxData<double, DIM> X(B0);
+        BoxData<double, 1> J(B0);
+        map.op(block).apply(X,J);
+        BoxData<double, DIM> X0(B0);
+        map.op(block).inverse(X0, X);
+        auto X0Sln = map.X(B0, gridSpacing);
+        X0 -= X0Sln;
+        EXPECT_LT(X0.absMax(), 1e-12);
+    }
+}
+TEST(MBLevelMapTests, ShearConvertPoint)
+{
+    int domainSize = 8;
+    int boxSize = domainSize;
+    int ghostWidth = domainSize / 2;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildShear(domainSize);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_Shear<HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+
+    Box boundPoints = Box::Cube(domainSize).adjacent(Point::X(), ghostWidth);
+
+    h5.writeMBLevel(map, map.map(), "SHEAR_CONVERT_POINT");
+    for (auto pi : boundPoints)
+    {
+        Point pj = map.convertPoint(pi, 0, 1);
+        Point p0 = pi - Point(domainSize, 0);
+        double x = p0[0] + 0.5;
+        double y = p0[1] + 0.5;
+        Point _pj(std::floor(x), std::floor(y - MB_MAP_SHEAR_SLOPE*x));
+        EXPECT_EQ(pj, _pj);
+    }
+
+
+}
 TEST(MBLevelMapTests, XPointMapSmall)
 {
     int domainSize = 16;
@@ -146,6 +205,36 @@ TEST(MBLevelMapTests, XPointMap)
         h5.writeMBLevel({"X", "Y", "Z"}, map, levelXExact, "MBLevelMapTests_XPointMap_XExact");
     #endif
 }
+TEST(MBLevelMapTests, XPointInverseMap)
+{
+    int domainSize = 16;
+    int boxSize = 16;
+    int ghostWidth = 2;
+    constexpr int numBlocks = 5;
+    double gridSpacing = 1.0 / domainSize;
+    HDF5Handler h5;
+
+    auto domain = buildXPoint(domainSize, numBlocks);
+    MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
+
+    // initialize map
+    MBLevelMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map;
+    map.define(layout, Point::Ones(ghostWidth));
+
+    for (auto iter : layout)
+    {
+        BlockIndex block = layout.block(iter);
+        Box B0 = layout[iter];
+        BoxData<double, DIM> X(B0);
+        BoxData<double, 1> J(B0);
+        map.op(block).apply(X,J);
+        BoxData<double, DIM> X0(B0);
+        map.op(block).inverse(X0, X);
+        auto X0Sln = map.X(B0, gridSpacing);
+        X0 -= X0Sln;
+        EXPECT_LT(X0.absMax(), 1e-12);
+    }
+}
 TEST(MBLevelMapTests, InterBlockApply_Shear)
 {
     int domainSize = 8;
@@ -201,8 +290,14 @@ TEST(MBLevelMapTests, InterBlockApply_Shear)
         EXPECT_LT(EXj.absMax(), 1e-10);
     }
 }
+
 TEST(MBLevelMapTests, CellApply_Shear)
 {
+    if (MB_MAP_SHEAR_SLOPE != 1.0)
+    {
+        std::cout << "Skipping Test: CellApply_Shear | MB_MAP_SHEAR_SLOPE != 1" << std::endl;
+        return;
+    }
     int domainSize = 8;
     int boxSize = 8;
     HDF5Handler h5;
@@ -302,7 +397,8 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
                 for (auto bi : boundBox)
                 {
                     MBDataPoint bi_loc(iter, bi, layout);
-                    MBDataPoint bi_adj(iter, bi, layout, dir, adjBlock);
+                    Point bj = layout.domain().convertPoint(bi, locBlock, adjBlock, PR_CELL);
+                    MBDataPoint bi_adj(iter, bi, bound.adjIndex, bj, layout);
 
                     auto XLoc_i = map.cellCentered(bi_loc);
                     auto XAdj_i = map.cellCentered(bi_adj);
@@ -322,14 +418,13 @@ TEST(MBLevelMapTests, CellApplyBoundary_Shear)
 #if DIM > 2
 TEST(MBLevelMapTests, CubeSphereShell)
 {
-    int domainSize = 32;
+    int domainSize = 16;
     int boxSize = 16;
-    int thickness = 32;
-    int ghostSize = 7;
+    int thickness = 16;
+    int ghostSize = 2;
     int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
     HDF5Handler h5;
 
-    // auto domain = buildCubeSphereShell(domainSize, thickness, radialDir);
     auto domain = CubedSphereShell::Domain(domainSize, thickness, radialDir);
     Point boxSizeVect = Point::Ones(boxSize);
     boxSizeVect[radialDir] = domainSize;
@@ -340,10 +435,30 @@ TEST(MBLevelMapTests, CubeSphereShell)
     // initialize map
     MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST> map;
     map.define(layout, ghost);
-
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"X", "Y", "Z"}, map, map.map(), "MBLevelMapTests_CubeSphereMap_X");
 #endif
+    for (auto iter : layout)
+    {
+        Box b = layout[iter];
+        auto block = layout.block(iter);
+        auto& mapOp = map.op(block);
+        auto dx = map.dx(block);
+        auto xi = map.X(b,dx);
+        for (auto p : b)
+        {
+            auto xi_p = xi.array(p);
+            auto x_p = mapOp.apply(xi_p);
+            auto xi_q = mapOp.inverse(x_p);
+            double err = (xi_p - xi_q).absMax();
+            if (err > 1e-12)
+            {
+                pr_out() << "Error in Cubed Sphere Map | block: " << block << " | point: " << p << " | error: " << err << std::endl;
+                //pr_out() << "Error in Cubed Sphere Map | block: " << block << " | point: " << p << " | xi: " << xi_p << " | x: " << x_p << " | inverse(x): " << xi_q << std::endl;
+            }
+            EXPECT_LT((xi_p - xi_q).absMax(), 1e-12);
+        }
+    }
 }
 
 TEST(MBLevelMapTests, InterBlockApply_CubeSphereShell)

@@ -6,27 +6,69 @@
 
 namespace Proto
 {
+    
     class MBInterpLayout
     {
         public:
         inline MBInterpLayout(){}
         inline MBInterpLayout(const MBDisjointBoxLayout& layout, int order = 4);
-        inline void addPoint(Point a_point) { m_baseFootprint.insert(a_point); }
+        inline void addPointToBaseFootprint(Point a_point) { m_baseFootprint.insert(a_point); }
+
+        /// @brief Modifies the base footprint so that the designated axis is ignored
+        /// @param dir The axis to be ignored
         inline void ignoreAxis(int dir);
+
+        inline bool isIgnoredAxis(int dir) const { return footprintSpan().size(dir) == 1; }
+
+        /// @brief Allows stencils produced with this layout to be copied along the designated axis (optimization)
+        /// @param a_dir 
+        /// @param a_flag 
         inline void setCopy(int a_dir, bool a_flag) { m_copyAxes[a_dir] = a_flag; }
 
         inline bool isCopied(int a_dir) const { return m_copyAxes[a_dir]; }
+
+        /// @brief Returns the set of shifts that would be used in the bulk of a regular grid
+        /// @return 
         inline std::set<Point> baseFootprint() const { return m_baseFootprint; }
+
+        /// @brief Returns the modified base footprint, adding extra points for dealing with boundaries
+        /// @param point The "center" of the stencil. This is the point being interpolated to
+        /// @param index The index of the patch which contains point (in its ghost region)
+        /// @return 
+        template<typename MAP, MemType MEM>
         inline std::set<Point> footprint(
             Point point,
-            Point boundaryDir,
-            MBIndex index) const;
+            MBIndex index,
+            const MBLevelMap<MAP, MEM>& map) const;
+        
+        /// @brief Converts a set of shifts (footprint) into a set of MBDataPoint used to access data for interpolation
+        /// @param footprint The set of shifts returned from this->footprint above
+        /// @param map Used to convert local index space points into points in adjacent blocks as needed
+        /// @param center The point being interpolated to
+        /// @param index The index of the patch containing center
+        /// @return 
+        template<typename MAP, MemType MEM>
+        inline std::vector<MBDataPoint> computeSourcePoints(
+            const MBLevelMap<MAP, MEM>& map,
+            Point center, MBIndex index) const;
+
+        /// @brief Return contains 1 for axes participating in interpolation and 0 for axes not participating
+        /// @return 
         inline Point footprintMask() const;
+
+        /// @brief Returns the span of the base footprint (for 4th order this should be Box::Kernel(2) if no axes are ignored)
+        /// @return 
         inline Box footprintSpan() const;
         inline const MBDisjointBoxLayout& layout() const { return m_layout; }
 
         private:
 
+        inline Point applyIgnoredAxes(Point basePoint, Point sourcePoint) const;
+        template<typename MAP, MemType MEM>
+        inline void addRedundantBoundarySources(
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP, MEM>& map) const;
         inline void addTriplePointFootprint(
             std::set<Point>& footprint,
             Point center,
@@ -48,9 +90,38 @@ namespace Proto
             Point center,
             MBIndex index) const;
 
+        // Currently unused
         inline void addInwardPoints(
             std::set<Point>& footprint,
             MBIndex index) const;
+
+        inline void augmentFootprint(
+            Point shift,
+            std::set<Point>& augmentedFootprint,
+            const std::set<Point>& footprint) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourceFromShiftedPoint(
+            Point shiftedPoint,
+            std::set<MBDataPoint>& sources,
+            const MBLevelMap<MAP, MEM>& map,
+            MBIndex index) const;
+
+        template<typename MAP, MemType MEM>
+        inline bool addSourcePoint(
+            std::set<MBDataPoint>& sourcePoints,
+            Point localPoint,
+            MBIndex localIndex,
+            Point sourcePoint,
+            MBIndex sourceIndex,
+            const MBLevelMap<MAP,MEM>& map) const;
+
+        template<typename MAP, MemType MEM>
+        inline void addSourcePointsNear(
+            Point localTrueCenter,
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP,MEM>& map) const;
 
         MBDisjointBoxLayout m_layout;
         std::set<Point> m_baseFootprint;

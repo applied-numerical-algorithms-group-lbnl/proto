@@ -256,8 +256,8 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
     HDF5Handler h5;
     pr_out()  << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
     std::cout << "MBMultigrid::solve | initial residual: " << res0 << std::endl;
-    h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
-            "MBMultigrid_Solve_Res_S%i", m_solveIter);
+    // h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
+    //         "MBMultigrid_Solve_Res_S%i", m_solveIter);
 #endif
     for (int ii = 0; ii < a_maxIter; ii++)
     {
@@ -271,8 +271,8 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::solve(
             std::cout << "MBMultigrid::solve | after iter: " << ii << " | residual: " << res << std::endl;
         }
         
-        h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
-                "MBMultigrid_Solve_Res_S%i", m_solveIter);
+        // h5.writeMBLevel(m_maps[fineLevel], *m_residual[fineLevel],
+        //         "MBMultigrid_Solve_Res_S%i", m_solveIter);
         
 #endif
         if (res < a_tolerance*res0) { break; }
@@ -521,9 +521,9 @@ T MBMultigrid<OPType, MAP, T, BCType, MEM>::resnorm(
     }
 #if PR_VERBOSE > 0
     HDF5Handler h5;
-    h5.writeMBLevel({"-lphi"}, m_maps[a_level], LPhi, "RESNORM_LPHI");
-    h5.writeMBLevel({"phi"}, m_maps[a_level], a_state, "RESNORM_PHI");
-    h5.writeMBLevel({"force"}, m_maps[a_level], a_force, "RESNORM_RHS");
+    // h5.writeMBLevel({"-lphi"}, m_maps[a_level], LPhi, "RESNORM_LPHI");
+    // h5.writeMBLevel({"phi"}, m_maps[a_level], a_state, "RESNORM_PHI");
+    // h5.writeMBLevel({"force"}, m_maps[a_level], a_force, "RESNORM_RHS");
 #endif
     return rxn.fetch();
 }

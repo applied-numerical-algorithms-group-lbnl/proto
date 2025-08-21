@@ -5,6 +5,7 @@
 
 using namespace Proto;
 
+
 TEST(ChomboTests, GetLayout) {
     int domainSize = 64;
     int boxSize = 16;

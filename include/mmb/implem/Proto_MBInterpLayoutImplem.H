@@ -1,3 +1,4 @@
+
 MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
 {
     m_baseFootprint.clear();
@@ -11,7 +12,7 @@ MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
         {
             if (pi.abs().sum() <= 2)
             {
-                addPoint(pi);
+                addPointToBaseFootprint(pi);
             }
         }
         break;
@@ -20,7 +21,7 @@ MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
         {
             if (pi.abs().sum() <= 3)
             {
-                addPoint(pi);
+                addPointToBaseFootprint(pi);
             }
         }
         break;
@@ -29,157 +30,198 @@ MBInterpLayout::MBInterpLayout(const MBDisjointBoxLayout& layout, int order)
         break;
     }
 }
+
 void MBInterpLayout::ignoreAxis(int dir)
 {
     std::vector<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
     m_baseFootprint.clear();
     for (auto fi : footprint)
     {
-        if (fi[dir] == 0) { addPoint(fi); }
+        if (fi[dir] == 0) { addPointToBaseFootprint(fi); }
     }
 }
 
-std::set<Point> MBInterpLayout::footprint(
-    Point center,
-    Point boundaryDir,
-    MBIndex index) const
+template<typename MAP, MemType MEM>
+inline std::vector<MBDataPoint>
+MBInterpLayout::computeSourcePoints(
+    const MBLevelMap<MAP,MEM>& map,
+    Point localCenter,
+    MBIndex localIndex) const
 {
-    PROTO_ASSERT(boundaryDir.abs().max() <= 1,
-        "MBInterpLayout::footprint | Error: boundaryDir is not a valid direction");
-    auto patchDomain = m_layout.patchDomain();
-    BlockIndex block = m_layout.block(index);
-    PatchID patch = m_layout.point(index);
-    PatchID adjPatch = patch + boundaryDir;
-    Box patchBox = m_layout[index];
-    std::set<Point> footprint(m_baseFootprint.begin(), m_baseFootprint.end());
-    addBoundaryFootprint(footprint, center, index);
-    if (patchDomain.isPointInTriplePoint(adjPatch, block))
+    std::set<MBDataPoint> sourcePoints;
+    pr_out() << "\nComputing Source Points | CENTER: " << localCenter << " | PATCH: " << layout().point(localIndex) << " | BLOCK: " << layout().block(localIndex) << std::endl;
+    auto trueCenterQuery = map.whichNeighborContains(localIndex, localCenter);
+    if (trueCenterQuery.has_value())
     {
-        addTriplePointFootprint(footprint, center, boundaryDir, index);
-    } else if (patchDomain.isPointInBlockBoundary(adjPatch, block))
-    {
-        for (auto orthDir : Point::DirectionsOfCodim(1))
+        auto [adjIndex, adjCenter] = trueCenterQuery.value();
+        Point localTrueCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+
+        // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
+        Point projectedLocalTrueCenter = applyIgnoredAxes(localCenter, localTrueCenter);
+        pr_out() << "\tComputed true center: " << localTrueCenter << " | projected: " << projectedLocalTrueCenter << std::endl;
+        addSourcePointsNear(projectedLocalTrueCenter, localIndex, sourcePoints, map);
+        pr_out() << "\tAdded " << sourcePoints.size() << " source points" << std::endl;
+    // The else is used for the rare case where a the localCenter doesn't map cleanly to a neighboring patch
+    // The best example of this is where 3 mutually symmetric blocks meet
+    } else {
+        pr_out() << "\tCould not establish a true center. Examining near center points" << std::endl;
+        for (auto dir : Point::DirectionsOfCodim(1))
         {
-            bool isOrthDir = (orthDir.dot(boundaryDir) == 0);
-            bool isTriplePointAdjacent = m_layout.domain().isPointInTriplePoint(center + orthDir, block);
-            if (isTriplePointAdjacent && isOrthDir)
+            dir *= footprintMask();
+            if (dir == Point::Zeros()) { continue; }
+            auto nearCenterQuery = map.whichNeighborContains(localIndex, localCenter + dir);
+            if (nearCenterQuery.has_value())
             {
-                addTriplePointFootprint(footprint, center, boundaryDir + orthDir, index);
+                auto [adjIndex, adjCenter] = nearCenterQuery.value();
+                Point localNearCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+
+                // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
+                Point projectedLocalNearCenter = applyIgnoredAxes(localCenter, localNearCenter);
+                pr_out() << "\tComputed near center: " << localNearCenter << " | projected: " << projectedLocalNearCenter << std::endl;
+                int before = sourcePoints.size();
+                addSourcePointsNear(projectedLocalNearCenter, localIndex, sourcePoints, map);
+                pr_out() << "\tAdded " << sourcePoints.size() - before << " source points" << std::endl;
             }
-
         }
     }
-    removeDomainBoundaryPoints(footprint, center, index);
-    removeTriplePointPoints(footprint, center, index);
-    return footprint;
+    // addRedundantBoundarySources(localIndex, sourcePoints, map);
+    return std::vector<MBDataPoint>(sourcePoints.begin(), sourcePoints.end());
 }
 
-void MBInterpLayout::removeDomainBoundaryPoints(
-    std::set<Point>& footprint,
-    Point center,
-    MBIndex index) const 
+template<typename MAP, MemType MEM>
+void MBInterpLayout::addSourcePointsNear(
+    Point localTrueCenter,
+    MBIndex localIndex,
+    std::set<MBDataPoint>& sourcePoints,
+    const MBLevelMap<MAP,MEM>& map) const
 {
-    BlockIndex block = m_layout.block(index);
-    std::set<Point> tmp(footprint.begin(), footprint.end());
-    footprint.clear();
-    for (auto p : tmp)
+    auto localPatch = layout().patch(localIndex);
+    Box localPatchBox = layout()[localIndex];
+    std::set<Point> frontierDirs;
+    
+    // Add all nearby points based on the base footprint
+    for (auto fi : baseFootprint())
     {
-        if (!m_layout.domain().isPointInDomainBoundary(p + center,block)) 
+        Point sourcePoint = localTrueCenter + fi;
+        auto adjIndexQuery = map.whichNeighborContains(localIndex, sourcePoint);
+        if (adjIndexQuery.has_value())
         {
-            footprint.insert(p);
+            auto adjIndex = adjIndexQuery.value().first;
+            Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
+            bool success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+            if (!success) { frontierDirs.insert(-(fi.dir())); }
         } else {
+            // if unable to add this point, store the opposite direction for extending the footprint away from the "hole"
+            frontierDirs.insert(-(fi.dir()));
         }
     }
-}
 
-void MBInterpLayout::removeTriplePointPoints(
-    std::set<Point>& footprint,
-    Point center,
-    MBIndex index) const 
-{
-    BlockIndex block = m_layout.block(index);
-    std::set<Point> tmp(footprint.begin(), footprint.end());
-    footprint.clear();
-    for (auto p : tmp)
+    // if necessary, process an additional frontier on the edge of the footprint
+    if (frontierDirs.size() > 0)
     {
-        if (!m_layout.domain().isPointInTriplePoint(p + center,block)) 
+        auto tmp = baseFootprint();
+        std::set<Point> footprint(tmp.begin(), tmp.end());
+        std::set<Point> frontier;
+        for (auto fi : footprint)
         {
-            footprint.insert(p);
-        } else {
-        }
-    }
-}
-
-void MBInterpLayout::addBoundaryFootprint(
-    std::set<Point>& footprint,
-    Point point,
-    MBIndex index) const
-{
-    auto patch = m_layout.patch(index);
-    Box patchBox = m_layout[index];
-    std::vector<Point> initialFootprint(footprint.begin(), footprint.end());
-    for (auto dir : Point::DirectionsOfCodim(1))
-    {
-        if (dir * footprintMask() == Point::Zeros()) { continue; }
-        if (m_layout.isPatchOnDomainBoundary(patch, dir) ||
-            m_layout.isRefinementBoundary(patch, dir))
-        {
-            int coord = dir.firstNonZeroIndex();
-            Box faceBox = patchBox.edge(dir);
-            if (point[coord] == faceBox.low()[coord])
+            for (auto dir : Point::Directions())
             {
-                for (auto fi : initialFootprint)
+                Point fj = fi + dir;
+                if (frontierDirs.count(dir) > 0 && footprint.count(fj) <= 0)
                 {
-                    footprint.insert(fi - dir);
+                    frontier.insert(fi + dir);
+                }
+            }
+        }
+
+        // this loop is the same as the footprint loop except that points which don't map properly are simply ignored
+        for (auto fi : frontier)
+        {
+            Point sourcePoint = localTrueCenter + fi;
+            auto adjIndexQuery = map.whichNeighborContains(localIndex, sourcePoint);
+            if (adjIndexQuery.has_value())
+            {
+                auto adjIndex = adjIndexQuery.value().first;
+                Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
+                addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+            }
+        }
+    }
+}
+
+template<typename MAP, MemType MEM>
+bool MBInterpLayout::addSourcePoint(
+    std::set<MBDataPoint>& sourcePoints,
+    Point localPoint,
+    MBIndex localIndex,
+    Point sourcePoint,
+    MBIndex sourceIndex,
+    const MBLevelMap<MAP,MEM>& map) const
+{
+    Box localPatchBox = layout()[localIndex];
+    Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
+    if (layout().block(localIndex) == layout().block(sourceIndex))
+    {
+        if ((localPatchBox.grow(map.ghost()[0]) & localDomainBox).containsPoint(localPoint))
+        {
+            MBDataPoint point(localIndex, localPoint, layout());
+            auto [_, success] = sourcePoints.insert(point);
+            return success;
+        }
+        pr_out() << "FAILURE\n";
+        // otherwise point is in an adjacent patch in the same block but NOT IN THE GHOST REGION of this patch and we ignore it
+    } else {
+        Point boundaryDir = layout().connectivity(localIndex, sourceIndex);
+        Point boundGhost = map.ghost()[boundaryDir.codim()];
+        Box boundaryBox = localPatchBox.adjacent(boundaryDir * boundGhost);
+        if ( boundaryDir != Point::Zeros() && boundaryBox.containsPoint(localPoint))
+        {
+            MBDataPoint point(localIndex, localPoint, sourceIndex, sourcePoint, layout());
+            auto [_, success] = sourcePoints.insert(point);
+            return success;
+        }
+    }
+    return false;
+}
+
+template<typename MAP, MemType MEM>
+void MBInterpLayout::addRedundantBoundarySources(
+    MBIndex localIndex,
+    std::set<MBDataPoint>& sourcePoints,
+    const MBLevelMap<MAP, MEM>& map) const
+{
+    auto localPatch = layout().patch(localIndex);
+    std::set<Point> localSourcePoints;
+    for (auto& si : sourcePoints) { localSourcePoints.insert(si.dstPoint()); }
+    Box localPatchBox = layout()[localIndex];
+    for (auto boundaryDir : Point::Directions())
+    {
+        if (boundaryDir.codim() < 2) { continue; }
+        Box nearBoundaryThreshold = localPatchBox.edge(boundaryDir).extrude(boundaryDir);
+        for (auto p0 : localSourcePoints)
+        {
+            if (nearBoundaryThreshold.containsPoint(p0))
+            {
+                Box nearPointThreshold(p0, p0);
+                nearPointThreshold = nearPointThreshold.extrude(boundaryDir * footprintMask());
+                for (auto dir : boundaryDir.subset())
+                {
+                    for (auto adjIndex : layout().adjacentIndices(localPatch, dir))
+                    {
+                        auto adjBlock = layout().block(adjIndex);
+                        Box nearPointThresholdAdj = layout().domain().convertBox(nearPointThreshold, localPatch.block, adjBlock);
+                        nearPointThresholdAdj &= layout()[adjIndex];
+                        for (auto srcPointAdj : nearPointThresholdAdj)
+                        {
+                            Point srcPointLocal = layout().domain().convertPoint(srcPointAdj, adjBlock, localPatch.block, PR_CELL);
+                            bool success = addSourcePoint(sourcePoints, srcPointLocal, localIndex, srcPointAdj, adjIndex, map);
+                        }
+                    }
                 }
             }
         }
     }
-}
 
-void MBInterpLayout::addTriplePointFootprint(
-    std::set<Point>& footprint,
-    Point center,
-    Point triplePointBoundary,
-    MBIndex index) const
-{
-    BlockIndex block = m_layout.block(index);
-    Box patchBox = m_layout[index];
-
-    auto triplePointCircuits = 
-        m_layout.domain().graph().getTriplePointCircuits(block, triplePointBoundary);
-    PROTO_ASSERT(triplePointCircuits.size() == 1,
-        "MBInterpLayout::footprint | Error: The more complex case is not implemented");
-    
-    // Everything past this point assumes there can only be one triple point circuit
-
-    Point n0 = triplePointCircuits[0].first;
-    Point n1 = triplePointCircuits[0].second;
-    Point inPlaneMask = (n0 + n1).abs();
-    Point outPlaneMask = Point::Ones() - inPlaneMask;
-    Point corner = patchBox.edge(n1 + n0).low()*inPlaneMask + center*outPlaneMask;
-    int maxDist = (center - corner).abs().max();
-    Point s0 = corner + n0*maxDist - center;
-    Point s1 = corner + n1*maxDist - center;
-
-    for (auto fi : m_baseFootprint)
-    {
-        footprint.insert(fi + s0);
-        footprint.insert(fi + s1);
-    }
-}
-
-void MBInterpLayout::addInwardPoints(
-        std::set<Point>& footprint,
-        MBIndex index) const
-{
-    std::set<Point> baseFootprint(footprint.begin(), footprint.end());
-    Box patchBox = m_layout[index];
-    for (auto pi : baseFootprint)
-    {
-        Point dir = patchBox.whichBoundaryContains(pi);
-        footprint.insert(pi - dir);
-    }
 }
 
 Point MBInterpLayout::footprintMask() const 
@@ -201,4 +243,12 @@ Box MBInterpLayout::footprintSpan() const
         spanBox &= fi;
     }
     return spanBox;
+}
+
+Point MBInterpLayout::applyIgnoredAxes(Point basePoint, Point sourcePoint) const
+{
+    Point diff = sourcePoint - basePoint;
+    Point mask = Point::Ones() - footprintMask();
+    diff = diff * mask;
+    return sourcePoint - diff;
 }
