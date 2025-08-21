@@ -284,7 +284,7 @@ void MBBoxPartition::validatePatch(const MBPoint& patch, std::string methodName)
 #ifndef NDEBUG
     PROTO_ASSERT(m_patchDomain.getBlock(patch.block).box().containsPoint(patch.point),
                  "%s | Error: %s is not a valid patch in block %i",
-                 methodName, patch.point.str(), patch.block);
+                 methodName.c_str(), patch.point.str().c_str(), patch.block);
 #endif
 }
 
@@ -292,7 +292,7 @@ void MBBoxPartition::validateIndex(uint64_t index, std::string methodName) const
     #ifndef NDEBUG
     PROTO_ASSERT(index < numBoxes(),
         "%s | Error: index %u is out of bounds",
-        methodName, index);
+        methodName.c_str(), index);
     #endif
 }
 

@@ -525,7 +525,7 @@ MBDisjointBoxLayout::coarsen(const std::vector<Point>& a_refRatios) const
 void MBDisjointBoxLayout::validateSelf(std::string methodName) const
 {
     #ifndef NDEBUG
-    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName);
+    PROTO_ASSERT(m_defined, "MBDisjointBoxLayout::%s | Error: Incompatible index", methodName.c_str());
     #endif
 }
 

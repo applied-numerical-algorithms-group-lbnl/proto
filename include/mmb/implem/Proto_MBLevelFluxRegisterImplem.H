@@ -195,7 +195,7 @@ MBIndex MBFluxRegisterCopier<T,C,MEM>::getCoarseIndex(
 {
     PROTO_ASSERT(a_dir.codim() == 1,
         "MBFluxRegisterCopier::getCoarseIndex | Error: direction %s is not codimension 1",
-        a_dir.str());
+        a_dir.str().c_str());
     auto& fineLayout = a_fluxRegister.m_fineLayout;
     auto& coarseLayout = a_fluxRegister.m_crseLayout;
     
@@ -534,7 +534,7 @@ void MBLevelFluxRegister<T,C,MEM>::addFineRegisterFromAdjacent(
 {
     PROTO_ASSERT(a_dir.codim() == 1,
         "MBLevelFluxRegister::addFineRegisterFromAdjacent | Error: Invalid direction %s",
-        a_dir.str());
+        a_dir.str().c_str());
     int coord = a_dir.firstNonZeroIndex();
     int side = (a_dir[coord] < 0) ? 0 : 1;
     BlockIndex block = m_fineLayout.block(a_fineIndex);
