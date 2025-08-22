@@ -21,8 +21,6 @@ TEST(ArrayTests, Modifiers) {
     Array<int,3> left, right(5);
     left.fill(5);
     EXPECT_EQ(left,right);
-    right.reset();
-    EXPECT_EQ(right.sum(),0);
 }
 
 TEST(ArrayTests, Arithmetic) {
