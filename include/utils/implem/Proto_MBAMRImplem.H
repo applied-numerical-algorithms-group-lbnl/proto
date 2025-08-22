@@ -85,7 +85,10 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             //FIXME: assumes uniform block size
             Box B0 = a_grid.getLevel(0).getBlock(0).domain().box();
             double L0 = B0.sizes().min();
-            int N0 = log(L0)/log(2.0);
+            //FIXME: -2 is here to force coarsest block size to be at least 8^DIM
+            // this is so that blocks remain larger than ghost regions. This should be
+            // a configurable parameter instead of a hard coded value
+            int N0 = log(L0)/log(2.0) - 2; 
             m_mg.push_back(MBMultigrid<OPType, MAP, T, BCType, MEM>(
                         a_grid[li], Point::Ones(2), N0));
         } else {
@@ -105,13 +108,12 @@ void MBAMR<OPType, MAP, T, BCType, MEM>::define(
             m_local[li] = std::make_shared<LevelStateData>(crseFineLayout, localGhost);
             m_local[li]->setVal(0);
             
-            std::cout << "dx: " << dx << std::endl;
             m_fluxRegisters[li] = std::make_unique<FluxRegister>(a_grid.getLevel(li), a_grid.getLevel(li+1), a_refRatios[li], dx);
             Array<double, DIM> r(a_refRatios[li]);
             dx = dx / r;
 
             MBLevelMap<MAP,MEM> localMap(crseFineLayout, localGhost);
-            m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()+1);
+            m_localBlockInterp[li] = std::make_shared<MBInterpOp>(localMap, OP::order()); // This might need to be OP::order()+1
         }
     }
     
