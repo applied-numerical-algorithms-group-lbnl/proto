@@ -116,7 +116,7 @@ int main(int argc, char** argv)
         AMRGrid grid(layouts, refRatios, numLevels);
 
         // SOLVER
-        AMR<BoxOp_Laplace, double> solver(grid, dx);
+        AMRSolver<BoxOp_Laplace, double> solver(grid, dx);
 
         // DATA
         AMRData<double> Phi(grid,    OP::ghost()); 

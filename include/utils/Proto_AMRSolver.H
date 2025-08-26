@@ -8,7 +8,7 @@
 using namespace Proto;
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
-class AMR : public AMRSolver<OpType, T, MEM>
+class AMRSolver // : public AMRSolver<OpType, T, MEM>
 {
     public:
     
@@ -21,7 +21,7 @@ class AMR : public AMRSolver<OpType, T, MEM>
     typedef AMRData<T, BOP::numState(), MEM>      AMRStateData;
     typedef AMRData<T, BOP::numAux(), MEM>        AMRAuxData;
 
-    inline AMR(
+    inline AMRSolver(
         AMRGrid& a_grid,
         Array<T, DIM>&   a_dx);
     
@@ -191,5 +191,5 @@ class AMR : public AMRSolver<OpType, T, MEM>
     std::shared_ptr<AMRLevel> m_amrLevel;
     std::shared_ptr<AMROP>    m_amrOp;
 };
-#include "implem/Proto_AMRImplem.H"
+#include "implem/Proto_AMRSolverImplem.H"
 #endif // end include guard

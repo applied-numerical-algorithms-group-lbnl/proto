@@ -1,6 +1,6 @@
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-AMR<OpType, T, MEM>::AMR(
+AMRSolver<OpType, T, MEM>::AMRSolver(
     AMRGrid& a_grid,
     Array<T, DIM>&   a_dx)
 {
@@ -10,7 +10,7 @@ AMR<OpType, T, MEM>::AMR(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::define(
+AMRSolver<OpType, T, MEM>::define(
     AMRGrid& a_grid,
     Array<T, DIM>&   a_dx)
 {
@@ -22,7 +22,7 @@ AMR<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMR<OpType, T, MEM>::solve(
+AMRSolver<OpType, T, MEM>::solve(
     AMRStateData& a_state,
     AMRStateData& a_force,
     AMRAuxData&   a_aux,
@@ -35,7 +35,7 @@ AMR<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMR<OpType, T, MEM>::solve(
+AMRSolver<OpType, T, MEM>::solve(
     AMRStateData& a_state,
     AMRStateData& a_force,
     int           a_maxIter,
@@ -83,7 +83,7 @@ AMR<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMR<OpType, T, MEM>::resnorm(
+AMRSolver<OpType, T, MEM>::resnorm(
     AMRStateData& a_residual,
     AMRStateData& a_state,
     AMRStateData& a_force)
@@ -103,7 +103,7 @@ AMR<OpType, T, MEM>::resnorm(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-AMR<OpType, T, MEM>::AMRLevel::AMRLevel(
+AMRSolver<OpType, T, MEM>::AMRLevel::AMRLevel(
     AMRGrid& a_grid,
     AMROP&   a_op,
     int      a_level)
@@ -114,7 +114,7 @@ AMR<OpType, T, MEM>::AMRLevel::AMRLevel(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::AMRLevel::define(
+AMRSolver<OpType, T, MEM>::AMRLevel::define(
     AMRGrid& a_grid,
     AMROP&   a_op,
     int      a_level)
@@ -170,7 +170,7 @@ AMR<OpType, T, MEM>::AMRLevel::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::AMRLevel::fineCorrect(
+AMRSolver<OpType, T, MEM>::AMRLevel::fineCorrect(
         LevelStateData& a_state,
         LevelStateData& a_crseState,
         LevelStateData& a_crseState_0)
@@ -194,7 +194,7 @@ AMR<OpType, T, MEM>::AMRLevel::fineCorrect(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::AMRLevel::crseResidual(
+AMRSolver<OpType, T, MEM>::AMRLevel::crseResidual(
         LevelStateData& a_ResC,
         AMRStateData&   a_Phi,
         LevelStateData& a_GC,
@@ -231,7 +231,7 @@ AMR<OpType, T, MEM>::AMRLevel::crseResidual(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::AMRLevel::vCycle(
+AMRSolver<OpType, T, MEM>::AMRLevel::vCycle(
         AMRStateData& a_state,
         AMRStateData& a_force,
         LevelStateData& a_levelForce)
@@ -278,7 +278,7 @@ AMR<OpType, T, MEM>::AMRLevel::vCycle(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMR<OpType, T, MEM>::AMRLevel::levelResidual(
+AMRSolver<OpType, T, MEM>::AMRLevel::levelResidual(
         LevelStateData& a_res,
         AMRStateData& a_state,
         AMRStateData& a_force, 

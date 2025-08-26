@@ -3,12 +3,11 @@
 #define _PROTO_LEVEL_SOLVER_FAS_MULTIGRID_
 
 #include "Proto.H"
-#include "Proto_LevelSolver.H"
 
 using namespace Proto;
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
-class LevelMultigridSolver : public LevelSolver<OpType, T, MEM>
+class LevelMultigridSolver
 {
     public:
    
