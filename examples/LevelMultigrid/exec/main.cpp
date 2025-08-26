@@ -106,7 +106,7 @@ int main(int argc, char** argv)
         DisjointBoxLayout layout(domain, boxSizeV);
         
         // solver
-        LevelMultigrid<BoxOp_Laplace, double> solver(layout, Point::Ones(refRatio), numLevels, dx);
+        LevelMultigridSolver<BoxOp_Laplace, double> solver(layout, Point::Ones(refRatio), numLevels, dx);
         solver.setVerbose(true);
 
         // data holders

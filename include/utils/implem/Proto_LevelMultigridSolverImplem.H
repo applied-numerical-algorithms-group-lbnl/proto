@@ -1,6 +1,6 @@
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
+LevelMultigridSolver<OpType, T, MEM>::LevelMultigridSolver(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -11,7 +11,7 @@ LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
+LevelMultigridSolver<OpType, T, MEM>::LevelMultigridSolver(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -23,7 +23,7 @@ LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::define(
+LevelMultigridSolver<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -37,7 +37,7 @@ LevelMultigrid<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::define(
+LevelMultigridSolver<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -52,14 +52,14 @@ LevelMultigrid<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::defineAsSubcycler(
+LevelMultigridSolver<OpType, T, MEM>::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
     T             a_dx)
 {
     PROTO_ASSERT(a_refRatio.isotropic(),
-        "LevelMultigrid::defineAsSubcycler | Error: Anisotropic refinement is not yet supported.");
+        "LevelMultigridSolver::defineAsSubcycler | Error: Anisotropic refinement is not yet supported.");
     m_mg = std::make_shared<MGLevel>(a_layout, a_refRatio, a_dx, a_numLevels - 1);
     m_mg->defineAsSubcycler(a_layout, a_refRatio, a_dx, a_numLevels - 1);
 }
@@ -68,7 +68,7 @@ LevelMultigrid<OpType, T, MEM>::defineAsSubcycler(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 T
-LevelMultigrid<OpType, T, MEM>::solve(
+LevelMultigridSolver<OpType, T, MEM>::solve(
     LevelStateData& a_state,
     LevelStateData& a_force,
     LevelAuxData&   a_aux,
@@ -82,7 +82,7 @@ LevelMultigrid<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 T
-LevelMultigrid<OpType, T, MEM>::solve(
+LevelMultigridSolver<OpType, T, MEM>::solve(
     LevelStateData& a_state,
     LevelStateData& a_force,
     int             a_maxIter,
@@ -133,7 +133,7 @@ LevelMultigrid<OpType, T, MEM>::solve(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-T LevelMultigrid<OpType, T, MEM>::resnorm(
+T LevelMultigridSolver<OpType, T, MEM>::resnorm(
     LevelStateData& a_residual,
     LevelStateData& a_state,
     LevelStateData& a_force)
@@ -161,7 +161,7 @@ T LevelMultigrid<OpType, T, MEM>::resnorm(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-void LevelMultigrid<OpType, T, MEM>::interpBC(
+void LevelMultigridSolver<OpType, T, MEM>::interpBC(
     LevelStateData& a_crseStateBC)
 {
     m_mg->interpBC(a_crseStateBC);
@@ -170,7 +170,7 @@ void LevelMultigrid<OpType, T, MEM>::interpBC(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::setVerbose(
+LevelMultigridSolver<OpType, T, MEM>::setVerbose(
     bool a_flag)
 {
     m_verbose = a_flag;
@@ -178,7 +178,7 @@ LevelMultigrid<OpType, T, MEM>::setVerbose(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::MGLevel(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     Array<T, DIM> a_dx,
@@ -190,7 +190,7 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::define(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     Array<T, DIM> a_dx,
@@ -243,7 +243,7 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     T             a_dx,
@@ -291,7 +291,7 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::interpBC(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::interpBC(
     LevelStateData& a_crseStateBC)
 {
     if (m_level > 0)
@@ -307,13 +307,13 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::interpBC(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::coarseForce(
         LevelStateData& a_crseForce,
         LevelStateData& a_state,
         LevelStateData& a_force,
         LevelStateData& a_crseState)
 {
-    PR_TIMERS("LevelMultigrid::coarseResidual");
+    PR_TIMERS("LevelMultigridSolver::coarseResidual");
     a_state.exchange();
     a_crseState.exchange();
     for (auto iter : m_levelOp.layout())
@@ -338,7 +338,7 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::residual(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::residual(
         LevelStateData& a_residual,
         LevelStateData& a_state,
         LevelStateData& a_force)
@@ -358,12 +358,12 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::residual(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::relax(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::relax(
         LevelStateData& a_state,
         LevelStateData& a_force,
         int a_numIter)
 {
-    PR_TIMERS("LevelMultigrid::relax");
+    PR_TIMERS("LevelMultigridSolver::relax");
     for (int ii = 0; ii < a_numIter; ii++)
     {
         a_state.exchange();
@@ -381,7 +381,7 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::relax(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::fineCorrect(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::fineCorrect(
         LevelStateData& a_fine,
         LevelStateData& a_crse,
         LevelStateData& a_crse0)
@@ -408,14 +408,14 @@ LevelMultigrid<OpType, T, MEM>::MGLevel::fineCorrect(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelMultigrid<OpType, T, MEM>::MGLevel::vCycle(
+LevelMultigridSolver<OpType, T, MEM>::MGLevel::vCycle(
         LevelStateData& a_state,
         LevelStateData& a_force)
 {
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    PR_TIMERS("LevelMultigrid::VCycle");
+    PR_TIMERS("LevelMultigridSolver::VCycle");
     if (m_level > 0)
     {
         relax(a_state, a_force, m_numPreRelax);

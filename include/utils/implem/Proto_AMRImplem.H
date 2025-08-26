@@ -134,7 +134,7 @@ AMR<OpType, T, MEM>::AMRLevel::define(
 
         // define the level MG solver
         int numMGLevels = 1;
-        m_mgSolver = std::make_shared<LevelMultigrid<OpType, T, MEM>>(
+        m_mgSolver = std::make_shared<LevelMultigridSolver<OpType, T, MEM>>(
             a_grid[m_level], Point::Ones(2), numMGLevels, m_op->dx(a_level));
    
         // fine correction stencil 
@@ -162,7 +162,7 @@ AMR<OpType, T, MEM>::AMRLevel::define(
             minDomainSize = min(domainSizeV[dir], minDomainSize);
         }
         int numMGLevels = log(minDomainSize*1.0) / log(2.0);
-        m_mgSolver = std::make_shared<LevelMultigrid<OpType, T, MEM>>(
+        m_mgSolver = std::make_shared<LevelMultigridSolver<OpType, T, MEM>>(
             a_grid[0], Point::Ones(2), numMGLevels, m_op->dx(a_level));
     }
 }

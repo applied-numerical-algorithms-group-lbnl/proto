@@ -3,7 +3,7 @@
 #define _PROTO_AMR_SOLVER_MULTIGRID_
 
 #include "Proto.H"
-#include "Proto_LevelMultigrid.H"
+#include "Proto_LevelMultigridSolver.H"
 
 using namespace Proto;
 
@@ -174,7 +174,7 @@ class AMR : public AMRSolver<OpType, T, MEM>
         Stencil<T> m_average;
         InterpStencil<T> m_interpolate;
          
-        std::shared_ptr<LevelMultigrid<OpType, T, MEM>> m_mgSolver;
+        std::shared_ptr<LevelMultigridSolver<OpType, T, MEM>> m_mgSolver;
         AMROP* m_op;
 
         LevelStateData m_crseLocal;
