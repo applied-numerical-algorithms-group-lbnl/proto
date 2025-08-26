@@ -41,9 +41,9 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         // for high order intrpolation of in the XPoint map with 8 blocks
         // If you change this code, change the similar code in MBLevelMap
         // - Chris Bozhart - 8/25/2025
-        ghost.fill(a_ghost + Point::Ones(2));
+        ghost.fill(a_ghost + Point::Ones(4));
         ghost[0] = a_ghost;
-        ghost[2] = ghost[1] + Point::Ones(2);
+        ghost[1] = a_ghost + Point::Ones(2);
     }
     define(a_layout, ghost, a_boundGhost);
 }

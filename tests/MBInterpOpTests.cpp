@@ -441,7 +441,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
 #endif
     int domainSize = 32;
     int boxSize = 16;
-    int thickness = 2;
+    int thickness = 32;
     int ghostSize = 4;
     bool cullRadialGhost = false;
     double order = 4.0;
@@ -451,6 +451,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
+    else { ghost[radialDir] = 1;}
     int N = 2;
     double err[N];
     double errL1[N];
