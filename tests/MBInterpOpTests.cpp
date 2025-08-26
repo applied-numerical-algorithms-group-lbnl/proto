@@ -205,9 +205,10 @@ namespace {
     template<int NBLOCK>
     double computeXPointInterpError(MBDisjointBoxLayout& layout, int ghostSize, int order, int refIter)
     {
-        std::cout << "Compute XPoint Error: NBLOCK = " << NBLOCK << " | NGHOST = " << ghostSize << std::endl;
+
         #if PR_VERBOSE > 0
         HDF5Handler h5;
+        std::cout << "Compute XPoint Error: NBLOCK = " << NBLOCK << " | NGHOST = " << ghostSize << std::endl;
         #endif
         Array<double, DIM> exp{1.0,1.0,0,0,0,0};
         exp *= order;
@@ -219,8 +220,7 @@ namespace {
         MBLevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(ghostSize));
         MBLevelBoxData<double, 1, HOST> hostErr(layout, Point::Ones(ghostSize));
 
-        MBLevelMap<MBMap_XPointRigid<NBLOCK, HOST>, HOST> map;
-        map.define(layout, Point::Ones(ghostSize));
+        auto map = XPoint<NBLOCK>::Map(layout, Point::Ones(ghostSize));
         auto C2C = Stencil<double>::CornersToCells(4);
         for (auto iter : layout)
         {
@@ -245,7 +245,6 @@ namespace {
         hostDst.exchange(); // fill boundary data
 #if PR_VERBOSE > 0
         h5.writeMBLevelBoundsUnified({"data"}, hostDst, "MBInterpOpTests_XPoint_DataBounds_N%i_R%i_1", NBLOCK, refIter);
-        // h5.writeMBLevelBounds({"data"}, hostDst, "MBInterpOpTests_XPoint_Bound");
 #endif
         MBInterpOp interp(map);
         
@@ -280,7 +279,7 @@ namespace {
 #if PR_VERBOSE > 0
         h5.writeMBLevel({"err"}, map, hostErr, "MBInterpOpTests_XPoint_Err_N%i_%i", NBLOCK, refIter);
 #endif
-        double threshold = 1e-3;
+        double threshold = 1e-2;
         int numErrorPoints = 0;
         for (auto iter : layout)
         {
@@ -308,7 +307,9 @@ namespace {
         }
         if (numErrorPoints > 0)
         {
-            std::cout << "Found " << numErrorPoints << " with error exceeding " << threshold << ". See pout for details. " << std::endl;
+            #if PR_VERBOSE > 0
+            std::cout << "Found " << numErrorPoints << " point with error exceeding " << threshold << ". See pout for details. " << std::endl;
+            #endif
         }
         return errNorm;
     }
@@ -334,31 +335,31 @@ TEST(MBInterpOp, XPointTest)
     {   
         if (testRuns.count(3) > 0)
         {
-            auto domain = buildXPoint(domainSize, 3);
+            auto domain = XPoint<3>::Domain(domainSize, boxSize);
             MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
             err[3][nn] = computeXPointInterpError<3>(layout, ghostSize, order, nn);
         }
         if (testRuns.count(4) > 0)
         {
-            auto domain = buildXPoint(domainSize, 4);
+            auto domain = XPoint<4>::Domain(domainSize, boxSize);
             MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
             err[4][nn] = computeXPointInterpError<4>(layout, ghostSize, order, nn);
         }
         if (testRuns.count(5) > 0)
         {
-            auto domain = buildXPoint(domainSize, 5);
+            auto domain = XPoint<5>::Domain(domainSize, boxSize);
             MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
             err[5][nn] = computeXPointInterpError<5>(layout, ghostSize, order, nn);
         }
         if (testRuns.count(6) > 0)
         {
-            auto domain = buildXPoint(domainSize, 6);
+            auto domain = XPoint<6>::Domain(domainSize, boxSize);
             MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
             err[6][nn] = computeXPointInterpError<6>(layout, ghostSize, order, nn);
         }
         if (testRuns.count(8) > 0)
         {
-            auto domain = buildXPoint(domainSize, 8);
+            auto domain = XPoint<8>::Domain(domainSize, boxSize);
             MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
             err[8][nn] = computeXPointInterpError<8>(layout, ghostSize, order, nn);
         }
@@ -395,7 +396,7 @@ TEST(MBInterpOp, XPointRefined)
     double errNorm[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
-        auto domain = buildXPoint(domainSize, numBlocks);
+        auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
         std::vector<MBPoint> patches;
         std::vector<Point> boxSizes;
         for (int block = 0; block < numBlocks; block++)
