@@ -86,4 +86,7 @@
 
 #include "transition/Proto_Transition_Utilities.H"
 
+#include "utils/Proto_LevelMultigrid.H"
+#include "utils/Proto_LevelRK4.H"
+
 #endif

@@ -80,7 +80,6 @@ void LevelRK4<OPType, T, BCType, MEM>::advance(
     m_delta.setVal(0);
 
     m_f.setTime(a_time);
-    //a_state.exchange();
     m_bc.setTime(a_time);
     m_bc.setRKStage(0);
     m_bc.apply(a_state);
@@ -89,7 +88,6 @@ void LevelRK4<OPType, T, BCType, MEM>::advance(
     
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
-    //m_U0.exchange();
     m_bc.setTime(a_time + half*a_dt);
     m_bc.setRKStage(1);
     m_bc.apply(m_U0);
@@ -99,7 +97,6 @@ void LevelRK4<OPType, T, BCType, MEM>::advance(
     
     a_state.copyTo(m_U0);
     m_U0.increment(m_k, half);
-    //m_U0.exchange();
     m_bc.setRKStage(2);
     m_bc.apply(m_U0);
     m_f(m_k, a_state, a_dt);  // compute k3*dt
@@ -108,7 +105,6 @@ void LevelRK4<OPType, T, BCType, MEM>::advance(
     m_f.setTime(a_time+a_dt);
     a_state.copyTo(m_U0);
     m_U0.increment(m_k);
-    //m_U0.exchange();
     m_bc.setRKStage(3);
     m_bc.setTime(a_time+a_dt);
     m_bc.apply(m_U0);

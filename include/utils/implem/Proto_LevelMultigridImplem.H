@@ -1,6 +1,6 @@
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
+LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -11,7 +11,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
+LevelMultigrid<OpType, T, MEM>::LevelMultigrid(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -23,7 +23,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::define(
+LevelMultigrid<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -37,7 +37,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::define(
+LevelMultigrid<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
@@ -52,14 +52,14 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::defineAsSubcycler(
+LevelMultigrid<OpType, T, MEM>::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     int                a_numLevels,
     T             a_dx)
 {
     PROTO_ASSERT(a_refRatio.isotropic(),
-        "LevelSolver_FASMultigrid::defineAsSubcycler | Error: Anisotropic refinement is not yet supported.");
+        "LevelMultigrid::defineAsSubcycler | Error: Anisotropic refinement is not yet supported.");
     m_mg = std::make_shared<MGLevel>(a_layout, a_refRatio, a_dx, a_numLevels - 1);
     m_mg->defineAsSubcycler(a_layout, a_refRatio, a_dx, a_numLevels - 1);
 }
@@ -68,7 +68,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::defineAsSubcycler(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 T
-LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
+LevelMultigrid<OpType, T, MEM>::solve(
     LevelStateData& a_state,
     LevelStateData& a_force,
     LevelAuxData&   a_aux,
@@ -82,7 +82,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 T
-LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
+LevelMultigrid<OpType, T, MEM>::solve(
     LevelStateData& a_state,
     LevelStateData& a_force,
     int             a_maxIter,
@@ -133,7 +133,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-T LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
+T LevelMultigrid<OpType, T, MEM>::resnorm(
     LevelStateData& a_residual,
     LevelStateData& a_state,
     LevelStateData& a_force)
@@ -161,7 +161,7 @@ T LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-void LevelSolver_FASMultigrid<OpType, T, MEM>::interpBC(
+void LevelMultigrid<OpType, T, MEM>::interpBC(
     LevelStateData& a_crseStateBC)
 {
     m_mg->interpBC(a_crseStateBC);
@@ -170,7 +170,7 @@ void LevelSolver_FASMultigrid<OpType, T, MEM>::interpBC(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::setVerbose(
+LevelMultigrid<OpType, T, MEM>::setVerbose(
     bool a_flag)
 {
     m_verbose = a_flag;
@@ -178,7 +178,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::setVerbose(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
+LevelMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     Array<T, DIM> a_dx,
@@ -190,7 +190,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
+LevelMultigrid<OpType, T, MEM>::MGLevel::define(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     Array<T, DIM> a_dx,
@@ -243,7 +243,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
+LevelMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
     Point              a_refRatio,
     T             a_dx,
@@ -291,7 +291,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::interpBC(
+LevelMultigrid<OpType, T, MEM>::MGLevel::interpBC(
     LevelStateData& a_crseStateBC)
 {
     if (m_level > 0)
@@ -307,7 +307,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::interpBC(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
+LevelMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
         LevelStateData& a_crseForce,
         LevelStateData& a_state,
         LevelStateData& a_force,
@@ -338,7 +338,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::residual(
+LevelMultigrid<OpType, T, MEM>::MGLevel::residual(
         LevelStateData& a_residual,
         LevelStateData& a_state,
         LevelStateData& a_force)
@@ -358,7 +358,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::residual(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::relax(
+LevelMultigrid<OpType, T, MEM>::MGLevel::relax(
         LevelStateData& a_state,
         LevelStateData& a_force,
         int a_numIter)
@@ -381,7 +381,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::relax(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::fineCorrect(
+LevelMultigrid<OpType, T, MEM>::MGLevel::fineCorrect(
         LevelStateData& a_fine,
         LevelStateData& a_crse,
         LevelStateData& a_crse0)
@@ -408,7 +408,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::fineCorrect(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::vCycle(
+LevelMultigrid<OpType, T, MEM>::MGLevel::vCycle(
         LevelStateData& a_state,
         LevelStateData& a_force)
 {

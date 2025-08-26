@@ -3,12 +3,12 @@
 #define _PROTO_AMR_SOLVER_MULTIGRID_
 
 #include "Proto.H"
-#include "LevelSolver_FASMultigrid.H"
+#include "Proto_LevelMultigrid.H"
 
 using namespace Proto;
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
-class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
+class AMR : public AMRSolver<OpType, T, MEM>
 {
     public:
     
@@ -21,7 +21,7 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
     typedef AMRData<T, BOP::numState(), MEM>      AMRStateData;
     typedef AMRData<T, BOP::numAux(), MEM>        AMRAuxData;
 
-    inline AMRSolver_FASMultigrid(
+    inline AMR(
         AMRGrid& a_grid,
         Array<T, DIM>&   a_dx);
     
@@ -174,7 +174,7 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
         Stencil<T> m_average;
         InterpStencil<T> m_interpolate;
          
-        std::shared_ptr<LevelSolver_FASMultigrid<OpType, T, MEM>> m_mgSolver;
+        std::shared_ptr<LevelMultigrid<OpType, T, MEM>> m_mgSolver;
         AMROP* m_op;
 
         LevelStateData m_crseLocal;
@@ -191,5 +191,5 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
     std::shared_ptr<AMRLevel> m_amrLevel;
     std::shared_ptr<AMROP>    m_amrOp;
 };
-#include "AMRSolver_FASMultigridI.H"
+#include "implem/Proto_AMRImplem.H"
 #endif // end include guard

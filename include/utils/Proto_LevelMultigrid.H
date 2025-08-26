@@ -8,7 +8,7 @@
 using namespace Proto;
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
-class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
+class LevelMultigrid : public LevelSolver<OpType, T, MEM>
 {
     public:
    
@@ -18,13 +18,13 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
     typedef LevelBoxData<T, BOP::numState(), MEM> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(), MEM> LevelAuxData;
 
-    inline LevelSolver_FASMultigrid(
+    inline LevelMultigrid(
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
         T                  a_dx);
     
-    inline LevelSolver_FASMultigrid(
+    inline LevelMultigrid(
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
@@ -155,5 +155,5 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
     LevelStateData m_residual; 
     std::shared_ptr<MGLevel> m_mg;
 };
-#include "LevelSolver_FASMultigridI.H"
+#include "implem/Proto_LevelMultigridImplem.H"
 #endif // end include guard

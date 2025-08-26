@@ -2,7 +2,6 @@
 #include <iomanip>
 #include "Proto.H"
 #include "BoxOp_Euler.H"
-#include "AMRRK4.H"
 #include "InputParser.H"
 //#include "TestFunctions.H"
 using namespace Proto;

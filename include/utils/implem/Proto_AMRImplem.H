@@ -1,6 +1,6 @@
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRSolver_FASMultigrid(
+AMR<OpType, T, MEM>::AMR(
     AMRGrid& a_grid,
     Array<T, DIM>&   a_dx)
 {
@@ -10,7 +10,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRSolver_FASMultigrid(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::define(
+AMR<OpType, T, MEM>::define(
     AMRGrid& a_grid,
     Array<T, DIM>&   a_dx)
 {
@@ -22,7 +22,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
+AMR<OpType, T, MEM>::solve(
     AMRStateData& a_state,
     AMRStateData& a_force,
     AMRAuxData&   a_aux,
@@ -35,7 +35,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
+AMR<OpType, T, MEM>::solve(
     AMRStateData& a_state,
     AMRStateData& a_force,
     int           a_maxIter,
@@ -83,7 +83,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 double
-AMRSolver_FASMultigrid<OpType, T, MEM>::resnorm(
+AMR<OpType, T, MEM>::resnorm(
     AMRStateData& a_residual,
     AMRStateData& a_state,
     AMRStateData& a_force)
@@ -103,7 +103,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::resnorm(
 
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::AMRLevel(
+AMR<OpType, T, MEM>::AMRLevel::AMRLevel(
     AMRGrid& a_grid,
     AMROP&   a_op,
     int      a_level)
@@ -114,7 +114,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::AMRLevel(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
+AMR<OpType, T, MEM>::AMRLevel::define(
     AMRGrid& a_grid,
     AMROP&   a_op,
     int      a_level)
@@ -134,7 +134,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
 
         // define the level MG solver
         int numMGLevels = 1;
-        m_mgSolver = std::make_shared<LevelSolver_FASMultigrid<OpType, T, MEM>>(
+        m_mgSolver = std::make_shared<LevelMultigrid<OpType, T, MEM>>(
             a_grid[m_level], Point::Ones(2), numMGLevels, m_op->dx(a_level));
    
         // fine correction stencil 
@@ -162,7 +162,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
             minDomainSize = min(domainSizeV[dir], minDomainSize);
         }
         int numMGLevels = log(minDomainSize*1.0) / log(2.0);
-        m_mgSolver = std::make_shared<LevelSolver_FASMultigrid<OpType, T, MEM>>(
+        m_mgSolver = std::make_shared<LevelMultigrid<OpType, T, MEM>>(
             a_grid[0], Point::Ones(2), numMGLevels, m_op->dx(a_level));
     }
 }
@@ -170,7 +170,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::fineCorrect(
+AMR<OpType, T, MEM>::AMRLevel::fineCorrect(
         LevelStateData& a_state,
         LevelStateData& a_crseState,
         LevelStateData& a_crseState_0)
@@ -194,7 +194,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::fineCorrect(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
+AMR<OpType, T, MEM>::AMRLevel::crseResidual(
         LevelStateData& a_ResC,
         AMRStateData&   a_Phi,
         LevelStateData& a_GC,
@@ -231,7 +231,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
+AMR<OpType, T, MEM>::AMRLevel::vCycle(
         AMRStateData& a_state,
         AMRStateData& a_force,
         LevelStateData& a_levelForce)
@@ -278,7 +278,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
 template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 void
-AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::levelResidual(
+AMR<OpType, T, MEM>::AMRLevel::levelResidual(
         LevelStateData& a_res,
         AMRStateData& a_state,
         AMRStateData& a_force, 

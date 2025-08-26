@@ -1,6 +1,5 @@
 #include "Proto.H"      
 #include "InputParser.H"
-#include "LevelRK4.H"
 #include "BoxOp_Euler.H"
 
 using namespace Proto;

@@ -11,4 +11,7 @@
 #include "amr/Proto_AMROp.H"
 #include "amr/Proto_AMRSolver.H"
 
+#include "utils/Proto_AMR.H"
+#include "utils/Proto_AMRRK4.H"
+
 #endif
