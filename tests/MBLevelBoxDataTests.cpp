@@ -50,79 +50,34 @@ TEST(MBLevelBoxData, Construction) {
 
     for (auto iter : layout)
     {
-        auto patchID = layout.point(iter);
-        auto blockID = layout.block(iter);
-        unsigned int xBlock = (blockID+1) % numBlocks;
-        unsigned int yBlock = (blockID-1+numBlocks) % numBlocks;
-        auto blockLayout = layout.getBlock(blockID);
-        Box patchBox = (layout)[iter]; 
-        
-        for (auto dir : K)
+        Box patchBox = layout[iter];
+        auto patch = layout.patch(iter);
+        for (auto adjIter : layout.adjacentIndices(patch))
         {
-            Point neighbor = patchID + dir;
-            Point adjPatch = patchMap[neighbor];
-            Box adjPatchBox = Box(adjPatch, adjPatch).refine(boxSize);
-            auto bounds = hostData.bounds(iter, dir);
-#if PR_VERBOSE > 1
-            if (bounds.size() > 0)
-            {
-                pr_out() << "patch: " << patchID << " | block: " << blockID << " | dir: " << dir << std::endl;
-                pr_out() << "\tpatchBox: " << patchBox << " | adjPatchBox: " << adjPatchBox << std::endl;
-                pr_out() << "\tnumBoundaries: " << bounds.size() << std::endl;
-                for (auto bi : bounds)
-                {
-                    pr_out() << "\t\tlocalBoundBox: " << bi.localData->box() << " | adjBoundBox: " << bi.adjData->box() << std::endl;
-                }
-            }
-#endif
-            if (patchDomain.containsPoint(neighbor))
-            {
-                EXPECT_EQ(bounds.size(), 0);
-            } else if (patchDomain.adjacent(nx,1).containsPoint(neighbor))
-            {
-                int ghostSize = ghost[1].max();
-                EXPECT_EQ(bounds.size(), 1);
-                EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, xBlock));
-                Box patchBoundary = patchBox.adjacent(dir, ghostSize);
-                Point adjDir = -CCW(dir);
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir, ghostSize);
+            Box adjPatchBox = layout[adjIter];
+            auto adjPatch = layout.patch(adjIter);
+            if (patch.block == adjPatch.block) { continue; }
 
-                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
-            } else if (patchDomain.adjacent(ny,1).containsPoint(neighbor))
-            {
-                int ghostSize = ghost[1].max();
-                EXPECT_EQ(bounds.size(), 1);
-                EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, yBlock));
-                Box patchBoundary = patchBox.adjacent(dir, ghostSize);
-                Point adjDir = -CW(dir); 
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir, ghostSize);
-                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
-                EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
-            } else if (patchDomain.adjacent(nx+ny,1).containsPoint(neighbor))
-            {
-                int ghostSize = ghost[2].max();
-                EXPECT_EQ(bounds.size(), numBlocks-3);
-                Box patchBoundary = patchBox.adjacent(dir,ghostSize);
-                Point adjDir = -dir;
-                adjDir[0] = dir[0]; adjDir[1] = dir[1];
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir, ghostSize);
-                for (auto bound : bounds)
-                {
-                    EXPECT_EQ(layout.block(bound.localIndex), blockID);
-                    EXPECT_NE(layout.block(bound.adjIndex), blockID);
-                    EXPECT_NE(layout.block(bound.adjIndex), yBlock);
-                    EXPECT_NE(layout.block(bound.adjIndex), xBlock);
-                    EXPECT_EQ(bound.localData->box(), patchBoundary.grow(boundGhost));
-                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary.grow(boundGhost));
-                }
-            } else {
-                EXPECT_EQ(bounds.size(), 0);
-            }
+
+
+            Point connectivity = layout.connectivity(iter, adjIter);
+            Point adjConnectivity = layout.connectivity(adjIter, iter);
+            EXPECT_NE(connectivity, Point::Zeros());
+            EXPECT_NE(adjConnectivity, Point::Zeros());
+            Point blockConnectivity = layout.domain().graph().connectivity(patch.block, adjPatch.block);
+            Point adjBlockConnectivity = layout.domain().graph().connectivity(adjPatch.block, patch.block);
+            EXPECT_NE(blockConnectivity, Point::Zeros());
+            EXPECT_NE(adjBlockConnectivity, Point::Zeros());
+
+            auto bound = hostData.bound(iter, connectivity, adjPatch.block);
+
+            int ghostSize = ghost[connectivity.codim()].max();
+            Box localBoundaryBox = patchBox.adjacent(connectivity, ghostSize).grow(boundGhost);
+            Box adjBoundaryBox = adjPatchBox.edge(adjConnectivity, ghostSize).grow(boundGhost);
+
+            EXPECT_EQ(bound.localData->box(), localBoundaryBox);
+            EXPECT_EQ(bound.adjData->box(), adjBoundaryBox);
+
         }
     }
 }

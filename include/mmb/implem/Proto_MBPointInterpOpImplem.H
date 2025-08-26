@@ -40,13 +40,19 @@ MBPointInterpOp::MBPointInterpOp(
     //auto footprint = a_interpLayout.footprint(m_dst.dstPoint(), m_dst.dstIndex());
     m_srcs = a_interpLayout.computeSourcePoints(a_map, m_dst.dstPoint(), m_dst.dstIndex());
     computeExponents();
-    validateMatrixDimensions();
+    try {
+        validateMatrixDimensions();
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        writeLevelFootprint(a_map, "UNDETERMINED_INTERP_OP");
+        std::abort();
+    }
     auto momentData = computeMoments(a_map);
     try {
         computeCoefficients(momentData);
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << std::endl;
-        writeLevelFootprint(a_map, "ERROR_FOOTPRINT");
+        writeLevelFootprint(a_map, "UNDETERMINED_INTERP_OP");
         std::abort();
     }
     Box spanBox = span();
@@ -92,27 +98,30 @@ void MBPointInterpOp::validateMatrixDimensions() const
     int M = m_srcs.size();
     if (N == 0)
     {
-        std::cout << "MBInterpOp | Invalid system detected: N = 0 (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Invalid system detected" << std::endl;
         pr_out() << "\tNo exponents were computed" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
         pr_out() << "\tDst Point: " << m_dst << std::endl;
         pr_out() << "====================================================================" << std::endl;
+        char errorMsg[100];
+        sprintf(errorMsg, "Invalid system detected: N = 0 (no exponents computed). See pout for details.");
+        throw std::runtime_error(std::string(errorMsg));
     }
     if (M == 0)
     {
-        std::cout << "MBInterpOp | Invalid system detected: M = 0 (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Invalid system detected" << std::endl;
         pr_out() << "\tNo source points were found" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
         pr_out() << "\tDst Point: " << m_dst << std::endl;
         pr_out() << "====================================================================" << std::endl;
+        char errorMsg[100];
+        sprintf(errorMsg, "Invalid system detected: M = 0 (no source data points found). See pout for details.");
+        throw std::runtime_error(std::string(errorMsg));
     }
     if (N > M)
     {
-        std::cout << "MBInterpOp | Undetermined system detected: N > M | dst: " << m_dst << " | (see pout for details)" << std::endl;
         pr_out() << "====================================================================" << std::endl;
         pr_out() << "Underdetermined system detected" << std::endl;
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
@@ -136,6 +145,9 @@ void MBPointInterpOp::validateMatrixDimensions() const
         }
 #endif
         pr_out() << "====================================================================" << std::endl;
+        char errorMsg[100];
+        sprintf(errorMsg, "Underdetermined system detected: N > M (not enough source data points found). See pout for details.");
+        throw std::runtime_error(std::string(errorMsg));
     }
 }
 
@@ -324,7 +336,7 @@ template<typename MAP, MemType MEM>
 void MBPointInterpOp::writeLevelFootprint(const MBLevelMap<MAP, MEM>& map, std::string filename) const 
 {
     MBLevelMap<MAP, MEM> _map;
-    Point ghost = map.ghost()[1];
+    Point ghost = map.ghost()[2];
     Box spanBox = span();
     for (int dd = 0; dd < DIM; dd++)
     {

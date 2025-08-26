@@ -54,13 +54,12 @@ MBInterpLayout::computeSourcePoints(
     if (trueCenterQuery.has_value())
     {
         auto [adjIndex, adjCenter] = trueCenterQuery.value();
-        Point localTrueCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
 
         // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
-        Point projectedLocalTrueCenter = applyIgnoredAxes(localCenter, localTrueCenter);
-        pr_out() << "\tComputed true center: " << localTrueCenter << " | projected: " << projectedLocalTrueCenter << std::endl;
-        addSourcePointsNear(projectedLocalTrueCenter, localIndex, sourcePoints, map);
-        pr_out() << "\tAdded " << sourcePoints.size() << " source points" << std::endl;
+        Point projectedAdjCenter = applyIgnoredAxes(localCenter, adjCenter);
+        addSourcePointsNear2(projectedAdjCenter, adjIndex, localIndex, sourcePoints, map);
+        Point localTrueCenter = layout().domain().convertPoint(projectedAdjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+        addSourcePointsNear2(localTrueCenter, localIndex, localIndex, sourcePoints, map);
     // The else is used for the rare case where a the localCenter doesn't map cleanly to a neighboring patch
     // The best example of this is where 3 mutually symmetric blocks meet
     } else {
@@ -73,19 +72,134 @@ MBInterpLayout::computeSourcePoints(
             if (nearCenterQuery.has_value())
             {
                 auto [adjIndex, adjCenter] = nearCenterQuery.value();
-                Point localNearCenter = layout().domain().convertPoint(adjCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
-
                 // the following line deals with the case where localTrueCenter has been mapped outside of the hyperplane of the footprint.
-                Point projectedLocalNearCenter = applyIgnoredAxes(localCenter, localNearCenter);
-                pr_out() << "\tComputed near center: " << localNearCenter << " | projected: " << projectedLocalNearCenter << std::endl;
-                int before = sourcePoints.size();
-                addSourcePointsNear(projectedLocalNearCenter, localIndex, sourcePoints, map);
-                pr_out() << "\tAdded " << sourcePoints.size() - before << " source points" << std::endl;
+                Point projectedAdjNearCenter = applyIgnoredAxes(localCenter, adjCenter);
+                addSourcePointsNear2(projectedAdjNearCenter, adjIndex, localIndex, sourcePoints, map);
+                Point localNearCenter = layout().domain().convertPoint(projectedAdjNearCenter, layout().block(adjIndex), layout().block(localIndex), PR_CELL);
+                addSourcePointsNear2(localNearCenter, localIndex, localIndex, sourcePoints, map);
             }
         }
     }
     // addRedundantBoundarySources(localIndex, sourcePoints, map);
     return std::vector<MBDataPoint>(sourcePoints.begin(), sourcePoints.end());
+}
+
+template<typename MAP, MemType MEM>
+void MBInterpLayout::addSourcePointsNear2(
+    Point centerPoint,
+    MBIndex searchIndex,
+    MBIndex localIndex,
+    std::set<MBDataPoint>& sourcePoints,
+    const MBLevelMap<MAP,MEM>& map) const
+{
+    auto localPatch = layout().patch(localIndex);
+    auto searchPatch = layout().patch(searchIndex);
+    std::set<Point> frontierDirs;
+
+    for (auto fi : baseFootprint())
+    {
+        Point sourcePoint = centerPoint + fi;
+        auto adjIndexQuery = map.whichNeighborContains(searchIndex, sourcePoint);
+        if (adjIndexQuery.has_value())
+        {
+            auto [adjIndex, adjPoint] = adjIndexQuery.value();
+            
+            if (layout().connectivity(localIndex, adjIndex) != Point::Zeros() || 
+                adjIndex == localIndex)
+            {
+                // sourcePoint maps to localPatch or a patch which shares a boundary with it
+                Point sourcePointLocal = layout().domain().convertPoint(adjPoint, layout().block(adjIndex), localPatch.block, PR_CELL);
+                bool success = addSourcePoint(sourcePoints, sourcePointLocal, localIndex, adjPoint, adjIndex, map);
+                if (!success) { frontierDirs.insert(-(fi.dir())); }
+
+            } else
+            {
+                // sourcePoint maps to a patch other than localPatch which isn't connected to localPatch
+                frontierDirs.insert(-(fi.dir())); 
+            }
+
+        } else {
+            // sourcePoint doesn't map to a patch (e.g outside of boundary)
+            frontierDirs.insert(-fi.dir());
+        }
+    }
+
+    // if necessary, process an additional frontier on the edge of the footprint
+    if (frontierDirs.size() > 0)
+    {
+        pr_out() << "expanding frontier in directions: ";
+        for (auto di : frontierDirs) { pr_out() << di << ", "; } pr_out() << std::endl;
+        auto tmp = baseFootprint();
+        std::set<Point> footprint(tmp.begin(), tmp.end());
+        std::set<Point> frontier;
+        for (auto fi : footprint)
+        {
+            for (auto dir : Point::Directions())
+            {
+                Point fj = fi + dir;
+                if (frontierDirs.count(dir) > 0 && footprint.count(fj) <= 0)
+                {
+                    frontier.insert(fi + dir);
+                }
+            }
+        }
+
+        pr_out() << "frontier: ";
+        for (auto fi : frontier) { pr_out() << fi << ", "; } pr_out() << std::endl;
+        // this loop is the same as the footprint loop except that points which don't map properly are simply ignored
+        for (auto fi : frontier)
+        {
+            Point sourcePoint = centerPoint + fi;
+            auto adjIndexQuery = map.whichNeighborContains(searchIndex, sourcePoint);
+            if (adjIndexQuery.has_value())
+            {
+                auto [adjIndex, adjPoint] = adjIndexQuery.value();
+                
+                if (layout().connectivity(localIndex, adjIndex) != Point::Zeros() || 
+                    adjIndex == localIndex)
+                {
+                    // sourcePoint maps to localPatch or a patch which shares a boundary with it
+                    Point sourcePointLocal = layout().domain().convertPoint(adjPoint, layout().block(adjIndex), localPatch.block, PR_CELL);
+                    bool success = addSourcePoint(sourcePoints, sourcePointLocal, localIndex, adjPoint, adjIndex, map);
+                }
+            }
+            footprint.insert(fi);
+        }
+
+        for (auto fi : footprint)
+        {
+            for (auto dir : Point::Directions())
+            {
+                Point fj = fi + dir;
+                if (frontierDirs.count(dir) > 0 && footprint.count(fj) <= 0)
+                {
+                    frontier.insert(fi + dir);
+                }
+            }
+        }
+
+        pr_out() << "frontier: ";
+        for (auto fi : frontier) { pr_out() << fi << ", "; } pr_out() << std::endl;
+        // this loop is the same as the footprint loop except that points which don't map properly are simply ignored
+        for (auto fi : frontier)
+        {
+            Point sourcePoint = centerPoint + fi;
+            auto adjIndexQuery = map.whichNeighborContains(searchIndex, sourcePoint);
+            if (adjIndexQuery.has_value())
+            {
+                auto [adjIndex, adjPoint] = adjIndexQuery.value();
+                
+                if (layout().connectivity(localIndex, adjIndex) != Point::Zeros() || 
+                    adjIndex == localIndex)
+                {
+                    // sourcePoint maps to localPatch or a patch which shares a boundary with it
+                    Point sourcePointLocal = layout().domain().convertPoint(adjPoint, layout().block(adjIndex), localPatch.block, PR_CELL);
+                    bool success = addSourcePoint(sourcePoints, sourcePointLocal, localIndex, adjPoint, adjIndex, map);
+                }
+            }
+            footprint.insert(fi);
+        }
+    }
 }
 
 template<typename MAP, MemType MEM>
@@ -119,6 +233,8 @@ void MBInterpLayout::addSourcePointsNear(
     // if necessary, process an additional frontier on the edge of the footprint
     if (frontierDirs.size() > 0)
     {
+        pr_out() << "expanding frontier in directions: ";
+        for (auto di : frontierDirs) { pr_out() << di << ", "; } pr_out() << std::endl;
         auto tmp = baseFootprint();
         std::set<Point> footprint(tmp.begin(), tmp.end());
         std::set<Point> frontier;
@@ -133,7 +249,8 @@ void MBInterpLayout::addSourcePointsNear(
                 }
             }
         }
-
+        pr_out() << "frontier: ";
+        for (auto fi : frontier) { pr_out() << fi << ", "; } pr_out() << std::endl;
         // this loop is the same as the footprint loop except that points which don't map properly are simply ignored
         for (auto fi : frontier)
         {
@@ -143,8 +260,39 @@ void MBInterpLayout::addSourcePointsNear(
             {
                 auto adjIndex = adjIndexQuery.value().first;
                 Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
-                addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+                auto success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+                if (!success) { frontierDirs.insert(-(fi.dir())); }
+            } else {
+                frontierDirs.insert(-(fi.dir())); 
             }
+            footprint.insert(fi);
+        }
+
+        frontier.clear();
+
+        for (auto fi : footprint)
+        {
+            for (auto dir : Point::Directions())
+            {
+                Point fj = fi + dir;
+                if (frontierDirs.count(dir) > 0 && footprint.count(fj) <= 0)
+                {
+                    frontier.insert(fi + dir);
+                }
+            }
+        }
+
+        for (auto fi : frontier)
+        {
+            Point sourcePoint = localTrueCenter + fi;
+            auto adjIndexQuery = map.whichNeighborContains(localIndex, sourcePoint);
+            if (adjIndexQuery.has_value())
+            {
+                auto adjIndex = adjIndexQuery.value().first;
+                Point adjPoint = layout().domain().convertPoint(sourcePoint, localPatch.block, layout().block(adjIndex), PR_CELL);
+                auto success = addSourcePoint(sourcePoints, sourcePoint, localIndex, adjPoint, adjIndex, map);
+            }
+            footprint.insert(fi);
         }
     }
 }
@@ -160,15 +308,17 @@ bool MBInterpLayout::addSourcePoint(
 {
     Box localPatchBox = layout()[localIndex];
     Box localDomainBox = layout().domain().getBlock(layout().block(localIndex)).box();
+    pr_out() << "trying to add source point | local point: " << localPoint << " | block: " << layout().block(localIndex);
+    pr_out() << " | adj point: " << sourcePoint << " | adj block: " << layout().block(sourceIndex);
     if (layout().block(localIndex) == layout().block(sourceIndex))
     {
         if ((localPatchBox.grow(map.ghost()[0]) & localDomainBox).containsPoint(localPoint))
         {
             MBDataPoint point(localIndex, localPoint, layout());
             auto [_, success] = sourcePoints.insert(point);
+            if (success) { pr_out() << "\tSUCCESS\nAdded point from local patch"<< std::endl;  } else { pr_out() << "\tFAILURE\nPoint is a duplicate"<< std::endl;  }
             return success;
         }
-        pr_out() << "FAILURE\n";
         // otherwise point is in an adjacent patch in the same block but NOT IN THE GHOST REGION of this patch and we ignore it
     } else {
         Point boundaryDir = layout().connectivity(localIndex, sourceIndex);
@@ -178,9 +328,11 @@ bool MBInterpLayout::addSourcePoint(
         {
             MBDataPoint point(localIndex, localPoint, sourceIndex, sourcePoint, layout());
             auto [_, success] = sourcePoints.insert(point);
+            if (success) { pr_out() << "\tSUCCESS\nAdded point from adjacent patch" << std::endl; } else { pr_out() << "\tFAILURE\nPoint is a duplicate"<< std::endl;  }
             return success;
         }
     }
+    pr_out() << "\tFAILURE\nPoint is not accessible from the local patch"<< std::endl; 
     return false;
 }
 

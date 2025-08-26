@@ -123,6 +123,14 @@ namespace Proto
             std::set<MBDataPoint>& sourcePoints,
             const MBLevelMap<MAP,MEM>& map) const;
 
+        template<typename MAP, MemType MEM>
+        inline void addSourcePointsNear2(
+            Point centerPoint,
+            MBIndex centerIndex,
+            MBIndex localIndex,
+            std::set<MBDataPoint>& sourcePoints,
+            const MBLevelMap<MAP,MEM>& map) const;
+
         MBDisjointBoxLayout m_layout;
         std::set<Point> m_baseFootprint;
         Array<bool, DIM> m_copyAxes;
