@@ -36,7 +36,12 @@
 #endif
 
 // Maps
+#include "utils/MBMap_XPointRigid.H"
+#include "utils/Proto_XPoint.H"
+#if DIM == 3
 #include "utils/MBMap_CubedSphereShell.H"
+#include "utils/Proto_CubedSphereShell.H"
+#endif
 
 // Utils
 #include "utils/Proto_MBLevelRK4.H"
@@ -44,7 +49,5 @@
 #ifdef PR_AMR
 #include "utils/Proto_MBAMR.H"
 #endif
-#if DIM == 3
-#include "utils/Proto_CubedSphereShell.H"
-#endif
+
 #endif
