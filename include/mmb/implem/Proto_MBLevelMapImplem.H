@@ -23,8 +23,17 @@ void MBLevelMap<MAP,MEM>::define(
         unsigned int               a_focalBlock)
 {
     Array<Point, DIM+1> ghost;
-    ghost.fill(a_ghost + Point::Ones(2)); //assumes 4th-5th order interpolation
+
+    // FIXME: Extra ghost cells are allocated for the boundary data ghost regions
+    // At least 2 layers of ghost cells are needed for 4th / 5th order interpolation
+    // Additional ghost cells may be needed for block boundary interpolation 
+    // in the case of heavily skewed maps. The +2 layers used here are necessary
+    // for high order intrpolation of in the XPoint map with 8 blocks
+    // If you change this code, change the similar code in MBLevelBoxData
+    // - Chris Bozhart - 8/25/2025
+    ghost.fill(a_ghost + Point::Ones(4));
     ghost[0] = a_ghost;
+    ghost[1] = a_ghost + Point::Ones(2);
     define(a_layout, ghost, a_focalBlock);
 }
 

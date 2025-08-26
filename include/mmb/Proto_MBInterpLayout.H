@@ -2,6 +2,7 @@
 #ifndef _PROTO_MB_INTERP_LAYOUT_
 #define _PROTO_MB_INTERP_LAYOUT_
 
+#include <algorithm> //used for std::sort
 #include "Proto.H"
 
 namespace Proto
@@ -46,11 +47,12 @@ namespace Proto
         /// @param map Used to convert local index space points into points in adjacent blocks as needed
         /// @param center The point being interpolated to
         /// @param index The index of the patch containing center
+        /// @param minSources The minimum number of sources needed for operator to be fully determined
         /// @return 
         template<typename MAP, MemType MEM>
         inline std::vector<MBDataPoint> computeSourcePoints(
             const MBLevelMap<MAP, MEM>& map,
-            Point center, MBIndex index) const;
+            Point center, MBIndex index, int minSources) const;
 
         /// @brief Return contains 1 for axes participating in interpolation and 0 for axes not participating
         /// @return 
@@ -118,10 +120,16 @@ namespace Proto
 
         template<typename MAP, MemType MEM>
         inline void addSourcePointsNear(
-            Point localTrueCenter,
+            Point centerPoint,
+            MBIndex centerIndex,
             MBIndex localIndex,
             std::set<MBDataPoint>& sourcePoints,
             const MBLevelMap<MAP,MEM>& map) const;
+
+        inline void removeSourcePointsNear(
+            Point trueCenterPoint,
+            int numSourcesToKeep,
+            std::set<MBDataPoint>& sourcePoints) const;
 
         MBDisjointBoxLayout m_layout;
         std::set<Point> m_baseFootprint;

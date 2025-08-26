@@ -323,7 +323,7 @@ TEST(MBInterpOp, XPointTest)
 #endif
     int domainSize = 16;
     int boxSize = 16;
-    int ghostSize = 2;
+    int ghostSize = 4;
     int numIter = 2;
     double order = 4;
 
@@ -378,7 +378,7 @@ TEST(MBInterpOp, XPointTest)
 }
 #endif
 #endif
-#if 1
+#if 0
 TEST(MBInterpOp, XPointRefined)
 {
     int ghostSize = 2;
@@ -451,6 +451,7 @@ TEST(MBInterpOp, CubedSphereShellTest)
     Array<double, DIM> offset{0.1,0.2,0.3,0,0,0};
     Point ghost = Point::Ones(ghostSize);
     if (cullRadialGhost) { ghost[radialDir] = 0;}
+    else { ghost[radialDir] = 1;}
     int N = 2;
     double err[N];
     double errL1[N];

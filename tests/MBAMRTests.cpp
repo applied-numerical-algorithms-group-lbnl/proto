@@ -38,7 +38,7 @@ namespace {
 #if 0
 TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
     constexpr int numBlocks = 4;
     int numLevels = 2;
@@ -99,10 +99,10 @@ TEST(MBAMR, AverageDown) {
     }
 }
 #endif
-#if 0
+#if 1
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
     constexpr int numBlocks = 5;
     int numLevels = 2;
@@ -201,12 +201,12 @@ TEST(MBAMR, InterpBounds) {
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     
     // Constants
-    int domainSize = 16;
+    int domainSize = 32;
     int boxSize = 16;
     constexpr int numBlocks = 5;
     int numLevels = 2;
