@@ -1,2 +1,2 @@
 blt_add_executable(NAME LevelMultigrid SOURCES main.cpp
-    DEPENDS_ON Headers_AMR common ${LIB_DEP})
+    DEPENDS_ON LevelMultigrid_Src ${LIB_DEP})

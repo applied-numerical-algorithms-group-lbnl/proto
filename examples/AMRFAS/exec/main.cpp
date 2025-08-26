@@ -1,7 +1,6 @@
 #include "Proto.H"
 #include "InputParser.H"
 #include "BoxOp_Laplace.H"
-#include "AMRSolver_FASMultigrid.H"
 
 using namespace Proto;
 
@@ -117,7 +116,7 @@ int main(int argc, char** argv)
         AMRGrid grid(layouts, refRatios, numLevels);
 
         // SOLVER
-        AMRSolver_FASMultigrid<BoxOp_Laplace, double> solver(grid, dx);
+        AMR<BoxOp_Laplace, double> solver(grid, dx);
 
         // DATA
         AMRData<double> Phi(grid,    OP::ghost()); 
