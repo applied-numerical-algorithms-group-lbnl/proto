@@ -37,9 +37,9 @@ MBPointInterpOp::MBPointInterpOp(
     m_order = a_order;
     m_dst = a_dst;
     Box patchBox = a_map.layout()[m_dst.dstIndex()];
-    //auto footprint = a_interpLayout.footprint(m_dst.dstPoint(), m_dst.dstIndex());
-    m_srcs = a_interpLayout.computeSourcePoints(a_map, m_dst.dstPoint(), m_dst.dstIndex());
     computeExponents();
+    m_srcs = a_interpLayout.computeSourcePoints(a_map, m_dst.dstPoint(), m_dst.dstIndex(), m_exponents.size());
+    
     try {
         validateMatrixDimensions();
     } catch (const std::runtime_error& e) {
