@@ -58,6 +58,7 @@ message(STATUS "Verbosity: ${VERBOSE}")
 add_compile_definitions(PR_VERBOSE=${VERBOSE})
 add_compile_definitions(DIM=${DIM})
 add_compile_definitions(PR_STACK_ALLOC=${STACK})
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 if (NOT DEFINED CMAKE_BUILD_TYPE)
     if (DEBUG AND RELEASE)
         set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose build type, \
