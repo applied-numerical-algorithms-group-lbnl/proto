@@ -222,8 +222,8 @@ void AMRRK4<OpType,T,MEM>::define(
         for (int lvl = a_level; lvl < numLevels; lvl++)
         {
             auto& layout = a_data.grid()[lvl];
-            m_ops.push_back(LOP(layout, dx));
-            //m_ops[lvl].define(layout, dx);
+            //m_ops.push_back(LOP(layout, dx));
+            m_ops[lvl].define(layout, dx);
             m_UStage.push_back(
                     std::make_shared<LevelBoxData<T, OP::numState(), MEM>>(
                         layout, OP::ghost()));
