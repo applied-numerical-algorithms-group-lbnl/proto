@@ -35,7 +35,6 @@ namespace {
     }
 }
 
-#if 0
 TEST(MBAMR, AverageDown) {
     HDF5Handler h5;
     int domainSize = 32;
@@ -98,19 +97,15 @@ TEST(MBAMR, AverageDown) {
 #endif
     }
 }
-#endif
-#if 1
 TEST(MBAMR, InterpBounds) {
     HDF5Handler h5;
     int domainSize = 32;
     int boxSize = 16;
-    constexpr int numBlocks = 5;
+    constexpr int numBlocks = 4;
     int numLevels = 2;
     int refRatio = 2;
     int numGhost = 2;
     Array<double, DIM> offset{0,0,0,0,0,0};
-    Array<Point,DIM+1> ghost;
-    ghost.fill(Point::Ones(numGhost));
   
     int N = 2;
     double error[N];
@@ -138,7 +133,6 @@ TEST(MBAMR, InterpBounds) {
             Box b_i = C2C.domain(crseLayout[iter]).grow(numGhost);
             BoxData<double, DIM> x_i(b_i.grow(PR_NODE));
             BoxData<double, 1> J_i(b_i);
-                // compute coordinate / jacobian values from map
             map[0].apply(x_i, J_i, block);
             BoxData<double, 1> phi_node = forall<double, 1>(f_bell, x_i, offset);
             phi |= C2C(phi_node);
@@ -185,7 +179,7 @@ TEST(MBAMR, InterpBounds) {
         error[nn] = rxn.fetch();
         #if PR_VERBOSE > 0
         std::cout << "Error (Max Norm): " << error[nn] << std::endl;
-        h5.writeMBLevel({"error"}, map[1], errData, "MBAMRTests_InterpBounds_PHI_ERR_N%i_1", nn);
+        h5.writeMBLevel({"error"}, map[1], errData, "MBAMRTests_InterpBounds_PHI_ERR_N%i", nn);
         #endif
         domainSize *= 2;
     }
@@ -200,8 +194,6 @@ TEST(MBAMR, InterpBounds) {
 #endif
     }
 }
-#endif
-#if 0
 TEST(MBAMRTests, LaplaceXPoint) {
     HDF5Handler h5;
     
@@ -258,7 +250,6 @@ TEST(MBAMRTests, LaplaceXPoint) {
         boxSize *= 2;
     }
 }
-#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
