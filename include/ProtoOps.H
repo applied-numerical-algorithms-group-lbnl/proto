@@ -7,5 +7,5 @@
 
 #include "Proto.H"
 
-#include "ops/Proto_Matrix.H"
+#include "lapack/Proto_Matrix.H"
 #endif

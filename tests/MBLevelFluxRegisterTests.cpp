@@ -575,7 +575,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointConstruction) {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
 
-    auto grid = telescopingXPointGrid(domainSize, numLevels, refRatio, boxSize, numBlocks);
+    auto grid = telescopingXPointGrid<numBlocks>(domainSize, numLevels, refRatio, boxSize);
     MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
     data.setVal(7);
@@ -631,7 +631,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointConstruction) {
     Array<Point,DIM+1> ghost;
     ghost.fill(Point::Ones(numGhost));
 
-    auto grid = refinedBlockBoundaryXPointGrid(domainSize, numLevels, refRatio, boxSize);
+    auto grid = refinedBlockBoundaryXPointGrid<numBlocks>(domainSize, numLevels, refRatio, boxSize);
     MBAMRMap<MBMap_XPointRigid<numBlocks, HOST>, HOST> map(grid, ghost);
     MBAMRData<double, 1, HOST> data(grid, ghost);
     data.setVal(7);
@@ -680,7 +680,7 @@ TEST(MBLevelFluxRegister, TelescopingXPointIncrement) {
     Point refRatios = Point::Ones(refRatio);
     Point ghostWidths = Point::Ones(ghostWidth);
 
-    auto grid = telescopingXPointGrid(domainSize, 2, refRatio, boxSize, numBlocks);
+    auto grid = telescopingXPointGrid<numBlocks>(domainSize, 2, refRatio, boxSize);
 
     Array<double, DIM> gridSpacing = Point::Ones();
     gridSpacing /= domainSize;
@@ -732,7 +732,7 @@ TEST(MBLevelFluxRegister, RefinedBlockBoundaryXPointIncrement) {
     Point refRatios = Point::Ones(refRatio);
     Point ghostWidths = Point::Ones(ghostWidth);
 
-    auto grid = refinedBlockBoundaryXPointGrid(domainSize, 2, refRatio, boxSize);
+    auto grid = refinedBlockBoundaryXPointGrid<numBlocks>(domainSize, 2, refRatio, boxSize);
 
     Array<double, DIM> gridSpacing = Point::Ones();
     gridSpacing /= domainSize;

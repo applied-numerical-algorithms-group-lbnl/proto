@@ -6,6 +6,7 @@
 
 using namespace Proto;
 
+namespace {
 MBGraph buildXPoint()
 {
     MBGraph graph(XPOINT_SIZE);
@@ -17,7 +18,7 @@ MBGraph buildXPoint()
     graph.fixRotations();
     return graph;
 }
-
+}
 TEST(MBGraph, XPointConnectivity) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();

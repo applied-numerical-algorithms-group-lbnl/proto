@@ -22,7 +22,7 @@
 #include "base/implem/Proto_MemoryImplem.H"
 
 // SINGLE PATCH OBJECTS
-#ifdef PR_OPS
+#ifdef PR_LAPACK
 #include "ProtoOps.H"
 #endif
 #include "base/Proto_Accel.H"
@@ -81,7 +81,9 @@
 #include "ProtoAMR.H"
 #endif
 #ifdef PR_MMB
+#ifdef PR_LAPACK
 #include "ProtoMMB.H"
+#endif
 #endif
 
 #include "transition/Proto_Transition_Utilities.H"

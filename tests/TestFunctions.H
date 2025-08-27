@@ -2,10 +2,44 @@
 #define TEST_LAMBDAS
 #include <cmath>
 #include "Proto.H"
-#ifdef PR_MMB
-#include "MBMap_XPointRigid.H"
-#endif
 using namespace Proto;
+
+enum TextColor
+{
+    WHITE,
+    RED,
+    YELLOW,
+    GREEN,
+    CYAN
+};
+
+void writeColorText(TextColor color, std::string text, std::ostream& stream = std::cout)
+{
+    std::string BEGIN;
+    switch(color)
+    {
+        case RED:
+            BEGIN = "\033[31m";
+            break;
+        case YELLOW:
+            BEGIN = "\033[33m";
+            break;
+        case GREEN:
+            BEGIN = "\033[32m";
+            break;
+        case WHITE:
+            BEGIN = "\033[37m";
+            break;
+        case CYAN:
+            BEGIN = "\033[36m";
+            break;
+        default:
+            std::cout << "unsupported TextColor: " << std::to_string(color);
+            break;
+    }
+    std::string RESET = "\033[0m";
+    stream << BEGIN << text << RESET << std::endl;
+}
 
 PROTO_KERNEL_START
 void f_bellF(Var<double>& a_data, Var<double, DIM>& a_X, Array<double, DIM> a_X0)
@@ -169,34 +203,6 @@ MBProblemDomain buildIdentity(int a_domainSize)
     return domain;
 }
 
-MBProblemDomain buildXPoint(int a_domainSize, int numBlocks = 5)
-{
-    PROTO_ASSERT(numBlocks > 2,
-        "buildXPoint | Error: Map is not valide for 2 or fewer blocks");
-    MBProblemDomain domain(numBlocks);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < numBlocks; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % numBlocks, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < numBlocks; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    domain.close();
-    return domain;
-}
-template<int NBLOCK, MemType MEM>
-std::shared_ptr<MBLevelMap<MBMap_XPointRigid<NBLOCK, MEM>, MEM>> XPointMap(int domainSize, int boxSize, int ghostSize)
-{
-    auto domain = buildXPoint(domainSize, NBLOCK);
-    auto layout = MBDisjointBoxLayout(domain, Point::Ones(boxSize));
-    auto map = std::make_shared<MBLevelMap<MBMap_XPointRigid<NBLOCK, MEM>, MEM>>();
-    map->define(layout, Point::Ones(ghostSize));
-    map->initialize();
-    return map;
-}
-
 MBProblemDomain buildShear(int a_domainSize)
 {
     MBProblemDomain domain(4);
@@ -247,23 +253,6 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     return domain;
 }
 #endif
-
-template<MemType MEM>
-PROTO_KERNEL_START
-void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, int numBlocks, int a_radius)
-{
-    double dtheta_mapped = 2*M_PI/numBlocks;
-    double dtheta_unmapped = 2*M_PI/4;
-    double theta_ratio = dtheta_mapped/dtheta_unmapped;
-    Point ri = Point::Ones(a_radius) - a_pt;
-    double r = max(ri[0], ri[1])*(1.0/a_radius);
-    double theta = 3*M_PI/2.0 + atan2(ri[1]*1.0, ri[0]*1.0)*theta_ratio + dtheta_mapped*a_block;
-
-    a_data(0) = r*cos(theta);
-    a_data(1) = r*sin(theta);
-    a_data(2) = 0;
-}
-PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 
 #if DIM > 2
 template<typename T, MemType MEM>
@@ -938,15 +927,15 @@ AMRGrid telescopingGrid(
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
 #ifdef PR_MMB
+template<int NBLOCK>
 MBAMRLayout telescopingXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
-        int boxSize,
-        int numBlocks = 5)
+        int boxSize)
 {
-    auto domain = buildXPoint(domainSize, numBlocks);
-    std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
+    auto domain = XPoint<NBLOCK>::Domain(domainSize, boxSize);
+    std::vector<Point> boxSizeVect(NBLOCK, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
     MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);
@@ -957,11 +946,6 @@ MBAMRLayout telescopingXPointGrid(
         std::vector<MBPoint> patches;
         Box patchDomain = Box::Cube(domainSize).refine(pow(refRatio,li)).coarsen(boxSize);
         Point patchDomainSizes = patchDomain.sizes();
-        //Point growDir = patchDomainSizes * (Point::X() + Point::Y());
-        //Point subDomainHigh = patchDomain.high();
-    
-        //Point subDomainLow = (subDomainHigh + Point::Ones()) / 2; 
-        //Box patchSubDomain(subDomainLow, subDomainHigh);
         Box patchSubDomain = patchDomain.extrude(-Point::X(), -patchDomainSizes[0]/2);
         patchSubDomain = patchSubDomain.extrude(-Point::Y(), -patchDomainSizes[1]/2);
         for (int bi = 0; bi < domain.size(); bi++)
@@ -976,15 +960,15 @@ MBAMRLayout telescopingXPointGrid(
     return grid;
 }
 
+template<int NBLOCK>
 MBAMRLayout refinedBlockBoundaryXPointGrid(
         int domainSize,
         int numLevels,
         int refRatio,
-        int boxSize,
-        int numBlocks = 5)
+        int boxSize)
 {
-    auto domain = buildXPoint(domainSize, numBlocks);
-    std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
+    auto domain = XPoint<NBLOCK>::Domain(domainSize, boxSize);
+    std::vector<Point> boxSizeVect(NBLOCK, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
     auto coarsePatches = domain.patches(boxSize);
     MBAMRLayout grid(domain, coarsePatches, boxSizeVect, refRatios);

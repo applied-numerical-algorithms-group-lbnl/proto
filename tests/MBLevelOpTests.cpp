@@ -170,7 +170,7 @@ TEST(MBLevelOp, XPointLaplace) {
     {
         err[nn] = 0.0;
         double dx = 1.0/domainSize;
-        auto domain = buildXPoint(domainSize);
+        auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
         Point boxSizes = Point::Ones(boxSize);
         MBDisjointBoxLayout layout(domain, boxSizes);
 
@@ -266,16 +266,22 @@ TEST(MBLevelOp, XPointLaplace) {
 #endif
 #endif
 
-#if 0
+#if 1
 #if DIM==2
 TEST(MBLevelOp, FluxMatching) {
-
+    #if 1
+    // use this to toggle tests on and off while developing.
+    std::cout << "TEST DISABLED | This test should be either fixed or deleted" << std::endl;
+    #else
+    #if PR_VERBOSE > 0
     HDF5Handler h5;
+    #endif
+    constexpr int numBlocks = 5;
     int domainSize = 16;
     int boxSize = 16;
     int numGhost = 4;
 
-    auto domain = buildXPoint(domainSize);
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
@@ -324,6 +330,7 @@ TEST(MBLevelOp, FluxMatching) {
 #if PR_VERBOSE > 0
     h5.writeMBLevel({"phi"}, map, hostSrc, "FluxMatch_Phi_%i",2);
     h5.writeMBLevel({"lphi"}, map, hostDst, "FluxMatch_LPhi_%i",1);
+#endif
 #endif
 }
 #endif

@@ -67,9 +67,9 @@ blt_add_executable(NAME LevelBoxDataTests SOURCES LevelBoxDataTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME LevelBoxDataTests COMMAND LevelBoxDataTests)
-if(OPS)
+if(LAPACK)
 blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
-    DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+    DEPENDS_ON Headers_LAPACK ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
@@ -77,7 +77,7 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
 blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
-    DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+    DEPENDS_ON Headers_LAPACK ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME OperatorTests COMMAND OperatorTests)
 endif()
@@ -136,13 +136,9 @@ if (MMB)
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME HDF5Tests COMMAND HDF5Tests)
     endif()
-    if(OPS)
-    blt_add_executable(NAME MBInterpLayoutTests SOURCES MBInterpLayoutTests.cpp
-        DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBInterpLayoutTests COMMAND MBInterpLayoutTests)    
+    if(LAPACK)   
     blt_add_executable(NAME MBInterpOpTests SOURCES MBInterpOpTests.cpp
-        DEPENDS_ON Headers_MMB Headers_OPS ${LIB_DEP} gtest
+        DEPENDS_ON Headers_MMB Headers_LAPACK ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
     blt_add_test(NAME MBInterpOpTests COMMAND MBInterpOpTests)
     blt_add_executable(NAME MBLevelOpTests SOURCES MBLevelOpTests.cpp

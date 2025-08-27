@@ -91,7 +91,7 @@ namespace Proto {
                 Box interiorBox,
                 Array<T,DIM> dx);
 
-        #ifdef PR_OPS
+        #ifdef PR_LAPACK
 
         /// @brief Creates a BCStencil which is used to extrapolate ghost cell values a specified 
         /// distance from a specified face. The number of source data points can also be specified.

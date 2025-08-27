@@ -8,10 +8,10 @@ using namespace Proto;
 TEST(MBAMRLayout, Construction) {
     int domainSize = 16;
     int boxSize = 16;
-    int numBlocks = 5;
+    constexpr int numBlocks = 5;
     int numLevels = 3;
     int refRatio = 2;
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     std::vector<Point> boxSizeVect(numBlocks, Point::Ones(boxSize));
     std::vector<Point> refRatios(numLevels-1, Point::Ones(refRatio));
 

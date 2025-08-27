@@ -8,7 +8,7 @@ namespace Proto {
 // Utililties
 //======================
 
-#ifdef PR_OPS
+#ifdef PR_LAPACK
 template<typename T>
 std::vector<double> Stencil<T>::ExtrapCoefs(const std::vector<double>& a_footprint, bool a_cellAverage)
 {

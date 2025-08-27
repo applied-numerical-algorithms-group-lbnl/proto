@@ -2,19 +2,20 @@
 Courtesy of the Applied Numerical Algorithms Group, Lawrence Berkeley National Laboratory
 
 ### Introduction
-Proto is a middleware layer that allows performance portability in scientific computations on structured grids. 
-* Proto has a high-level interface to enable stencil computations and pointwise calculations with a minimum of code.  This productivity layer makes for much cleaner and smaller scientific codes.
-* Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
-* Proto includes data structures which support embedded boundary (EB) calculations.  Embedded boundary calculations done properly require data to live on a more complex graph structure than simple arrays can support. 
+Proto is a flexible, expressive, and lightweight performance library focused on providing tools for building high-order simulations on structured grids using adaptive mesh refinement (AMR). Proto provides:
+* A clean, multi-level interface allowing developers to use as much or little of Proto as is needed for their application
+* High level abstractions for easily building AMR-based solvers on simple or mapped-multiblock problem domains
+* Expressive methods for specifying complex, high order computations using a minimalist, math-like syntax while avoiding excessive boilerplate
+* A flexible backend equipped to target various heterogeneous computing platforms containing CPUs as well as both NVidia and AMD GPUs
 
 ## Including Proto
-Proto requires very little effort to include in an external project. Proto consists entirely of header files, so there is no "build" at all. The only requirements are to #include "Proto.H" in the top level application, link the proto/include directory in the external application's build, and define any relevant compile time variables (see below). Do not #include any other headers from Proto other than Proto.H as doing so will often lead to linking issues.
+Proto requires very little effort to include in an external project. Proto consists entirely of header files, so there is no "build" at all. The only requirements are to #include "Proto.H" in the top level application, link the proto/include directory in the external application's build, and define any relevant compile time variables (see below). Do not #include any other headers from Proto other than Proto.H as doing so may lead to linking issues.
  ### Compile Time Constants
  * DIM - Maximum number of spatial dimensions
  * PR_MPI - If defined, MPI code will be toggled on. Compatible with either of the following GPU backend options
  * PROTO_CUDA - If defined, the cuda GPU compatible backend will be toggled on. Not compatible with PROTO_HIP
  * PROTO_HIP - If defined, the HIP GPU compatible backend will be toggled on. Not compatible with PROTO_CUDA
- * PR_HDF5 - If defined, HDF5 I/O tools will be included.
+ * PR_HDF5 - If defined, HDF5 I/O tools will be included. 
  * PR_AMR - If defined, adaptive mesh refinement tools will be included
  * PR_MMB - If defined, mapped multiblock tools will be included. Requires PR_OPS
  * PR_OPS - If defined, built in linear algebra tools will be included. Requires LAPACK.

@@ -88,7 +88,7 @@ public:
 
     inline void print() const;
 
-#ifdef PR_OPS
+#ifdef PR_LAPACK
 //=======================================================================================
 // InterpStencil1D Library ||
 //=======================++
@@ -193,7 +193,7 @@ public:
             std::vector<Point>&       a_shifts,
             const std::vector<Point>& a_orders,
             Point                     a_refRatio);
-#endif // end ifdef PR_OPS
+#endif // end ifdef PR_LAPACK
 #endif
 private:
     unsigned int m_r;               ///< Destination refinement ratio

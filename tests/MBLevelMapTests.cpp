@@ -135,7 +135,7 @@ TEST(MBLevelMapTests, XPointMapSmall)
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
@@ -152,7 +152,7 @@ TEST(MBLevelMapTests, XPointMap)
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map
@@ -214,7 +214,7 @@ TEST(MBLevelMapTests, XPointInverseMap)
     double gridSpacing = 1.0 / domainSize;
     HDF5Handler h5;
 
-    auto domain = buildXPoint(domainSize, numBlocks);
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     MBDisjointBoxLayout layout(domain, Point::Ones(boxSize));
 
     // initialize map

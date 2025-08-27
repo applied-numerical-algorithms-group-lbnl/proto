@@ -30,7 +30,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
 option(AMR "Build AMR libraries" OFF)
 option(MMB "Build MMB libraries" OFF)
-option(OPS "Build Operator libraries" OFF)
+option(LAPACK "Build LAPACK dependencies" OFF)
 option(BLIS "Use BLIS instead of BLAS" OFF)
 option(DEBUG "Building with DEBUG ON" ON)
 option(RELEASE "Building an optimized release build" OFF)
@@ -86,8 +86,15 @@ if (AMR)
     add_compile_definitions(PR_AMR)
 endif()
 
+if(BLIS)
+  set(LAPACK ON) # doesn't make sense to use blis without Ops
+endif()
+
 if (MMB)
     message(STATUS "MMB libraries are enabled")
+    if (NOT LAPACK)
+        message(STATUS "LAPACK was OFF. Setting to ON. LAPACK or BLIS are required for MMB.")
+    endif()
     add_compile_definitions(PR_MMB)
 endif()
 
@@ -115,12 +122,10 @@ project(Proto VERSION 4.0 DESCRIPTION "Proto examples") # LANGUAGES CXX) # HDF5 
 enable_language(CXX)
 
 # setup packages
-if(BLIS)
-  set(OPS ON) # doesn't make sense to use blis without Ops
-endif()
-if(OPS)
-    message(STATUS "Operator libraries are enabled")
-    add_compile_definitions(PR_OPS)
+
+if(LAPACK)
+    message(STATUS "Matrix libraries are enabled")
+    add_compile_definitions(PR_LAPACK)
     if (DEFINED ENV{OLCF_NETLIB_LAPACK_ROOT})
         set(LAPACK_DIR $ENV{OLCF_NETLIB_LAPACK_ROOT})
     elseif(DEFINED ENV{MKLROOT})
@@ -270,7 +275,6 @@ if (NOT BLT_LOADED)
         endif ()
     endif ()
 
-    # Default to C++11 if not set so GTest/GMock can build
     if (NOT BLT_CXX_STD)
         set(BLT_CXX_STD "c++17" CACHE STRING "")
     endif()

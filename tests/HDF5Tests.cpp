@@ -90,11 +90,12 @@ TEST(HDF5, ReadWriteMBLevel)
     HDF5Handler h5;
     int domainSize = 4;
     int boxSize = 2;
-    auto domain = buildXPoint(domainSize);
+    constexpr int numBlocks = 5;
+    auto domain = XPoint<numBlocks>::Domain(domainSize, boxSize);
     Point boxSizeVect = Point::Ones(boxSize);
     std::vector<MBPoint> patches;
     std::vector<Point> boxSizes;
-    for (BlockIndex bi = 0; bi < domain.numBlocks(); bi++)
+    for (BlockIndex bi = 0; bi < numBlocks; bi++)
     {
         boxSizes.push_back(Point::Ones(boxSize));
         for (Point pi : Box::Cube(domainSize / boxSize))

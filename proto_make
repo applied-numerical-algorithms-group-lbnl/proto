@@ -19,7 +19,7 @@ parser.add_argument('--CUDA', help="Compile for Cuda acceleration [ON]", choices
 parser.add_argument('--HIP',  help="Compile for HIP acceleration [ON]", choices=['ON', 'OFF'], default='OFF')
 parser.add_argument('--MMB',  help="Use MMB library [ON]", choices=['ON', 'OFF'], default='ON')
 parser.add_argument('--HDF5', help="Enable HDF5 data processing [ON]", choices=['ON', 'OFF'], default='ON')
-parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
+parser.add_argument('--LAPACK',  help="Use built-in Linear Algebra interface (required for mapped multiblock) [ON]",
         choices=['ON', 'OFF'], default='ON')
 parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
 parser.add_argument('--RELEASE', help="Create an optimized build. Turn off DEBUG in order to omit building the symbol table [OFF]", choices=['ON', 'OFF'], default='OFF')
@@ -40,7 +40,7 @@ examples = []
 perfs = []
 
 targets = ['ALL (build everything)', 'TEST (build everything and run all tests)']
-if (args.OPS == 'ON'):
+if (args.LAPACK == 'ON'):
     for e in example_dirs:
         if (e[0] == '_'): continue
         if (e == 'CMakeLists.txt'): continue
@@ -120,7 +120,7 @@ CMAKE_FLAGS += "-D MMB=" + args.MMB + " "
 CMAKE_FLAGS += "-D ENABLE_CUDA=" + args.CUDA + " "
 CMAKE_FLAGS += "-D ENABLE_HIP=" + args.HIP + " "
 CMAKE_FLAGS += "-D ENABLE_HDF5=" + args.HDF5 + " "
-CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
+CMAKE_FLAGS += "-D LAPACK=" + args.LAPACK + " "
 CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
 CMAKE_FLAGS += "-D RELEASE=" + args.RELEASE + " "
 CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
@@ -147,9 +147,9 @@ successful_tests = []
 if args.TARGET == 'TEST':
     #os.system('cmake --build build/')  # General build step
     for i, test in enumerate(tests):
-        if i < args.RESTART:
-            print(f"Skipping {test} (before restart index {args.RESTART})")
-            continue
+        # if i < args.RESTART:
+        #     print(f"Skipping {test} (before restart index {args.RESTART})")
+        #     continue
         print(f"\nBuilding {test}...")
         result = subprocess.run(f'cmake --build build/ --target {test}', shell=True)
         if result.returncode != 0:

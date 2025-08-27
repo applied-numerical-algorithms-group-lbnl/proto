@@ -21,11 +21,9 @@
 #include "mmb/Proto_MBBoxOp.H"
 #include "mmb/Proto_MBLevelBC.H"
 #include "mmb/Proto_MBLevelOp.H"
-#ifdef PR_OPS 
 #include "mmb/Proto_MBInterpLayout.H"
 #include "mmb/Proto_MBPointInterpOp.H"
 #include "mmb/Proto_MBInterpOp.H"
-#endif
 #ifdef PR_AMR
 #include "ProtoAMR.H"
 #include "mmb/Proto_MBAMRBoxPartition.H"
