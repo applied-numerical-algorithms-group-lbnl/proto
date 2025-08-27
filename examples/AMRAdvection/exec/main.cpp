@@ -51,11 +51,11 @@ void f_advectionExactF(
         double r = sqrt(rsq);
         if (r > r0)
         {
-            a_U(comp) = 1.;
+            a_U(comp) = 0.;
         }
         else
         {
-            a_U(comp) = 1.+pow(cos(M_PI*r/r0/2),6);
+            a_U(comp) = pow(cos(M_PI*r/r0/2),6);
         }
     }
 }
@@ -181,7 +181,9 @@ int main(int argc, char** argv)
                 std::cout << "n: " << k << " | time: " << time << std::endl;
             }
 #ifdef PR_HDF5
-            h5.writeAMRData(dx, U, "U_N%i", k+1);
+            AMRData<double, NUMCOMPS> UPlot(U.grid(), Point::Zeros());
+            U.copyTo(UPlot);
+            h5.writeAMRData(dx, UPlot, "U_N%i", k+1);
 #endif
         }
     }
