@@ -22,6 +22,7 @@ parser.add_argument('--HDF5', help="Enable HDF5 data processing [ON]", choices=[
 parser.add_argument('--OPS',  help="Use build in Linear Algebra interface [ON]",
         choices=['ON', 'OFF'], default='ON')
 parser.add_argument('--DEBUG', help="Build with debugging symbols. Turn this off to build with -O3 [ON]", choices=['ON', 'OFF'], default='ON')
+parser.add_argument('--RELEASE', help="Create an optimized build. Turn off DEBUG in order to omit building the symbol table [OFF]", choices=['ON', 'OFF'], default='OFF')
 parser.add_argument('-v','--VERBOSE', type=int, help='Verbosity of test code [0]', default='0')
 parser.add_argument('-t','--TARGET', help='Target to build [LIST]', default='LIST')
 parser.add_argument('-n', '--NPROC', type=int, help='Number of CPUS [1]', default='1')
@@ -120,6 +121,7 @@ CMAKE_FLAGS += "-D ENABLE_HIP=" + args.HIP + " "
 CMAKE_FLAGS += "-D ENABLE_HDF5=" + args.HDF5 + " "
 CMAKE_FLAGS += "-D OPS=" + args.OPS + " "
 CMAKE_FLAGS += "-D DEBUG=" + args.DEBUG + " "
+CMAKE_FLAGS += "-D RELEASE=" + args.RELEASE + " "
 CMAKE_FLAGS += "-D VERBOSE=" + str(args.VERBOSE) + " "
 CMAKE_FLAGS += "-D ENABLE_ALL_TESTS=ON" + " "
 CMAKE_FLAGS += "-D DISABLE_INIT_CHECKS=" + args.DISABLE_INIT_CHECKS + " "

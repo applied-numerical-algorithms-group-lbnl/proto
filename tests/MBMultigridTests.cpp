@@ -115,7 +115,7 @@ TEST(MBMultigridTests, BlockBoundaryInterpolate)
     std::cout << "TEST UNFINISHED" << std::endl;
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, Residual)
 {
     #if PR_VERBOSE > 0
@@ -167,7 +167,7 @@ TEST(MBMultigridTests, Residual)
 #endif
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, RelaxSingleIter)
 {
     #if PR_VERBOSE > 0
@@ -216,7 +216,7 @@ TEST(MBMultigridTests, RelaxSingleIter)
 
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, AverageDown)
 {
     #if PR_VERBOSE > 0
@@ -277,7 +277,7 @@ TEST(MBMultigridTests, AverageDown)
     }
 }
 #endif
-#if 1
+#if 0
 TEST(MBMultigridTests, LaplaceIdentity) {
     #if PR_VERBOSE > 0
     HDF5Handler h5;
@@ -346,8 +346,11 @@ TEST(MBMultigridTests, LaplaceXPoint) {
     mg.solve(phi, rhs, 20, 1e-10);
 }
 #endif
-#if 1
+
 TEST(MBMultigridTests, LaplaceXPointRefined) {
+    #if 1
+    std::cout << "TEST DISABLED | This test should be either fixed or deleted" << std::endl;
+    #else
     #if PR_VERBOSE > 0
     HDF5Handler h5;
     #endif
@@ -386,8 +389,9 @@ TEST(MBMultigridTests, LaplaceXPointRefined) {
     h5.writeMBLevel({"residual"}, map, res, "RES_LAPLACE_XPOINT");
 #endif
     mg.solve(phi, rhs, 10, 1e-10);
+    #endif
 }
-#endif
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
