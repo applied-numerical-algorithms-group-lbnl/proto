@@ -17,10 +17,10 @@ namespace Proto
                 Point srcToDst,
                 Point dstToSrc)
         {
-            srcBlock = srcBlock;
-            dstBlock = dstBlock;
-            srcToDst = srcToDst;
-            dstToSrc = dstToSrc;
+            this->srcBlock = srcBlock;
+            this->dstBlock = dstBlock;
+            this->srcToDst = srcToDst;
+            this->dstToSrc = dstToSrc;
         }
 
         inline ~MBGraphArc(){}

@@ -17,9 +17,9 @@ void MBGraphNode::addArc(BlockIndex a_block,
     MBGraphArc arc(index, a_block, a_toDst, a_fromDst); 
     
     // check for redundancies
-    for (auto arc : arcs[a_toDst])
+    for (auto a : arcs[a_toDst])
     {
-        if (arc.dstBlock == a_block) {return; }
+        if (a.dstBlock == a_block) {return; }
     }
 
     // add the arc to the map
