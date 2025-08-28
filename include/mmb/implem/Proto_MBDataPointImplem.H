@@ -55,7 +55,7 @@ MBDataPoint MBDataPoint::shift(Point a_dstShift, const MBDisjointBoxLayout& a_la
     ret.m_dstPoint = m_dstPoint + a_dstShift;
     if (inBoundary())
     {
-        auto R = a_layout.domain().graph().rotation(m_dstBlock, m_boundaryDir);
+        auto R = a_layout.domain().graph().rotation(m_dstBlock, m_srcBlock);
         ret.m_srcPoint = m_srcPoint + R(a_dstShift);
     } else {
         ret.m_srcPoint = m_srcPoint + a_dstShift;

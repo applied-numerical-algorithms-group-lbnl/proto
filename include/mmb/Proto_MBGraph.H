@@ -80,19 +80,6 @@ namespace Proto
         mutable std::map<Point, std::vector<MBGraphArc>> arcs; /// Map from direction from this to all arcs in that direction
     };
   
- /// Multiblock Graph
-    /** Codifies the underlying graph structure of a Multiblock domain. Contains information
-     *  about how blocks are connected to each other. Does not contain information related to
-     *  block sizes (see MBProblemDomain).
-     *
-     *  A MBGraph is built in stages. First a graph is initialized with the desired number of
-     *  blocks. Then, codimension-1 boundaries are defined using the defineBoundary function.
-     *  Boundaries of codimension-2+ are created automatically.
-     *
-     *  7-28-2023: Currently MBGraph does not correctly generate coordinate rotations associated
-     *  with codimension 3+ boundaries. -CLG
-     */
-
     class MBProblemDomain;
 
     /// @brief Graph of a mapped multiblock domain. Nodes represent blocks and arcs represent
@@ -233,14 +220,7 @@ namespace Proto
             BlockIndex srcBlock,
             BlockIndex dstBlock) const;
 
-        /// Get Rotation
-        /** Obtain the coordinate rotation from a specified block to an adjacent block which is
-         *  connected by a codimension-1 boundary. If the specified direction is not
-         *  not codimension-1, this function will yield an error.
-         */
-        inline CoordPermutation& rotation(
-                BlockIndex block,
-                Point dir) const;
+
 
         /// Get Adjacent Block
         /** Obtain the block adjacent to a specified block in a specified codimension-1
@@ -298,24 +278,19 @@ namespace Proto
         /** Executes postprocessing steps once all boundaries have been defined. This function
          *  Also checks for various topological errors in the graph construction. */
         inline void close();
-
         
-
+    private:
+    
         inline void fixRotations();
-private:
-        /** @brief retrieves a reference to the coordinate permutation associated with the boundary between srcBlock and dstBlock
-         *  along a specified direction. 
-         *  
-         *  This function is used for modifying the internals of the graph and is not recommended for public use 
-         * 
-         *  @param srcBlock the source block of the implied boundary
-         *  @param dir 
-         *  @param dstBlock the destination block of the implied boundary
-         */
+
         inline CoordPermutation& rotation(
                 BlockIndex srcBlock,
                 Point dir,
                 BlockIndex dstBlock) const;
+
+        inline CoordPermutation& rotation(
+                BlockIndex block,
+                Point dir) const;
 
         bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;

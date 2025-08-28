@@ -194,7 +194,7 @@ namespace {
         if (patchOnBlockBoundary)
         {
             BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);
-            CoordPermutation R = fineLayout.domain().graph().rotation(block, dir);
+            CoordPermutation R = fineLayout.domain().graph().rotation(block, adjBlock);
             Box rotatedDomain = fineLayout.domain().convertBox(flux.box(), block, adjBlock);
             flux.rotate(rotatedDomain, R);
 
@@ -350,6 +350,7 @@ namespace {
         for (auto iter : layout)
         {
             if (block >= 0 && layout.block(iter) != block) { continue; }
+            
             Box B0 = layout[iter];
             auto &refluxData = refluxRegisters[iter];
             BoxData<T,C> error(refluxData.box());
@@ -369,7 +370,8 @@ namespace {
                 auto fineSoln = testFineReflux<T,C>(get<1>(fineArgs), get<0>(fineArgs), refRatio,gridSpacing);
                 if (get<2>(fineArgs) != layout.block(iter))
                 {
-                    auto R = layout.domain().graph().rotation(layout.block(iter), dir);
+                    BlockIndex adjBlock = layout.domain().graph().adjacent(layout.block(iter), dir);
+                    auto R = layout.domain().graph().rotation(layout.block(iter), adjBlock);
                     auto Rinv = R.inverse();
                     fineSoln.rotate(registerBox, Rinv);
                 }

@@ -15,8 +15,7 @@ MBGraph buildXPoint()
     {
         graph.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
-    // graph.close();
-    graph.fixRotations();
+    graph.close();
     return graph;
 }
 }
@@ -56,7 +55,7 @@ TEST(MBGraph, XPointReverseArc) {
     Point x = Point::Basis(0);
     Point y = Point::Basis(1);
     Box K = Box::Kernel(1);
-    for (int bi = 0; bi < numBlocks; bi++)
+    for ( bi = 0; bi < numBlocks; bi++)
     {
         for (int bj = 0; bj < numBlocks; bj++)
         {
@@ -65,7 +64,7 @@ TEST(MBGraph, XPointReverseArc) {
             else if (diff == 1 || diff == -(XPOINT_SIZE-1))
             {
                 Box orth = K.grow(-x);
-                auto R = graph.rotation(bi, x);
+                auto R = graph.rotation(bi, bj);
                 for (auto dir : orth)
                 {
                     Point arc = dir + x;
@@ -74,7 +73,7 @@ TEST(MBGraph, XPointReverseArc) {
                 }
             } else if (diff == -1 || diff == XPOINT_SIZE-1) {
                 Box orth = K.grow(-y);
-                auto R = graph.rotation(bi, y);
+                auto R = graph.rotation(bi, bj);
                 for (auto dir : orth)
                 {
                     Point arc = dir + y;
@@ -233,8 +232,7 @@ TEST(MBGraph, CubedSphere) {
             }
         }
     }
-    // graph.close();
-    graph.fixRotations();
+    graph.close();
     auto dirs = Point::DirectionsOfCodim(1);
     for (auto di : dirs)
     {
