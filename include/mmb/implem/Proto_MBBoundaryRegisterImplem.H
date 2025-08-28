@@ -67,7 +67,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                     auto& adjLocalLayout = a_layout.getBlock(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
-                    auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
+                    auto R = a_layout.domain().graph().rotation(block, adjBlock);
                     for (auto ki : k)
                     {
                         boundsKey_t key(patch, block, ki);

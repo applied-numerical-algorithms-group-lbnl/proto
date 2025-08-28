@@ -75,9 +75,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
             auto adjPatch = a_layout.patch(adjIter);
             if (adjPatch.block == patch.block) { continue; } // not a block boundary
-            Point blockConnectivity = a_layout.domain().graph().connectivity(patch.block, adjPatch.block);
-
-            auto R = a_layout.domain().graph().rotation(patch.block, blockConnectivity, adjPatch.block);
+            auto R = a_layout.domain().graph().rotation(patch.block, adjPatch.block);
             
             int ghostSize = a_ghost[patchConnectivity.codim()].max();
             Box patchBox = a_layout[iter];

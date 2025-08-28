@@ -281,6 +281,20 @@ Point MBGraph::mirrorDirAcrossBoundary(
     return -R(a_dir*orth) + adjNorm;
 }
 
+inline CoordPermutation MBGraph::rotation(
+        BlockIndex a_srcBlock,
+        BlockIndex a_dstBlock) const
+{
+    PROTO_ASSERT(a_srcBlock < numBlocks(),
+        "MBGraph::rotation | Error: Block index %i is out of bounds.", a_srcBlock);
+    PROTO_ASSERT(a_dstBlock < numBlocks(),
+        "MBGraph::rotation | Error: Block index %i is out of bounds.", a_dstBlock);
+    Point dir = connectivity(a_srcBlock, a_dstBlock);
+    PROTO_ASSERT(dir != Point::Zeros(),
+        "MBGraph::rotation | Error: Blocks do not share a boundary");
+    return rotation(a_srcBlock, dir, a_dstBlock);
+}
+
 inline CoordPermutation& MBGraph::rotation(BlockIndex a_block, Point a_dir) const
 {
     PR_TIME("MBGraph::rotation(block, dir)");

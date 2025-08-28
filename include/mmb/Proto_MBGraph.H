@@ -3,8 +3,6 @@
 #ifndef _PROTO_MB_GRAPH_
 #define _PROTO_MB_GRAPH_
 
-//#include "Proto.H"
-
 namespace Proto
 {
     /// @brief Defines what type is used for indexing block entities
@@ -224,19 +222,17 @@ namespace Proto
                 BlockIndex dstBlock,
                 Point dir) const;
 
-        /** @brief retrieves the coordinate permutation associated with the boundary between srcBlock and dstBlock
-         *  along a specified direction. 
-         *  
+        /** @brief Attempts to retrieve the coordinate permutation from srcBlock to dstBlock
+         *  Fails by assertion if the input blocks don't share a boundary
+         * 
          *  @param srcBlock the source block of the implied boundary
-         *  @param dir 
          *  @param dstBlock the destination block of the implied boundary
-         *  @param 
+         *  @return the permutation from srcBlock's coordinates to dstBlock's coordinates
          */
-        inline CoordPermutation& rotation(
-                BlockIndex srcBlock,
-                Point dir,
-                BlockIndex dstBlock) const;
-        
+         inline CoordPermutation rotation(
+            BlockIndex srcBlock,
+            BlockIndex dstBlock) const;
+
         /// Get Rotation
         /** Obtain the coordinate rotation from a specified block to an adjacent block which is
          *  connected by a codimension-1 boundary. If the specified direction is not
@@ -303,9 +299,23 @@ namespace Proto
          *  Also checks for various topological errors in the graph construction. */
         inline void close();
 
-        private:
+        
 
         inline void fixRotations();
+private:
+        /** @brief retrieves a reference to the coordinate permutation associated with the boundary between srcBlock and dstBlock
+         *  along a specified direction. 
+         *  
+         *  This function is used for modifying the internals of the graph and is not recommended for public use 
+         * 
+         *  @param srcBlock the source block of the implied boundary
+         *  @param dir 
+         *  @param dstBlock the destination block of the implied boundary
+         */
+        inline CoordPermutation& rotation(
+                BlockIndex srcBlock,
+                Point dir,
+                BlockIndex dstBlock) const;
 
         bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;

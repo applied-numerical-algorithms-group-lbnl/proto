@@ -258,8 +258,8 @@ TEST(MBLevelMapTests, InterBlockApply_Shear)
         unsigned int bj = (bi + 1) % 4;
         Point dir_ij = layout.domain().graph().connectivity(bi, bj);
         Point dir_ji = layout.domain().graph().connectivity(bj, bi);
-        auto Rij = layout.domain().graph().rotation(bi, dir_ij, bj);
-        auto Rji = layout.domain().graph().rotation(bj, dir_ji, bi);
+        auto Rij = layout.domain().graph().rotation(bi, bj);
+        auto Rji = layout.domain().graph().rotation(bj, bi);
 
         Box Bi = Box::Cube(domainSize).edge(dir_ij, 2);
         Box Bj = Box::Cube(domainSize).adjacent(dir_ji, 2);

@@ -123,8 +123,7 @@ void MBFluxRegisterCopier<T,C,MEM>::addCoarseMotionItems (MBLevelFluxRegister<T,
             if (fineBlock != block)
             {
                 srcBox = coarseLayout.domain().convertBox(srcBox, block, fineBlock);
-                Point reverseDir = coarseLayout.domain().graph().mirrorDirAcrossBoundary(block, fineBlock, ri.dir());
-                rotation = coarseLayout.domain().graph().rotation(fineBlock, reverseDir, block);
+                rotation = coarseLayout.domain().graph().rotation(fineBlock, block);
                 
             }
             MBMotionItem toMotionItem(adjFineIndex, iter, srcBox, dstBox);
@@ -172,7 +171,7 @@ void MBFluxRegisterCopier<T,C,MEM>::addFineMotionItems (MBLevelFluxRegister<T,C,
             if (coarseBlock != fineBlock)
             {
                 dstBox = coarseLayout.domain().convertBox(srcBox, fineBlock, coarseBlock);
-                rotation = coarseLayout.domain().graph().rotation(fineBlock, dir, coarseBlock);
+                rotation = coarseLayout.domain().graph().rotation(fineBlock, coarseBlock);
             }
 
             int adjCoarseProcID = coarseLayout.procID(adjCoarseIndex);

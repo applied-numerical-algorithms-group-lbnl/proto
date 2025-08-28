@@ -111,7 +111,7 @@ share a codimension 1 boundary.");
     
     Box srcBox = m_domains[a_srcBlock].box();
     Box dstBox = m_domains[a_dstBlock].box();
-    auto R01 = m_graph->rotation(a_srcBlock, n01, a_dstBlock);
+    auto R01 = m_graph->rotation(a_srcBlock, a_dstBlock);
     
     Point d01, d10, v01, v10, s10;
     

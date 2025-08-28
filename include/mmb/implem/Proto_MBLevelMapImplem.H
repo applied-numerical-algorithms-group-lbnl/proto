@@ -122,8 +122,7 @@ void MBLevelMap<MAP,MEM>::doApply(
         BoxData<double, DIM, MEM> X_tmp(B);
         BoxData<double, 1, MEM> J_tmp(B);
         apply(X_tmp, J_tmp, a_computeBlock);
-        Point conn = domain.graph().connectivity(a_computeBlock, a_outBlock);
-        auto R = domain.graph().rotation(a_computeBlock, conn, a_outBlock);
+        auto R = domain.graph().rotation(a_computeBlock, a_outBlock);
         X_tmp.copyTo(a_X, R);
         J_tmp.copyTo(a_J, R);
     } else {
