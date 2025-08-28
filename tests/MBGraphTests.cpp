@@ -224,7 +224,7 @@ TEST(MBGraph, CubedSphere) {
                 Point adjDir = R(dir);
                 auto srcBlock = graph.adjacent(0, dir);
                 auto dstBlock = graph.adjacent(0, adjDir);
-                if (graph.adjacent(srcBlock, adjDir) == graph.size())
+                if (graph.adjacent(srcBlock, adjDir) == graph.numBlocks())
                 {
                     graph.defineBoundary(srcBlock, dstBlock, adjDir, R);
                 }

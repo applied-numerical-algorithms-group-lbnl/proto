@@ -1,0 +1,11 @@
+# Developer Notes
+
+## Ghost Cell Convension:
+Several data holders require an argument "ghost" which is Array<Point, DIM+1>. The convension for this structure is that the
+first element is the size of the ghost region for the actual BoxData elements stored in the data holder (e.g. the "bulk" ghost region)
+and the other elements (indexed 1, 2, ..., DIM) are the sizes of the extra data holders allocated on block boundaries for
+boundaries BETWEEN PATCHES of the indexed codimension. 
+
+## Miscellaneous:
+
+BlockIndex: Typedef'd in MBGraph.H. It's just an int, but calling a reference to a block a BlockIndex makes code easier to understand

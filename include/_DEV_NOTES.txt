@@ -1,0 +1,19 @@
+# Library Convensions:
+
+## Function Signatures
+Arguments to functions in header files dont have any prefix (e.g. a_). Arguments to functions in the corresponding cpp files
+may use whatever form is convenient for the developer. The purpose of this is to improve readability in modern
+text editors which have syntax completion.
+
+Prefer slightly more verbose function names than terse ones if the latter would be ambiguous.
+For example, what is the "size" of an MBDisjointBoxLayout? Number of blocks? Number of patches? Instead of a generic "size" function, define the following:
+
+int numBlocks() const;
+int numPatches() const;
+
+## Printing
+
+Small objects (Point, Box, etc) should have the following I/O methods:
+std::string str() const;                                        // creates a std::string representation of the object
+void print(std::ostream& stream = std::cout) const;             // prints the output of this->str() to the specified ostream, defaulting to std::cout. Adds an endline.
+std::ostream& operator<<(std::ostream& stream, const Obj& obj); // prints the object into an ostream

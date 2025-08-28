@@ -20,10 +20,10 @@ MBProblemDomain::MBProblemDomain(std::shared_ptr<MBGraph> a_graph)
 {
     m_closed = false;
     m_domains.clear();
-    m_domains.resize(a_graph->size());
+    m_domains.resize(a_graph->numBlocks());
     m_graph = a_graph;
     m_domainsDefined.clear();
-    m_domainsDefined.resize(a_graph->size(), false);
+    m_domainsDefined.resize(a_graph->numBlocks(), false);
 }
 
 void MBProblemDomain::defineDomain(BlockIndex a_blockID, Point a_domainSize)

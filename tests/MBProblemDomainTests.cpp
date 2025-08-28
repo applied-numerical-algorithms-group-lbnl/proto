@@ -22,7 +22,7 @@ TEST(MBProblemDomain, ConvertSimple)
                 domain.defineDomain(0,Point::Ones(boxSize));
                 domain.defineDomain(1,Point::Ones(boxSize));
                 const auto& graph = domain.graph();
-                Point revDir = graph.reverseDir(0,1,dir);
+                Point revDir = graph.mirrorDirAcrossBoundary(0,1,dir);
                 Point revArc = graph.reverseArc(0,1,dir);
                 EXPECT_EQ(R(dir), -revDir);
 

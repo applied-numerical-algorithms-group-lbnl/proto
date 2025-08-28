@@ -217,7 +217,7 @@ namespace {
         {
             auto adjBlock = coarseLayout.domain().graph().adjacent(block, coarseDir);
             Box fineRegisterBox = coarseLayout.domain().convertBox(coarseRegisterBox, block, adjBlock);
-            Point fineDir = coarseLayout.domain().graph().reverseDir(block, adjBlock, coarseDir);
+            Point fineDir = coarseLayout.domain().graph().mirrorDirAcrossBoundary(block, adjBlock, coarseDir);
             return std::make_tuple(fineDir, fineRegisterBox, adjBlock);
         } else {
             return std::make_tuple(-coarseDir, coarseRegisterBox, block);

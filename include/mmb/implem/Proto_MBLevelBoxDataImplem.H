@@ -90,110 +90,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                 iter, adjIter, patchBoundary, adjPatchBoundary,
                 R.inverse(), a_boundGhost);
             m_bounds[key].emplace_back(a_layout, iter, adjIter, patchBoundary, adjPatchBoundary, R.inverse(), a_boundGhost);
-        }
-
-
-        // auto block = a_layout.block(iter);
-        // auto patch = a_layout.point(iter);
-        // auto& localLayout = a_layout.getBlock(block);
-        // auto patchDomain = localLayout.patchDomain().box();
-        // auto localIndex = localLayout.find(patch);
-        // auto patchBox = localLayout[localIndex];
-
-        // Box K = Box::Kernel(1);
-        // for (int cc = 1; cc <= DIM; cc++)
-        // {
-        //     int ghostSize = m_ghost[cc].max();
-        //     if (ghostSize <= 0) {continue; }
-        //     for (auto di : K)
-        //     {
-        //         if (di.codim() != cc)
-        //         {
-        //             continue;
-        //         }
-        //         if (patchDomain.containsPoint(patch + di))
-        //         {
-        //             continue;
-        //         }
-        //         Point shrinkDirs;
-        //         for (int d = 0; d < DIM; d++)
-        //         {
-        //             shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
-        //         }
-        //         Box k = K.grow(shrinkDirs).shift(di);
-        //         PROTO_ASSERT(k.containsPoint(di),
-        //                      "MBLevelBoxData::define | Error: Data corruption");
-        //         auto bounds = a_layout.domain().boundaries(block, di);
-        //         Box boundaryPatches = patchDomain.adjacent(di, 1);
-        //         for (auto bound : bounds)
-        //         {
-        //             PROTO_ASSERT(bound.srcToDst == di,
-        //                          "MBLevelBoxData::define | Error: Data corruption");
-        //             auto adjBlock = bound.dstBlock;
-        //             Point adjDir = bound.dstToSrc;
-        //             const auto& adjLocalLayout = a_layout.getBlock(adjBlock);
-        //             Box adjPatchDomain = adjLocalLayout.patchDomain().box();
-        //             Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
-        //             auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
-        //             for (auto ki : k)
-        //             {
-        //                 boundsKey_t key(patch, block, ki);
-        //                 Point neighbor = patch + ki;
-        //                 if (boundaryPatches.containsPoint(neighbor))
-        //                 {
-        //                     auto adjPatch = R.rotateCell(
-        //                             neighbor, boundaryPatches, adjBoundaryPatches);
-        //                     auto adjIndex = adjLocalLayout.find(adjPatch);
-
-        //                     // for codim > 1, the rotation isn't defined in the directions
-        //                     // that are linearly independent from the boundary surface
-        //                     // to get this right, we rotate the in-plane coordinates and
-        //                     // use the reverse arc for the out of plane coordinates
-                            
-        //                     Point kiAdj = a_layout.domain().graph()
-        //                         .reverseDir(block, adjBlock, ki);
-
-        //                     Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-        //                     Box adjPatchBoundary = a_layout.domain()
-        //                         .convertBox(patchBoundary, block, adjBlock, CTR);
-
-        //                     auto adjIter = a_layout.find(adjPatch, adjBlock);
-        //                     if (adjIter == a_layout.end()) { continue; } //patch was not found
-                           
-        //                     MBBoundaryData<T, C, MEM> boundData(a_layout,
-        //                         iter, adjIter, patchBoundary, adjPatchBoundary,
-        //                         R.inverse(), a_boundGhost);
-        //                     m_bounds[key].push_back(boundData);
-        //                     // std::cout << "Built boundary from block " << block << " to adjBlock: " << adjBlock << std::endl;
-        //                     // std::cout << "\tLocal Box: " << patchBoundary << " | Adj Box: " << adjPatchBoundary << std::endl;
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-    
-    }
-#if 0
-    for (auto iter : a_layout)
-    {
-        for (Point dir : Box::Kernel(1))
-        {
-            for (auto bound : bounds(iter, dir))
-            {
-                auto localIndex = bound.localIndex;
-                auto adjIndex = bound.adjIndex;
-                Point localPatch = a_layout.point(localIndex);
-                Point adjPatch = a_layout.point(adjIndex);
-                BlockIndex localBlock = a_layout.block(localIndex);
-                BlockIndex adjBlock = a_layout.block(adjIndex);
-                Box localBox = bound.localData->box();
-                Box adjBox = bound.adjData->box();
-                
-                std::cout << "block: " << localBlock << " patch: " << localPatch << " box: " << localBox;
-                std::cout << " => block: " << adjBlock << " patch: " << adjPatch << " box: " << adjBox << std::endl;
-            }
-            
-        }
+        }    
     }
 #endif
     if (a_ghost[0] != Point::Zeros())
@@ -995,7 +892,7 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                 auto adjBlock = layout.block(bound.adjIndex);
                 auto boundCodim = graph.connectivity(localBlock, adjBlock).codim();
                 Point ghost = ghostArray[boundCodim];
-                Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
+                Point adjDir = graph.mirrorDirAcrossBoundary(localBlock, adjBlock, dir);
 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();

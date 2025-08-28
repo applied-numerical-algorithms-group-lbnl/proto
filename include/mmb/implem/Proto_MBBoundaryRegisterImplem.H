@@ -87,7 +87,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
                             // to get this right, we rotate the in-plane coordinates and
                             // use the reverse arc for the out of plane coordinates
                             
-                            Point kiAdj = a_layout.domain().graph().reverseDir(
+                            Point kiAdj = a_layout.domain().graph().mirrorDirAcrossBoundary(
                                     block, adjBlock, ki);
                             Box patchBoundary = patchBox.adjacent(ki, a_depth);
                             Box adjPatchBoundary;
@@ -367,7 +367,7 @@ MBBoundaryCopier<T,C,MEM,CTR>::buildMotionPlans(
                         "MBBoundaryCopier::buildMotionPlans | Error: Data corruption.");
                 int adjRank = layout.procID(bound.adjIndex);
                 auto adjBlock = layout.block(bound.adjIndex);
-                Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
+                Point adjDir = graph.mirrorDirAcrossBoundary(localBlock, adjBlock, dir);
                 
                 Box localBox_to = bound.localData->box();
                 Box adjBox_to = layout.domain().convertBox(

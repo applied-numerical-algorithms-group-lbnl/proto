@@ -102,7 +102,7 @@ namespace Proto
                 CoordPermutation&   a_rotation);
 
         // Number of Blocks
-        inline unsigned int size() const { return m_graph->size(); }
+        inline unsigned int size() const { return m_graph->numBlocks(); }
         
         // Number of Blocks
         inline unsigned int numBlocks() const { return size(); }

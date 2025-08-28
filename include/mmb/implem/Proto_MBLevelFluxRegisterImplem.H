@@ -123,7 +123,7 @@ void MBFluxRegisterCopier<T,C,MEM>::addCoarseMotionItems (MBLevelFluxRegister<T,
             if (fineBlock != block)
             {
                 srcBox = coarseLayout.domain().convertBox(srcBox, block, fineBlock);
-                Point reverseDir = coarseLayout.domain().graph().reverseDir(block, fineBlock, ri.dir());
+                Point reverseDir = coarseLayout.domain().graph().mirrorDirAcrossBoundary(block, fineBlock, ri.dir());
                 rotation = coarseLayout.domain().graph().rotation(fineBlock, reverseDir, block);
                 
             }
