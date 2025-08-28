@@ -92,7 +92,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             m_bounds[key].emplace_back(a_layout, iter, adjIter, patchBoundary, adjPatchBoundary, R.inverse(), a_boundGhost);
         }    
     }
-#endif
     if (a_ghost[0] != Point::Zeros())
     {
         m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));

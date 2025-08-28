@@ -15,7 +15,8 @@ MBGraph buildXPoint()
     {
         graph.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
-    graph.fixRotations();
+    graph.close();
+    // graph.fixRotations();
     return graph;
 }
 }
@@ -232,8 +233,10 @@ TEST(MBGraph, CubedSphere) {
             }
         }
     }
-    graph.fixRotations();
-    auto dirs = codimDirs(1);
+    // graph.fixRotations();
+    graph.close();
+    // auto dirs = codimDirs(1);
+    auto dirs = Point::DirectionsOfCodim(1);
     for (auto di : dirs)
     {
         auto bi = graph.adjacent(0, di);
