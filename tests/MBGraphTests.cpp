@@ -55,7 +55,7 @@ TEST(MBGraph, XPointReverseArc) {
     Point x = Point::Basis(0);
     Point y = Point::Basis(1);
     Box K = Box::Kernel(1);
-    for ( bi = 0; bi < numBlocks; bi++)
+    for ( int bi = 0; bi < numBlocks; bi++)
     {
         for (int bj = 0; bj < numBlocks; bj++)
         {
@@ -99,12 +99,12 @@ TEST(MBGraph, XPointAdjacent) {
             {
                 if (dir == 0 && *siter == Side::Hi)
                 {
-                    EXPECT_EQ(graph.adjacent(ii, dir, *siter), (ii+1) % numBlocks);
+                    EXPECT_EQ(graph.adjacentBlock(ii, dir, *siter), (ii+1) % numBlocks);
                 } else if (dir == 1 && *siter == Side::Hi)
                 {
-                    EXPECT_EQ(graph.adjacent(ii, dir, *siter), (ii + numBlocks - 1) % numBlocks);
+                    EXPECT_EQ(graph.adjacentBlock(ii, dir, *siter), (ii + numBlocks - 1) % numBlocks);
                 } else {
-                    EXPECT_EQ(graph.adjacent(ii, dir, *siter), numBlocks);
+                    EXPECT_EQ(graph.adjacentBlock(ii, dir, *siter), numBlocks);
                 }
             }
         }
@@ -222,9 +222,9 @@ TEST(MBGraph, CubedSphere) {
             for (int ii = 0; ii < 4; ii++)
             {
                 Point adjDir = R(dir);
-                auto srcBlock = graph.adjacent(0, dir);
-                auto dstBlock = graph.adjacent(0, adjDir);
-                if (graph.adjacent(srcBlock, adjDir) == graph.numBlocks())
+                auto srcBlock = graph.adjacentBlock(0, dir);
+                auto dstBlock = graph.adjacentBlock(0, adjDir);
+                if (graph.adjacentBlock(srcBlock, adjDir) == graph.numBlocks())
                 {
                     graph.defineBoundary(srcBlock, dstBlock, adjDir, R);
                 }
@@ -236,7 +236,7 @@ TEST(MBGraph, CubedSphere) {
     auto dirs = Point::DirectionsOfCodim(1);
     for (auto di : dirs)
     {
-        auto bi = graph.adjacent(0, di);
+        auto bi = graph.adjacentBlock(0, di);
         auto conn_out = graph.fullConnectivity(0, bi);
         auto conn_in  = graph.fullConnectivity(bi, 0);
         EXPECT_EQ(conn_out.size(), pow(3,DIM-1));
@@ -245,7 +245,7 @@ TEST(MBGraph, CubedSphere) {
         {
             if (di.dot(dj) == 0)
             {
-                auto bj = graph.adjacent(0, dj);
+                auto bj = graph.adjacentBlock(0, dj);
                 auto conn_ij = graph.fullConnectivity(bi, bj);
                 EXPECT_EQ(conn_ij.size(), pow(3,DIM-1));
             }
@@ -255,6 +255,7 @@ TEST(MBGraph, CubedSphere) {
 TEST(MBGraph, TriplePoint) {
     
     MBGraph g0(3);
+    
     auto CCW = CoordPermutation::ccw();
     auto CW = CoordPermutation::cw();
     auto I = CoordPermutation::identity();
@@ -262,6 +263,7 @@ TEST(MBGraph, TriplePoint) {
     auto Y = Point::Y();
     g0.defineBoundary(0,1,X, CCW);
     g0.defineBoundary(0,2,Y, CCW);
+    g0.close();
     EXPECT_FALSE(g0.isTriplePoint(0,X+Y));
     EXPECT_FALSE(g0.isTriplePoint(0,X-Y));
     EXPECT_FALSE(g0.isTriplePoint(0,-X+Y));
@@ -278,17 +280,21 @@ TEST(MBGraph, TriplePoint) {
     EXPECT_FALSE(g0.isTriplePoint(0,-X-Y-Z));
 #endif
 
-    g0.defineBoundary(1,2,X,CW);
-    EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
-    EXPECT_TRUE(g0.isTriplePoint(1,X+Y));
-    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y));
+    MBGraph g1(3);
+    g1.defineBoundary(0,1,X, CCW);
+    g1.defineBoundary(0,2,Y, CCW);
+    g1.defineBoundary(1,2,X,CW);
+    g1.close();
+    EXPECT_TRUE(g1.isTriplePoint(0,X+Y));
+    EXPECT_TRUE(g1.isTriplePoint(1,X+Y));
+    EXPECT_TRUE(g1.isTriplePoint(2,-X-Y));
 #if DIM > 2
-    EXPECT_TRUE(g0.isTriplePoint(0,X+Y+Z));
-    EXPECT_TRUE(g0.isTriplePoint(1,X+Y+Z));
-    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y+Z));
-    EXPECT_TRUE(g0.isTriplePoint(0,X+Y-Z));
-    EXPECT_TRUE(g0.isTriplePoint(1,X+Y-Z));
-    EXPECT_TRUE(g0.isTriplePoint(2,-X-Y-Z));
+    EXPECT_TRUE(g1.isTriplePoint(0,X+Y+Z));
+    EXPECT_TRUE(g1.isTriplePoint(1,X+Y+Z));
+    EXPECT_TRUE(g1.isTriplePoint(2,-X-Y+Z));
+    EXPECT_TRUE(g1.isTriplePoint(0,X+Y-Z));
+    EXPECT_TRUE(g1.isTriplePoint(1,X+Y-Z));
+    EXPECT_TRUE(g1.isTriplePoint(2,-X-Y-Z));
 #endif
 }
 #if DIM == 3
@@ -311,6 +317,7 @@ TEST(MBGraph, TriplePoint3D) {
     g0.defineBoundary(3,4,X, CCW);
     g0.defineBoundary(3,5,Y, CCW);
     g0.defineBoundary(4,5,X, CW);
+    g0.close();
 
     EXPECT_TRUE(g0.isTriplePoint(0,X+Y));
     EXPECT_TRUE(g0.isTriplePoint(0,X+Y+Z));
@@ -337,9 +344,10 @@ TEST(MBGraph, Equality) {
 
     G1.defineBoundary(0,1,X, CCW);
     G1.defineBoundary(0,2,Y, CCW);
-
+    G1.close();
     G2.defineBoundary(0,1,X, CCW);
     G2.defineBoundary(0,2,Y, CCW);
+    G2.close();
 
     bool equal = (G1 == G2);
 

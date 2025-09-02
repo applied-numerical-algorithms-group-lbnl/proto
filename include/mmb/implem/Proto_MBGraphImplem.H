@@ -38,6 +38,23 @@ CoordPermutation& MBGraphNode::rotation(Point a_dir, BlockIndex a_block)
     MayDay<void>::Error("MBGraphNode::rotation | Error: Data corruption.");
 }
 
+void MBGraphNode::print(std::ostream& stream) const
+{
+    stream << "MBGraphNode: Block " << index << std::endl;
+    for (auto dir : Point::Directions())
+    {
+        auto& dirArcs = arcs[dir];
+        if (dirArcs.size() > 0)
+        {
+            stream << "Direction: " << dir << std::endl;
+            for (auto a : dirArcs)
+            {
+                a.print(stream);
+            }
+        }
+    }
+}
+
 //=================================================================================================
 // BLOCK GRAPH
 
@@ -80,7 +97,7 @@ void MBGraph::fixRotations()
             Point f = f0;
             Point g = g0;
             BlockIndex b1 = b0;
-            auto b2 = adjacent(b0,f0);
+            auto b2 = adjacentBlock(b0,f0);
             while (b2 < numBlocks() && b2 != b0)
             {
                 d = reverseArc(b1,b2,d);
@@ -94,7 +111,7 @@ void MBGraph::fixRotations()
                 }
 
                 b1 = b2;
-                b2 = adjacent(b2,f);
+                b2 = adjacentBlock(b2,f);
             }
             if (b2 == b0 || reverse)
             {
@@ -114,7 +131,6 @@ void MBGraph::defineBoundary(
 {
     PROTO_ASSERT(!m_closed,
         "MBGraph::defineBoundary | Error: Graph definition has been completed and is locked");
-    // TODO: Remove this restriction if we allow for periodic boundaries
     PROTO_ASSERT(a_srcBlock != a_dstBlock,
         "MBGraph::defineBoundary | Error: src and dst block indices must be different.");
     PROTO_ASSERT(a_srcBlock < numBlocks(),
@@ -252,6 +268,7 @@ Point MBGraph::mirrorDirAcrossBoundary(
         BlockIndex a_dstBlock,
         Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::mirrorDirAcrossBoundary | Error: Graph must be closed before this function can be used");
     PROTO_ASSERT(a_srcBlock < numBlocks(),
         "MBGraph::mirrorDirAcrossBoundary | Error: Block index %i is out of bounds.", a_srcBlock);
     PROTO_ASSERT(a_dstBlock < numBlocks(),
@@ -285,6 +302,7 @@ inline CoordPermutation MBGraph::rotation(
         BlockIndex a_srcBlock,
         BlockIndex a_dstBlock) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::rotation | Error: Graph must be closed before this function can be used");
     PROTO_ASSERT(a_srcBlock < numBlocks(),
         "MBGraph::rotation | Error: Block index %i is out of bounds.", a_srcBlock);
     PROTO_ASSERT(a_dstBlock < numBlocks(),
@@ -336,20 +354,22 @@ inline CoordPermutation& MBGraph::rotation(
     }
 }
 
-BlockIndex MBGraph::adjacent(
+BlockIndex MBGraph::adjacentBlock(
         BlockIndex    a_srcBlock,
         unsigned int    a_dir,
         Side::LoHiSide  a_side) const
 {
-    return adjacent(a_srcBlock, Point::Basis(a_dir, a_side));
+    return adjacentBlock(a_srcBlock, Point::Basis(a_dir, a_side));
 }
 
-BlockIndex MBGraph::adjacent(
+BlockIndex MBGraph::adjacentBlock(
         BlockIndex    a_srcBlock,
         Point           a_dir) const
 {
     PROTO_ASSERT(a_dir.codim() == 1,
-            "MBGraph::adjacent | Error: Directional input must have codimension 1.");
+            "MBGraph::adjacentBlock | Error: Directional input must have codimension 1.");
+    PROTO_ASSERT(a_srcBlock >= 0 && a_srcBlock < numBlocks(),
+            "MBGraph::adjacentBlock | Error: Invalid block");
     if (numBoundaries(a_srcBlock, a_dir) != 1) { return numBlocks(); }
     return m_blocks[a_srcBlock]->arcs[a_dir][0].dstBlock;
 }
@@ -381,10 +401,11 @@ std::vector<MBGraphArc> MBGraph::boundaries(BlockIndex a_block, Point a_dir) con
     return bounds;
 }
 
-std::vector<Point> MBGraph::triplePoints(
+std::vector<Point> MBGraph::codim2TriplePointBoundaries(
         BlockIndex a_srcBlock, 
         Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::codim2TriplePointBoundaries | Error: Graph must be closed before this function can be used");
     int codim = a_dir.codim();
     std::vector<Point> points;
     if (codim <= 1) { return points; }
@@ -402,8 +423,8 @@ std::vector<Point> MBGraph::triplePoints(
             Point dir = a_dir;
             dir[ii] = 0;
             PROTO_ASSERT(dir.codim() < codim,
-                    "MBGraph::isTriplePoint | Recursion Error");
-            for (auto pi : triplePoints(a_srcBlock, dir))
+                    "MBGraph::codim2TriplePointBoundaries | Recursion Error");
+            for (auto pi : codim2TriplePointBoundaries(a_srcBlock, dir))
             {
                 points.push_back(pi);
             }
@@ -417,6 +438,7 @@ bool MBGraph::isTriplePoint(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::isTriplePoint | Error: Graph must be closed before this function can be used");
     int codim = a_dir.codim();
     if (codim <= 1) { return false; }
     else if (codim > 2)
@@ -440,15 +462,15 @@ bool MBGraph::isTriplePoint(
         return false;
     } else {
         auto dirs = a_dir.split();
-        auto b0 = adjacent(a_srcBlock, dirs[0]);
-        auto b1 = adjacent(a_srcBlock, dirs[1]);
+        auto b0 = adjacentBlock(a_srcBlock, dirs[0]);
+        auto b1 = adjacentBlock(a_srcBlock, dirs[1]);
         if (b0 >= numBlocks() || b1 >= numBlocks()) { return false; }
         auto R0 = rotation(a_srcBlock, dirs[0]);  
         auto R1 = rotation(a_srcBlock, dirs[1]);
         auto d01 = R0(dirs[1]);
         auto d10 = R1(dirs[0]);
-        auto b01 = adjacent(b0, d01); 
-        auto b10 = adjacent(b1, d10); 
+        auto b01 = adjacentBlock(b0, d01); 
+        auto b10 = adjacentBlock(b1, d10); 
         return (b01 == b1 && b10 == b0);
     }
 
@@ -459,6 +481,7 @@ MBGraph::getTriplePointCircuits(
     BlockIndex a_srcBlock,
     Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::getTriplePointCircuits| Error: Graph must be closed before this function can be used");
     std::vector<std::pair<Point, Point>> circuits;
     if (a_dir.codim() == 2)
     {
@@ -486,6 +509,7 @@ bool MBGraph::isDomainBoundary(
         BlockIndex a_srcBlock,
         Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::isDomainBoundary | Error: Graph must be closed before this function can be used");
     if (a_dir == Point::Zeros()) { return false; }
     if (isBlockBoundary(a_srcBlock, a_dir)) { return false; }
     if (isTriplePoint(a_srcBlock, a_dir)) { return false; }
@@ -494,7 +518,6 @@ bool MBGraph::isDomainBoundary(
 
 bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
-    // return (this == &a_rhs);
     for (auto n0 : m_blocks)
     {
         bool foundMatch = false;
@@ -513,6 +536,9 @@ bool MBGraph::operator==(const MBGraph& a_rhs) const
 
 bool MBGraph::isBlockBoundary(BlockIndex a_srcBlock, Point a_dir) const
 {
+    PROTO_ASSERT(m_closed, "MBGraph::isBlockBoundary | Error: Graph must be closed before this function can be used");
+    PROTO_ASSERT(a_srcBlock >= 0 && a_srcBlock < numBlocks(),
+        "MBGraph::isBlockBoundary | Error: Invalid block");
     if (isTriplePoint(a_srcBlock, a_dir)) { return true; }
     auto& arcMap = m_blocks[a_srcBlock]->arcs;
     if (arcMap.find(a_dir) == arcMap.end()) {return false; }
@@ -531,8 +557,7 @@ void MBGraph::print() const
     for (auto block : m_blocks)
     {
         pr_out() << "Block " << block->index << std::endl;
-        Box K = Box::Kernel(1);
-        for (auto dir : K)
+        for (Point dir : Point::Directions())
         {
             pr_out() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
             for (auto arc : block->arcs[dir])
@@ -562,9 +587,9 @@ void MBGraph::close()
                 auto dir_ji = bound_ij.dstToSrc;
                 if (dir_ij.codim() == 1)
                 {
-                    PROTO_ASSERT(adjacent(bi,dir_ij) == bj,
+                    PROTO_ASSERT(adjacentBlock(bi,dir_ij) == bj,
                         "MBGraph::close() | Error: Graph corruption");
-                    PROTO_ASSERT(adjacent(bj,dir_ji) == bi,
+                    PROTO_ASSERT(adjacentBlock(bj,dir_ji) == bi,
                         "MBGraph::close() | Error: Graph corruption");
                 }
                 if (dir_ij.codim() <= 2)
@@ -576,6 +601,7 @@ void MBGraph::close()
             }
         }
     }
+    m_closed = true;
 }
 
 

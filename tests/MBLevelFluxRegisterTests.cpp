@@ -193,7 +193,7 @@ namespace {
         bool patchOnBlockBoundary = fineLayout.isPatchOnBlockBoundary(finePatch, dir);
         if (patchOnBlockBoundary)
         {
-            BlockIndex adjBlock = fineLayout.domain().graph().adjacent(block, dir);
+            BlockIndex adjBlock = fineLayout.domain().graph().adjacentBlock(block, dir);
             CoordPermutation R = fineLayout.domain().graph().rotation(block, adjBlock);
             Box rotatedDomain = fineLayout.domain().convertBox(flux.box(), block, adjBlock);
             flux.rotate(rotatedDomain, R);
@@ -215,7 +215,7 @@ namespace {
         bool boxOnBlockBoundary = domainBox.edge(coarseDir).containsBox(coarseRegisterBox);
         if (boxOnBlockBoundary)
         {
-            auto adjBlock = coarseLayout.domain().graph().adjacent(block, coarseDir);
+            auto adjBlock = coarseLayout.domain().graph().adjacentBlock(block, coarseDir);
             Box fineRegisterBox = coarseLayout.domain().convertBox(coarseRegisterBox, block, adjBlock);
             Point fineDir = coarseLayout.domain().graph().mirrorDirAcrossBoundary(block, adjBlock, coarseDir);
             return std::make_tuple(fineDir, fineRegisterBox, adjBlock);
@@ -370,7 +370,7 @@ namespace {
                 auto fineSoln = testFineReflux<T,C>(get<1>(fineArgs), get<0>(fineArgs), refRatio,gridSpacing);
                 if (get<2>(fineArgs) != layout.block(iter))
                 {
-                    BlockIndex adjBlock = layout.domain().graph().adjacent(layout.block(iter), dir);
+                    BlockIndex adjBlock = layout.domain().graph().adjacentBlock(layout.block(iter), dir);
                     auto R = layout.domain().graph().rotation(layout.block(iter), adjBlock);
                     auto Rinv = R.inverse();
                     fineSoln.rotate(registerBox, Rinv);

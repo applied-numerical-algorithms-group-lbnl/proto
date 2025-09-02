@@ -45,7 +45,7 @@ namespace Proto
             return oss.str();
         }  
 
-        inline void print(std::ostream& stream = std::cout) { stream << str() << std::endl; }
+        inline void print(std::ostream& stream = std::cout) const { stream << str() << std::endl; }
 
         BlockIndex srcBlock; ///< The block index at the arc's origin
         BlockIndex dstBlock; ///< The block index at the arc's end
@@ -75,6 +75,10 @@ namespace Proto
             return (index == rhs.index)
                 && (arcs == rhs.arcs);
         }
+
+        /// @brief Print the block associated with this node and any arcs extending from it
+        /// @param stream 
+        inline void print(std::ostream& stream = std::cout) const;
 
         BlockIndex index; ///< The block associated with this node
         mutable std::map<Point, std::vector<MBGraphArc>> arcs; /// Map from direction from this to all arcs in that direction
@@ -135,6 +139,18 @@ namespace Proto
                 unsigned int      dir,
                 Side::LoHiSide      side,
                 CoordPermutation&   rotation);
+
+        /** @brief executes post processing steps once all boundaries of this graph have been defined
+         *  This function must be called before the graph can be used.
+         * 
+         *  Many functions of MBGraph will fail if the graph has not been closed.
+         * 
+         *  One of the purposes of this function is to implicitly compute higher codimensional boundaries
+         *  between blocks and the coordinate permutations associated with those connections. This process
+         *  is correct for codimension-2 boundaries, but may be incorrect for codimension-3 boundaries 
+         *  for graphs with a non-trivial 3 dimensional structure at the time of writing - 9/2/2025
+         */
+        inline void close();
 
         /// @brief Number of blocks in the graph
         inline unsigned int numBlocks() const {return m_blocks.size(); }
@@ -220,80 +236,142 @@ namespace Proto
             BlockIndex srcBlock,
             BlockIndex dstBlock) const;
 
-
-
-        /// Get Adjacent Block
-        /** Obtain the block adjacent to a specified block in a specified codimension-1
-         *  direction */
-        inline BlockIndex adjacent(
-                BlockIndex    srcBlock,
+        /** @brief Get the block adjacent to srcBlock in the specified codimension-1 direction
+         *  Since the direction is codimension-1, the block - should it exist - is guaranteed to be unique
+         *  @param srcBlock the block whose adjacency is desired
+         *  @param dir the coordinate axis along which to search for an adjacency
+         *  @param side the side (high / low) to search for the adjacency on
+         */
+        inline BlockIndex adjacentBlock(
+                BlockIndex      srcBlock,
                 unsigned int    dir,
                 Side::LoHiSide  side) const;
         
-        /// Get Adjacent Block (Overload)
-        /** This function is the same as the other version of adjacent. This function will fail
-         *  if a codimension-2+ point is supplied. */
-        inline BlockIndex adjacent(
+        /** @brief Get the block adjacent to srcBlock in the specified codimension-1 direction
+         *  Fails if codim1Dir.codim() != 1 
+         *  @param srcBlock a valid block index
+         *  @param codim1Dir a codimension-1 direction
+        */
+        inline BlockIndex adjacentBlock(
                 BlockIndex    srcBlock,
-                Point           dir) const;
+                Point         codim1Dir) const;
         
+        /** @brief Get a vector of all blocks adjacent to this block in direction dir
+         *  
+         *  @param srcBlock a valid block index
+         *  @param dir a direction
+         */
         inline std::set<BlockIndex> adjacentBlocks(
                 BlockIndex srcBlock,
                 Point dir) const;
 
-        /// Equality Operator
+        /** @brief Equality operator. Equality is determined by value */
         inline bool operator==(const MBGraph& rhs) const;
 
-        /// Detect Block Boundary
-        /** Returns true if the specified inputs correspond to a boundary between two blocks. */
+        /** @brief Determine if the block - direction pair represents the boundary of a block
+         *  This function returns true if dir points to a "triple point" region even though the
+         *  graph has no arcs from the node associated with srcBlock in the direction dir
+         *  
+         *  @param srcBlock a valid block index
+         *  @param dir a direction
+         */
         inline bool isBlockBoundary(BlockIndex srcBlock, Point dir) const;
       
-        /// Return list of codimension-2 triple points
-        inline std::vector<Point> triplePoints(
-                BlockIndex srcBlock,
-                Point dir) const;
-
-        /// Detect Triple Point
-        /** Returns true if the specified block boundary corresponds to a "triple point".
+        
+        /** @brief returns true if the specified block boundary corresponds to a "triple point".
          *  In this context, a "triple point" is a codimension-2 block boundary where exactly
          *  three blocks meet. This function is used to infer corrections that must be made 
-         *  when building interpolation operators in such regions. */
+         *  when building interpolation operators in such regions.
+         * 
+         *  Example: A "Triple Point" Configuration in 2D
+         *        \
+         *         \ Block 2
+         *  Block 0 >-------
+         *         / Block 1
+         *        /
+         */
         inline bool isTriplePoint(
                 BlockIndex  srcBlock,
                 Point        dir) const;
 
+        /** @brief return a list of codimension-1 direction pairs which represent "triple point circuits"
+         *  two codimension-1 directions represent a circuit relative to srcBlock if srcBlock has a
+         *  codimension-1 boundary in those directions with two other blocks which in turn have a codimenison-1
+         *  boundary which lies in the same logical "plane" as the two directions defining the circuit.
+         *  
+         *  This function is not recommended for public use.
+         * 
+         *  If DIM==2, there will be at most one circuit for a given block. In higher dimensions, there will in
+         *  general be many, and will result in the function being called recursively.
+         * 
+         *  At the time of writing, there are no dependencies in Proto which use this function, but it is likely
+         *  that it will be useful for more complex graphs. - Chris Bozhart - 9/2/2025
+         * 
+         *  @param srcBlock the reference block from which the search for triple point circuits is executed
+         *  @param dir the direction in which triple point circuits are searched
+        */
         std::vector<std::pair<Point, Point>>
         getTriplePointCircuits(
             BlockIndex srcBlock,
             Point dir) const;
 
+        /** @brief returns true if there are no blocks adjacent to srcBlock in the direction dir. This situation
+         *  is assumed to correspond to a "domain boundary"
+         *  @param srcBlock the reference block from which domain boundaries are searched for
+         *  @param dir the direction which constitutes the query for a domain boundary
+         */
         inline bool isDomainBoundary(
                 BlockIndex  srcBlock,
                 Point       dir) const;
 
-        /// Print
+        /// @brief prints all of the MBGraphNode objects in this graph (one for each block)
+        /** which in turn prints all of the arcs extending from each block
+        */
         inline void print() const;
         
-        /// Close Graph
-        /** Executes postprocessing steps once all boundaries have been defined. This function
-         *  Also checks for various topological errors in the graph construction. */
-        inline void close();
+
         
     private:
-    
+        
+        /** @brief internal function called inside of "close" adjusts errors in the implicitly constructed
+         *  coordinate permutations between blocks with high codimensional connectivity. 
+         */
         inline void fixRotations();
 
+        /** @brief obtain a reference to the coordinate permuation object stored in the graph. Used
+         *  by "close" to fix internal boundary rotations, and not intended for public use. If you think you 
+         *  need to use this externally, there is probably a bug in MBGraph::close that needs addressing instead
+         */
         inline CoordPermutation& rotation(
                 BlockIndex srcBlock,
                 Point dir,
                 BlockIndex dstBlock) const;
-
+    
+        /** @brief obtain a reference to the coordinate permuation object stored in the graph. Used
+         *  by "close" to fix internal boundary rotations, and not intended for public use. If you think you 
+         *  need to use this externally, there is probably a bug in MBGraph::close that needs addressing instead
+         */
         inline CoordPermutation& rotation(
                 BlockIndex block,
                 Point dir) const;
 
-        bool m_closed;
-        std::vector<std::shared_ptr<MBGraphNode>> m_blocks;
+        /** @brief for a given block - direction pair, return all of the codimension-2 boundaries 
+         *  that are projections of dir which also represent triple point boundaries.
+         * 
+         *  This function is highly experimental and not well tested.
+         *  This function only has true utility for DIM >= 3. For an illustrative example of when
+         *  This function has value, consider a graph of 4 blocks connected in such a way that
+         *  the arcs for a tetrahedron. It is completely unused at the time of writing, but
+         *  may come in handy in the future.
+         *  - Chris Bozhart - 8/28/2025
+         */
+        inline std::vector<Point> codim2TriplePointBoundaries(
+                BlockIndex srcBlock,
+                Point dir) const;
+
+
+        bool m_closed; ///< Has "close" been called on this
+        std::vector<std::shared_ptr<MBGraphNode>> m_blocks; ///< The nodes of this graph
     };
 #include "implem/Proto_MBGraphImplem.H"
 } // end namespace Proto
