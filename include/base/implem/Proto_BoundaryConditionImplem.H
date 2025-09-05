@@ -95,7 +95,7 @@ void BoundaryCondition::Dirichlet(
         fluxTemp.copyTo(a_fluxes[dd]);
     }
 }
-
+#ifdef PR_LAPACK
 template<class T>
 BCStencil<T> BoundaryCondition::DirichletExtrapStencil(int dist, Face face, int npoints)
 {
@@ -187,3 +187,4 @@ void BoundaryCondition::ExtrapolateCorners(
         }
     }
 }
+#endif
