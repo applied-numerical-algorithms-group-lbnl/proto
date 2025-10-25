@@ -265,7 +265,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
   //State W_ave_R_limited = alias(a_W_ave_R);
   State W_ave_R_limited = m_copy(a_W_ave_R);
   int limiter_apply = 1;
-  int slope_flattening_apply = 1;
+  int slope_flattening_apply = 0;
   if (limiter_apply == 1) {
     PR_TIMERS("limiter_apply==1");
     State W_ave_ahead = alias(a_W_ave,Point::Basis(a_d)*(-1));
@@ -316,9 +316,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
         eta = forall<double,1,MEM>(eta_calc, eta_d, eta_old);
         
       } else {
-        eta = alias(eta_d);
+        eta = m_copy(eta_d);
       }
-      eta_old = alias(eta);
+      eta_old = m_copy(eta);
     }
     State W_ave_L_ahead_lim_flat = forall<double,NUMCOMPS,MEM>(Flat_calc, W_ave_L_ahead_limited, a_W_ave, eta, a_d);
     
