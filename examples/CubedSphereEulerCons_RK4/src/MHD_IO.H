@@ -29,6 +29,8 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   auto map = CubedSphereShell::Map(layout, OP::ghost());
   MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
   MBLevelBoxData<double, NUMCOMPS, HOST> Uout(layout, Point::Zeros());
+  MBLevelBoxData<double, NUMCOMPS, HOST> W_cart_out(layout, Point::Zeros());
+  MBLevelBoxData<double, NUMCOMPS, HOST> W_sph_out(layout, Point::Zeros());
   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));
   MBLevelBoxData<double, 1, HOST> radiusLev(layout, OP::ghost() + 2);
   for (auto dit : layout)
@@ -46,8 +48,12 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   if (scale_data_with_r == 1){
     names[0] = "density_scaled";
     names[4] = "P_scaled";
+    names[5] = "BxPerp_scaled";
+    names[6] = "ByPerp_scaled";
+    names[7] = "BzPerp_scaled";
     names[9] = "Br_scaled"; 
   }
+  Array<double, DIM> dx;
   for (auto dit : layout)
   {
     auto& JU_i = a_JU[dit];
@@ -62,13 +68,20 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     CubedSphereShell::
       consToSemiSphNGEuler(USemiSph,JU_i,dVolr_i,bx_i,
                            blockBox,dxiPerp,block,4);
+    dx = eulerOp[dit].dx();
+    double half = 0.5;
+    BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+            (f_cubedSphereMap3,radiusLev[dit].box(),radiusLev[dit],dx,half,half,block);  
     forallInPlace([ ] PROTO_LAMBDA
     (Var<double,NUMCOMPS+2,HOST>& a_Wout,
+     Var<double,NUMCOMPS,HOST>& a_W_sph_out,
      const Var<double,NUMCOMPS+2,HOST>& a_USemiSph,
      double a_gamma,
      const Var<double,1,HOST>& a_radius,
+     const Var<double,DIM,HOST>& a_Xcart,
      int a_scale_data_with_r)
     {
+      // Primitive variables with vec_non_rad as vec_x_non, vec_y_non, vec_z_non
       a_Wout(0) = a_USemiSph(0);
       a_Wout(1) = a_USemiSph(1) / a_Wout(0);
       a_Wout(2) = a_USemiSph(2) / a_Wout(0);
@@ -86,22 +99,41 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
               + a_Wout(7)*a_Wout(7) + a_Wout(9)*a_Wout(9))/(8.0*M_PI);
       a_Wout(4) = (a_USemiSph(4) - ke - me)*(a_gamma - 1.0);
 
-      if (a_scale_data_with_r == 1){
-        a_Wout(0) = a_Wout(0)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
-        a_Wout(1) = a_Wout(1)/1e5; // km/s;
-        a_Wout(2) = a_Wout(2)/1e5; // km/s;
-        a_Wout(3) = a_Wout(3)/1e5; // km/s;
-        a_Wout(4) = a_Wout(4)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
-        // scaled by r*(2*gamma)
-        if (a_Wout(4) < 0.) a_Wout(4) = 0.;
-        a_Wout(5) = a_Wout(5)*1e6; // microGauss
-        a_Wout(6) = a_Wout(6)*1e6; // microGauss
-        a_Wout(7) = a_Wout(7)*1e6; // microGauss
-        a_Wout(8) = a_Wout(8)/1e5; // km/s;
-        a_Wout(9) = a_Wout(9)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
-      }
-    }, Wout[dit], USemiSph, gamma, radiusLev[dit], scale_data_with_r);
 
+      a_W_sph_out(iRHO) = a_Wout(0);
+      a_W_sph_out(iP) = a_Wout(4);
+      // Convert non rad cartesian to spherical velocities
+      double x = a_Xcart(0);
+      double y = a_Xcart(1);
+      double z = a_Xcart(2);
+      double r = sqrt(x*x + y*y + z*z);
+      double theta = acos(z/r);
+      double phi = atan2(y,x);
+      // Convert Cartesian to spherical velocities
+      a_W_sph_out(iVX) = a_Wout(8);
+      a_W_sph_out(iVY) = cos(theta)*cos(phi)*a_Wout(1) + cos(theta)*sin(phi)*a_Wout(2) - sin(theta)*a_Wout(3);
+      a_W_sph_out(iVZ) = -sin(phi)*a_Wout(1) + cos(phi)*a_Wout(2);
+      // Convert Cartesian to spherical magnetic fields
+      a_W_sph_out(iBX) = a_Wout(9);
+      a_W_sph_out(iBY) = cos(theta)*cos(phi)*a_Wout(5) + cos(theta)*sin(phi)*a_Wout(6) - sin(theta)*a_Wout(7);
+      a_W_sph_out(iBZ) = -sin(phi)*a_Wout(5) + cos(phi)*a_Wout(6);
+
+      if (a_scale_data_with_r == 1){
+        a_W_sph_out(iRHO) = a_W_sph_out(iRHO)*a_radius(0)*a_radius(0)/c_AU/c_AU/c_MP; // /cm^3 , scaled by r^2;
+        a_W_sph_out(iVX) = a_W_sph_out(iVX)/1e5; // km/s;
+        a_W_sph_out(iVY) = a_W_sph_out(iVY)/1e5; // km/s;
+        a_W_sph_out(iVZ) = a_W_sph_out(iVZ)/1e5; // km/s;
+        a_W_sph_out(iP) = a_W_sph_out(iP)*pow(a_radius(0)/c_AU,a_gamma*2)*1e12;    
+        // scaled by r*(2*gamma)
+        if (a_Wout(iP) < 0.) a_Wout(iP) = 0.;
+        a_W_sph_out(iBX) = a_W_sph_out(iBX)*(a_radius(0)*a_radius(0)/c_AU/c_AU)*1e6; // microGauss
+        a_W_sph_out(iBY) = a_W_sph_out(iBY)*(a_radius(0)/c_AU)*1e6; // microGauss
+        a_W_sph_out(iBZ) = a_W_sph_out(iBZ)*(a_radius(0)/c_AU)*1e6; // microGauss
+      }
+      
+    }, Wout[dit], W_sph_out[dit], USemiSph, gamma, radiusLev[dit], XCart, scale_data_with_r);
+
+#if 0    
     forallInPlace([ ] PROTO_LAMBDA
       (Var<double,NUMCOMPS,HOST>& l_U,
         const Var<double,NUMCOMPS,HOST>& l_JU,
@@ -113,7 +145,50 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
             l_U(comp) = l_JU(comp)/(l_deta(0)*l_dVolr(0));
           } 
       },Uout[dit],JU_i,deta,dVolr_i);
-    
+
+      
+
+      forallInPlace([ ] PROTO_LAMBDA
+      (Var<double,NUMCOMPS,HOST>& l_W_cart_out,
+        Var<double,NUMCOMPS,HOST>& l_W_sph_out,
+        const Var<double,NUMCOMPS,HOST>& l_JU,
+        const Var<double,DIM,HOST>& l_XCart,
+        const Var<double,1,HOST>& l_deta,
+        const Var<double,1,HOST>& l_dVolr,
+        const double a_gamma)
+      {                    
+        for (int comp = 0; comp < NUMCOMPS; comp++)
+          {
+            l_W_cart_out(comp) = l_JU(comp)/(l_deta(0)*l_dVolr(0)); 
+          }
+          l_W_cart_out(iVX) = l_W_cart_out(iMOMX)/l_W_cart_out(iRHO);
+          l_W_cart_out(iVY) = l_W_cart_out(iMOMY)/l_W_cart_out(iRHO);
+          l_W_cart_out(iVZ) = l_W_cart_out(iMOMZ)/l_W_cart_out(iRHO);
+          l_W_cart_out(iP) = (a_gamma-1.0)*(l_W_cart_out(iE) - 0.5*l_W_cart_out(iRHO)*(l_W_cart_out(iVX)*l_W_cart_out(iVX)
+                                + l_W_cart_out(iVY)*l_W_cart_out(iVY)
+                                + l_W_cart_out(iVZ)*l_W_cart_out(iVZ))
+                                - (l_W_cart_out(iBX)*l_W_cart_out(iBX)
+                                + l_W_cart_out(iBY)*l_W_cart_out(iBY)
+                                + l_W_cart_out(iBZ)*l_W_cart_out(iBZ))/8.0/M_PI); 
+
+          double r = sqrt(l_XCart(0)*l_XCart(0) + l_XCart(1)*l_XCart(1) + l_XCart(2)*l_XCart(2));
+          double theta = acos(l_XCart(2)/r);
+          double phi = atan2(l_XCart(1),l_XCart(0));
+          // Convert Cartesian to spherical velocities
+          l_W_sph_out(iVX) = sin(theta)*cos(phi)*l_W_cart_out(iVX) + sin(theta)*sin(phi)*l_W_cart_out(iVY) + cos(theta)*l_W_cart_out(iVZ);
+          l_W_sph_out(iVY) = cos(theta)*cos(phi)*l_W_cart_out(iVX) + cos(theta)*sin(phi)*l_W_cart_out(iVY) - sin(theta)*l_W_cart_out(iVZ);
+          l_W_sph_out(iVZ) = -sin(phi)*l_W_cart_out(iVX) + cos(phi)*l_W_cart_out(iVY);
+          // Convert Cartesian to spherical magnetic fields
+          l_W_sph_out(iBX) = sin(theta)*cos(phi)*l_W_cart_out(iBX) + sin(theta)*sin(phi)*l_W_cart_out(iBY) + cos(theta)*l_W_cart_out(iBZ);
+          l_W_sph_out(iBY) = cos(theta)*cos(phi)*l_W_cart_out(iBX) + cos(theta)*sin(phi)*l_W_cart_out(iBY) - sin(theta)*l_W_cart_out(iBZ);
+          l_W_sph_out(iBZ) = -sin(phi)*l_W_cart_out(iBX) + cos(phi)*l_W_cart_out(iBY);
+
+          l_W_sph_out(iRHO) = l_W_cart_out(iRHO);
+          l_W_sph_out(iP) = l_W_cart_out(iP);
+      },W_cart_out[dit],W_sph_out[dit],JU_i,XCart,deta,dVolr_i,gamma);
+
+#endif
+
 #ifndef PR_DISABLE_INIT_CHECKS
     // bool infOrNanBlock = Wout[dit].containsInfOrNAN();
     // if (infOrNanBlock)
@@ -164,21 +239,14 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
-  
-  if (scale_data_with_r == 1){
-  h5.writeMBLevel({"density_scaled", "VxPerp", "VyPerp", "VzPerp", "P_scaled", "BxPerp", "ByPerp", "BzPerp","Vr","Br_scaled"}, map, Wout, output_file);
-  } else {
-  h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, output_file);
-  }
+  h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
   if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
-// cout << infOrNan << endl;
-// if (infOrNan) abort();
-  // h5.writeMBLevel({"density","Momr","Momt","Momp","E","Br","Bt","Bp"}, map, JUTemp, "U_sph_" + to_string(iter));
-  // h5.writeMBLevel({"density","Momx","Momy","Momz","E","Bx","By","Bz"}, map, Uout, "Uout" + to_string(iter));
-  // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, a_JU, "JU_" + to_string(iter));
+
+  // Print this for more detailed output
+  // h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, "W_" + to_string(iter));
 }
 
-void Write_Checkpoint(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
+  void Write_Checkpoint(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              int iter,
              int restart_step,
              double time = 0.0,

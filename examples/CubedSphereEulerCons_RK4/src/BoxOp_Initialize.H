@@ -67,7 +67,7 @@ void f_radialShellInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;
+  a_W(iVX) = 00.;//ur;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -117,7 +117,7 @@ void f_nonradialInit_F(
   T p = p0 * pow(rho / rho0, a_gamma);
   T ur = amplitude * sqrt(a_gamma * p0 / rho0);
   a_W(iRHO) = rho;
-  a_W(iVX) = ur;//0.0;
+  a_W(iVX) = 0.0;
   a_W(iVY) = 0.0;
   a_W(iVZ) = 0.0;
   a_W(iP) = p;
@@ -172,6 +172,26 @@ initialize(State& a_W,
           uint a_block) const
 {
   int init_condition_type = ParseInputs::get_init_condition_type();
+
+  // Calculate A_matrix_inv
+  BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(a_W.box(),a_h,a_block,0);
+  BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(a_W.box(),a_h,0);
+  forallInPlace([ ] PROTO_LAMBDA
+    (Var<T, DIM, MEM, DIM> &a_amat,
+    Var<T, 1, MEM> &a_deta)
+    {
+      double inv_deta = 1.0 / a_deta(0);
+      for (int i = 0; i < DIM; i++){
+        for (int j = 0; j < DIM; j++){
+          a_amat(i,j) = a_amat(i,j) * inv_deta;
+        }
+      }
+    },amat,deta);
+  BoxData<T,DIM,MEM,DIM> A_matrix_inv(a_W.box());
+  A_matrix_inv.setToZero();
+  forallInPlace(f_matinv3by3,A_matrix_inv,amat);
+
+
   T strength = ParseInputs::get_strength();
   if (init_condition_type == 0) forallInPlace_p(f_radialShellInit, a_W, a_radius, a_gamma, a_nradius);
   if (init_condition_type == 1)
@@ -189,6 +209,46 @@ initialize(State& a_W,
     for (int i = -NGHOST; i <= (high_index-low_index)-NGHOST; i++){
       a_BC.copyTo(a_W,sourceBox,Point::Basis(0)*(i+1));
     }
+
+    // Convert from classical spherical to Cartesian (confirmed correct)
+    forallInPlace([ ] PROTO_LAMBDA
+    (Var<double, NUMCOMPS, HOST> &a_W,
+    Var<double, DIM> &a_X_cart)
+    {  
+      double x = a_X_cart(0);
+      double y = a_X_cart(1);
+      double z = a_X_cart(2);
+      double r = sqrt(x*x + y*y + z*z);
+      double theta = acos(z/r);
+      double phi = atan2(y,x);
+      // Convert spherical to Cartesian velocities
+      double u_r = a_W(iVX);
+      double u_theta = a_W(iVZ); //BC files are written as r,phi,theta
+      double u_phi = a_W(iVY);
+      a_W(iVX) = sin(theta)*cos(phi)*u_r + cos(theta)*cos(phi)*u_theta - sin(phi)*u_phi;
+      a_W(iVY) = sin(theta)*sin(phi)*u_r + cos(theta)*sin(phi)*u_theta + cos(phi)*u_phi;
+      a_W(iVZ) = cos(theta)*u_r - sin(theta)*u_theta;
+      // Convert spherical to Cartesian magnetic fields
+      double B_r = a_W(iBX);
+      double B_theta = a_W(iBZ); //BC files are written as r,phi,theta
+      double B_phi = a_W(iBY);
+      a_W(iBX) = sin(theta)*cos(phi)*B_r + cos(theta)*cos(phi)*B_theta - sin(phi)*B_phi;
+      a_W(iBY) = sin(theta)*sin(phi)*B_r + cos(theta)*sin(phi)*B_theta + cos(phi)*B_phi;
+      a_W(iBZ) = cos(theta)*B_r - sin(theta)*B_theta;
+    },a_W,a_Xcart);
+
+    // Convert from cartesian to cubed-spherical Primitive variables w=A_inv*u
+    BoxData<T,DIM,MEM> V_cart = slice<T,NUMCOMPS,DIM,MEM>(a_W,iVX);
+    BoxData<T,DIM,MEM> tmpV(a_W.box());
+    T one = 1.0;  
+    forallInPlace(f_matVecProd,tmpV,A_matrix_inv,V_cart,one);
+    tmpV.copyTo(V_cart);
+
+    BoxData<T,DIM,MEM> B_cart = slice<T,NUMCOMPS,DIM,MEM>(a_W,iBX);
+    BoxData<T,DIM,MEM> tmpB(a_W.box());
+    forallInPlace(f_matVecProd,tmpB,A_matrix_inv,B_cart,one);
+    tmpB.copyTo(B_cart);
+
     // In primitive spherical. To correct units. scale by radius.
     forallInPlace([ ] PROTO_LAMBDA
     (Var<double, NUMCOMPS, HOST> &a_WSph,

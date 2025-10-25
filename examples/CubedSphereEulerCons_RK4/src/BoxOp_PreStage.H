@@ -203,14 +203,34 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
   // Inner BCs
   if (a_blockBox.low()[0] > bxGhosted.low()[0])
   {
-       
+
+    // Calculate A_matrix
+    BoxData<T,DIM,MEM,DIM> amat = CubedSphereShell::detA_A<T,MEM>(bdryBoxLow,a_h,a_block,0);
+    BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bdryBoxLow,a_h,0);
+    forallInPlace([ ] PROTO_LAMBDA
+      (Var<T, DIM, MEM, DIM> &a_amat,
+      Var<T, 1, MEM> &a_deta)
+      {
+        double inv_deta = 1.0 / a_deta(0);
+        for (int i = 0; i < DIM; i++){
+          for (int j = 0; j < DIM; j++){
+            a_amat(i,j) = a_amat(i,j) * inv_deta;
+          }
+        }
+      },amat,deta);
+    BoxData<T,DIM,MEM,DIM> A_matrix_inv(bdryBoxLow);
+    A_matrix_inv.setToZero();
+    forallInPlace(f_matinv3by3,A_matrix_inv,amat);
+
+    // Find X_cart
+    double half = 0.5;
+    BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
+    (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);
+
     if (init_condition_type == 0 || init_condition_type == 1 || init_condition_type == 4 || init_condition_type == 5){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
     }
-    if (init_condition_type == 2){
-      double half = 0.5;
-      BoxData<double, DIM, HOST> XCart = forall_p<double,DIM,HOST>
-      (f_cubedSphereMap3,radius.box(),radius,dx,half,half,a_block);  
+    if (init_condition_type == 2){ 
       forallInPlace_p(f_radialoutflowIBCs, bdryBoxLow, a_USphStage, radius, XCart, m_gamma, thickness);
     }
     if (init_condition_type == 3){
@@ -220,10 +240,65 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
       for (int i = 0; i <= NGHOST; i++){
         a_BC.copyTo(a_USphStage,sourceBox,Point::Basis(0)*(-i));
       }
+
+
+
+      // Convert from classical spherical to Cartesian (confirmed correct)
+      forallInPlace([ ] PROTO_LAMBDA
+      (Var<double, NUMCOMPS, HOST> &a_W,
+      Var<double, DIM> &a_X_cart)
+      {  
+        double x = a_X_cart(0);
+        double y = a_X_cart(1);
+        double z = a_X_cart(2);
+        double r = sqrt(x*x + y*y + z*z);
+        double theta = acos(z/r);
+        double phi = atan2(y,x);
+        // Convert spherical to Cartesian velocities
+        double u_r = a_W(iVX);
+        double u_theta = a_W(iVZ); //BC files are written as r,phi,theta
+        double u_phi = a_W(iVY);
+        a_W(iVX) = sin(theta)*cos(phi)*u_r + cos(theta)*cos(phi)*u_theta - sin(phi)*u_phi;
+        a_W(iVY) = sin(theta)*sin(phi)*u_r + cos(theta)*sin(phi)*u_theta + cos(phi)*u_phi;
+        a_W(iVZ) = cos(theta)*u_r - sin(theta)*u_theta;
+        // Convert spherical to Cartesian magnetic fields
+        double B_r = a_W(iBX);
+        double B_theta = a_W(iBZ); //BC files are written as r,phi,theta
+        double B_phi = a_W(iBY);
+        a_W(iBX) = sin(theta)*cos(phi)*B_r + cos(theta)*cos(phi)*B_theta - sin(phi)*B_phi;
+        a_W(iBY) = sin(theta)*sin(phi)*B_r + cos(theta)*sin(phi)*B_theta + cos(phi)*B_phi;
+        a_W(iBZ) = cos(theta)*B_r - sin(theta)*B_theta;
+      },bdryBoxLow,a_USphStage,XCart);
+
+      BoxData<T,NUMCOMPS,MEM> USph_stage_temp(bdryBoxLow);
+      a_USphStage.copyTo(USph_stage_temp);
+
+      // Convert from cartesian to cubed-spherical Primitive variables w=A_inv*u
+      BoxData<T,DIM,MEM> V_sph = slice<T,NUMCOMPS,DIM,MEM>(a_USphStage,iVX);
+      BoxData<T,DIM,MEM> V_cart = slice<T,NUMCOMPS,DIM,MEM>(USph_stage_temp,iVX);
+      BoxData<T,DIM,MEM> V_cart_temp(V_cart.box());
+      V_cart.copyTo(V_cart_temp);
+      BoxData<T,DIM,MEM> tmpV(USph_stage_temp.box());
+      T one = 1.0;  
+      forallInPlace(f_matVecProd,tmpV,A_matrix_inv,V_cart,one);
+      tmpV.copyTo(V_sph);
+
+      BoxData<T,DIM,MEM> B_sph = slice<T,NUMCOMPS,DIM,MEM>(a_USphStage,iBX);
+      BoxData<T,DIM,MEM> B_cart = slice<T,NUMCOMPS,DIM,MEM>(USph_stage_temp,iBX);
+      BoxData<T,DIM,MEM> B_cart_temp(B_cart.box());
+      B_cart.copyTo(B_cart_temp);
+      BoxData<T,DIM,MEM> tmpB(USph_stage_temp.box());
+      forallInPlace(f_matVecProd,tmpB,A_matrix_inv,B_cart,one);
+      tmpB.copyTo(B_sph);
+
+
+
       // Convert primitive spherical to conserved spherical variables. in correct units. scale by radius.
       forallInPlace_p([ ] PROTO_LAMBDA
       (Point a_pt,
        Var<T, NUMCOMPS, MEM> &a_USph,
+       Var<T, DIM, MEM> &a_V_cart,
+       Var<T, DIM, MEM> &a_B_cart,
        Var<T> &a_radius,
        T a_gamma)
       {  
@@ -237,7 +312,12 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
         double Bx = a_USph(5)*1.0e-6*pow(r_BC/rad,2.0); // MicroGauss to Gauss
         double By = a_USph(6)*1.0e-6*pow(r_BC/rad,1.0);
         double Bz = a_USph(7)*1.0e-6*pow(r_BC/rad,1.0);
-        double e = p/(a_gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/M_PI;
+        double V_cart_mag2 = a_V_cart(0)*a_V_cart(0) + a_V_cart(1)*a_V_cart(1) + a_V_cart(2)*a_V_cart(2);
+        double B_cart_mag2 = a_B_cart(0)*a_B_cart(0) + a_B_cart(1)*a_B_cart(1) + a_B_cart(2)*a_B_cart(2);
+        double B_rad_mag2 = a_USph(5)*a_USph(5);
+        double B_non_rad_mag2 = B_cart_mag2 - B_rad_mag2;
+        double B_mag2_scaled = 1.0e-12*B_non_rad_mag2*pow(r_BC/rad,2.0) + 1.0e-12*B_rad_mag2*pow(r_BC/rad,4.0);
+        double e = p/(a_gamma-1.0) + rho*(V_cart_mag2)/2.0 + (B_mag2_scaled)/8.0/M_PI;
         a_USph(0) = rho; //rho
         a_USph(1) = rho*u; //Momentum-x
         a_USph(2) = rho*v; //Momentum-y
@@ -246,30 +326,11 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
         a_USph(5) = Bx; //Bx
         a_USph(6) = By; //By
         a_USph(7) = Bz; //Bz
-      },bdryBoxLow,a_USphStage,radius,m_gamma);
+      },bdryBoxLow,a_USphStage,V_cart,B_cart,radius,m_gamma);
     }
 
     if (init_condition_type == 6){
       forallInPlace_p(f_radialBCs, bdryBoxLow, a_USphStage, radius, dxradius, m_gamma, thickness);
-      // Calculate A_matrix
-      double half = 0.5;
-      double dxiPerp = a_h;
-      Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-      Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
-      Point high = bdryBoxLow.high();
-      Point low = bdryBoxLow.low();
-      high[0] = low[0];
-      Box bx0(low,high);
-      BoxData<T,DIM,MEM,DIM> A_matrix(bdryBoxLow);
-      T offseta = half;
-      T offsetb = half;
-      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
-                      dxiPerp,offseta,offsetb);
-      spreadSlice(A_matrix);
-
-      BoxData<T,DIM,MEM,DIM> A_matrix_inv(bdryBoxLow);
-      A_matrix_inv.setToZero();
-      forallInPlace(f_matinv3by3,A_matrix_inv,A_matrix);
 
       // A constant U_cart
       BoxData<double, DIM> U_cart(bdryBoxLow);
