@@ -23,47 +23,85 @@ public:
 	{
 		int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
 		int thetaCoord = (rCoord + 1) % 3;
-		int phiCoord = (rCoord + 2) % 3;
-		readData(BC_data, a_filename);
-		readGeom(dtheta, a_filename);
-		readTheta(theta, a_filename);
-		readPhi(phi, a_filename);
-		Box_BC = readDomain(a_filename);
+		int phiCoord   = (rCoord + 2) % 3;
+
+		if (procID() == 0) cout << "Reading BC data from file: " << a_filename << endl;
+
+		// Geometry can be read by all (small)
+		readGeom(dtheta, a_filename, /*parallel_open=*/true);
+		readTheta(theta, a_filename, /*parallel_open=*/true);
+		readPhi(phi, a_filename, /*parallel_open=*/true);
+		Box_BC = readDomain(a_filename, /*parallel_open=*/true);
+
+		// Build rotated BT box (same on all ranks)
 		Point LT = Box_BC.low();
 		LT[thetaCoord] = Box_BC.low()[phiCoord];
-		LT[phiCoord] = Box_BC.low()[thetaCoord];
+		LT[phiCoord]   = Box_BC.low()[thetaCoord];
 		Point HT = Box_BC.high();
 		HT[thetaCoord] = Box_BC.high()[phiCoord];
-		HT[phiCoord] = Box_BC.high()[thetaCoord];
+		HT[phiCoord]   = Box_BC.high()[thetaCoord];
 		Box BT(LT, HT);
-		auto t = Point::Basis(thetaCoord);
-		auto p = Point::Basis(phiCoord);
-		CoordPermutation R{{t, p}, {p, t}};
-		BC_data_extended.clear();
-		BC_data_extended.resize(BC_data.size());
-                
-		for (int i = 0; i < BC_data.size(); i++)
+
+		// Extended box (same on all ranks)
+		Point high = BT.high();
+		high[phiCoord] = 2 * (BT.high()[phiCoord] + 1) - 1;
+		Point low  = BT.low();
+		low[phiCoord]  = -1;
+		Box bx2(low, high);
+
+		// Only rank 0 reads & prepares data frames
+		if (procID() == 0)
 		{
-			BC_data[i].rotate(BT, R);
-			// Extend the box to double the size in the phi direction
-			Point high = BT.high();
-			int domainSizez = high[phiCoord] + 1;
-			high[phiCoord] = 2 * (BT.high()[phiCoord] + 1) - 1;
-			Point low = BT.low();
-			low[phiCoord] = -1;
-			Box bx2(low, high);
-			BC_data_extended[i].define(bx2);
-                        for (int comp = 0; comp < 8; comp++)
-                          {
-                            BC_data_extended[i].setVal
-                              (m_scalevars[comp],BC_data_extended[i].box(),comp);
-                          }
-			BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
-			BC_data[i].copyTo(BC_data_extended[i]);
+			// readData(BC_data, a_filename);
+			readData(BC_data, a_filename, /*parallel_open=*/false);  // root-only serial open
+			int force_single_frame = ParseInputs::get_BC_force_single_frame();
+			if (force_single_frame == 1) BC_data.resize(1);
+
+			// rotate theta<->phi into BT
+			auto t = Point::Basis(thetaCoord);
+			auto p = Point::Basis(phiCoord);
+			CoordPermutation R{{t, p}, {p, t}};
+
+			BC_data_extended.clear();
+			BC_data_extended.resize(BC_data.size());
+
+			for (int i = 0; i < (int)BC_data.size(); ++i)
+			{
+				BC_data[i].rotate(BT, R);
+
+				// define & init extended on root only
+				BC_data_extended[i].define(bx2);
+				for (int comp = 0; comp < 8; ++comp) {
+					BC_data_extended[i].setVal(m_scalevars[comp], bx2, comp);
+				}
+				// wrap copy: [BT] at offset + direct copy
+				BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
+				BC_data[i].copyTo(BC_data_extended[i]);
+			}
+			cout << "Geometric + BC frames prepared on rank 0." << endl;
 		}
+		barrier();
+		// All ranks keep these shapes for later
 		Box_BC = BT;
-		int force_single_frame = ParseInputs::get_BC_force_single_frame();
-		if (force_single_frame == 1) BC_data.resize(1);
+	}
+
+	// helper: broadcast a BoxData buffer (contiguous doubles)
+	inline void bcast_boxdata(BoxData<double,8,HOST>& buf, int root=0)
+	{
+	#ifdef PR_MPI
+		// Broadcast in chunks if ever larger than INT_MAX elements (rare)
+		const size_t nElems = (size_t)buf.size();  // (#cells * 8)
+		double* ptr = buf.data();
+		const size_t INT_MAX_ELEMS = (size_t)std::numeric_limits<int>::max();
+		size_t off = 0;
+		while (off < nElems) {
+			size_t chunk = std::min(nElems - off, INT_MAX_ELEMS);
+			MPI_Bcast(ptr + off, (int)chunk, MPI_DOUBLE, root, MPI_COMM_WORLD);
+			off += chunk;
+		}
+	#else
+		(void)buf; (void)root; // no-op in serial
+	#endif
 	}
 
 	template <typename T, MemType MEM>
@@ -76,17 +114,26 @@ public:
 		int thetaCoord = (rCoord + 1) % 3;
 		int phiCoord = (rCoord + 2) % 3;
 
-		Box bx1 = BC_data[0].box();
-		Box bx2 = BC_data_extended[0].box();
+		// --- minimal change: define boxes without touching BC_data[...] on non-root
+		Box bx1 = Box_BC;  // was: BC_data[0].box()
+		Point eHigh = bx1.high(); eHigh[phiCoord] = 2*(bx1.high()[phiCoord] + 1) - 1;
+		Point eLow  = bx1.low();  eLow [phiCoord] = -1;
+		Box bx2(eLow, eHigh);     // was: BC_data_extended[0].box()
 		BoxData<double, 8, HOST> data_0(bx1);
 		BoxData<double, 8, HOST> BC_data_temp1(bx1);
 		BoxData<double, 8, HOST> BC_data_temp2(bx1);
 
 		Point high = bx1.high();
 		int domainSizez = high[phiCoord] + 1;
+		// --- minimal change: broadcast num_frames so all ranks take same branch
+		int num_frames = 0;
+		if (procID()==0) num_frames = (int)BC_data_extended.size();
+#ifdef PR_MPI
+		MPI_Bcast(&num_frames, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
 
-		int low_frame_now = a_time / (ParseInputs::get_BC_cadence() * 3600);
-		if (BC_data.size() == 1 || low_frame_now >= BC_data.size() - 1)
+		int low_frame_now = (int)( (double)a_time / (ParseInputs::get_BC_cadence() * 3600.0) );
+		if (num_frames == 1 || low_frame_now >= num_frames - 1)
 		{
 
 			BoxData<double, 8, HOST> data_a(bx2);
@@ -96,7 +143,7 @@ public:
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
 			// Carrington rotation time (27.2753 days) is from Earth's prespective.
-			double angle_to_rotate = fmod(360 * a_time / carr_rot_time, 360);
+			double angle_to_rotate = fmod(360.0 * (double)a_time / carr_rot_time, 360.0);
 
 			// Can use this if no rotation is needed
 			// angle_to_rotate = 0;
@@ -107,20 +154,22 @@ public:
 			cells_to_rotate = domainSizez - cells_to_rotate;
 			static Stencil<double> m_right_shift;
 			m_right_shift = (1.0 - needed_fraction) * Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
-			if (BC_data.size() == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
-			if (low_frame_now >= BC_data.size() - 1) BC_data_extended[BC_data.size() - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+			if (procID()==0) {
+				if (num_frames == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+				if (low_frame_now >= num_frames - 1) BC_data_extended[num_frames - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+			}
+			bcast_boxdata(data_a); // NEW
 			BC_data_temp1 = m_right_shift(data_a);
 			BC_data_temp1.copyTo(data_0);
 		}
 		else
 		{
-
 			double h5_cadence = ParseInputs::get_BC_cadence();
 			double time_temp = a_time;
 			int low_frame = time_temp / (h5_cadence * 3600);
 			int next_frame = low_frame + 1;
-			PROTO_ASSERT(low_frame < BC_data.size(),
-									 "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %lu", low_frame, BC_data.size());
+			PROTO_ASSERT(low_frame < num_frames,
+									 "MHD_Set_Boundary_Values::interpolate_h5_BC | Error: next BC frame not available. %i >= %lu", low_frame, num_frames);
 			double needed_fraction = (time_temp - (low_frame * h5_cadence * 3600)) / (h5_cadence * 3600);
 
 			BoxData<double, 8, HOST> data_a(bx2);
@@ -169,11 +218,13 @@ public:
 			static Stencil<double> m_right_shift2;
 			m_right_shift1 = (1.0 - needed_fraction1) * Shift(Point::Zeros()) + (needed_fraction1)*Shift(-Point::Basis(phiCoord));
 			m_right_shift2 = (1.0 - needed_fraction2) * Shift(Point::Zeros()) + (needed_fraction2)*Shift(-Point::Basis(phiCoord));
-
-			BC_data_extended[low_frame].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate1));
+			if (procID()==0) {
+				BC_data_extended[low_frame].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate1));
+				BC_data_extended[next_frame].copyTo(data_b, bx2, Point::Basis(phiCoord) * (-cells_to_rotate2));
+			}
+			bcast_boxdata(data_a); // NEW
+			bcast_boxdata(data_b); // NEW
 			BC_data_temp1 = m_right_shift1(data_a);
-
-			BC_data_extended[next_frame].copyTo(data_b, bx2, Point::Basis(phiCoord) * (-cells_to_rotate2));
 			BC_data_temp2 = m_right_shift2(data_b);
 
 			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data_interpolated,
@@ -208,47 +259,42 @@ public:
 
 		// Interpolate data
 		BCOp.apply(a_dstData, data);
-
-		// Set magnetic field to zero
-		// for (auto dit : a_dstData.layout())
-        //   {
-		// 	forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data)
-		// 	{                    
-		// 		a_BC_data(iBX) = 0.0;
-		// 		a_BC_data(iBY) = 0.0;
-		// 		a_BC_data(iBZ) = 0.0;
-
-		// 	},
-		// 	a_dstData[dit]);
-		//   }
 	}
 
-	template <typename... Args>
-	inline void readFile(hid_t *a_file, std::string a_filename, Args... a_params)
+
+	// add a bool flag to choose serial vs parallel open
+	inline void readFile(hid_t* a_file, const std::string& a_filename, bool parallel_open)
 	{
-		char fname[100];
-		// if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
-		// {
-		//     a_filename += ".hdf5";
-		// }
+	#ifdef PR_MPI
+		if (parallel_open) {
+			// collective open on WORLD (call this ONLY when all ranks participate)
+			hid_t p_access = H5Pcreate(H5P_FILE_ACCESS);
+			assert(p_access >= 0);
+			assert(H5Pset_fapl_mpio(p_access, MPI_COMM_WORLD, MPI_INFO_NULL) >= 0);
+			*a_file = H5Fopen(a_filename.c_str(), H5F_ACC_RDONLY, p_access);
+			assert(H5Pclose(p_access) >= 0);
+		} else {
+			// serial open (safe to call on rank 0 only)
+			*a_file = H5Fopen(a_filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+		}
+	#else
+		*a_file = H5Fopen(a_filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+	#endif
+		if (*a_file < 0) {
+			pr_out() << "H5Fopen failed for: " << a_filename << "\n";
+	#ifdef PR_MPI
+			MPI_Abort(MPI_COMM_WORLD, 1);
+	#else
+			std::abort();
+	#endif
+		}
+	}
 
-		// The following pragmas suppress some GCC warnings that are overly conservative
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-		sprintf(fname, a_filename.c_str(), a_params...);
-#pragma GCC diagnostic pop
-
-#ifdef PR_MPI
-		auto mpi_comm = MPI_COMM_WORLD;
-		auto mpi_info = MPI_INFO_NULL;
-
-		auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-		assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-		*a_file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
-		assert(H5Pclose(p_access) >= 0);
-#else
-		*a_file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
-#endif
+	// small helper to avoid world barriers inside root-only paths
+	inline void barrier_world_if_all(bool do_barrier) {
+	#ifdef PR_MPI
+		if (do_barrier) MPI_Barrier(MPI_COMM_WORLD);
+	#endif
 	}
 
 	inline Box _readDomain(hid_t *a_file)
@@ -328,7 +374,7 @@ public:
 		Box domainBox = _readDomain(&file);
 		a_data.define(domainBox);
 		readDataset(&file, a_data, 0);
-		barrier();
+		// barrier();
 		assert(H5Fclose(file) >= 0);
 	}
 
@@ -354,7 +400,7 @@ public:
 			a_data[ii].define(domainBox);
 			readDataset(&file, a_data[ii], ii);
 		}
-		barrier();
+		// barrier();
 		assert(H5Fclose(file) >= 0);
 	}
 
