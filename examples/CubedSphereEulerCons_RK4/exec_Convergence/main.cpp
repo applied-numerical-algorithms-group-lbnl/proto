@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
   int restart_step = 0;
   int write_cadence = ParseInputs::get_write_cadence();
   int checkpoint_cadence = ParseInputs::get_checkpoint_cadence();
+  int slice_cadence = ParseInputs::get_slice_cadence();
   int convTestType = ParseInputs::get_convTestType();
   int init_condition_type = ParseInputs::get_init_condition_type();
   int radial_refinement = ParseInputs::get_radial_refinement();
@@ -38,6 +39,8 @@ int main(int argc, char *argv[])
   
   double probe_cadence = ParseInputs::get_Probe_cadence();
   double write_time_cadence = ParseInputs::get_write_time_cadence();
+  double slice_time_cadence = ParseInputs::get_slice_time_cadence();
+
   int radialDir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   Array<double, DIM> offset = {0., 0., 0.};
   Array<double, DIM> exp = {1., 1., 1.};
@@ -163,7 +166,9 @@ int main(int argc, char *argv[])
   
     bool give_space_in_probe_file = true;
     double probe_cadence_temp = 0;
+    double slice_time_cadence_temp = 0;
     double write_time_cadence_temp = 0;
+
 #if 0 // Begin debug comment.
     auto initialCons = CubedSphereShell::conservationSum(JU);
     for (int comp = 0; comp< 8; comp++)
@@ -238,10 +243,14 @@ int main(int argc, char *argv[])
         }
 #endif
       int write_time_cadence_new = floor(time/write_time_cadence);
-      if (iter % write_cadence == 0 || write_time_cadence_new > write_time_cadence_temp)
+      int slice_time_cadence_new = floor(time/slice_time_cadence);
+      bool write_data = (write_time_cadence_new > write_time_cadence_temp) || (iter % write_cadence == 0);
+      bool slice_data = (slice_time_cadence_new > slice_time_cadence_temp) || (iter % slice_cadence == 0);
+      if (write_data || slice_data)
         {
-          Write_W(JU, eulerOp, iop, iter, time, dt);
-          write_time_cadence_temp = write_time_cadence_new;
+          Write_W(JU, eulerOp, iop, iter, time, dt, write_data, slice_data);
+          if (write_data) write_time_cadence_temp = write_time_cadence_new;
+          if (slice_data) slice_time_cadence_temp = slice_time_cadence_new;
           // Check conservation.
 #if 0
           if (convTestType < 3)

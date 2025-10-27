@@ -30,7 +30,9 @@ private:
     int limiter; // 1:4th order, 2: Minmod
     double strength; // Strength of perturbation for test problems.
     int write_cadence; 
+    int slice_cadence;
     double write_time_cadence; // In seconds
+    double slice_time_cadence; // In seconds
     int checkpoint_cadence;
     int P_floor_cadence; // Iteration cadence for P_floor
     string data_file_prefix;
@@ -100,7 +102,9 @@ public:
     static int get_limiter() {return getInstance().limiter;}
     static double get_strength() {return getInstance().strength;}
     static int get_write_cadence() {return getInstance().write_cadence;}
+    static int get_slice_cadence() {return getInstance().slice_cadence;}
     static double get_write_time_cadence() {return getInstance().write_time_cadence;}
+    static double get_slice_time_cadence() {return getInstance().slice_time_cadence;}
     static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
     static int get_P_floor_cadence() {return getInstance().P_floor_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
@@ -157,7 +161,9 @@ public:
         args.add("limiter", limiter);
         args.add("strength", strength);
         args.add("write_cadence", write_cadence);
+        args.add("slice_cadence", slice_cadence);
         args.add("write_time_cadence", write_time_cadence);
+        args.add("slice_time_cadence", slice_time_cadence);
         args.add("checkpoint_cadence", checkpoint_cadence);
         args.add("P_floor_cadence", P_floor_cadence);
         args.add("data_file_prefix", data_file_prefix);
@@ -216,7 +222,9 @@ public:
             cout << "limiter: " << limiter << endl;
             cout << "strength: " << strength << endl;
             cout << "write_cadence: " << write_cadence << endl;
+            cout << "slice_cadence: " << slice_cadence << endl;
             cout << "write_time_cadence: " << write_time_cadence << endl;
+            cout << "slice_time_cadence: " << slice_time_cadence << endl;
             cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
             cout << "P_floor_cadence: " << P_floor_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;

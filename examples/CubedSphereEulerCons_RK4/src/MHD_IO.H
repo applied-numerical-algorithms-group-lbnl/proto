@@ -824,7 +824,9 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              MBInterpOp &a_iop,
              int iter,
              double time = 0.0,
-             double dt = 0.0)
+             double dt = 0.0,
+             bool write_data = false,
+             bool write_slice = false)
 {
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
@@ -1003,23 +1005,28 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     }
 #endif
   }
-  double physical_time = getPhysTime(time);
-  std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
-  std::string tecplot_slice_file_x = ParseInputs::get_data_file_prefix() + "_x_" + std::to_string(iter) + ".dat";
-  std::string tecplot_slice_file_y = ParseInputs::get_data_file_prefix() + "_y_" + std::to_string(iter) + ".dat";
-  std::string tecplot_slice_file_z = ParseInputs::get_data_file_prefix() + "_z_" + std::to_string(iter) + ".dat";
-  std::string tecplot_spherical_slice_file = ParseInputs::get_data_file_prefix() + "_r_" + std::to_string(iter) + ".dat";
-  // h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
-  // if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
-  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_x, physical_time,time,iter, 0, 0.0);
-  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_y, physical_time,time,iter, 1, 0.0);
-  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_z, physical_time,time,iter, 2, 0.0);
-  if (procID() == 0) cout << "Tecplot equatorial slice files written at iteration " << iter << endl;
-  writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
-  if (procID() == 0) cout << "Tecplot spherical slice file written at iteration " << iter << endl;                                     
+  
+  if (write_data){
+    std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter); 
+    h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
+    if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
+    // Print this for more detailed output
+    // h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, "W_" + to_string(iter));
+  }
 
-  // Print this for more detailed output
-  // h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, "W_" + to_string(iter));
+  if (write_slice){
+    double physical_time = getPhysTime(time);
+    std::string tecplot_slice_file_x = ParseInputs::get_data_file_prefix() + ".x." + std::to_string(iter) + ".dat";
+    std::string tecplot_slice_file_y = ParseInputs::get_data_file_prefix() + ".y." + std::to_string(iter) + ".dat";
+    std::string tecplot_slice_file_z = ParseInputs::get_data_file_prefix() + ".z." + std::to_string(iter) + ".dat";
+    std::string tecplot_spherical_slice_file = ParseInputs::get_data_file_prefix() + ".r." + std::to_string(iter) + ".dat";
+    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_x, physical_time,time,iter, 0, 0.0);
+    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_y, physical_time,time,iter, 1, 0.0);
+    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_z, physical_time,time,iter, 2, 0.0);
+    writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
+    if (procID() == 0) cout << "Tecplot slice files written at iteration " << iter << endl;                                     
+  }
+  
 }
 
   void Write_Checkpoint(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,

@@ -109,7 +109,7 @@ clean:
 	rm -rf d o *.o *.exe *.d ../../_common/*.o ../src/*.o ../../common/*.d ../src/*.d
 
 dataclean:
-	rm -rf *.hdf5 *.vtk *.table pout*
+	rm -rf *.hdf5 *.vtk *.table pout* *.log *.dat
 
 
 
