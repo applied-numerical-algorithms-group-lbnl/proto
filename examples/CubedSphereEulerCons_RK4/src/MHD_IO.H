@@ -13,16 +13,88 @@
 #include <limits>
 #include <string>
 
+time_t mktimeUTC(struct tm *time_tm)
+{
+  // *** enter in UTC mode
+  char *oldTZ = getenv("TZ");
+  putenv("TZ=UTC");
+  tzset();
+  // ***
+
+  time_t ret = mktime(time_tm);
+
+  // *** Restore previous TZ
+  if (oldTZ == NULL)
+  {
+    putenv("TZ=");
+  }
+  else
+  {
+    char buff[255];
+    sprintf(buff, "TZ=%s", oldTZ);
+    putenv(buff);
+  }
+  tzset();
+  // ***
+
+  return ret;
+}
+
+time_t getPosixTime(double a_time)
+{
+  int year = (int)(floor(a_time));
+  int daysYear = (year % 4 == 0 ? 366 : 365);
+
+  tm time_tm;
+  bzero(&time_tm, sizeof(tm));
+
+  time_tm.tm_year = year - 1900;
+  time_tm.tm_sec = (int)((a_time - year) * daysYear * 24.0 * 3600.0);
+  time_tm.tm_mday = 1;
+  time_tm.tm_isdst = 0;
+
+  time_t posix_time = mktimeUTC(&time_tm);
+
+  return posix_time;
+}
+
+double getPhysTime(double a_time)
+{
+  // double   timeRef      = eos_AU/m_lismV; // sec
+  double BC_start_time = ParseInputs::get_BC_start_time();
+  time_t startBC = getPosixTime(BC_start_time);
+  double timeSec = (a_time); //*timeRef; // time in sec
+  time_t timeSec_t = (time_t)(floor(timeSec));
+
+  time_t curTime = startBC + timeSec_t;
+
+  tm curTime_tm;
+  // gmtime_r(&curTime,&curTime_tm);
+  localtime_r(&curTime, &curTime_tm);
+
+  int daysYear = (curTime_tm.tm_year % 4 == 0 ? 366 : 365);
+
+  double PhysTime = curTime_tm.tm_year + 1900.0 +
+                    (double)(curTime_tm.tm_yday) / (double)(daysYear) +
+                    (double)(curTime_tm.tm_hour) / (double)(daysYear * 24.0) +
+                    (double)(curTime_tm.tm_min) / (double)(daysYear * 24.0 * 60.0) +
+                    (double)(curTime_tm.tm_sec + timeSec - timeSec_t) / (double)(daysYear * 24.0 * 3600.0);
+
+  return PhysTime;
+}
+
 template<
   template<MemType> typename MAP,
   typename T, unsigned int C, MemType MEM, Centering CTR
 >
-void writeTecplotSlice(
+void writeTecplotSlice_plane(
     const MBLevelMap<MAP, MEM>&            a_map,         // PR_NODE: x,y,z at nodes
     const MBLevelBoxData<T, C, MEM, CTR>&  a_data,        // cell-centered variables
     const std::vector<std::string>&        a_varNames,    // size C
     const std::string&                     a_filename,    // one Tecplot .dat
-    double                                  a_physTime,
+    double                                 a_physTime,
+    double                                 a_time,
+    int                                     a_iter, 
     int                                     a_axis,        // 0=x, 1=y, 2=z
     double                                  a_value = 0.0  // plane value (default 0)
 )
@@ -448,7 +520,7 @@ void writeTecplotSlice(
         std::ofstream ofs(a_filename, std::ios::out);
         ofs.setf(std::ios::scientific);
         ofs << std::setprecision(6);
-        ofs << "TITLE = \"Plane slice (" << titleAxis(a_axis) << "=" << a_value << ")\"\n";
+        ofs << "TITLE = \"t=" << a_time << " step="<< a_iter<<"\"\n";
         ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
         for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
         ofs << "\n";
@@ -456,7 +528,6 @@ void writeTecplotSlice(
         ofs << std::setprecision(6);
         ofs.write(big.data(), (std::streamsize)big.size());
         ofs.close();
-        cout << "Wrote single Tecplot file: " << a_filename << "\n";
     } else {
         MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, nullptr, nullptr, nullptr, MPI_CHAR, 0, comm);
     }
@@ -464,7 +535,7 @@ void writeTecplotSlice(
     std::ofstream ofs(a_filename, std::ios::out);
     ofs.setf(std::ios::scientific);
     ofs << std::setprecision(6);
-    ofs << "TITLE = \"Plane slice (" << titleAxis(a_axis) << "=" << a_value << ")\"\n";
+    ofs << "TITLE = \"t=" << a_time << " step="<< a_iter<<"\"\n";
     ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
     for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
     ofs << "\n";
@@ -472,15 +543,8 @@ void writeTecplotSlice(
     ofs << std::setprecision(6);
     ofs << localStr;
     ofs.close();
-    cout << "Wrote single Tecplot file: " << a_filename << "\n";
 #endif
 }
-
-
-
-
-
-
 
 
 
@@ -504,6 +568,8 @@ void writeTecplotSlice_spherical(
     const std::vector<std::string>&        a_varNames,   // size C
     const std::string&                     a_filename,   // output Tecplot .dat (single file)
     double                                  a_physTime,
+    double                                 a_time,
+    int                                     a_iter, 
     double                                  a_radius      // target radius r
 )
 {
@@ -726,7 +792,7 @@ void writeTecplotSlice_spherical(
         std::ofstream ofs(a_filename, std::ios::out);
         ofs.setf(std::ios::scientific);
         ofs << std::setprecision(6);
-        ofs << "TITLE = \"Spherical slice (r=" << std::setprecision(12) << a_radius << ")\"\n";
+        ofs << "TITLE = \"t=" << a_time << " step="<< a_iter<<"\"\n";
         ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
         for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
         ofs << "\n";
@@ -734,7 +800,6 @@ void writeTecplotSlice_spherical(
         ofs << std::setprecision(6);
         ofs.write(big.data(), (std::streamsize)big.size());
         ofs.close();
-        pr_out() << "Wrote single Tecplot file: " << a_filename << "\n";
     } else {
         MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, nullptr, nullptr, nullptr, MPI_CHAR, 0, comm);
     }
@@ -742,7 +807,7 @@ void writeTecplotSlice_spherical(
     std::ofstream ofs(a_filename, std::ios::out);
     ofs.setf(std::ios::scientific);
     ofs << std::setprecision(6);
-    ofs << "TITLE = \"Spherical slice (r=" << std::setprecision(12) << a_radius << ")\"\n";
+    ofs << "TITLE = \"t=" << a_time << " step="<< a_iter<<"\"\n";
     ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
     for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
     ofs << "\n";
@@ -750,7 +815,6 @@ void writeTecplotSlice_spherical(
     ofs << std::setprecision(6);
     ofs << localStr;
     ofs.close();
-    pr_out() << "Wrote single Tecplot file: " << a_filename << "\n";
 #endif
 }
 
@@ -981,16 +1045,16 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     }
 #endif
   }
-  
+  double physical_time = getPhysTime(time);
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
   std::string tecplot_file = "W_sph_" + std::to_string(iter) + ".dat";
   std::string tecplot_spherical_slice_file = "W_sph_spherical_slice_" + std::to_string(iter) + ".dat";
   h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
   if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
   // writeEquatorialSlice_Tecplot_SingleFile(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, time);
-  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, time, 0, 0.0);
+  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, physical_time,time,iter, 0, 0.0);
   if (procID() == 0) cout << "Tecplot equatorial slice file written at iteration " << iter << endl;
-  writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, time, /*radius=*/1.5e13); 
+  writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
   if (procID() == 0) cout << "Tecplot spherical slice file written at iteration " << iter << endl;                                     
 
   // Print this for more detailed output
@@ -1051,75 +1115,7 @@ double interpolate(vector<double> &xData, vector<double> &yData, double x, bool 
   return yL + dydx * (x - xL); // linear interpolation
 }
 
-time_t mktimeUTC(struct tm *time_tm)
-{
-  // *** enter in UTC mode
-  char *oldTZ = getenv("TZ");
-  putenv("TZ=UTC");
-  tzset();
-  // ***
 
-  time_t ret = mktime(time_tm);
-
-  // *** Restore previous TZ
-  if (oldTZ == NULL)
-  {
-    putenv("TZ=");
-  }
-  else
-  {
-    char buff[255];
-    sprintf(buff, "TZ=%s", oldTZ);
-    putenv(buff);
-  }
-  tzset();
-  // ***
-
-  return ret;
-}
-
-time_t getPosixTime(double a_time)
-{
-  int year = (int)(floor(a_time));
-  int daysYear = (year % 4 == 0 ? 366 : 365);
-
-  tm time_tm;
-  bzero(&time_tm, sizeof(tm));
-
-  time_tm.tm_year = year - 1900;
-  time_tm.tm_sec = (int)((a_time - year) * daysYear * 24.0 * 3600.0);
-  time_tm.tm_mday = 1;
-  time_tm.tm_isdst = 0;
-
-  time_t posix_time = mktimeUTC(&time_tm);
-
-  return posix_time;
-}
-
-double getPhysTime(double a_time)
-{
-  // double   timeRef      = eos_AU/m_lismV; // sec
-  double BC_start_time = ParseInputs::get_BC_start_time();
-  time_t startBC = getPosixTime(BC_start_time);
-  double timeSec = (a_time); //*timeRef; // time in sec
-  time_t timeSec_t = (time_t)(floor(timeSec));
-
-  time_t curTime = startBC + timeSec_t;
-
-  tm curTime_tm;
-  // gmtime_r(&curTime,&curTime_tm);
-  localtime_r(&curTime, &curTime_tm);
-
-  int daysYear = (curTime_tm.tm_year % 4 == 0 ? 366 : 365);
-
-  double PhysTime = curTime_tm.tm_year + 1900.0 +
-                    (double)(curTime_tm.tm_yday) / (double)(daysYear) +
-                    (double)(curTime_tm.tm_hour) / (double)(daysYear * 24.0) +
-                    (double)(curTime_tm.tm_min) / (double)(daysYear * 24.0 * 60.0) +
-                    (double)(curTime_tm.tm_sec + timeSec - timeSec_t) / (double)(daysYear * 24.0 * 3600.0);
-
-  return PhysTime;
-}
 
 template<typename BOX_OP>
 void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
