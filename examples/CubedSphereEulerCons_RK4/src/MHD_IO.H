@@ -953,48 +953,6 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
             l_U(comp) = l_JU(comp)/(l_deta(0)*l_dVolr(0));
           } 
       },Uout[dit],JU_i,deta,dVolr_i);
-
-      
-
-      forallInPlace([ ] PROTO_LAMBDA
-      (Var<double,NUMCOMPS,HOST>& l_W_cart_out,
-        Var<double,NUMCOMPS,HOST>& l_W_sph_out,
-        const Var<double,NUMCOMPS,HOST>& l_JU,
-        const Var<double,DIM,HOST>& l_XCart,
-        const Var<double,1,HOST>& l_deta,
-        const Var<double,1,HOST>& l_dVolr,
-        const double a_gamma)
-      {                    
-        for (int comp = 0; comp < NUMCOMPS; comp++)
-          {
-            l_W_cart_out(comp) = l_JU(comp)/(l_deta(0)*l_dVolr(0)); 
-          }
-          l_W_cart_out(iVX) = l_W_cart_out(iMOMX)/l_W_cart_out(iRHO);
-          l_W_cart_out(iVY) = l_W_cart_out(iMOMY)/l_W_cart_out(iRHO);
-          l_W_cart_out(iVZ) = l_W_cart_out(iMOMZ)/l_W_cart_out(iRHO);
-          l_W_cart_out(iP) = (a_gamma-1.0)*(l_W_cart_out(iE) - 0.5*l_W_cart_out(iRHO)*(l_W_cart_out(iVX)*l_W_cart_out(iVX)
-                                + l_W_cart_out(iVY)*l_W_cart_out(iVY)
-                                + l_W_cart_out(iVZ)*l_W_cart_out(iVZ))
-                                - (l_W_cart_out(iBX)*l_W_cart_out(iBX)
-                                + l_W_cart_out(iBY)*l_W_cart_out(iBY)
-                                + l_W_cart_out(iBZ)*l_W_cart_out(iBZ))/8.0/M_PI); 
-
-          double r = sqrt(l_XCart(0)*l_XCart(0) + l_XCart(1)*l_XCart(1) + l_XCart(2)*l_XCart(2));
-          double theta = acos(l_XCart(2)/r);
-          double phi = atan2(l_XCart(1),l_XCart(0));
-          // Convert Cartesian to spherical velocities
-          l_W_sph_out(iVX) = sin(theta)*cos(phi)*l_W_cart_out(iVX) + sin(theta)*sin(phi)*l_W_cart_out(iVY) + cos(theta)*l_W_cart_out(iVZ);
-          l_W_sph_out(iVY) = cos(theta)*cos(phi)*l_W_cart_out(iVX) + cos(theta)*sin(phi)*l_W_cart_out(iVY) - sin(theta)*l_W_cart_out(iVZ);
-          l_W_sph_out(iVZ) = -sin(phi)*l_W_cart_out(iVX) + cos(phi)*l_W_cart_out(iVY);
-          // Convert Cartesian to spherical magnetic fields
-          l_W_sph_out(iBX) = sin(theta)*cos(phi)*l_W_cart_out(iBX) + sin(theta)*sin(phi)*l_W_cart_out(iBY) + cos(theta)*l_W_cart_out(iBZ);
-          l_W_sph_out(iBY) = cos(theta)*cos(phi)*l_W_cart_out(iBX) + cos(theta)*sin(phi)*l_W_cart_out(iBY) - sin(theta)*l_W_cart_out(iBZ);
-          l_W_sph_out(iBZ) = -sin(phi)*l_W_cart_out(iBX) + cos(phi)*l_W_cart_out(iBY);
-
-          l_W_sph_out(iRHO) = l_W_cart_out(iRHO);
-          l_W_sph_out(iP) = l_W_cart_out(iP);
-      },W_cart_out[dit],W_sph_out[dit],JU_i,XCart,deta,dVolr_i,gamma);
-
 #endif
 
 #ifndef PR_DISABLE_INIT_CHECKS
@@ -1051,7 +1009,6 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   std::string tecplot_spherical_slice_file = "W_sph_spherical_slice_" + std::to_string(iter) + ".dat";
   h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
   if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
-  // writeEquatorialSlice_Tecplot_SingleFile(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, time);
   writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, physical_time,time,iter, 0, 0.0);
   if (procID() == 0) cout << "Tecplot equatorial slice file written at iteration " << iter << endl;
   writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
