@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=2       # Total # of nodes 
 #SBATCH --ntasks=216     # Total # of MPI tasks
-#SBATCH --time=08:00:00   # Total run time limit (hh:mm:ss)
+#SBATCH --time=24:00:00   # Total run time limit (hh:mm:ss)
 #SBATCH -J myjobname     # Job name
 #SBATCH -o myjob.o%j     # Name of stdout output file
 #SBATCH -e myjob.e%j     # Name of stderr error file

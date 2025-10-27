@@ -11,7 +11,7 @@
 -strength                        100.
 -write_cadence                   1000000
 -write_time_cadence              1800
--checkpoint_cadence              1000
+-checkpoint_cadence              100
 -P_floor_cadence                 5000000
 -data_file_prefix                data
 -checkpoint_file_prefix          checkpoint
