@@ -1093,18 +1093,18 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
           int a_iter,
           double a_time,
           Array<double, DIM> a_dx,
-          bool give_space = false)
+          bool give_space = false,
+          string probe_file = "default",
+          string Probe_data_file = "default")
 
 {
 
   int pid = procID();
   ofstream outputFile;
-  string Probe_data_file = ParseInputs::get_Probe_data_file();
   outputFile.open(Probe_data_file, std::ios::app);
   if (pid == 0 && give_space)
     outputFile << endl;
   double gamma = ParseInputs::get_gamma();
-  std::string probe_file = ParseInputs::get_Probe_trajectory_file();
 
   int number_of_lines = 0;
   int totvars = 5; // Year DOY Radius Latitude Longitude

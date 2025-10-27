@@ -5,6 +5,7 @@
 #include <algorithm> // For std::remove
 #include <iostream>  // For std::cout, etc.
 #include <iomanip>   // For std::setw, etc.
+#include <vector>
 
 using namespace Proto;
 using namespace std;
@@ -51,8 +52,9 @@ private:
     int operator_switchln;   // no linear (1) no nonlinear (2) both on (0)
     int MBInterp_define;   // old define (0) new define (1)
     string BC_file;
-    string Probe_trajectory_file;
-    string Probe_data_file;
+    int num_probes = 0;                                
+    std::vector<std::string> probe_filenames;           
+    std::vector<std::string> probe_coords;               
     double Probe_cadence; // In seconds
     double BC_start_time;
     double BC_cadence; // In hours
@@ -122,8 +124,9 @@ public:
     static int get_operator_switchln() {return getInstance().operator_switchln;}
     static int get_MBInterp_define() {return getInstance().MBInterp_define;}
     static string get_BC_file() {return getInstance().BC_file;}
-    static string get_Probe_trajectory_file() {return getInstance().Probe_trajectory_file;}
-    static string get_Probe_data_file() {return getInstance().Probe_data_file;}
+    static int get_num_probes() { return getInstance().num_probes; }                               
+    static const std::vector<std::string>& get_probe_filenames() { return getInstance().probe_filenames; } 
+    static const std::vector<std::string>& get_probe_coords()     { return getInstance().probe_coords; }     
     static double get_Probe_cadence() {return getInstance().Probe_cadence;}
     static double get_BC_start_time() {return getInstance().BC_start_time;}
     static double get_BC_cadence() {return getInstance().BC_cadence;}
@@ -181,8 +184,16 @@ public:
         args.add("operator_switchln", operator_switchln);
         args.add("MBInterp_define", MBInterp_define);
         args.add("BC_file", BC_file);
-        args.add("Probe_trajectory_file", Probe_trajectory_file);
-        args.add("Probe_data_file", Probe_data_file);
+        args.add("num_probes", num_probes); 
+        constexpr int MAX_PROBES = 32; // or more if needed
+        // ensure storage exists before parse:
+        probe_filenames.assign(MAX_PROBES, "");
+        probe_coords.assign(MAX_PROBES, "");
+        for (int i = 0; i < MAX_PROBES; ++i) {
+            const std::string base = "probe" + std::to_string(i) + ".";
+            args.add(base + "filename", probe_filenames[(size_t)i]);
+            args.add(base + "coords",   probe_coords[(size_t)i]);
+        }
         args.add("Probe_cadence", Probe_cadence);
         args.add("BC_start_time", BC_start_time);
         args.add("BC_cadence", BC_cadence);
@@ -206,6 +217,9 @@ public:
         args.add("CME_a1", CME_a1);
         args.add("CME_shift", CME_shift);
         args.parse(argc, argv);
+        // use only the first num_probes entries
+        probe_filenames.resize((size_t)std::max(0, num_probes));
+        probe_coords.resize((size_t)std::max(0, num_probes));
 
         int pid = procID();
         if (pid == 0) {
@@ -242,8 +256,12 @@ public:
             cout << "operator_switchln: " << operator_switchln << endl;
             cout << "MBInterp_define: " << MBInterp_define << endl;
             cout << "BC_file: " << BC_file << endl;
-            cout << "Probe_trajectory_file: " << Probe_trajectory_file << endl;
-            cout << "Probe_data_file: " << Probe_data_file << endl;
+            cout << "Probe_cadence: " << Probe_cadence << endl;
+            cout << "num_probes: " << num_probes << endl; 
+            for (int i = 0; i < num_probes; ++i) {        
+                cout << "  probe" << i << ".filename: " << probe_filenames[static_cast<size_t>(i)] << endl;
+                cout << "  probe" << i << ".coords:   " << probe_coords[static_cast<size_t>(i)]   << endl;
+            }
             cout << "Probe_cadence: " << Probe_cadence << endl;
             cout << "BC_start_time: " << BC_start_time << endl;
             cout << "BC_cadence: " << BC_cadence << endl;

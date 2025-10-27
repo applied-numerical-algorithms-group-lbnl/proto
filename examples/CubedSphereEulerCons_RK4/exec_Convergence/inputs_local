@@ -30,8 +30,13 @@
 -operator_switchln               0
 -MBInterp_define                 1
 -BC_file                         ../scripts/psi_eclipse24_swig_wsa2_smth5_bc_r21_5_corotating_Bp.h5
--Probe_trajectory_file           trajEarth
--Probe_data_file                 probed_data.dat
+-num_probes                      3
+-probe0.filename                 Earth.dat
+-probe0.coords                   trajEarth
+-probe1.filename                 Probe_0.dat
+-probe1.coords                   traj_0
+-probe2.filename                 Probe_1.dat
+-probe2.coords                   traj_1
 -Probe_cadence                   3600
 -BC_start_time                   2024.206170309654
 -BC_cadence                      1.0

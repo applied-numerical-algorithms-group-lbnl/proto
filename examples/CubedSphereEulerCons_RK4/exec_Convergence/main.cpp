@@ -38,6 +38,9 @@ int main(int argc, char *argv[])
   if (init_condition_type == 3) BC_global.file_to_BoxData_vec(BC_file);
   
   double probe_cadence = ParseInputs::get_Probe_cadence();
+  auto num_probes  = ParseInputs::get_num_probes();
+  auto& probe_filenames = ParseInputs::get_probe_filenames();
+  auto& probe_coords = ParseInputs::get_probe_coords();
   double write_time_cadence = ParseInputs::get_write_time_cadence();
   double slice_time_cadence = ParseInputs::get_slice_time_cadence();
 
@@ -305,9 +308,13 @@ int main(int argc, char *argv[])
      
       int probe_cadence_new = floor(time/probe_cadence);
       if (probe_cadence_new > probe_cadence_temp || iter == 1){
-        Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file);
+        for (int p = 0; p < num_probes; ++p) {
+          string probe_coord = probe_coords[static_cast<size_t>(p)];
+          string probe_filename = probe_filenames[static_cast<size_t>(p)];
+          Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file, probe_coord, probe_filename);
+        }
         give_space_in_probe_file = false;
-        probe_cadence_temp = probe_cadence_new;
+        probe_cadence_temp = probe_cadence_new;     
       }
       
       auto end = chrono::steady_clock::now();
