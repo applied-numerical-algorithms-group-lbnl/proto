@@ -9,6 +9,750 @@
 #include <sstream>
 #include <vector>
 #include <time.h>
+#include <cmath>
+#include <limits>
+#include <string>
+
+template<
+  template<MemType> typename MAP,
+  typename T, unsigned int C, MemType MEM, Centering CTR
+>
+void writeTecplotSlice(
+    const MBLevelMap<MAP, MEM>&            a_map,         // PR_NODE: x,y,z at nodes
+    const MBLevelBoxData<T, C, MEM, CTR>&  a_data,        // cell-centered variables
+    const std::vector<std::string>&        a_varNames,    // size C
+    const std::string&                     a_filename,    // one Tecplot .dat
+    double                                  a_physTime,
+    int                                     a_axis,        // 0=x, 1=y, 2=z
+    double                                  a_value = 0.0  // plane value (default 0)
+)
+{
+    if (DIM != 3) {
+        cout << "writePlaneSlice_Tecplot_SingleFile: DIM!=3 not supported\n";
+        return;
+    }
+    if ((int)a_varNames.size() != (int)C) {
+        cout << "writePlaneSlice_Tecplot_SingleFile: a_varNames.size()!=C\n";
+        return;
+    }
+    if (a_axis < 0 || a_axis > 2) {
+        cout << "writePlaneSlice_Tecplot_SingleFile: a_axis must be 0(x)/1(y)/2(z)\n";
+        return;
+    }
+
+    const_cast<MBLevelMap<MAP, MEM>&>(a_map).initialize();
+
+    std::ostringstream zbuf;
+    zbuf.setf(std::ios::scientific);
+    zbuf << std::setprecision(6);
+
+    constexpr int Xc = 0, Yc = 1, Zc = 2;
+    const int comp = (a_axis == 0 ? Xc : (a_axis == 1 ? Yc : Zc)); // component being sliced
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+    const double tol = 1e-12;
+
+    auto lerp = [](double a,double b,double t){ return a + t*(b-a); };
+
+    auto titleAxis = [&](int ax)->const char*{
+        return (ax==0 ? "x" : (ax==1 ? "y" : "z"));
+    };
+
+    int patchOrdinal = 0;
+    for (auto it : a_data.layout()) {
+        const auto& dataPatch = a_data[it];      // cell-centered
+        const auto& mapPatch  = a_map.map()[it]; // node-centered
+
+        // Cell interior box and sizes
+        const Box  cellBox = dataPatch.box();
+        const auto lo = cellBox.low();
+        const auto hi = cellBox.high();
+        const int ni = hi[0]-lo[0]+1;  // cells in i
+        const int nj = hi[1]-lo[1]+1;  // cells in j
+        const int nk = hi[2]-lo[2]+1;  // cells in k
+        if (ni<=0 || nj<=0 || nk<=0) { ++patchOrdinal; continue; }
+
+        // Skip patches with no plane crossing in their node envelope for chosen axis/value
+        double vmin = +1e300, vmax = -1e300;
+        {
+            const Box mapBox = mapPatch.box();
+            for (int k=lo[2]; k<=hi[2]+1; ++k)
+            for (int j=lo[1]; j<=hi[1]+1; ++j)
+            for (int i=lo[0]; i<=hi[0]+1; ++i) {
+                Point pn(i,j,k);
+                if (!cellBox.containsPoint(pn)) continue;
+                const double v = mapPatch(pn, comp);
+                if (v < vmin) vmin = v;
+                if (v > vmax) vmax = v;
+            }
+        }
+        if (vmin > a_value + tol || vmax < a_value - tol) { ++patchOrdinal; continue; }
+
+        const int blockId = a_data.layout().block(it);
+        const bool isZface = (blockId == 0 || blockId == 1); // your mapping: 0/1 are ±Z
+
+        // Choose marching direction and node grid based on your rules
+        enum MarchDir { MARCH_I, MARCH_J, MARCH_K };
+        MarchDir march;
+        // Default grid sizes and lin indexers (set inside branches)
+        int Nin=0, Njn=0, Nkn=0;
+
+        // axis rules:
+        // - Z plane: always march K (original behavior)
+        // - Y plane: march J on non-±Z, march K on ±Z
+        // - X plane: march I on non-±Z, march K on ±Z (rule-of-thumb)
+        if (a_axis == Zc) {
+            march = MARCH_K;
+        } else if (a_axis == Yc) {
+            march = isZface ? MARCH_K : MARCH_J;
+        } else { // a_axis == Xc
+            march = MARCH_J;
+        }
+
+        const Box  boxMap  = mapPatch.box();
+        const auto mhi = boxMap.high();
+
+        auto nodeClamped = [&](int ii, int jj, int kk) {
+            int ci = std::min(ii, mhi[0]);
+            int cj = std::min(jj, mhi[1]);
+            int ck = std::min(kk, mhi[2]);
+            return Point(ci, cj, ck);
+        };
+
+        // Common helpers for cell-center averages of map coords
+        auto avg8_at = [&](int i,int j,int k,int component)->double{
+            Point b00 = nodeClamped(lo[0]+i  , lo[1]+j  , lo[2]+k);
+            Point b10 = nodeClamped(lo[0]+i+1, lo[1]+j  , lo[2]+k);
+            Point b01 = nodeClamped(lo[0]+i  , lo[1]+j+1, lo[2]+k);
+            Point b11 = nodeClamped(lo[0]+i+1, lo[1]+j+1, lo[2]+k);
+            Point t00 = nodeClamped(lo[0]+i  , lo[1]+j  , lo[2]+k+1);
+            Point t10 = nodeClamped(lo[0]+i+1, lo[1]+j  , lo[2]+k+1);
+            Point t01 = nodeClamped(lo[0]+i  , lo[1]+j+1, lo[2]+k+1);
+            Point t11 = nodeClamped(lo[0]+i+1, lo[1]+j+1, lo[2]+k+1);
+            return 0.125*( mapPatch(b00,component)+mapPatch(b10,component)+mapPatch(b01,component)+mapPatch(b11,component)
+                         + mapPatch(t00,component)+mapPatch(t10,component)+mapPatch(t01,component)+mapPatch(t11,component) );
+        };
+
+        // ============ Three branches: march K / march J / march I ============
+        if (march == MARCH_K) {
+            // Grid (i,j), cells ni*nj
+            Nin = ni + 1; Njn = nj + 1;
+            auto linN = [&](int i,int j){ return j*Nin + i; }; // nodes (i,j)
+            auto linC = [&](int i,int j){ return j*ni  + i;  }; // cells (i,j)
+
+            std::vector<double> X(Nin*Njn, NaN), Y(Nin*Njn, NaN), Z(Nin*Njn, NaN);
+            // Intersect vertical node columns (vary k) with comp = a_value
+            for (int jn=0; jn<Njn; ++jn) {
+                for (int in=0; in<Nin; ++in) {
+                    const int gi = lo[0] + in;
+                    const int gj = lo[1] + jn;
+                    const int mi = (gi > mhi[0]) ? mhi[0] : gi;
+                    const int mj = (gj > mhi[1]) ? mhi[1] : gj;
+
+                    bool hit=false;
+                    for (int k=0; k<nk; ++k) {
+                        const int kk  = lo[2] + k;
+                        const int kk1 = lo[2] + std::min(k+1, nk);
+                        Point p0 = nodeClamped(mi, mj, kk );
+                        Point p1 = nodeClamped(mi, mj, kk1);
+                        if (!boxMap.containsPoint(p0) || !boxMap.containsPoint(p1)) continue;
+
+                        const double v0 = mapPatch(p0, comp);
+                        const double v1 = mapPatch(p1, comp);
+                        const bool cross = ( (v0 - a_value)<=+tol && (v1 - a_value)>=-tol ) ||
+                                           ( (v0 - a_value)>=-tol && (v1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (v1 - v0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - v0)/denom);
+
+                        const double x0 = mapPatch(p0, Xc), x1 = mapPatch(p1, Xc);
+                        const double y0 = mapPatch(p0, Yc), y1 = mapPatch(p1, Yc);
+                        const double z0 = mapPatch(p0, Zc), z1 = mapPatch(p1, Zc);
+
+                        const int L = linN(in, jn);
+                        X[L] = lerp(x0, x1, t);
+                        Y[L] = lerp(y0, y1, t);
+                        Z[L] = lerp(z0, z1, t);
+                        // Pin sliced component numerically to a_value to avoid 1e-15 drift
+                        if (comp==Xc) X[L]=a_value; else if (comp==Yc) Y[L]=a_value; else Z[L]=a_value;
+
+                        hit = true; break;
+                    }
+                    (void)hit;
+                }
+            }
+
+            // Cell-center interpolation along k
+            std::vector<std::vector<double>> VarsCell(C, std::vector<double>(ni*nj, NaN));
+            for (int j=0; j<nj; ++j) {
+                for (int i=0; i<ni; ++i) {
+                    bool have=false;
+                    for (int k=0; k<nk-1; ++k) {
+                        double c0 = avg8_at(i,j,k  , comp);
+                        double c1 = avg8_at(i,j,k+1, comp);
+                        const bool cross = ( (c0 - a_value)<=+tol && (c1 - a_value)>=-tol ) ||
+                                           ( (c0 - a_value)>=-tol && (c1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (c1 - c0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - c0)/denom);
+
+                        Point cp0(lo[0]+i, lo[1]+j, lo[2]+k  );
+                        Point cp1(lo[0]+i, lo[1]+j, lo[2]+k+1);
+                        for (unsigned c=0; c<C; ++c) {
+                            const double v0 = static_cast<double>(dataPatch(cp0, c));
+                            const double v1 = static_cast<double>(dataPatch(cp1, c));
+                            VarsCell[c][linC(i,j)] = lerp(v0, v1, t);
+                        }
+                        have = true; break;
+                    }
+                    (void)have;
+                }
+            }
+
+            // Emit zone (i,j)
+            zbuf << "ZONE T=\"B" << a_data.layout().block(it) << "_P" << patchOrdinal
+                 << "\" DATAPACKING=BLOCK, VARLOCATION=([4-" << (3+(int)C)
+                 << "]=CELLCENTERED), I=" << (ni+1) << ", J=" << (nj+1) << "\n";
+
+            auto dumpBlockN = [&](const std::vector<double>& A){
+                for (int jj=0; jj<Njn; ++jj) {
+                    for (int ii=0; ii<Nin; ++ii) zbuf << A[jj*Nin + ii] << " ";
+                    zbuf << "\n";
+                }
+            };
+            auto dumpBlockC = [&](const std::vector<double>& A){
+                for (int jj=0; jj<nj; ++jj) {
+                    for (int ii=0; ii<ni; ++ii) zbuf << A[jj*ni + ii] << " ";
+                    zbuf << "\n";
+                }
+            };
+
+            dumpBlockN(X); dumpBlockN(Y); dumpBlockN(Z);
+            for (unsigned c=0; c<C; ++c) dumpBlockC(VarsCell[c]);
+        }
+        else if (march == MARCH_J) {
+            // Grid (i,k), cells ni*nk
+            Nin = ni + 1; Nkn = nk + 1;
+            auto linN = [&](int i,int k){ return k*Nin + i; }; // nodes (i,k)
+            auto linC = [&](int i,int k){ return k*ni  + i;  }; // cells (i,k)
+
+            std::vector<double> X(Nin*Nkn, NaN), Y(Nin*Nkn, NaN), Z(Nin*Nkn, NaN);
+            // Intersect along j at fixed (i,k): comp = a_value
+            for (int kn=0; kn<Nkn; ++kn) {
+                for (int in=0; in<Nin; ++in) {
+                    const int gi = lo[0] + in;
+                    const int gk = lo[2] + kn;
+                    const int mi = (gi > mhi[0]) ? mhi[0] : gi;
+                    const int mk = (gk > mhi[2]) ? mhi[2] : gk;
+
+                    bool hit=false;
+                    for (int j=0; j<nj; ++j) {
+                        const int jj  = lo[1] + j;
+                        const int jj1 = lo[1] + std::min(j+1, nj);
+                        Point p0 = nodeClamped(mi, jj , mk);
+                        Point p1 = nodeClamped(mi, jj1, mk);
+                        if (!boxMap.containsPoint(p0) || !boxMap.containsPoint(p1)) continue;
+
+                        const double v0 = mapPatch(p0, comp);
+                        const double v1 = mapPatch(p1, comp);
+                        const bool cross = ( (v0 - a_value)<=+tol && (v1 - a_value)>=-tol ) ||
+                                           ( (v0 - a_value)>=-tol && (v1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (v1 - v0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - v0)/denom);
+
+                        const double x0 = mapPatch(p0, Xc), x1 = mapPatch(p1, Xc);
+                        const double y0 = mapPatch(p0, Yc), y1 = mapPatch(p1, Yc);
+                        const double z0 = mapPatch(p0, Zc), z1 = mapPatch(p1, Zc);
+
+                        const int L = linN(in, kn);
+                        X[L] = lerp(x0, x1, t);
+                        Y[L] = lerp(y0, y1, t);
+                        Z[L] = lerp(z0, z1, t);
+                        if (comp==Xc) X[L]=a_value; else if (comp==Yc) Y[L]=a_value; else Z[L]=a_value;
+
+                        hit = true; break;
+                    }
+                    (void)hit;
+                }
+            }
+
+            // Cell-center interpolation along j
+            std::vector<std::vector<double>> VarsCell(C, std::vector<double>(ni*nk, NaN));
+            for (int k=0; k<nk; ++k) {
+                for (int i=0; i<ni; ++i) {
+                    bool have=false;
+                    for (int j=0; j<nj-1; ++j) {
+                        double c0 = avg8_at(i,j  ,k, comp);
+                        double c1 = avg8_at(i,j+1,k, comp);
+                        const bool cross = ( (c0 - a_value)<=+tol && (c1 - a_value)>=-tol ) ||
+                                           ( (c0 - a_value)>=-tol && (c1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (c1 - c0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - c0)/denom);
+
+                        Point cp0(lo[0]+i, lo[1]+j  , lo[2]+k);
+                        Point cp1(lo[0]+i, lo[1]+j+1, lo[2]+k);
+                        for (unsigned c=0; c<C; ++c) {
+                            const double v0 = static_cast<double>(dataPatch(cp0, c));
+                            const double v1 = static_cast<double>(dataPatch(cp1, c));
+                            VarsCell[c][linC(i,k)] = lerp(v0, v1, t);
+                        }
+                        have = true; break;
+                    }
+                    (void)have;
+                }
+            }
+
+            // Emit zone (i,k)
+            zbuf << "ZONE T=\"B" << a_data.layout().block(it) << "_P" << patchOrdinal
+                 << "\" DATAPACKING=BLOCK, VARLOCATION=([4-" << (3+(int)C)
+                 << "]=CELLCENTERED), I=" << (ni+1) << ", J=" << (nk+1) << "\n";
+
+            auto dumpBlockN = [&](const std::vector<double>& A){
+                for (int kk=0; kk<Nkn; ++kk) {
+                    for (int ii=0; ii<Nin; ++ii) zbuf << A[kk*Nin + ii] << " ";
+                    zbuf << "\n";
+                }
+            };
+            auto dumpBlockC = [&](const std::vector<double>& A){
+                for (int kk=0; kk<nk; ++kk) {
+                    for (int ii=0; ii<ni; ++ii) zbuf << A[kk*ni + ii] << " ";
+                    zbuf << "\n";
+                }
+            };
+
+            dumpBlockN(X); dumpBlockN(Y); dumpBlockN(Z);
+            for (unsigned c=0; c<C; ++c) dumpBlockC(VarsCell[c]);
+        }
+        else { // march == MARCH_I
+            // Grid (j,k), cells nj*nk
+            Njn = nj + 1; Nkn = nk + 1;
+            auto linN = [&](int j,int k){ return k*Njn + j; }; // nodes (j,k)
+            auto linC = [&](int j,int k){ return k*nj  + j;  }; // cells (j,k)
+
+            std::vector<double> X(Njn*Nkn, NaN), Y(Njn*Nkn, NaN), Z(Njn*Nkn, NaN);
+            // Intersect along i at fixed (j,k): comp = a_value
+            for (int kn=0; kn<Nkn; ++kn) {
+                for (int jn=0; jn<Njn; ++jn) {
+                    const int gj = lo[1] + jn;
+                    const int gk = lo[2] + kn;
+                    const int mj = (gj > mhi[1]) ? mhi[1] : gj;
+                    const int mk = (gk > mhi[2]) ? mhi[2] : gk;
+
+                    bool hit=false;
+                    for (int i=0; i<ni; ++i) {
+                        const int ii  = lo[0] + i;
+                        const int ii1 = lo[0] + std::min(i+1, ni);
+                        Point p0 = nodeClamped(ii , mj, mk);
+                        Point p1 = nodeClamped(ii1, mj, mk);
+                        if (!boxMap.containsPoint(p0) || !boxMap.containsPoint(p1)) continue;
+
+                        const double v0 = mapPatch(p0, comp);
+                        const double v1 = mapPatch(p1, comp);
+                        const bool cross = ( (v0 - a_value)<=+tol && (v1 - a_value)>=-tol ) ||
+                                           ( (v0 - a_value)>=-tol && (v1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (v1 - v0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - v0)/denom);
+
+                        const double x0 = mapPatch(p0, Xc), x1 = mapPatch(p1, Xc);
+                        const double y0 = mapPatch(p0, Yc), y1 = mapPatch(p1, Yc);
+                        const double z0 = mapPatch(p0, Zc), z1 = mapPatch(p1, Zc);
+
+                        const int L = linN(jn, kn);
+                        X[L] = lerp(x0, x1, t);
+                        Y[L] = lerp(y0, y1, t);
+                        Z[L] = lerp(z0, z1, t);
+                        if (comp==Xc) X[L]=a_value; else if (comp==Yc) Y[L]=a_value; else Z[L]=a_value;
+
+                        hit = true; break;
+                    }
+                    (void)hit;
+                }
+            }
+
+            // Cell-center interpolation along i
+            std::vector<std::vector<double>> VarsCell(C, std::vector<double>(nj*nk, NaN));
+            for (int k=0; k<nk; ++k) {
+                for (int j=0; j<nj; ++j) {
+                    bool have=false;
+                    for (int i=0; i<ni-1; ++i) {
+                        double c0 = avg8_at(i  ,j,k, comp);
+                        double c1 = avg8_at(i+1,j,k, comp);
+                        const bool cross = ( (c0 - a_value)<=+tol && (c1 - a_value)>=-tol ) ||
+                                           ( (c0 - a_value)>=-tol && (c1 - a_value)<=+tol );
+                        if (!cross) continue;
+                        const double denom = (c1 - c0);
+                        const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_value - c0)/denom);
+
+                        Point cp0(lo[0]+i  , lo[1]+j, lo[2]+k);
+                        Point cp1(lo[0]+i+1, lo[1]+j, lo[2]+k);
+                        for (unsigned c=0; c<C; ++c) {
+                            const double v0 = static_cast<double>(dataPatch(cp0, c));
+                            const double v1 = static_cast<double>(dataPatch(cp1, c));
+                            VarsCell[c][linC(j,k)] = lerp(v0, v1, t);
+                        }
+                        have = true; break;
+                    }
+                    (void)have;
+                }
+            }
+
+            // Emit zone (j,k)
+            zbuf << "ZONE T=\"B" << a_data.layout().block(it) << "_P" << patchOrdinal
+                 << "\" DATAPACKING=BLOCK, VARLOCATION=([4-" << (3+(int)C)
+                 << "]=CELLCENTERED), I=" << (nj+1) << ", J=" << (nk+1) << "\n";
+
+            auto dumpBlockN = [&](const std::vector<double>& A){
+                for (int kk=0; kk<Nkn; ++kk) {
+                    for (int jj=0; jj<Njn; ++jj) zbuf << A[kk*Njn + jj] << " ";
+                    zbuf << "\n";
+                }
+            };
+            auto dumpBlockC = [&](const std::vector<double>& A){
+                for (int kk=0; kk<nk; ++kk) {
+                    for (int jj=0; jj<nj; ++jj) zbuf << A[kk*nj + jj] << " ";
+                    zbuf << "\n";
+                }
+            };
+
+            dumpBlockN(X); dumpBlockN(Y); dumpBlockN(Z);
+            for (unsigned c=0; c<C; ++c) dumpBlockC(VarsCell[c]);
+        }
+
+        ++patchOrdinal;
+    }
+
+    // ---- Gather and write single file on rank 0 ----
+    std::string localStr = zbuf.str();
+    std::vector<char> localBuf(localStr.begin(), localStr.end());
+    int localN = (int)localBuf.size();
+
+    int rank = 0, nprocs = 1;
+#ifdef PR_MPI
+    MPI_Comm comm = MPI_COMM_WORLD;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &nprocs);
+
+    std::vector<int> counts, displs;
+    if (rank == 0) counts.resize(nprocs);
+    MPI_Gather(&localN, 1, MPI_INT, (rank==0?counts.data():nullptr), 1, MPI_INT, 0, comm);
+
+    std::vector<char> big;
+    if (rank == 0) {
+        displs.resize(nprocs,0);
+        int tot=0; for (int p=0;p<nprocs;++p){ displs[p]=tot; tot+=counts[p]; }
+        big.resize(tot);
+        MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, big.data(), counts.data(), displs.data(), MPI_CHAR, 0, comm);
+
+        std::ofstream ofs(a_filename, std::ios::out);
+        ofs.setf(std::ios::scientific);
+        ofs << std::setprecision(6);
+        ofs << "TITLE = \"Plane slice (" << titleAxis(a_axis) << "=" << a_value << ")\"\n";
+        ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
+        for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
+        ofs << "\n";
+        ofs << "DATASETAUXDATA PhysTime = \"" << std::setprecision(12) << a_physTime << "\"\n";
+        ofs << std::setprecision(6);
+        ofs.write(big.data(), (std::streamsize)big.size());
+        ofs.close();
+        cout << "Wrote single Tecplot file: " << a_filename << "\n";
+    } else {
+        MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, nullptr, nullptr, nullptr, MPI_CHAR, 0, comm);
+    }
+#else
+    std::ofstream ofs(a_filename, std::ios::out);
+    ofs.setf(std::ios::scientific);
+    ofs << std::setprecision(6);
+    ofs << "TITLE = \"Plane slice (" << titleAxis(a_axis) << "=" << a_value << ")\"\n";
+    ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
+    for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
+    ofs << "\n";
+    ofs << "DATASETAUXDATA PhysTime = \"" << std::setprecision(12) << a_physTime << "\"\n";
+    ofs << std::setprecision(6);
+    ofs << localStr;
+    ofs.close();
+    cout << "Wrote single Tecplot file: " << a_filename << "\n";
+#endif
+}
+
+
+
+
+
+
+
+
+
+// Extract a spherical slice r = a_radius into a single Tecplot file.
+// Assumes "i" index marches monotonically outward in radius (increasing r).
+// Robustness: we *search along i* for every (j,k) line, so even if r is not strictly
+// monotone everywhere, any local crossing between i and i+1 will still be detected.
+//
+// - Geometry (X,Y,Z) is node-based on a (j,k) structured grid: I = nj+1, J = nk+1
+// - Variables are interpolated at cell centers between (i,j,k) and (i+1,j,k): size nj*nk
+//
+// Usage:
+// writeTecplotSlice_spherical(map, data, varNames, "r1.50.dat", time, /*radius=*/1.50);
+template<
+  template<MemType> typename MAP,
+  typename T, unsigned int C, MemType MEM, Centering CTR
+>
+void writeTecplotSlice_spherical(
+    const MBLevelMap<MAP, MEM>&            a_map,        // node-centered geometry: X,Y,Z
+    const MBLevelBoxData<T, C, MEM, CTR>&  a_data,       // cell-centered variables
+    const std::vector<std::string>&        a_varNames,   // size C
+    const std::string&                     a_filename,   // output Tecplot .dat (single file)
+    double                                  a_physTime,
+    double                                  a_radius      // target radius r
+)
+{
+    static_assert(DIM==3, "Tecplot slicer assumes DIM==3.");
+    if ((int)a_varNames.size() != (int)C) {
+        pr_out() << "writeSphericalSlice_Tecplot_SingleFile: a_varNames.size()!=C\n";
+        return;
+    }
+
+    const_cast<MBLevelMap<MAP, MEM>&>(a_map).initialize();
+
+    std::ostringstream zbuf;
+    zbuf.setf(std::ios::scientific);
+    zbuf << std::setprecision(6);
+
+    constexpr int Xc = 0, Yc = 1, Zc = 2;
+    const double NaN = std::numeric_limits<double>::quiet_NaN();
+    const double tol = 1e-12;
+
+    auto lerp = [](double a,double b,double t){ return a + t*(b-a); };
+    auto hypot3 = [](double x,double y,double z){ return std::sqrt(x*x + y*y + z*z); };
+
+    int patchOrdinal = 0;
+    for (auto it : a_data.layout()) {
+        const auto& dataPatch = a_data[it];      // cell-centered
+        const auto& mapPatch  = a_map.map()[it]; // node-centered
+
+        // Cell interior box and sizes
+        const Box  cellBox = dataPatch.box();
+        const auto lo = cellBox.low();
+        const auto hi = cellBox.high();
+        const int ni = hi[0]-lo[0]+1;  // cells in i (radial march)
+        const int nj = hi[1]-lo[1]+1;  // cells in j
+        const int nk = hi[2]-lo[2]+1;  // cells in k
+        if (ni<=0 || nj<=0 || nk<=0) { ++patchOrdinal; continue; }
+
+        // Quick reject: check node-envelope radii against target
+        double rmin = +1e300, rmax = -1e300;
+        {
+            const Box mapBox = mapPatch.box();
+            for (int k=lo[2]; k<=hi[2]+1; ++k)
+            for (int j=lo[1]; j<=hi[1]+1; ++j)
+            for (int i=lo[0]; i<=hi[0]+1; ++i) {
+                Point pn(i,j,k);
+                if (!cellBox.containsPoint(pn)) continue; // consider overlap region
+                const double x = mapPatch(pn, Xc);
+                const double y = mapPatch(pn, Yc);
+                const double z = mapPatch(pn, Zc);
+                const double r = hypot3(x,y,z);
+                if (r < rmin) rmin = r;
+                if (r > rmax) rmax = r;
+            }
+        }
+        if (rmin > a_radius + tol || rmax < a_radius - tol) { ++patchOrdinal; continue; }
+
+        const int blockId = a_data.layout().block(it);
+        (void)blockId; // (not needed here, but kept for symmetry with plane slicer)
+
+        // Node grid for Tecplot geometry: use (j,k) since we march along i (radial)
+        const int Njn = nj + 1, Nkn = nk + 1;
+        auto linN = [&](int j,int k){ return k*Njn + j; }; // nodes (j,k)
+        auto linC = [&](int j,int k){ return k*nj  + j;  }; // cells (j,k)
+
+        std::vector<double> X(Njn*Nkn, NaN), Y(Njn*Nkn, NaN), Z(Njn*Nkn, NaN);
+
+        const Box  boxMap  = mapPatch.box();
+        const auto mhi = boxMap.high();
+
+        auto nodeClamped = [&](int ii, int jj, int kk) {
+            int ci = std::min(ii, mhi[0]);
+            int cj = std::min(jj, mhi[1]);
+            int ck = std::min(kk, mhi[2]);
+            return Point(ci, cj, ck);
+        };
+
+        // ---------- NODE GEOMETRY: intersect along i for each (j,k) node-line ----------
+        for (int kn=0; kn<Nkn; ++kn) {
+            for (int jn=0; jn<Njn; ++jn) {
+                const int gj = lo[1] + jn;                 // node j (may be hi[1]+1)
+                const int gk = lo[2] + kn;                 // node k (may be hi[2]+1)
+                const int mj = (gj > mhi[1]) ? mhi[1] : gj;
+                const int mk = (gk > mhi[2]) ? mhi[2] : gk;
+
+                bool hit=false;
+                for (int i=0; i<ni; ++i) { // segment between i and i+1
+                    const int ii  = lo[0] + i;
+                    const int ii1 = lo[0] + std::min(i+1, ni);
+                    Point p0 = nodeClamped(ii , mj, mk);
+                    Point p1 = nodeClamped(ii1, mj, mk);
+                    if (!boxMap.containsPoint(p0) || !boxMap.containsPoint(p1)) continue;
+
+                    const double x0 = mapPatch(p0, Xc), x1 = mapPatch(p1, Xc);
+                    const double y0 = mapPatch(p0, Yc), y1 = mapPatch(p1, Yc);
+                    const double z0 = mapPatch(p0, Zc), z1 = mapPatch(p1, Zc);
+                    const double r0 = hypot3(x0,y0,z0);
+                    const double r1 = hypot3(x1,y1,z1);
+
+                    const bool cross = ( (r0 - a_radius)<=+tol && (r1 - a_radius)>=-tol ) ||
+                                       ( (r0 - a_radius)>=-tol && (r1 - a_radius)<=+tol );
+                    if (!cross) continue;
+
+                    const double denom = (r1 - r0);
+                    const double t = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_radius - r0)/denom);
+
+                    const int L = linN(jn, kn);
+                    X[L] = lerp(x0, x1, t);
+                    Y[L] = lerp(y0, y1, t);
+                    Z[L] = lerp(z0, z1, t);
+                    // Numerically nudge exactly onto the sphere (optional):
+                    // const double s = a_radius / hypot3(X[L],Y[L],Z[L]); X[L]*=s; Y[L]*=s; Z[L]*=s;
+
+                    hit = true; break;
+                }
+                (void)hit; // stays NaN if truly no intersection on this line
+            }
+        }
+
+        // ---------- CELL-CENTER VARIABLES: interpolate along i at fixed (j,k) ----------
+        // Average node map to cell-center (i,j,k) using the 8 corners
+        auto avg8_at = [&](int i,int j,int k,int comp)->double{
+            Point b00 = nodeClamped(lo[0]+i  , lo[1]+j  , lo[2]+k);
+            Point b10 = nodeClamped(lo[0]+i+1, lo[1]+j  , lo[2]+k);
+            Point b01 = nodeClamped(lo[0]+i  , lo[1]+j+1, lo[2]+k);
+            Point b11 = nodeClamped(lo[0]+i+1, lo[1]+j+1, lo[2]+k);
+            Point t00 = nodeClamped(lo[0]+i  , lo[1]+j  , lo[2]+k+1);
+            Point t10 = nodeClamped(lo[0]+i+1, lo[1]+j  , lo[2]+k+1);
+            Point t01 = nodeClamped(lo[0]+i  , lo[1]+j+1, lo[2]+k+1);
+            Point t11 = nodeClamped(lo[0]+i+1, lo[1]+j+1, lo[2]+k+1);
+            return 0.125*( mapPatch(b00,comp)+mapPatch(b10,comp)+mapPatch(b01,comp)+mapPatch(b11,comp)
+                         + mapPatch(t00,comp)+mapPatch(t10,comp)+mapPatch(t01,comp)+mapPatch(t11,comp) );
+        };
+
+        // Helper to get center radius at (i,j,k)
+        auto center_r = [&](int i,int j,int k)->double{
+            const double xc = avg8_at(i,j,k, Xc);
+            const double yc = avg8_at(i,j,k, Yc);
+            const double zc = avg8_at(i,j,k, Zc);
+            return hypot3(xc,yc,zc);
+        };
+
+        std::vector<std::vector<double>> VarsCell(C, std::vector<double>(nj*nk, NaN));
+
+        for (int k=0; k<nk; ++k) {
+            for (int j=0; j<nj; ++j) {
+                bool have = false;
+                for (int i=0; i<ni-1; ++i) {
+                    const double r0 = center_r(i  , j, k);
+                    const double r1 = center_r(i+1, j, k);
+
+                    const bool cross = ( (r0 - a_radius)<=+tol && (r1 - a_radius)>=-tol ) ||
+                                       ( (r0 - a_radius)>=-tol && (r1 - a_radius)<=+tol );
+                    if (!cross) continue;
+
+                    const double denom = (r1 - r0);
+                    const double tcc   = (std::fabs(denom) < 1e-30) ? 0.0 : ((a_radius - r0)/denom);
+
+                    Point cp0(lo[0]+i  , lo[1]+j, lo[2]+k);
+                    Point cp1(lo[0]+i+1, lo[1]+j, lo[2]+k);
+                    for (unsigned c=0; c<C; ++c) {
+                        const double v0 = static_cast<double>(dataPatch(cp0, c));
+                        const double v1 = static_cast<double>(dataPatch(cp1, c));
+                        VarsCell[c][linC(j,k)] = lerp(v0, v1, tcc);
+                    }
+                    have = true;
+                    break;
+                }
+                (void)have; // remains NaN where sphere truly does not cut the column
+            }
+        }
+
+        // ---- Emit ZONE for this patch (structured (j,k)) ----
+        zbuf << "ZONE T=\"B" << a_data.layout().block(it) << "_P" << patchOrdinal
+             << "\" DATAPACKING=BLOCK, VARLOCATION=([4-" << (3+(int)C)
+             << "]=CELLCENTERED), I=" << (nj+1) << ", J=" << (nk+1) << "\n";
+
+        // Dump helpers
+        auto dumpBlockN = [&](const std::vector<double>& A){
+            for (int kk=0; kk<Nkn; ++kk) {
+                for (int jj=0; jj<Njn; ++jj) zbuf << A[linN(jj,kk)] << " ";
+                zbuf << "\n";
+            }
+        };
+        auto dumpBlockC = [&](const std::vector<double>& A){
+            for (int kk=0; kk<nk; ++kk) {
+                for (int jj=0; jj<nj; ++jj) zbuf << A[linC(jj,kk)] << " ";
+                zbuf << "\n";
+            }
+        };
+
+        dumpBlockN(X);
+        dumpBlockN(Y);
+        dumpBlockN(Z);
+        for (unsigned c=0; c<C; ++c) dumpBlockC(VarsCell[c]);
+
+        ++patchOrdinal;
+    }
+
+    // ---- Gather and write single file on rank 0 ----
+    std::string localStr = zbuf.str();
+    std::vector<char> localBuf(localStr.begin(), localStr.end());
+    int localN = (int)localBuf.size();
+
+    int rank = 0, nprocs = 1;
+#ifdef PR_MPI
+    MPI_Comm comm = MPI_COMM_WORLD;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &nprocs);
+
+    std::vector<int> counts, displs;
+    if (rank == 0) counts.resize(nprocs);
+    MPI_Gather(&localN, 1, MPI_INT, (rank==0?counts.data():nullptr), 1, MPI_INT, 0, comm);
+
+    std::vector<char> big;
+    if (rank == 0) {
+        displs.resize(nprocs,0);
+        int tot=0; for (int p=0;p<nprocs;++p){ displs[p]=tot; tot+=counts[p]; }
+        big.resize(tot);
+        MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, big.data(), counts.data(), displs.data(), MPI_CHAR, 0, comm);
+
+        std::ofstream ofs(a_filename, std::ios::out);
+        ofs.setf(std::ios::scientific);
+        ofs << std::setprecision(6);
+        ofs << "TITLE = \"Spherical slice (r=" << std::setprecision(12) << a_radius << ")\"\n";
+        ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
+        for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
+        ofs << "\n";
+        ofs << "DATASETAUXDATA PhysTime = \"" << std::setprecision(12) << a_physTime << "\"\n";
+        ofs << std::setprecision(6);
+        ofs.write(big.data(), (std::streamsize)big.size());
+        ofs.close();
+        pr_out() << "Wrote single Tecplot file: " << a_filename << "\n";
+    } else {
+        MPI_Gatherv(localBuf.data(), localN, MPI_CHAR, nullptr, nullptr, nullptr, MPI_CHAR, 0, comm);
+    }
+#else
+    std::ofstream ofs(a_filename, std::ios::out);
+    ofs.setf(std::ios::scientific);
+    ofs << std::setprecision(6);
+    ofs << "TITLE = \"Spherical slice (r=" << std::setprecision(12) << a_radius << ")\"\n";
+    ofs << "VARIABLES=\"X\" \"Y\" \"Z\"";
+    for (const auto& nm : a_varNames) ofs << " \"" << nm << "\"";
+    ofs << "\n";
+    ofs << "DATASETAUXDATA PhysTime = \"" << std::setprecision(12) << a_physTime << "\"\n";
+    ofs << std::setprecision(6);
+    ofs << localStr;
+    ofs.close();
+    pr_out() << "Wrote single Tecplot file: " << a_filename << "\n";
+#endif
+}
 
 template<typename BOX_OP>
 void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
@@ -239,8 +983,15 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   
   std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter);
+  std::string tecplot_file = "W_sph_" + std::to_string(iter) + ".dat";
+  std::string tecplot_spherical_slice_file = "W_sph_spherical_slice_" + std::to_string(iter) + ".dat";
   h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
   if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
+  // writeEquatorialSlice_Tecplot_SingleFile(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, time);
+  writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_file, time, 0, 0.0);
+  if (procID() == 0) cout << "Tecplot equatorial slice file written at iteration " << iter << endl;
+  writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, time, /*radius=*/1.5e13); 
+  if (procID() == 0) cout << "Tecplot spherical slice file written at iteration " << iter << endl;                                     
 
   // Print this for more detailed output
   // h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, "W_" + to_string(iter));
