@@ -1007,7 +1007,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   }
   
   if (write_data){
-    std::string output_file = ParseInputs::get_data_file_prefix() + "_" + std::to_string(iter); 
+    std::string output_file = ParseInputs::get_data_file_prefix() + "." + std::to_string(iter); 
     h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
     if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
     // Print this for more detailed output
