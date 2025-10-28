@@ -70,9 +70,9 @@ private:
     string BC_file;
     int num_probes = 0;                                
     std::vector<std::string> probe_filenames;           
-    std::vector<std::string> probe_coords;               
+    std::vector<std::string> probe_coords;  // Accepts HGI coordinates              
     double Probe_cadence; // In seconds
-    double BC_start_time;
+    double BC_start_time; // Like 2024.0 for year 2024
     double BC_cadence; // In hours
     int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
     int BC_force_single_frame; // 1: Use only one frame for BCs, 0: Use all frames for BCs (if present)
