@@ -168,9 +168,9 @@ int main(int argc, char *argv[])
     
   
     bool give_space_in_probe_file = true;
-    double probe_cadence_temp = 0;
-    double slice_time_cadence_temp = 0;
-    double write_time_cadence_temp = 0;
+    int probe_trigger_count_temp = -1;
+    int write_trigger_count_temp = -1;
+    int slice_trigger_count_temp = -1;
 
 #if 0 // Begin debug comment.
     auto initialCons = CubedSphereShell::conservationSum(JU);
@@ -247,13 +247,15 @@ int main(int argc, char *argv[])
 #endif
       int write_time_cadence_new = floor(time/write_time_cadence);
       int slice_time_cadence_new = floor(time/slice_time_cadence);
-      bool write_data = (write_time_cadence_new > write_time_cadence_temp) || (iter % write_cadence == 0);
-      bool slice_data = (slice_time_cadence_new > slice_time_cadence_temp) || (iter % slice_cadence == 0);
+      int write_trigger_count_now = floor(time/write_time_cadence);
+      int slice_trigger_count_now = floor(time/slice_time_cadence);
+      bool write_data = ((time > write_trigger_count_now * write_time_cadence - dt) && (time < write_trigger_count_now * write_time_cadence + dt) && (write_trigger_count_now != write_trigger_count_temp)) || (iter % write_cadence == 0);
+      bool slice_data = ((time > slice_trigger_count_now * slice_time_cadence - dt) && (time < slice_trigger_count_now * slice_time_cadence + dt) && (slice_trigger_count_now != slice_trigger_count_temp)) || (iter % slice_cadence == 0);
       if (write_data || slice_data)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt, write_data, slice_data);
-          if (write_data) write_time_cadence_temp = write_time_cadence_new;
-          if (slice_data) slice_time_cadence_temp = slice_time_cadence_new;
+          if (write_data) write_trigger_count_temp = write_trigger_count_now;
+          if (slice_data) slice_trigger_count_temp = slice_trigger_count_now;
           // Check conservation.
 #if 0
           if (convTestType < 3)
@@ -305,16 +307,17 @@ int main(int argc, char *argv[])
         {
           Write_Checkpoint(JU, iter, restart_step, time, dt);
         }
-     
-      int probe_cadence_new = floor(time/probe_cadence);
-      if (probe_cadence_new > probe_cadence_temp || iter == 1){
+      
+      int probe_trigger_count_now = floor(time/probe_cadence);
+      bool do_probes = (time > probe_trigger_count_now * probe_cadence - dt) && (time < probe_trigger_count_now * probe_cadence + dt) && (probe_trigger_count_now != probe_trigger_count_temp);
+      if (do_probes || iter == 1){
         for (int p = 0; p < num_probes; ++p) {
           string probe_coord = probe_coords[static_cast<size_t>(p)];
           string probe_filename = probe_filenames[static_cast<size_t>(p)];
           Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file, probe_coord, probe_filename);
         }
         give_space_in_probe_file = false;
-        probe_cadence_temp = probe_cadence_new;     
+        probe_trigger_count_temp = probe_trigger_count_now;     
       }
       
       auto end = chrono::steady_clock::now();
