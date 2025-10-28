@@ -38,6 +38,22 @@ private:
     int P_floor_cadence; // Iteration cadence for P_floor
     string data_file_prefix;
     string checkpoint_file_prefix;
+    std::string slices_raw;
+    bool slice_X = false;
+    bool slice_Y = false;
+    bool slice_Z = false;
+    bool slice_R = false;
+    void parseSlices() {
+        slice_X = slice_Y = slice_Z = slice_R = false;
+        std::istringstream iss(slices_raw);
+        std::string token;
+        while (iss >> token) {
+            if (token == "X") slice_X = true;
+            else if (token == "Y") slice_Y = true;
+            else if (token == "Z") slice_Z = true;
+            else if (token == "R") slice_R = true;
+        }
+    }
     int scale_data_with_r; // 0: No scaling, 1: Scale with r
     int max_checkpoint_files;
     string restart_file;
@@ -111,6 +127,10 @@ public:
     static int get_P_floor_cadence() {return getInstance().P_floor_cadence;}
     static string get_data_file_prefix() {return getInstance().data_file_prefix;}
     static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
+    static bool get_slice_X() { return getInstance().slice_X; }
+    static bool get_slice_Y() { return getInstance().slice_Y; }
+    static bool get_slice_Z() { return getInstance().slice_Z; }
+    static bool get_slice_R() { return getInstance().slice_R; }
     static int get_scale_data_with_r() {return getInstance().scale_data_with_r;}
     static int get_max_checkpoint_files() {return getInstance().max_checkpoint_files;}
     static string get_restart_file() {return getInstance().restart_file;}
@@ -171,6 +191,7 @@ public:
         args.add("P_floor_cadence", P_floor_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("checkpoint_file_prefix", checkpoint_file_prefix);
+        args.add("Slices", slices_raw);
         args.add("scale_data_with_r", scale_data_with_r);
         args.add("max_checkpoint_files", max_checkpoint_files);
         args.add("restart_file", restart_file);
@@ -217,6 +238,7 @@ public:
         args.add("CME_a1", CME_a1);
         args.add("CME_shift", CME_shift);
         args.parse(argc, argv);
+        parseSlices();
         // use only the first num_probes entries
         probe_filenames.resize((size_t)std::max(0, num_probes));
         probe_coords.resize((size_t)std::max(0, num_probes));
@@ -243,6 +265,7 @@ public:
             cout << "P_floor_cadence: " << P_floor_cadence << endl;
             cout << "data_file_prefix: " << data_file_prefix << endl;
             cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+            cout << "Slices: " << slices_raw << endl;
             cout << "scale_data_with_r: " << scale_data_with_r << endl;
             cout << "max_checkpoint_files: " << max_checkpoint_files << endl;
             cout << "restart_file: " << restart_file << endl;

@@ -17,6 +17,7 @@
 -P_floor_cadence                 5000000
 -data_file_prefix                data
 -checkpoint_file_prefix          checkpoint
+-Slices                          X Y Z R
 -scale_data_with_r               1
 -max_checkpoint_files            3
 #-restart_file                    checkpoint_1000.hdf5

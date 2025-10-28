@@ -1016,14 +1016,22 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
 
   if (write_slice){
     double physical_time = getPhysTime(time);
-    std::string tecplot_slice_file_x = ParseInputs::get_data_file_prefix() + ".x." + std::to_string(iter) + ".dat";
-    std::string tecplot_slice_file_y = ParseInputs::get_data_file_prefix() + ".y." + std::to_string(iter) + ".dat";
-    std::string tecplot_slice_file_z = ParseInputs::get_data_file_prefix() + ".z." + std::to_string(iter) + ".dat";
-    std::string tecplot_spherical_slice_file = ParseInputs::get_data_file_prefix() + ".r." + std::to_string(iter) + ".dat";
-    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_x, physical_time,time,iter, 0, 0.0);
-    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_y, physical_time,time,iter, 1, 0.0);
-    writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_z, physical_time,time,iter, 2, 0.0);
-    writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
+    if (ParseInputs::get_slice_X()){
+      std::string tecplot_slice_file_x = ParseInputs::get_data_file_prefix() + ".x." + std::to_string(iter) + ".dat";
+      writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_x, physical_time,time,iter, 0, 0.0);
+    }
+    if (ParseInputs::get_slice_Y()){
+      std::string tecplot_slice_file_y = ParseInputs::get_data_file_prefix() + ".y." + std::to_string(iter) + ".dat";
+      writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_y, physical_time,time,iter, 1, 0.0);
+    }
+    if (ParseInputs::get_slice_Z()){
+      std::string tecplot_slice_file_z = ParseInputs::get_data_file_prefix() + ".z." + std::to_string(iter) + ".dat";
+      writeTecplotSlice_plane(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_slice_file_z, physical_time,time,iter, 2, 0.0);
+    }
+    if (ParseInputs::get_slice_R()){
+      std::string tecplot_spherical_slice_file = ParseInputs::get_data_file_prefix() + ".r." + std::to_string(iter) + ".dat";
+      writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
+    }
     if (procID() == 0) cout << "Tecplot slice files written at iteration " << iter << endl;                                     
   }
   
