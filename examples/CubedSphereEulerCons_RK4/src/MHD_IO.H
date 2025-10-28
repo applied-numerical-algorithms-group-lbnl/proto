@@ -1358,7 +1358,5 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
     }
   }
 
-  if (procID() == 0) cout << "Probed at iteration " << a_iter << endl;
-
   outputFile.close();
 }

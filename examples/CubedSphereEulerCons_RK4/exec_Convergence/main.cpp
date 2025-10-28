@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
       MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
       // OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
-      Write_W(JU, eulerOp, iop, restart_step, time, dt);            
+      Write_W(JU, eulerOp, iop, restart_step, time, dt, true, true);            
       {
         HDF5Handler h5;
         MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(JU.layout(), OP::ghost());
@@ -249,8 +249,8 @@ int main(int argc, char *argv[])
       int slice_time_cadence_new = floor(time/slice_time_cadence);
       int write_trigger_count_now = floor(time/write_time_cadence);
       int slice_trigger_count_now = floor(time/slice_time_cadence);
-      bool write_data = ((time > write_trigger_count_now * write_time_cadence - dt) && (time < write_trigger_count_now * write_time_cadence + dt) && (write_trigger_count_now != write_trigger_count_temp)) || (iter % write_cadence == 0);
-      bool slice_data = ((time > slice_trigger_count_now * slice_time_cadence - dt) && (time < slice_trigger_count_now * slice_time_cadence + dt) && (slice_trigger_count_now != slice_trigger_count_temp)) || (iter % slice_cadence == 0);
+      bool write_data = ((time > write_trigger_count_now * write_time_cadence - dt) && (time < write_trigger_count_now * write_time_cadence + dt) && (write_trigger_count_now != write_trigger_count_temp)) || (iter % write_cadence == 0) || (iter == max_iter);
+      bool slice_data = ((time > slice_trigger_count_now * slice_time_cadence - dt) && (time < slice_trigger_count_now * slice_time_cadence + dt) && (slice_trigger_count_now != slice_trigger_count_temp)) || (iter % slice_cadence == 0) || (iter == max_iter);
       if (write_data || slice_data)
         {
           Write_W(JU, eulerOp, iop, iter, time, dt, write_data, slice_data);
@@ -317,7 +317,8 @@ int main(int argc, char *argv[])
           Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file, probe_coord, probe_filename);
         }
         give_space_in_probe_file = false;
-        probe_trigger_count_temp = probe_trigger_count_now;     
+        probe_trigger_count_temp = probe_trigger_count_now;   
+        if (procID() == 0) cout << "Probed at iteration " << iter << endl;  
       }
       
       auto end = chrono::steady_clock::now();
