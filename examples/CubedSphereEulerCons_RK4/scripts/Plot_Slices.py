@@ -38,6 +38,9 @@ out_dir = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/R
 #-- Corotation needed? ---
 COROTATE = False
 
+#-- process all or new only ---
+PROCESS_ALL = True
+
 # -------------------------------
 # Radial scaling powers per variable
 # -------------------------------
@@ -592,7 +595,14 @@ def plot_with_geometry(
     step = geom["step"]; t_code = geom["t_code"]; phys_dt = geom["phys_dt"]; theta = geom["theta"]
 
     # Fetch cell values in the SAME order as geometry was assembled
-    v_flat = get_values_for_var(geom, varname, cell_order=cell_order, rotate_components=False)
+    # if varname is T, calulate temperature from pressure and density
+    if varname == "T":
+        density = get_values_for_var(geom, "density", cell_order=cell_order, rotate_components=False)
+        pressure = get_values_for_var(geom, "P", cell_order=cell_order, rotate_components=False)
+        # Avoid division by zero
+        v_flat = pressure/(2.0*(density/1.67262192e-24)*1.3806505e-16)
+    else:
+        v_flat = get_values_for_var(geom, varname, cell_order=cell_order, rotate_components=False)
 
     # Units → radial scaling
     v_raw = v_flat * UNIT_SCALE.get(varname, 1.0)
@@ -662,7 +672,7 @@ from multiprocessing import Pool, cpu_count
 import matplotlib
 matplotlib.use("Agg")  # safe for subprocesses with Matplotlib
 
-VARIABLES = ["density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"]
+VARIABLES = ["density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp", "T"]
 
 def _render_one_file(args):
     filepath, out_dir = args
@@ -692,6 +702,19 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     MIN_ITER = -1
+
+    #Search all density*.png files in out_dir to determine max iteration already done
+    if not PROCESS_ALL:
+        existing_pngs = [f for f in os.listdir(out_dir) if re.match(r'density_\d+\.png$', f)]
+        max_done_iter = -1
+        for f in existing_pngs:
+            m = re.search(r'density_(\d+)\.png$', f)
+            if m:
+                iter_num = int(m.group(1))
+                if iter_num > max_done_iter:
+                    max_done_iter = iter_num
+        MIN_ITER = max_done_iter
+        print(f"[INFO] Skipping files with iter <= {MIN_ITER} based on existing density PNGs.")
 
     all_files = [f for f in os.listdir(slice_folder) if re.match(r'.*\.z\.\d+\.dat$', f)]
     if not all_files:
