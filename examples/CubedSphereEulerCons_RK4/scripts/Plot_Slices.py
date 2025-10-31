@@ -25,10 +25,11 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from matplotlib.patches import Circle
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 # --- physics conversion params (edit as needed) ---
 AU_CM       = 1.495978707e13  # AU in cm
-LISM_V_CMS  = 1.0 #2.54e6          # 25.4 km/s example; set to your value
 START_ISO   = "2024-03-16T12:00:00"  # simulation t=0 (UTC)
 
 #--- address variables ---
@@ -39,7 +40,7 @@ out_dir = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/R
 COROTATE = False
 
 #-- process all or new only ---
-PROCESS_ALL = True
+PROCESS_ALL = False
 
 # -------------------------------
 # Radial scaling powers per variable
@@ -97,6 +98,9 @@ COLOR_SETTINGS = {
     # Pressure
     "P": {"cmap": "plasma", "vmin": 0.0, "vmax": 800},
 }
+
+def cm_to_AU(x, pos):
+    return f"{x / AU_CM:.2f}"
 
 # =========================
 # Geometry cache + builders
@@ -635,19 +639,21 @@ def plot_with_geometry(
             else:
                 cbar.ax.set_yticklabels([f"{t:.2f}" for t in ticks])
 
-    ax.set_xlabel("X"); ax.set_ylabel("Y")
+    ax.xaxis.set_major_formatter(FuncFormatter(cm_to_AU))
+    ax.yaxis.set_major_formatter(FuncFormatter(cm_to_AU))
+    ax.set_xlabel("X (AU)"); ax.set_ylabel("Y (AU)")
     ax.set_aspect("equal", adjustable="box")
     # If you want hard limits:
     # ax.set_xlim(-1.2, 1.2); ax.set_ylim(-1.2, 1.2)
 
     # Title (step padded, 7 sig figs)
-    title_left = f"{LABELS.get(varname, varname)}   R=[{inner_radius:.2f}, {outer_radius:.2f}] AU"
+    title_left = f"{LABELS.get(varname, varname)}   R=[{inner_radius/AU_CM:.2f}, {outer_radius/AU_CM:.2f}] AU"
     try:
         step_str = f"{step:06d}" if (step is not None and step >= 0) else "------"
         t_str = f"{t_code:.7g}" if t_code is not None else "----"
         utc_str = phys_dt.strftime('%Y-%m-%d %H:%M:%S') if phys_dt else "----"
         rot_str = f"rot={np.rad2deg(-theta):.2f}°" if theta != 0 else "rot=0°"
-        ax.set_title(f"{title_left}\nstep={step_str}   t={t_str:>12}   UTC: {utc_str}   {rot_str}")
+        ax.set_title(f"{title_left}\nUTC: {utc_str}   {rot_str}")
     except Exception:
         ax.set_title(title_left)
 
