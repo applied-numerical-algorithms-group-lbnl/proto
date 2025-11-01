@@ -6,6 +6,7 @@
 #include <iostream>  // For std::cout, etc.
 #include <iomanip>   // For std::setw, etc.
 #include <vector>
+#include <sstream>
 
 using namespace Proto;
 using namespace std;
@@ -191,7 +192,7 @@ public:
         args.add("P_floor_cadence", P_floor_cadence);
         args.add("data_file_prefix", data_file_prefix);
         args.add("checkpoint_file_prefix", checkpoint_file_prefix);
-        args.add("Slices", slices_raw);
+        args.add("slices", slices_raw);
         args.add("scale_data_with_r", scale_data_with_r);
         args.add("max_checkpoint_files", max_checkpoint_files);
         args.add("restart_file", restart_file);
