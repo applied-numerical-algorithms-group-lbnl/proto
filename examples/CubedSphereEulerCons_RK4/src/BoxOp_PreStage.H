@@ -83,7 +83,7 @@ PreStagePatch(BoxData<T,NUMCOMPS,MEM>& a_USphStage,
               T a_dt,
               int a_kstage)
 {
-  PR_TIMERS("BoxOp_Euler::PreStagePatch");
+  PR_TIMERS("BoxOp_EulerCubedSphere::PreStagePatch()");
   HDF5Handler h5;
 
   // if (procID() == 0) h5.writePatch(1,a_USphStage,"a_USphStage_noBC");
@@ -380,7 +380,7 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
               int a_kstage)
 {
   
-  PR_TIMERS("BoxOp_Euler::PreStageLevel");
+  PR_TIMERS("BoxOp_EulerCubedSphere::PreStageLevel()");
   int init_condition_type = ParseInputs::get_init_condition_type();
   auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);

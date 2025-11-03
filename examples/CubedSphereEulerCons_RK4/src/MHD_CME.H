@@ -352,6 +352,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
     double a_dt,
     double a_gamma)
 {
+    PR_TIME("BoxOp_EulerCubedSphere::Insert_CME()");
     if (ParseInputs::get_CME_type() == 1){
         if (procID() == 0) cout << "Inserting CME" << endl;
         HDF5Handler h5;

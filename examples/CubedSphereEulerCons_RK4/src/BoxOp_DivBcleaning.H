@@ -8,10 +8,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::DivBPowell(
                         const State& a_USph,
                         T a_scale) const
 {
+  PR_TIME("BoxOp_EulerCubedSphere::DivBPowell()");
   int a_block = this->block();
   State rhs(a_Rhs.box());
   rhs.setVal(0.0);
-  PR_TIME("BoxOp_Euler::DivBPowell()");
   HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
   BoxData<T,DIM,MEM> Dr(bxRad);

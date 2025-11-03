@@ -15,7 +15,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
    T                               a_scale,
    int                             a_counter) const
 {
-  PR_TIMERS("BoxOp_Euler::operator()");
+  PR_TIMERS("BoxOp_EulerCubedSphere::operator()");
   int a_block = this->block();
   HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
@@ -255,7 +255,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
                                           uint a_block,
                                           uint a_dir) const
 {
-  PR_TIMERS("primToMappedFlux");
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToMappedFlux()");
   // Multiply momentum and B fluxes by det(A) A.
   BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,iMOMX);
   BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(a_physFlux,iMOMX);
@@ -323,7 +323,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
 {
 
   // Compute fluxes at face centers.
-  PR_TIMERS("primToMappedRusanovFlux");
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToMappedRusanovFlux()");
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                     - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   // Deconvolve W to obtain point values.
@@ -485,7 +485,7 @@ primToFlux(
            uint a_centering) const
 {
   // Compute fluxes at face centers.
-  PR_TIMERS("primToFlux");
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToFlux()");
   T dxiPerp = this->dx()[1];
   Stencil<T> deconvolveStencilRadial = (1.0*Shift(Point::Zeros())
                                     - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
@@ -556,7 +556,7 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       MBInterpOp& a_iop,
       MBLevelBoxData<T,1,MEM>& a_dVolr)
 {
-  PR_TIMERS("BoxOp_Euler::dtCFL");
+  PR_TIMERS("BoxOp_EulerCubedSphere::dtCFL()");
   auto layout = a_JU.layout();
   
   auto map = CubedSphereShell::Map(layout, ghost());
@@ -639,7 +639,7 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
            T a_weight,
            int a_kstage)
 {
-  PR_TIMERS("BoxOp_Euler::StageLevel");
+  PR_TIMERS("BoxOp_EulerCubedSphere::StageLevel()");
   auto layout = a_UStage.layout();
   auto map = CubedSphereShell::Map(layout, ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
@@ -707,6 +707,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
           MBInterpOp& a_iop,
           MBLevelBoxData<T,1,MEM>& a_dVolrLev) 
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::applyOp()");
   T weight = 1.0;
   auto layout = a_JU.layout();
   MBBoundaryRegister<T,BoxOp_EulerCubedSphere<T,MAP,MEM>::numState(),MEM>
@@ -760,6 +761,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
 dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,
       const State& a_W) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::dtInv()");
   Box bx= this->box();  
   T dxiR = this->dx()[0];
   T dxiPerp = this->dx()[1];
@@ -844,7 +846,7 @@ PostStagePatch(
                T a_weight)
 {
   // Increment boundary registers.
-  PR_TIMERS("BoxOp_Euler::postStagePatch");
+  PR_TIMERS("BoxOp_EulerCubedSphere::postStagePatch()");
   abort(); // Deprecated. Can resurrect if we need it.
 }
 #endif
@@ -858,6 +860,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
 postStepLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_rhsTotal,             
               MBBoundaryRegister<T,NUMCOMPS,MEM,PR_CELL>& a_blockReg)
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::postStepLevel()");
   abort();
 }
 #if 0
@@ -873,6 +876,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialGhost(State& a_U,
                                                 Box a_blockBox
                                                 )
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::radialGhost()");
   if (a_blockBox.high()[0] < a_bxGhosted.high()[0])
     {
       Point low = a_bxGhosted.low();
@@ -909,6 +913,7 @@ P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
     double a_dt,
     double a_gamma)
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::P_floor()");
   auto map = CubedSphereShell::Map(a_JU.layout(), ghost());
   auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   MBLevelBoxData<double, NUMCOMPS, HOST> USph(a_layout, ghost());

@@ -10,6 +10,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
                                              BoxData<T, 1, MEM>& a_dVolr,
                                              Box a_bx) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::radialMetrics()");
   int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
   double r0 = CUBED_SPHERE_SHELL_R0;
   double r1 = CUBED_SPHERE_SHELL_R1;
@@ -63,6 +64,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::checkRadial(State& a_inputs,
                                                T a_h,
                                                unsigned int a_block) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::checkRadial()");
   BoxData<T,NUMCOMPS,MEM> outputs(a_inputs.box());
   outputs.setToZero();
   Box bx = a_inputs.box();
@@ -115,7 +117,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
                                               uint a_block) const
 {
   HDF5Handler h5;
-  PR_TIMERS("primToCons");
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToCons()");
   Array<Array<uint,DIM>,6>
     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -238,7 +240,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
                                               uint a_block,
                                               uint a_centering) const
 {
-  PR_TIMERS("kineticEnergyW");
+  PR_TIMERS("BoxOp_EulerCubedSphere::kineticEnergyW()");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -309,7 +311,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::magneticEnergyW(
                                               uint a_block,
                                               uint a_centering) const
 {
-  PR_TIMERS("magneticEnergyW");
+  PR_TIMERS("BoxOp_EulerCubedSphere::magneticEnergyW()");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -379,7 +381,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::vdotbW(
                                         uint a_block,
                                         uint a_centering) const
 {
-  PR_TIMERS("vdotbW");
+  PR_TIMERS("BoxOp_EulerCubedSphere::vdotbW()");
   Array<Array<uint,DIM>,6>
      permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
   Array<Array<int,DIM>,6>
@@ -460,7 +462,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToSph(
                                              const BoxData<T,1,MEM>& a_dVolr, 
                                              uint a_block) const
 {
-  PR_TIMERS("primToSph");
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToSph()");
   Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
                                 + (1.0/24.0)*Stencil<T>::Laplacian());
   Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
@@ -604,7 +606,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::cartToSph(
                                              uint a_block) const
 {
   // Get spherical conserved variables.
-  PR_TIMERS("cartToSph");
+  PR_TIMERS("BoxOp_EulerCubedSphere::cartToSph()");
   T dxiPerp = this->dx()[1];
   Box bx = a_JU.box();
   auto domainBox = this->layout().domain().getBlock(a_block).box();
@@ -639,7 +641,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::cartToSph(
   BoxData<T,NUMCOMPS,MEM> UBar(bx);
   // JU -> V_r*(rho,rho*vel_cart,rho*E) = JU / det(A);
   {
-    PR_TIMERS("ConsToRadialCons");
     BoxData<T,1,MEM> tmp(bx); 
     BoxData<T,1,MEM> JRho = slice(a_JU,iRHO);
     BoxData<T,1,MEM> rho = slice(a_USph,iRHO);
@@ -673,7 +674,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
                                           uint a_block) const
 {
   // Get radial conserved variables.
-  PR_TIMERS("USphToPrim");
+  PR_TIMERS("BoxOp_EulerCubedSphere::sphToPrim()");
   
   Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
                                 + (1.0/24.0)*Stencil<T>::Laplacian());
@@ -722,7 +723,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim_2O(
                                           uint a_block) const
 {
   // Get radial conserved variables.
-  PR_TIMERS("USphToPrim_2O");
+  PR_TIMERS("BoxOp_EulerCubedSphere::sphToPrim_2O()");
    
   a_W = forall<T,NUMCOMPS,MEM>(f_sphToPrim,a_USph);
   // Compute pressure.

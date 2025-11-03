@@ -398,6 +398,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod
  BoxData<double,DIM>& a_dx_sph,
  const int a_d) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::Limiters_minmod()");
   static Stencil<double> m_difference;
   m_difference = -1.0*Shift(Point::Zeros()) + 1.0*Shift(Point::Basis(a_d)); 
   static Stencil<double> m_copy;

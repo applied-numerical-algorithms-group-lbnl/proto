@@ -828,6 +828,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              bool write_data = false,
              bool write_slice = false)
 {
+  PR_TIME("Write_W");
   double gamma = ParseInputs::get_gamma();
   HDF5Handler h5;
   a_JU.exchange();
@@ -1043,6 +1044,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
              double time = 0.0,
              double dt = 0.0)
 {
+  PR_TIME("Write_Checkpoint");
   HDF5Handler h5;
   std::string check_file_name = ParseInputs::get_checkpoint_file_prefix() + "_" + std::to_string(iter);
   h5.setTime(time);
@@ -1106,7 +1108,7 @@ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
           string Probe_data_file = "default")
 
 {
-
+  PR_TIME("Probe");
   int pid = procID();
   ofstream outputFile;
   outputFile.open(Probe_data_file, std::ios::app);

@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
   MBLevelBoxData<double, NUMCOMPS, HOST> U_conv_test[3]; 
   PR_TIMER_SETFILE(to_string(thickness) + "_DIM" + to_string(DIM) +"_"+to_string(boxSize_nonrad) + "_" + to_string(boxSize_rad)//+ "_NProc" + to_string(numProc())
                    + "_CubeSphereTest.time.table");
-  PR_TIMERS("MMBEuler");
+  PR_TIMERS("MMB_MHD");
   int levmax = 3;
   auto domain =
     CubedSphereShell::Domain(domainSize, thickness, radialDir);

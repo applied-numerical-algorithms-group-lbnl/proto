@@ -171,6 +171,7 @@ initialize(State& a_W,
           T a_h,
           uint a_block) const
 {
+  PR_TIME("BoxOp_EulerCubedSphere::initialize()");
   int init_condition_type = ParseInputs::get_init_condition_type();
 
   // Calculate A_matrix_inv

@@ -11,10 +11,10 @@ viscFlux(
          T a_scale,
          T a_dt) const
 {
+  PR_TIME("BoxOp_EulerCubedSphere::viscFlux terms()");
   int block = this->block();
   State rhs(a_Rhs.box());
   rhs.setVal(0.0);
-  PR_TIME("BoxOp_Euler::viscosity terms()");
   HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
   BoxData<T,DIM,MEM> Dr(bxRad);
@@ -228,6 +228,7 @@ primToMappedViscFlux(
                      uint a_block,
                      uint a_dir) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::primToMappedViscFlux()");
   T one = 1.0;
   // Multiply momentum and B fluxes by det(A) A.
   BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,iMOMX);
@@ -276,6 +277,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearViscCoef(
                                                   uint a_block,
                                                   uint a_dir) const
 {
+  PR_TIMERS("BoxOp_EulerCubedSphere::LinearViscCoef()");
   // Find (|w_d| + c_fast*Adj(A)_{d,.}) and multiply with a_fluxdir.
   forallInPlace([ ] PROTO_LAMBDA
                 (Var<T,1,MEM>& a_linfluxcoef,
@@ -344,7 +346,7 @@ NonLinearViscCoef(
                   uint a_dir) const
 {
   // Nonlinear artificial viscosity.
-  PR_TIMERS("BoxOp_EulerCubedSphere::NL Viscosity coefficient");
+  PR_TIMERS("BoxOp_EulerCubedSphere::NonLinearViscCoef()");
   HDF5Handler h5;
   // Compute divergence of the velocity.
   BoxData<T,DIM,MEM> volflow(a_W.box());
@@ -435,7 +437,6 @@ NonLinearViscCoef(
     }
 #endif
   {
-    PR_TIMERS("BoxOp_EulerCubedSphere::NL Viscosity coefficient - final");
     divu *= a_dxi[a_dir];
     T alpha = .3;
     T beta = .3;
