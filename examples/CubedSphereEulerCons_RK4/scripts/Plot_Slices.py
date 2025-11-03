@@ -736,7 +736,8 @@ if __name__ == "__main__":
     tasks = [(os.path.join(slice_folder, f), out_dir) for f in slice_files]
 
     # Use N-1 workers by default; change to a fixed number (e.g., 8) if you prefer
-    workers = max(1, (cpu_count() or 2) - 1)
+    # workers = max(1, (cpu_count() or 2) - 1)
+    workers = 8
     print(f"[INFO] Processing {len(slice_files)} files × {len(VARIABLES)} vars using {workers} workers...")
 
     done = 0
