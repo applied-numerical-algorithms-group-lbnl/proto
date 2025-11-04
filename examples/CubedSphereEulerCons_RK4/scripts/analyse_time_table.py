@@ -5,8 +5,8 @@ import plotly.express as px
 # ------- CONFIG -------
 
 FILENAME = "Table.dat"
-THRESHOLD_PCT = 0.05      # plot nodes with >= this % of total time. Lower value may not work well.
-VIEW_MODE = "sunburst"   # or "treemap"
+THRESHOLD_PCT = 0.00      # plot nodes with >= this % of total time.
+VIEW_MODE = "treemap"   # "sunburst" or "treemap" #"sunburst" doesn't work well sometimes.
 
 # ------- PARSER -------
 
