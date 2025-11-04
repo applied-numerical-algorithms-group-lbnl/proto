@@ -72,9 +72,9 @@ public:
 
 				// define & init extended on root only
 				BC_data_extended[i].define(bx2);
-				for (int comp = 0; comp < 8; ++comp) {
-					BC_data_extended[i].setVal(m_scalevars[comp], bx2, comp);
-				}
+				// for (int comp = 0; comp < 8; ++comp) {
+				// 	BC_data_extended[i].setVal(m_scalevars[comp], bx2, comp);
+				// }
 				// wrap copy: [BT] at offset + direct copy
 				BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
 				BC_data[i].copyTo(BC_data_extended[i]);
@@ -103,6 +103,34 @@ public:
 	#else
 		(void)buf; (void)root; // no-op in serial
 	#endif
+	}
+
+	// Using this instead of Stencil-based fractional shift for BoxData increased speed significantly
+	template <typename T, MemType MEM>
+	inline void
+	apply_frac_shift_phi(BoxData<T,NUMCOMPS,MEM>       & a_out,
+						 BoxData<T,NUMCOMPS,MEM> & a_in,
+						int                            a_phiCoord,
+						double                         a_frac)
+	{
+		// IMPORTANT: alias shift sign is opposite of Stencil::Shift
+		// To mimic Shift(-Basis(phiCoord)), we use +Basis(phiCoord) in alias:
+		auto in_left = alias(a_in, Point::Basis(a_phiCoord) * 1);
+
+		forallInPlace(
+			[=] PROTO_LAMBDA(
+				Var<T,NUMCOMPS,MEM>       & l_a_out,
+				const Var<T,NUMCOMPS,MEM> & l_a_in,
+				const Var<T,NUMCOMPS,MEM> & l_in_left)
+			{
+				for (int c = 0; c < NUMCOMPS; ++c)
+				{
+					l_a_out(c) =
+						(T(1.0) - T(a_frac)) * l_a_in(c)
+					+ T(a_frac)            * l_in_left(c);
+				}
+			},
+			a_out, a_in, in_left);
 	}
 
 	template <typename T, MemType MEM>
@@ -139,8 +167,6 @@ public:
 		{
 
 			BoxData<double, 8, HOST> data_a(bx2);
-                        for (int comp = 0; comp < 8; comp++)
-                          data_a.setVal(m_scalevars[comp],bx2,comp);
 			// Rotate the data
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
@@ -154,14 +180,12 @@ public:
 			double needed_fraction = angle_to_rotate / (360 / domainSizez) - cells_to_rotate;
 			cells_to_rotate = cells_to_rotate % domainSizez;
 			cells_to_rotate = domainSizez - cells_to_rotate;
-			static Stencil<double> m_right_shift;
-			m_right_shift = (1.0 - needed_fraction) * Shift(Point::Zeros()) + (needed_fraction)*Shift(-Point::Basis(phiCoord));
 			if (procID()==0) {
 				if (num_frames == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
 				if (low_frame_now >= num_frames - 1) BC_data_extended[num_frames - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
 			}
-			bcast_boxdata(data_a); // NEW
-			BC_data_temp1 = m_right_shift(data_a);
+			bcast_boxdata(data_a);
+			apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction);
 			BC_data_temp1.copyTo(data_0);
 		}
 		else
@@ -176,11 +200,7 @@ public:
 
 			BoxData<double, 8, HOST> data_a(bx2);
 			BoxData<double, 8, HOST> data_b(bx2);
-                        for (int comp = 0;comp < 8;comp++)
-                          {
-                            data_a.setVal(m_scalevars[comp],bx2,comp);
-                            data_b.setVal(m_scalevars[comp],bx2,comp);
-                          }                          
+                     
 			// Rotate the data
 			double carr_rot_time = 25.38 * 24 * 60 * 60; // Seconds
 			// We should use sidereal time for this. 25.38 days. That's the rotation time from a fixed location.
@@ -216,18 +236,15 @@ public:
 
 			// if(procID()==0) cout << " low_frame = " << low_frame << " needed_fraction = " << needed_fraction << " cells_to_rotate1 " << cells_to_rotate1 << " cells_to_rotate2 " << cells_to_rotate2 << endl;
 
-			static Stencil<double> m_right_shift1;
-			static Stencil<double> m_right_shift2;
-			m_right_shift1 = (1.0 - needed_fraction1) * Shift(Point::Zeros()) + (needed_fraction1)*Shift(-Point::Basis(phiCoord));
-			m_right_shift2 = (1.0 - needed_fraction2) * Shift(Point::Zeros()) + (needed_fraction2)*Shift(-Point::Basis(phiCoord));
 			if (procID()==0) {
 				BC_data_extended[low_frame].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate1));
 				BC_data_extended[next_frame].copyTo(data_b, bx2, Point::Basis(phiCoord) * (-cells_to_rotate2));
 			}
-			bcast_boxdata(data_a); // NEW
-			bcast_boxdata(data_b); // NEW
-			BC_data_temp1 = m_right_shift1(data_a);
-			BC_data_temp2 = m_right_shift2(data_b);
+			bcast_boxdata(data_a);
+			bcast_boxdata(data_b);
+
+			apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction1);
+			apply_frac_shift_phi<T, MEM>(BC_data_temp2, data_b, phiCoord, needed_fraction2);
 
 			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data_interpolated,
 										Var<T, NUMCOMPS, MEM> & a_BC_data_lo,
@@ -241,26 +258,48 @@ public:
 				data_0, BC_data_temp1, BC_data_temp2, needed_fraction);
 		}
 
-		// Create a single block, single patch MBLevelBoxData
-		// You may have to do this on each processor
-		MBProblemDomain srcDomain(numProc());
-		for (BlockIndex bi = 0; bi < numProc(); bi++)
+		// Making use of cached BC operator to avoid rebuild each time, much faster
+		// --- Cached source layout / data / BC operator ---
+		struct BCCache
 		{
-			srcDomain.defineDomain(bi, Box_BC.sizes());
+			bool initialized = false;
+			MBDisjointBoxLayout srcLayout;
+			std::unique_ptr<MBLevelBoxData<double, 8, HOST>> srcData;
+			MBInterpOp BCOp;
+			int cachedNumProc = -1;
+		};
+
+		static BCCache s_cache;
+
+		if (!s_cache.initialized || s_cache.cachedNumProc != numProc())
+		{
+			// Rebuild if first time, or if numProc() changed (paranoia)
+			MBProblemDomain srcDomain(numProc());
+			for (BlockIndex bi = 0; bi < numProc(); bi++)
+			{
+				srcDomain.defineDomain(bi, Box_BC.sizes());
+			}
+
+			s_cache.srcLayout = MBDisjointBoxLayout(srcDomain, Box_BC.sizes());
+			s_cache.srcData   = std::make_unique<MBLevelBoxData<double, 8, HOST>>(
+									s_cache.srcLayout, Point::Zeros());
+
+			// Build interpolation op once, based on the map + srcLayout geometry
+			s_cache.BCOp = CubedSphereShell::BCBilinearOp(
+				a_map, s_cache.srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
+
+			s_cache.cachedNumProc = numProc();
+			s_cache.initialized   = true;
 		}
 
-		MBDisjointBoxLayout srcLayout(srcDomain, Box_BC.sizes());
-		MBLevelBoxData<double, 8, HOST> data(srcLayout, Point::Zeros());
-		data_0.copyTo(data[*srcLayout.begin()]);
+		// Copy BC "image" into the (one) source patch this operator expects
+		data_0.copyTo((*s_cache.srcData)[*s_cache.srcLayout.begin()]);
 
 		a_dstData.setVal(0);
-
-		// Get the interpolation or Nearest operator
-		// auto BCOp = CubedSphereShell::BCNearestOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
-		auto BCOp = CubedSphereShell::BCBilinearOp(a_map, srcLayout, dtheta, theta, phi, Side::Lo, NGHOST);
-
-		// Interpolate data
-		BCOp.apply(a_dstData, data);
+		{
+			PR_TIMERS("MHDReader::BoxData_to_BC::applyBCOp");
+			s_cache.BCOp.apply(a_dstData, *s_cache.srcData);
+		}
 	}
 
 
