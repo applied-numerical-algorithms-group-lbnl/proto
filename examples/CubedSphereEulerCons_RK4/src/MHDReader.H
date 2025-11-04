@@ -21,6 +21,7 @@ public:
 
 	inline void file_to_BoxData_vec(std::string a_filename)
 	{
+		PR_TIMERS("MHDReader::file_to_BoxData_vec()");
 		int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
 		int thetaCoord = (rCoord + 1) % 3;
 		int phiCoord   = (rCoord + 2) % 3;
@@ -109,6 +110,7 @@ public:
 							const MBLevelMap<MBMap_CubedSphereShell, MEM> &a_map,
 							T a_time)
 	{
+		PR_TIMERS("MHDReader::BoxData_to_BC");
 		HDF5Handler h5;
 		int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
 		int thetaCoord = (rCoord + 1) % 3;

@@ -4,6 +4,7 @@ MBProblemDomain CubedSphereShell::Domain(
     int a_thickness,
     int a_radialDir)
 {
+    PR_TIMERS("CubedSphereShell::Domain()");
     MBProblemDomain domain(6);
     auto CCW = CoordPermutation::ccw(a_radialDir);
     auto CW = CoordPermutation::cw(a_radialDir);
@@ -50,6 +51,7 @@ CubedSphereShell::Map(
         const MBDisjointBoxLayout&  a_layout,
         Point   a_ghost)
 {
+    PR_TIMERS("CubedSphereShell::Map()");
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(a_layout, a_ghost);
     return map;
@@ -60,6 +62,7 @@ MBLevelMap<MBMap_CubedSphereShell, MEM>
 CubedSphereShell::Map(
         const MBLevelBoxData<T,C,MEM,CTR>& a_data)
 {
+    PR_TIMERS("CubedSphereShell::Map()");
     MBLevelMap<MBMap_CubedSphereShell, HOST> map;
     map.define(a_data.layout(), a_data.ghost());
     return map;
@@ -72,6 +75,7 @@ MBLevelOp<OpType, MBMap_CubedSphereShell, T>
 CubedSphereShell::Operator(
     MBLevelMap<MBMap_CubedSphereShell, MEM>& a_map)
 {
+    PR_TIMERS("CubedSphereShell::Operator()");
     MBLevelOp<OpType, MBMap_CubedSphereShell, T> op;
     op.define(a_map);
     return op;
@@ -84,6 +88,7 @@ CubedSphereShell::InterpOp(
         Point a_ghost,
         int a_order)
 {
+    PR_TIMERS("CubedSphereShell::InterpOp()");
     MBInterpLayout interpLayout(a_layout, a_order);
     interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
     interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
@@ -105,6 +110,7 @@ CubedSphereShell::InterpOp(
         MBLevelBoxData<T,C,MEM,CTR>& a_data,
         int a_order)
 {
+    PR_TIMERS("CubedSphereShell::InterpOp()");
   Point ghost = a_data.ghost()[0] + Point::Ones() - Point::Basis(0,1);
     return InterpOp<MEM>(a_data.layout(), ghost, a_order);
 }
@@ -367,7 +373,7 @@ CubedSphereShell::BCNearestOp(
         Side::LoHiSide             a_side,
         int a_ghost)
 {
-
+    PR_TIMERS("CubedSphereShell::BCNearestOp()");
     // SETUP
     const auto& layout = a_map.layout();
     int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -477,7 +483,7 @@ CubedSphereShell::BCBilinearOp(
     Side::LoHiSide a_side,
     int a_ghost)
 {
-
+    PR_TIMERS("CubedSphereShell::BCBilinearOp()");
     // SETUP
     const auto& layout = a_map.layout();
     int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
@@ -638,6 +644,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 Array<T,C>
 CubedSphereShell::conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU)
 {
+  PR_TIMERS("CubedSphereShell::conservationSum()");
   auto layout = a_JU.layout();
   MBLevelBoxData<T,C,MEM,CTR> temp(layout,Point::Zeros());
   a_JU.copyTo(temp);
@@ -654,7 +661,8 @@ void
 CubedSphereShell::InterpBoundaries(
                                    MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                    int a_order)
-{
+{ 
+    PR_TIMERS("CubedSphereShell::InterpBoundaries()");
     auto op = InterpOp(a_data, a_order);
     op.apply(a_data, a_data);
 }
@@ -665,6 +673,7 @@ WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WCartToWSemiPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_W.box() & a_WSemi.box();
@@ -702,6 +711,7 @@ WCartToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WCartToWSphPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_WCart.box() & a_WSph.box();
@@ -740,6 +750,7 @@ WSphToWCartPointwise(BoxData<T,C,MEM>& a_WCart,
                      T a_h,
                      unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WSphToWCartPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_WCart.box() & a_WSph.box();
@@ -776,6 +787,7 @@ WSemiToWCartPointwise(BoxData<T,C,MEM>& a_W,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WSemiToWCartPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_W.box() & a_WSemi.box();
@@ -807,6 +819,7 @@ WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WSphToWSemiPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_WSph.box() & a_WSemi.box();
@@ -849,6 +862,7 @@ WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WSemiToWSphPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx = a_WSph.box() & a_WSemi.box();
@@ -893,6 +907,7 @@ WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
                          T a_gamma,
                          unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::WSphPointwiseToJUAverage()");
   Stencil<T> convolveStencil =
     1.0*Shift(Point::Zeros()) + (1.0/24.0)*Stencil<T>::Laplacian();
   // tranform WSph -> USph.
@@ -992,6 +1007,7 @@ WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
                       const BoxData<T,C+2,MEM>& a_WSemi,
                       T a_gamma)
 {
+  PR_TIMERS("CubedSphereShell::WSemiToUSemiPointwise()");
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C + 2,MEM>& a_usemi,
                                 const Var<T,C + 2,MEM>& a_wsemi,
@@ -1022,6 +1038,7 @@ USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                       const BoxData<T,C+2,MEM>& a_USemi,
                       T a_gamma)
 {
+  PR_TIMERS("CubedSphereShell::USemiToWSemiPointwise()");
   forallInPlace([] PROTO_LAMBDA(
                                 Var<T,C + 2,MEM>& a_wsemi,
                                 const Var<T,C + 2,MEM>& a_usemi,
@@ -1050,6 +1067,7 @@ PerpCheckPointwise(BoxData<T,C+2,MEM>& a_WSemi,
                       T a_h,
                       unsigned int a_block)
 {
+  PR_TIMERS("CubedSphereShell::PerpCheckPointwise()");
   auto permute = perm(a_block);
   auto sign = permsign(a_block);
   Box bx =  a_WSemi.box();
@@ -1143,6 +1161,7 @@ radialCons(
            T a_weight
            )
 {
+  PR_TIMERS("CubedSphereShell::radialCons()");
   Box lowBox =
     a_validBox.face(0,Side::Lo)&a_flux.box();
   if (!lowBox.empty())
@@ -1186,7 +1205,7 @@ consToSemiSphNGEuler(
                      unsigned int a_block,                 
                      unsigned int a_order)
 {
-  PR_TIMERS("consToSemiSphNGEuler");
+  PR_TIMERS("CubedSphereShell::consToSemiSphNGEuler()");
   Box bx = a_bx.grow(Point::Basis(0))&a_blockBox;
   // cout << "input box " << bx <<", blockbox" << a_blockBox << endl;
   BoxData<T,C,MEM> USph(bx);
@@ -1298,6 +1317,7 @@ void CubedSphereShell::semiSphToSph(
                                       int a_compvec,
                                       int a_compradial)
 {
+  PR_TIMERS("CubedSphereShell::semiSphToSph()");
   Box bx = a_VSph.box();
   BoxData<T,DIM,MEM> tmp(bx);
   tmp.setToZero();
@@ -1327,7 +1347,7 @@ consToSphInterpEuler(
                      unsigned int a_order,
                      int a_counter)
 {
-  PR_TIMERS("CubedSphereShell::consToSphInterpEuler");
+  PR_TIMERS("CubedSphereShell::consToSphInterpEuler()");
   auto layout = a_JU.layout();
   auto ghost = a_JU.ghost();
   HDF5Handler h5;
@@ -1353,7 +1373,7 @@ consToSphInterpEuler(
   T dxiPerp = 1.0/size[1];
   for (auto dit : JUTemp.layout())
     {
-      PR_TIMERS("CubedSphereShell::consToSphInterpEuler pre-exchange");
+      PR_TIMERS("CubedSphereShell::consToSphInterpEuler() pre-exchange");
       // Transform JU -> USemiSph on valid cells in layout.
       unsigned int block = JUTemp.layout().block(dit);
       Box blockBox = JUTemp.layout().getBlock(block).domain().box();
@@ -1427,7 +1447,7 @@ consToSphInterpEuler(
 #endif
       for (auto dit : USemiSph.layout())
     {
-       PR_TIMERS("CubedSphereShell::consToSphInterpEuler post-exchange");
+       PR_TIMERS("CubedSphereShell::consToSphInterpEuler() post-exchange");
       BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
       Box bxOut = a_JU[dit].box();     
       Box bxIn = USemiSph_i.box();
@@ -1525,6 +1545,7 @@ consToCartInterpEuler(
                         MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
                         unsigned int a_order)
 {
+  PR_TIMERS("CubedSphereShell::consToCartInterpEuler()");
   //HDF5Handler h5;
   Point ghostIn = a_JU.ghost()[0] + Point::Basis(1,1) + Point::Basis(2,1);
   MBLevelBoxData<T,C,MEM,CTR> JUIn(a_JU.layout(),ghostIn);
@@ -1572,6 +1593,7 @@ cellMatrixQuotientMatAndInv(
                             const BoxData<T,DIM,MEM,1>& a_numerator,
                             bool a_debug)
 {
+  PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
   
   forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
@@ -1612,6 +1634,7 @@ cellMatrixQuotientMatAndInv(
                             Box a_blockBox,
                             bool a_debug)
 {
+  PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
   BoxData<T,DIM,MEM,1> quotBar(a_numerator.box());
   BoxData<T,DIM,MEM,1> corr(a_quotBox);
@@ -1826,6 +1849,7 @@ cellMatrixVectorProd(
                      Box a_qBox,
                      Box a_blockBox)
 {
+  PR_TIMERS("CubedSphereShell::cellMatrixVectorProd()");
   T one = 1.0;
   BoxData<T,DIM,MEM,1> qvecBar(a_qBox);
   BoxData<T,DIM,MEM,1> corr(a_qBox);
@@ -1862,6 +1886,7 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              const BoxData<T,1,MEM>& a_denomInv,
                                              const BoxData<T,1,MEM>& a_numerator)
 {
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
   a_quot.setToZero();
   a_quotBar.setToZero();
   auto temp = a_denomInv*a_numerator;
@@ -1892,6 +1917,7 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              Box a_blockBox,
                                              bool a_debug)
 {
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
   a_quot.setToZero();
   BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
   // if (a_debug)
@@ -1932,6 +1958,7 @@ cellQuotientValAndInvRadial(
                             Box a_quotBox,
                             Box a_blockBox)
 {
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInvRadial()");
   a_quot.setToZero();
   BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
   T twelveth = -1.0/12.0;
@@ -1951,7 +1978,7 @@ CubedSphereShell::detA_A(
                          unsigned int a_block,
                          unsigned int a_centering) 
 {
-  PR_TIMERS("detA_A");
+  PR_TIMERS("CubedSphereShell::detA_A()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -2057,7 +2084,7 @@ inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
                                                         unsigned int a_block,
                                                         unsigned int a_centering)
 {
-  PR_TIMERS("AMatrix");
+  PR_TIMERS("CubedSphereShell::AMatrix()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -2131,7 +2158,7 @@ BoxData<T,1,MEM> CubedSphereShell::detA(
                                         T a_h,
                                         unsigned int a_centering)
 {
-  PR_TIMERS("detA");
+  PR_TIMERS("CubedSphereShell::detA()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -2190,7 +2217,7 @@ BoxData<T,DIM,MEM> CubedSphereShell::adjA(
                                           unsigned int a_block,
                                           int a_centering)
 {
-  PR_TIMERS("adjA");
+  PR_TIMERS("CubedSphereShell::adjA()");
   BoxData<T,DIM,MEM,1> output(a_bx);
   T hInvHalf = .5/a_h;
   switch(a_centering)
@@ -2227,7 +2254,7 @@ CubedSphereShell::d1nCrossN(
                             T a_h,
                             uint a_block)
 {
-  PR_TIMERS("d1nCrossN");
+  PR_TIMERS("CubedSphereShell::d1nCrossN()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -2288,7 +2315,7 @@ CubedSphereShell::nCrossD2n(
                             T a_h,
                             uint a_block)
 {
-  PR_TIMERS("nCrossD2n");
+  PR_TIMERS("CubedSphereShell::nCrossD2n()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -2350,7 +2377,7 @@ CubedSphereShell::deriv3case(
                              uint a_dir,
                              bool a_debug)
 {
-  PR_TIMERS("deriv3case");
+  PR_TIMERS("CubedSphereShell::deriv3case()");
   BoxData<T,C,MEM> output(a_outputBox);
   Stencil<T> loStencil = (-1.5)*Shift(Point::Zeros()) +
     2.0*Shift(Point::Basis(a_dir)) + (-.5)*Shift(Point::Basis(a_dir,2));
@@ -2392,6 +2419,7 @@ CubedSphereShell::deriv3case(
                                      BoxData<T,C,MEM>& a_U,
                                      Box a_blockBox)
  {
+    PR_TIMERS("CubedSphereShell::radialExtrapolate()");
    Box bx = a_U.box();
    if (bx.high()[0] > a_blockBox.high()[0])
      {
