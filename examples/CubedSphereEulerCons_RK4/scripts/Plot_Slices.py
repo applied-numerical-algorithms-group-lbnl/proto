@@ -33,8 +33,10 @@ AU_CM       = 1.495978707e13  # AU in cm
 START_ISO   = "2024-03-16T12:00:00"  # simulation t=0 (UTC)
 
 #--- address variables ---
-slice_folder = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/Ron/With_HelioCubed"
-out_dir = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/Ron/With_HelioCubed/Images_inertial"
+slice_folder = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/Ron/With_HelioCubed_single_frame"
+# slice_folder = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/Ron/With_HelioCubed"
+
+out_dir = slice_folder + "/Images_inertial"
 
 #-- Corotation needed? ---
 COROTATE = False

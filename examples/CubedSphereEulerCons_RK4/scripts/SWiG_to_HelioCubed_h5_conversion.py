@@ -40,7 +40,7 @@ time = toYearFraction(dt(2024, 3, 16, 12, 0, 0))
 First_file = 1813
 phys_domain = [0.1, 0, 0, 0.1, 6.28319, 3.14159]
 # Out_file = "psi_eclipse24_swig_wsa2_smth5_bc_r21_5_corotating.h5"
-Out_file = "psi_eclipse24_swig_wsa2_smth5_bc_r21_5_corotating_Bp.h5"
+Out_file = "psi_eclipse24_swig_wsa2_smth5_bc_r21_5_corotating_Bp_two_frames.h5"
 step_const = [0, 1, 0]
 phi_face = True
 time_cadence = 1.0/24.
@@ -56,6 +56,8 @@ parent_directory = os.path.abspath(os.path.join(current_directory, '..'))
 address_of_files = os.path.join(parent_directory, 'psi_eclipse24_swig_wsa2_smth5_bc_r21_5_corotating/')
 
 files = sorted(glob(address_of_files+'rho_r1_idx*.h5'))
+#keep only the first 1 files for testing
+files = files[:2]
 print("Number of files:", len(files))
 
 for i in range(len(files)):

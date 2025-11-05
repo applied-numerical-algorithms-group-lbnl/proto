@@ -4,7 +4,7 @@ import plotly.express as px
 
 # ------- CONFIG -------
 
-FILENAME = "Table.dat"
+FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/45_DIM3_30_45_CubeSphereTest.time.table"
 THRESHOLD_PCT = 0.00      # plot nodes with >= this % of total time.
 VIEW_MODE = "treemap"   # "sunburst" or "treemap" #"sunburst" doesn't work well sometimes.
 

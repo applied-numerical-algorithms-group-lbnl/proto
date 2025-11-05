@@ -223,6 +223,10 @@ template<
 class BoxOp_EulerCubedSphere : public MBBoxOp<T, MAP, NUMCOMPS, 0, MEM>
 {
 public:
+
+  using LayoutT = MBDisjointBoxLayout;
+  using MapT = decltype(CubedSphereShell::Map(std::declval<const LayoutT&>(),Point()));
+  using OpT = decltype(CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(std::declval<MapT&>()));
   using MBBoxOp<T, MAP, NUMCOMPS,0,MEM>::MBBoxOp;
 
   T m_gamma = ParseInputs::get_gamma();

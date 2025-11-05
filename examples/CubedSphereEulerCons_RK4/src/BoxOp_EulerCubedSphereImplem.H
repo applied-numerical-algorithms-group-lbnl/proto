@@ -559,8 +559,25 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
   PR_TIMERS("BoxOp_EulerCubedSphere::dtCFL()");
   auto layout = a_JU.layout();
   
-  auto map = CubedSphereShell::Map(layout, ghost());
-  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+  // Old method without static cache
+  // auto map = CubedSphereShell::Map(layout, ghost());
+  // auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+
+  // New faster method with static cache
+  static const LayoutT*        s_layoutPtr = nullptr;
+  static std::unique_ptr<MapT> s_map;
+  static std::unique_ptr<OpT>  s_eulerOp;
+  if (!s_map || s_layoutPtr != &layout)
+  {
+      s_layoutPtr = &layout;
+      s_map    = std::make_unique<MapT>(CubedSphereShell::Map(layout, ghost()));
+      s_eulerOp = std::make_unique<OpT>(CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(*s_map));
+  }
+  auto& map     = *s_map;
+  auto& eulerOp = *s_eulerOp;
+
+
+
   MBLevelBoxData<T,NUMCOMPS,MEM,PR_CELL> USph(layout,Point::Zeros());
   a_JU.copyTo(USph);
   Reduction<T,Operation::Max,MEM> dtinv;
@@ -641,8 +658,24 @@ StageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_k,
 {
   PR_TIMERS("BoxOp_EulerCubedSphere::StageLevel()");
   auto layout = a_UStage.layout();
-  auto map = CubedSphereShell::Map(layout, ghost());
-  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+
+  // Old method without static cache
+  // auto map = CubedSphereShell::Map(layout, ghost());
+  // auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+
+  // New faster method with static cache
+  static const LayoutT*        s_layoutPtr = nullptr;
+  static std::unique_ptr<MapT> s_map;
+  static std::unique_ptr<OpT>  s_eulerOp;
+  if (!s_map || s_layoutPtr != &layout)
+  {
+      s_layoutPtr = &layout;
+      s_map    = std::make_unique<MapT>(CubedSphereShell::Map(layout, ghost()));
+      s_eulerOp = std::make_unique<OpT>(CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(*s_map));
+  }
+  auto& map     = *s_map;
+  auto& eulerOp = *s_eulerOp;
+
   T dt_min = 1.0e20;
   T dt_next_local = 1.e20;
   T wgtxdt = a_weight*a_dt;

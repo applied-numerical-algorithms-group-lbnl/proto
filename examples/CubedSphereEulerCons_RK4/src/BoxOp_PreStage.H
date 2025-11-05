@@ -1,5 +1,6 @@
 #include "MHDReader.H"
 #include "MHD_Constants.H"
+#include <memory>  
 extern MHDReader BC_global;
 template <typename T, MemType MEM>
 PROTO_KERNEL_START
@@ -382,10 +383,26 @@ preStageLevel(MBLevelBoxData<T,NUMCOMPS,MEM>& a_UStage,
   
   PR_TIMERS("BoxOp_EulerCubedSphere::PreStageLevel()");
   int init_condition_type = ParseInputs::get_init_condition_type();
-  auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
-  auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
   double gamma = ParseInputs::get_gamma();
   auto layout = a_UStage.layout();
+
+  // Old method without static cache
+  // auto map = CubedSphereShell::Map(a_UStage.layout(), ghost());
+  // auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);
+
+  // New faster method with static cache
+  static const LayoutT*        s_layoutPtr = nullptr;
+  static std::unique_ptr<MapT> s_map;
+  static std::unique_ptr<OpT>  s_eulerOp;
+  if (!s_map || s_layoutPtr != &layout)
+  {
+      s_layoutPtr = &layout;
+      s_map    = std::make_unique<MapT>(CubedSphereShell::Map(layout, ghost()));
+      s_eulerOp = std::make_unique<OpT>(CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(*s_map));
+  }
+  auto& map     = *s_map;
+  auto& eulerOp = *s_eulerOp;
+
   // Transform JU -> USph.
   CubedSphereShell::consToSphInterpEuler(a_UStage,a_iop,a_dVolrLev, 4, 0);
 
