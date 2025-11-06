@@ -260,10 +260,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave
   m_copy = 1.0*Shift(Point::Zeros());
   //Limiter Starts here
   State W_ave_L_ahead = alias(a_W_ave_L,Point::Basis(a_d)*(-1));
-  //State W_ave_L_ahead_limited = alias(W_ave_L_ahead);  // This works, but won't be able to compare diffrences as if W_ave_L_ahead_limited changes, so does W_ave_L_ahead
-  State W_ave_L_ahead_limited = m_copy(W_ave_L_ahead);
-  //State W_ave_R_limited = alias(a_W_ave_R);
-  State W_ave_R_limited = m_copy(a_W_ave_R);
+  State W_ave_L_ahead_limited = alias(W_ave_L_ahead);  // This works, but won't be able to compare diffrences as if W_ave_L_ahead_limited changes, so does W_ave_L_ahead
+  // State W_ave_L_ahead_limited = m_copy(W_ave_L_ahead);
+  State W_ave_R_limited = alias(a_W_ave_R);
+  // State W_ave_R_limited = m_copy(a_W_ave_R);
   int limiter_apply = 1;
   int slope_flattening_apply = 0;
   if (limiter_apply == 1) {
