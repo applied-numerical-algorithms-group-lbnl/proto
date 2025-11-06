@@ -1,12 +1,14 @@
 import re
 import pandas as pd
 import plotly.express as px
+import numpy as np
+import colorsys
 
 # ------- CONFIG -------
 
 FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/45_DIM3_30_45_CubeSphereTest.time.table"
 THRESHOLD_PCT = 0.00      # plot nodes with >= this % of total time.
-VIEW_MODE = "treemap"   # "sunburst" or "treemap" #"sunburst" doesn't work well sometimes.
+VIEW_MODE = "treemap"
 
 # ------- PARSER -------
 
@@ -95,7 +97,7 @@ def parse_gprof_callgraph(text: str):
 
 # ------- BUILD DF + FILTERING -------
 
-def build_sunburst_df(nodes, edges, threshold_pct=0.1):
+def build_sunburst_df(nodes, edges, threshold_pct=0.0):
     """
     Build DataFrame for Plotly (sunburst or treemap).
 
@@ -139,6 +141,18 @@ def build_sunburst_df(nodes, edges, threshold_pct=0.1):
                 keep_ids.add(p)
                 added = True
 
+    # helper to compute depth from root
+    def get_depth(nid):
+        d = 0
+        cur = nid
+        while True:
+            p = parent.get(cur, "")
+            if p == "" or p is None:
+                break
+            d += 1
+            cur = p
+        return d
+
     # Build rows for DataFrame
     rows = []
     for nid, nd in nodes.items():
@@ -146,12 +160,14 @@ def build_sunburst_df(nodes, edges, threshold_pct=0.1):
             continue
         value = nd["time"] or 0.0
         pct_total = pct_by_id[nid]
+        depth = get_depth(nid)
         rows.append({
             "id": nid,
             "label": f"{nd['name']} ({pct_total:.2f}%)",
             "parent": parent.get(nid, ""),
             "value": value,
             "pct_total": pct_total,
+            "depth": depth,
         })
 
     return pd.DataFrame(rows)
@@ -170,38 +186,44 @@ def main():
     print(f"Nodes shown in plot: {len(df)} (threshold = {THRESHOLD_PCT}%)")
     print(df.head())
 
-    if VIEW_MODE == "sunburst":
-        fig = px.sunburst(
-            df,
-            ids="id",
-            names="label",
-            parents="parent",
-            values="value",
-            color="pct_total",
-            color_continuous_scale="Viridis",
-            branchvalues="total",
-        )
-    elif VIEW_MODE == "treemap":
+    # --- RANDOM COLORS, BRIGHTER FOR DEEPER NODES ---
+    rng = np.random.default_rng(123)  # fixed seed for reproducibility
+    max_depth = max(df["depth"].max(), 1)
+
+    def depth_color(depth):
+        # random hue
+        h = rng.random()
+        s = 0.6
+        # value/brightness increases with depth (children = brighter)
+        v = 0.4 + 0.6 * (depth / max_depth)
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
+
+    df["color"] = df["depth"].apply(depth_color)
+
+    if VIEW_MODE == "treemap":
         fig = px.treemap(
             df,
             ids="id",
             names="label",
             parents="parent",
             values="value",
-            color="pct_total",
-            color_continuous_scale="Viridis",
+            # use custom_data to keep pct_total & ids in hover
+            custom_data=["pct_total", "id", "parent"],
         )
+        # override colors with our custom rgb list
+        fig.update_traces(marker=dict(colors=df["color"]))
     else:
         raise ValueError(f"Unknown VIEW_MODE = {VIEW_MODE}")
 
     # 🔹 Smaller, cleaner hover box
     hover_tmpl = (
-        "<b>%{label}</b><br>"           # label already has function name + %
+        "<b>%{label}</b><br>"
         "time = %{value:.3f} s<br>"
-        "% of total = %{color:.2f}%<br>"
-        "id = %{id}<br>"
-        "parent = %{parent}<br>"
-        "<extra></extra>"               # removes the grey trace name at bottom
+        "% of total = %{customdata[0]:.2f}%<br>"
+        "id = %{customdata[1]}<br>"
+        "parent = %{customdata[2]}<br>"
+        "<extra></extra>"
     )
     fig.update_traces(hovertemplate=hover_tmpl)
 
