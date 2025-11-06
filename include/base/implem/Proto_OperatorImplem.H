@@ -325,9 +325,41 @@ _cellProduct(BoxData<T,C,MEM,D,E>& a_product,
     PR_TIME("Operator::cellProduct");
     for (int ii = 0; ii < DIM; ii++)
     {
-        auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
-        BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
-        BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
+        // Old way (Stencil application):
+        // auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
+        // BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
+        // BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
+
+        // New (alias + forall):
+        BoxData<T,C,MEM,D,E> Dp(a_p2nd.box());
+        BoxData<T,C,MEM,D,E> Dq(a_q2nd.box());
+        // alias needs non-const BoxData
+        auto &p2nd_nc = const_cast<BoxData<T,C,MEM,D,E>&>(a_p2nd);
+        auto &q2nd_nc = const_cast<BoxData<T,C,MEM,D,E>&>(a_q2nd);
+
+        // IMPORTANT: alias shift sign is opposite of Stencil::Shift
+        auto p_plus  = alias(p2nd_nc,  Point::Basis(ii) * (-1)); // ~ Shift(+1)
+        auto p_minus = alias(p2nd_nc,  Point::Basis(ii));        // ~ Shift(-1)
+        auto q_plus  = alias(q2nd_nc,  Point::Basis(ii) * (-1));
+        auto q_minus = alias(q2nd_nc,  Point::Basis(ii));
+
+        forallInPlace(
+            [] PROTO_LAMBDA(Var<T,C,MEM,D,E>& v_Dp,
+                            Var<T,C,MEM,D,E>& v_Dq,
+                            const Var<T,C,MEM,D,E>& v_p_plus,
+                            const Var<T,C,MEM,D,E>& v_p_minus,
+                            const Var<T,C,MEM,D,E>& v_q_plus,
+                            const Var<T,C,MEM,D,E>& v_q_minus)
+            {
+                for (int cc = 0; cc < C; cc++)
+                for (int dd = 0; dd < D; dd++)
+                for (int ee = 0; ee < E; ee++)
+                {
+                    v_Dp(cc,dd,ee) = T(0.5) * (v_p_plus(cc,dd,ee) - v_p_minus(cc,dd,ee));
+                    v_Dq(cc,dd,ee) = T(0.5) * (v_q_plus(cc,dd,ee) - v_q_minus(cc,dd,ee));
+                }
+            },
+            Dp, Dq, p_plus, p_minus, q_plus, q_minus);
 
         forallInPlace(
             [] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq, int v_dir)
@@ -408,9 +440,42 @@ _faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
     for (int ii = 0; ii < DIM; ii++)
     {
         if (ii == a_dir){continue;}
-        auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
-        BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
-        BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
+        // Old way (Stencil application):
+        // auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
+        // BoxData<T,C,MEM,D,E> Dp = Diff(a_p2nd);
+        // BoxData<T,C,MEM,D,E> Dq = Diff(a_q2nd);
+
+        // New (alias + forall):
+        BoxData<T,C,MEM,D,E> Dp(a_p2nd.box());
+        BoxData<T,C,MEM,D,E> Dq(a_q2nd.box());
+        // alias needs non-const BoxData
+        auto &p2nd_nc = const_cast<BoxData<T,C,MEM,D,E>&>(a_p2nd);
+        auto &q2nd_nc = const_cast<BoxData<T,C,MEM,D,E>&>(a_q2nd);
+
+        // IMPORTANT: alias shift sign is opposite of Stencil::Shift
+        auto p_plus  = alias(p2nd_nc,  Point::Basis(ii) * (-1)); // ~ Shift(+1)
+        auto p_minus = alias(p2nd_nc,  Point::Basis(ii));        // ~ Shift(-1)
+        auto q_plus  = alias(q2nd_nc,  Point::Basis(ii) * (-1));
+        auto q_minus = alias(q2nd_nc,  Point::Basis(ii));
+
+        forallInPlace(
+            [] PROTO_LAMBDA(Var<T,C,MEM,D,E>& v_Dp,
+                            Var<T,C,MEM,D,E>& v_Dq,
+                            const Var<T,C,MEM,D,E>& v_p_plus,
+                            const Var<T,C,MEM,D,E>& v_p_minus,
+                            const Var<T,C,MEM,D,E>& v_q_plus,
+                            const Var<T,C,MEM,D,E>& v_q_minus)
+            {
+                for (int cc = 0; cc < C; cc++)
+                for (int dd = 0; dd < D; dd++)
+                for (int ee = 0; ee < E; ee++)
+                {
+                    v_Dp(cc,dd,ee) = T(0.5) * (v_p_plus(cc,dd,ee) - v_p_minus(cc,dd,ee));
+                    v_Dq(cc,dd,ee) = T(0.5) * (v_q_plus(cc,dd,ee) - v_q_minus(cc,dd,ee));
+                }
+            },
+            Dp, Dq, p_plus, p_minus, q_plus, q_minus);
+
         forallInPlace(
             [=] PROTO_LAMBDA (Var<T,C,MEM,D,E>& v_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq, bool v_replace)
             {

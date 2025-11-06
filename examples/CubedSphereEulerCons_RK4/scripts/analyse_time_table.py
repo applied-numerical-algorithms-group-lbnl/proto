@@ -6,7 +6,7 @@ import colorsys
 
 # ------- CONFIG -------
 
-FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/45_DIM3_30_45_CubeSphereTest.time.table"
+FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/90_DIM3_30_90_CubeSphereTest.time.table"
 THRESHOLD_PCT = 0.00      # plot nodes with >= this % of total time.
 VIEW_MODE = "treemap"
 
@@ -233,7 +233,10 @@ def main():
         title=f"Callgraph Time Breakdown (≥ {THRESHOLD_PCT}% total, view={VIEW_MODE})",
         margin=dict(t=40, l=0, r=0, b=0),
     )
-
+    # Save to HTML
+    # out_html = FILENAME + f".{VIEW_MODE}.pct{THRESHOLD_PCT:.2f}.html"
+    # fig.write_html(out_html)
+    # print(f"Plot saved to: {out_html}")
     fig.show()
 
 

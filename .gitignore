@@ -21,4 +21,5 @@ blt
 pout.*
 myjob.o*
 myjob.e*
+*.html
 visitlog.py
