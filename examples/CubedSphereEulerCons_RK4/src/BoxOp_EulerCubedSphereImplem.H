@@ -1,6 +1,7 @@
 // ====================================================================================
 // New factorization of operator implems start here.
 // ====================================================================================
+#include <unordered_map>
 template<
     typename T,
     template<MemType> typename MAP,
@@ -19,11 +20,31 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   int a_block = this->block();
   HDF5Handler h5;
   Box bxRad = a_USph.box().grow(Point::Basis(0,2));
-  BoxData<T,DIM,MEM> Dr(bxRad);
-  BoxData<T,1,MEM> radius(bxRad);
-  BoxData<T,DIM,MEM> adjDr(bxRad);
-  BoxData<T,1,MEM> dVolr(bxRad);
-  radialMetrics(radius,Dr,adjDr,dVolr,bxRad);
+  struct OperatorRadialMetricsCacheEntry
+  {
+      Box box;
+      BoxData<T,1,MEM> radius;
+      BoxData<T,DIM,MEM> Dr;
+      BoxData<T,DIM,MEM> adjDr;
+      BoxData<T,1,MEM> dVolr;
+      bool defined = false;
+  };
+  using OperatorRadialMetricsCacheMap = std::unordered_map<const void*, OperatorRadialMetricsCacheEntry>;
+  static OperatorRadialMetricsCacheMap s_operatorRadialMetricsCache;
+  auto& radialEntry = s_operatorRadialMetricsCache[static_cast<const void*>(this)];
+  if (!radialEntry.defined || radialEntry.box != bxRad)
+  {
+      radialEntry.box = bxRad;
+      radialEntry.radius.define(bxRad);
+      radialEntry.Dr.define(bxRad);
+      radialEntry.adjDr.define(bxRad);
+      radialEntry.dVolr.define(bxRad);
+      radialMetrics(radialEntry.radius,radialEntry.Dr,radialEntry.adjDr,radialEntry.dVolr,bxRad);
+      radialEntry.defined = true;
+  }
+  auto& Dr = radialEntry.Dr;
+  auto& adjDr = radialEntry.adjDr;
+  auto& dVolr = radialEntry.dVolr;
   auto domainBox = this->layout().domain().getBlock(a_block).box();
   // Primitive Variables. 
   // Transform to primitive variables, spherical velocities.
@@ -61,6 +82,44 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   BoxData<T,DIM,MEM,DIM> A_matrix0(bx);
   BoxData<T,1,MEM>speedMax(this->box());
   speedMax.setVal(0.0);
+  struct OperatorGeomCacheKey
+  {
+      const void* op;
+      int dir;
+      int block;
+  };
+  struct OperatorGeomCacheKeyHash
+  {
+      std::size_t operator()(const OperatorGeomCacheKey& key) const noexcept
+      {
+          auto ptrHash = std::hash<const void*>()(key.op);
+          auto dirHash = std::hash<int>()(key.dir);
+          auto blockHash = std::hash<int>()(key.block);
+          std::size_t combined = ptrHash ^ (dirHash + 0x9e3779b9 + (ptrHash<<6) + (ptrHash>>2));
+          combined ^= (blockHash + 0x9e3779b9 + (combined<<6) + (combined>>2));
+          return combined;
+      }
+  };
+  struct OperatorGeomCacheKeyEq
+  {
+      bool operator()(const OperatorGeomCacheKey& lhs, const OperatorGeomCacheKey& rhs) const noexcept
+      {
+          return lhs.op == rhs.op && lhs.dir == rhs.dir && lhs.block == rhs.block;
+      }
+  };
+  struct OperatorGeomCacheEntry
+  {
+      Box faceBox;
+      Box dirBox;
+      Box cellBox;
+      BoxData<T,1,MEM> detA;
+      BoxData<T,DIM,MEM,DIM> detAA;
+      BoxData<T,DIM,MEM> ntrow;
+      BoxData<T,DIM,MEM,DIM> Amatrix;
+      bool defined = false;
+  };
+  using OperatorGeomCacheMap = std::unordered_map<OperatorGeomCacheKey, OperatorGeomCacheEntry, OperatorGeomCacheKeyHash, OperatorGeomCacheKeyEq>;
+  static OperatorGeomCacheMap s_operatorGeomCache;
   
   for (int dir = 0; dir < DIM; dir++)
     {
@@ -101,27 +160,51 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       //Required mapping variables.
       Box bxface = WFace_L.box().grow(-2);     
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir);  
-      BoxData<T,DIM,MEM,DIM> deta_a = CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
-      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir); 
-      if (dir ==0) deta.copyTo(deta0);
       Box bx = W.box();
       Box bxdir = bx.extrude(Point::Basis(dir));
-      BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bxdir,dxiPerp,a_block,dir);
-      if (dir == 0) ntrow.copyTo(ntrow0);
       Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
       Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
-      Point high = bx.high();
-      Point low = bx.low();
-      high[0] = low[0];
-      Box bx0(low,high);
-      BoxData<T,DIM,MEM,DIM> A_matrix(bx);
-      T offseta = half;
-      T offsetb = half;
-      if (dir == 1) offseta = 0.0;
-      if (dir == 2) offsetb = 0.0;
-      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[a_block],sign[a_block],
-                      dxiPerp,offseta,offsetb);
-      spreadSlice(A_matrix);
+      OperatorGeomCacheKey geomKey{static_cast<const void*>(this), dir, a_block};
+      auto& geomEntry = s_operatorGeomCache[geomKey];
+      if (!geomEntry.defined || geomEntry.faceBox != bxface || geomEntry.cellBox != bx || geomEntry.dirBox != bxdir)
+      {
+          geomEntry.faceBox = bxface;
+          geomEntry.cellBox = bx;
+          geomEntry.dirBox = bxdir;
+          geomEntry.detA.define(bxface);
+          geomEntry.detAA.define(bxface);
+          geomEntry.ntrow.define(bxdir);
+          geomEntry.Amatrix.define(bx);
+          BoxData<T,1,MEM> detaTemp =
+            CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir);
+          detaTemp.copyTo(geomEntry.detA);
+          BoxData<T,DIM,MEM,DIM> detaATemp =
+            CubedSphereShell::detA_A<T,MEM>(bxface,dxiPerp,a_block,dir);
+          detaATemp.copyTo(geomEntry.detAA);
+          BoxData<T,DIM,MEM> ntrowTemp =
+            CubedSphereShell::adjA<T,MEM>(bxdir,dxiPerp,a_block,dir);
+          ntrowTemp.copyTo(geomEntry.ntrow);
+          Point high = bx.high();
+          Point low = bx.low();
+          high[0] = low[0];
+          Box bx0(low,high);
+          BoxData<T,DIM,MEM,DIM> AmatrixTemp(bx);
+          T offseta = half;
+          T offsetb = half;
+          if (dir == 1) offseta = 0.0;
+          if (dir == 2) offsetb = 0.0;
+          forallInPlace_p(f_Amatrix,bx0,AmatrixTemp,permute[a_block],sign[a_block],
+                          dxiPerp,offseta,offsetb);
+          spreadSlice(AmatrixTemp);
+          AmatrixTemp.copyTo(geomEntry.Amatrix);
+          geomEntry.defined = true;
+      }
+      auto& deta_a = geomEntry.detAA;
+      auto& deta = geomEntry.detA;
+      auto& ntrow = geomEntry.ntrow;
+      auto& A_matrix = geomEntry.Amatrix;
+      if (dir ==0) deta.copyTo(deta0);
+      if (dir == 0) ntrow.copyTo(ntrow0);
       if (dir == 0) A_matrix.copyTo(A_matrix0);
       
       int limiter = ParseInputs::get_limiter();
@@ -575,11 +658,21 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
   static const LayoutT*        s_layoutPtr = nullptr;
   static std::unique_ptr<MapT> s_map;
   static std::unique_ptr<OpT>  s_eulerOp;
+  struct GeometryCacheEntry
+  {
+      Box box;
+      BoxData<T,1,MEM> detAInv;
+      BoxData<T,DIM,MEM,DIM> invcoef;
+      bool defined = false;
+  };
+  using GeometryCacheMap = std::unordered_map<int, GeometryCacheEntry>;
+  static GeometryCacheMap s_geomCache;
   if (!s_map || s_layoutPtr != &layout)
   {
       s_layoutPtr = &layout;
       s_map    = std::make_unique<MapT>(CubedSphereShell::Map(layout, ghost()));
       s_eulerOp = std::make_unique<OpT>(CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(*s_map));
+      s_geomCache.clear();
   }
   auto& map     = *s_map;
   auto& eulerOp = *s_eulerOp;
@@ -598,19 +691,28 @@ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
       auto block = layout.block(dit);
       Box bxblock = layout.domain().getBlock(block).box();
       T dx = 1./(bxblock.high()[2] + 1);
-      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx0,dx,0); 
-      BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
-        ([ ] PROTO_LAMBDA
-         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
-         {
-           a_output(0) = 1.0/a_deta(0);
-         }
-         ,deta);
-      BoxData<T,DIM,MEM,DIM> deta_amat =
-        CubedSphereShell::detA_A<T,MEM>(bx0,dx,block,0);
-      BoxData<T,DIM,MEM,DIM> invcoef(bx0);
-      invcoef.setToZero();
-      forallInPlace(f_matinv3by3,invcoef,deta_amat);
+      auto globalIndex = dit.global();
+      auto& cacheEntry = s_geomCache[globalIndex];
+      if (!cacheEntry.defined || cacheEntry.box != bx0)
+      {
+          cacheEntry.box = bx0;
+          BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bx0,dx,0);
+          cacheEntry.detAInv = forall<T,1,MEM>
+            ([] PROTO_LAMBDA
+             (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+             {
+                 a_output(0) = 1.0/a_deta(0);
+             }
+             ,deta);
+          BoxData<T,DIM,MEM,DIM> deta_amat =
+            CubedSphereShell::detA_A<T,MEM>(bx0,dx,block,0);
+          cacheEntry.invcoef = BoxData<T,DIM,MEM,DIM>(bx0);
+          cacheEntry.invcoef.setToZero();
+          forallInPlace(f_matinv3by3,cacheEntry.invcoef,deta_amat);
+          cacheEntry.defined = true;
+      }
+      auto& detaInv = cacheEntry.detAInv;
+      auto& invcoef = cacheEntry.invcoef;
 
       BoxData<T,1,MEM> JRho = slice(USph[dit],0);
       BoxData<T,1,MEM> JRhoE = slice(USph[dit],DIM+1);
@@ -808,35 +910,103 @@ dtInv(Reduction<T,Operation::Max,MEM>& a_dtInv,
   T dxiPerp = this->dx()[1];
   int block = this->block();
   Box bxRadius = bx;
-  BoxData<T,DIM,MEM> Dr(bxRadius);
-  BoxData<T,1,MEM> radius(bxRadius);
-  BoxData<T,DIM,MEM> adjDr(bxRadius);
-  BoxData<T,1,MEM> dVolr(bxRadius);
   BoxData<T,1,MEM> speedMax(bxRadius);
   speedMax.setToZero();
-  radialMetrics(radius,Dr,adjDr,dVolr,bxRadius);
+  struct RadialMetricsCacheEntry
+  {
+      Box box;
+      BoxData<T,1,MEM> radius;
+      BoxData<T,DIM,MEM> Dr;
+      BoxData<T,DIM,MEM> adjDr;
+      BoxData<T,1,MEM> dVolr;
+      bool defined = false;
+  };
+  using RadialMetricsCacheMap = std::unordered_map<const void*, RadialMetricsCacheEntry>;
+  static RadialMetricsCacheMap s_radialMetricsCache;
+  auto& radialEntry = s_radialMetricsCache[static_cast<const void*>(this)];
+  if (!radialEntry.defined || radialEntry.box != bxRadius)
+  {
+      radialEntry.box = bxRadius;
+      radialEntry.radius.define(bxRadius);
+      radialEntry.Dr.define(bxRadius);
+      radialEntry.adjDr.define(bxRadius);
+      radialEntry.dVolr.define(bxRadius);
+      radialMetrics(radialEntry.radius,radialEntry.Dr,radialEntry.adjDr,radialEntry.dVolr,bxRadius);
+      radialEntry.defined = true;
+  }
+  auto& Dr = radialEntry.Dr;
+  auto& adjDr = radialEntry.adjDr;
+  auto& dVolr = radialEntry.dVolr;
   T half = .5;
+  struct DtInvCacheKey
+  {
+      const void* op;
+      int dir;
+  };
+  struct DtInvCacheKeyHash
+  {
+      std::size_t operator()(const DtInvCacheKey& key) const noexcept
+      {
+          auto ptrHash = std::hash<const void*>()(key.op);
+          auto dirHash = std::hash<int>()(key.dir);
+          return ptrHash ^ (dirHash + 0x9e3779b9 + (ptrHash<<6) + (ptrHash>>2));
+      }
+  };
+  struct DtInvCacheKeyEq
+  {
+      bool operator()(const DtInvCacheKey& lhs, const DtInvCacheKey& rhs) const noexcept
+      {
+          return lhs.op == rhs.op && lhs.dir == rhs.dir;
+      }
+  };
+  struct DtInvGeometryCacheEntry
+  {
+      Box faceBox;
+      Box cellBox;
+      BoxData<T,1,MEM> detA;
+      BoxData<T,DIM,MEM> ntrow;
+      BoxData<T,DIM,MEM,DIM> Amatrix;
+      bool defined = false;
+  };
+  using DtInvGeometryCacheMap = std::unordered_map<DtInvCacheKey, DtInvGeometryCacheEntry, DtInvCacheKeyHash, DtInvCacheKeyEq>;
+  static DtInvGeometryCacheMap s_dtInvGeomCache;
   for (int dir = 0 ; dir < DIM; dir++)
     {
       Box bxface = bx;
       BoxData<T,1,MEM> adjDrDir = slice(adjDr,dir); 
-      BoxData<T,1,MEM> deta =
-        CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir);
-      BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bxface,dxiPerp,block,dir);
-      Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-      Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
-      Point high = bxface.high();
-      Point low = bxface.low();
-      high[0] = low[0];
-      Box bx0(low,high);
-      BoxData<T,DIM,MEM,DIM> A_matrix(bx);
-      T offseta = half;
-      T offsetb = half;
-      if (dir == 1) offseta = 0.0;
-      if (dir == 2) offsetb = 0.0;
-      forallInPlace_p(f_Amatrix,bx0,A_matrix,permute[block],sign[block],
-                      dxiPerp,offseta,offsetb);
-      spreadSlice(A_matrix);
+      DtInvCacheKey cacheKey{static_cast<const void*>(this), dir};
+      auto& geomEntry = s_dtInvGeomCache[cacheKey];
+      if (!geomEntry.defined || geomEntry.faceBox != bxface || geomEntry.cellBox != bx)
+      {
+          geomEntry.faceBox = bxface;
+          geomEntry.cellBox = bx;
+          geomEntry.detA.define(bxface);
+          geomEntry.ntrow.define(bxface);
+          geomEntry.Amatrix.define(bx);
+          BoxData<T,1,MEM> detaTemp =
+            CubedSphereShell::detA<T,MEM>(bxface,dxiPerp,dir);
+          detaTemp.copyTo(geomEntry.detA);
+          BoxData<T,DIM,MEM> ntrowTemp =
+            CubedSphereShell::adjA<T,MEM>(bxface,dxiPerp,block,dir);
+          ntrowTemp.copyTo(geomEntry.ntrow);
+          Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+          Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
+          Point high = bxface.high();
+          Point low = bxface.low();
+          high[0] = low[0];
+          Box bx0(low,high);
+          T offseta = half;
+          T offsetb = half;
+          if (dir == 1) offseta = 0.0;
+          if (dir == 2) offsetb = 0.0;
+          forallInPlace_p(f_Amatrix,bx0,geomEntry.Amatrix,permute[block],sign[block],
+                          dxiPerp,offseta,offsetb);
+          spreadSlice(geomEntry.Amatrix);
+          geomEntry.defined = true;
+      }
+      const auto& deta = geomEntry.detA;
+      const auto& ntrow = geomEntry.ntrow;
+      const auto& A_matrix = geomEntry.Amatrix;
       //speedMax.setVal(0.);
       forallInPlace(f_speedmax,
                     speedMax,a_W,A_matrix,
