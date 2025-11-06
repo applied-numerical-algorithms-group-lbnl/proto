@@ -69,32 +69,6 @@ viscFlux(
       Box bx = W.box();
       Box bxdir = bx.extrude(Point::Basis(dir));
       BoxData<T,DIM,MEM> ntrow = CubedSphereShell::adjA<T,MEM>(bx,dxiPerp,block,dir);
-#if 0
-      // Debugging diagnostics, #if'ed out for now.
-      if (dir == 0)
-        {
-          auto vr = slice(W,iVX);
-          auto adjDrslice = slice(adjDr,0);
-          BoxData<T,1,MEM> adjdrcomp =
-            ((0.5)*Shift(Point::Basis(0)) + (0.5)*Shift(Point::Zeros()))(adjDrslice);
-          auto temp = vr*adjdrcomp;
-          //temp *= deta;
-          //BoxData<T,1,MEM> dvdr = Stencil<T>::Derivative(1,0,2)(temp,a_Rhs.box(),1./dxi[0]);
-          BoxData<T,1,MEM> dvdr =
-            ((-1.0)*Shift(Point::Basis(0,-1)) + 1.0*Shift(Point::Basis(0)))
-            (temp,bxface,0.5/dxi[0]);
-          // cout << procID() << ", dAvrdxi = " << dvdr.absMax() << endl;
-          forallInPlace([ ] PROTO_LAMBDA(
-                                         Var<T,1,MEM>& a_numer,
-                                         const Var<T,1,MEM>& a_denom1,
-                                         const Var<T,1,MEM>& a_denom2)
-                        {
-                          a_numer(0) = a_numer(0)/(a_denom1(0));
-                        },dvdr,dVolr,deta);
-  
-          // cout << procID() << ", dAvrdVolr = " << dvdr.absMax() << endl;
-        }
-#endif // endif for #if 0.
       Array<Array<uint,DIM>,6> permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
       Array<Array<int,DIM>,6> sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}}; 
       Point high = bx.high();
@@ -178,34 +152,6 @@ viscFlux(
       rhs += rhsIncr;
       
       outputbox &= rhsIncr.box();
-#if 0
-      // << procID() << ", " << outputbox << ", " << rhsIncr.absMax(0) <<  endl;
-      if (procID() == 0)
-        {
-           T c_MP = 67262192e-24;
-           Array<T,NUMCOMPS> scalevars =
-             {c_MP,1.e5*c_MP,1.e5*c_MP,1.e5*c_MP,1.e12,1.e6,1.e6,1.e6};
-          auto J = dVolr*deta;
-          rhsIncr *= a_dt;  
-          for (int comp; comp < NUMCOMPS; comp++)
-            {
-              auto rhsincrcomp = slice(rhsIncr,comp);
-              forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& a_rhs,
-                                             const Var<T,1,MEM>& a_j,
-                                             T a_scalevar)
-                            {
-                              a_rhs(0) /= (a_j(0)*a_scalevar);
-                            },rhsincrcomp,J,scalevars[comp]);
-              
-            }
-          if (procID() == 0)
-            {
-              cout << "dt = " << a_dt << ", rhsViscmax = " << rhsIncr.absMax(0) << endl;
-            }
-          HDF5Handler h5;
-          h5.writePatch(dxiPerp,rhsIncr,"rhsVisc"+to_string(dir));
-        }
-#endif
     }
   rhs *= (a_scale);
   a_Rhs += rhs;
@@ -234,15 +180,13 @@ primToMappedViscFlux(
   BoxData<T,DIM,MEM> fluxdirMom = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,iMOMX);
   BoxData<T,DIM,MEM> physFluxMom = slice<T,NUMCOMPS,DIM,MEM>(a_physFlux,iMOMX);
   BoxData<T,DIM,MEM> tmp = forall<T,DIM,MEM>(f_matVecProd,a_deta_a,physFluxMom,one);
-  //Operator::_faceMatrixProductAB(a_deta_a,physFluxMom,a_deta_a,physFluxMom,a_dir);
-  //CHANGE to simple product.
+
   tmp.copyTo(fluxdirMom);
 
   BoxData<T,DIM,MEM> fluxdirB = slice<T,NUMCOMPS,DIM,MEM>(a_fluxdir,iBX);
   BoxData<T,DIM,MEM> physFluxB = slice<T,NUMCOMPS,DIM,MEM>(a_physFlux,iBX);
   BoxData<T,DIM,MEM> tmp2 = forall<T,DIM,MEM>(f_matVecProd,a_deta_a,physFluxB,one);
-  // Operator::_faceMatrixProductAB(a_deta_a,physFluxB,a_deta_a,physFluxB,a_dir);
-  // CHANGE to simple product.
+
   tmp2.copyTo(fluxdirB);
 
   // Scale rho, rho E fluxes by det(A),
@@ -255,13 +199,24 @@ primToMappedViscFlux(
                   a_fluxout(iE) = a_deta(0)*a_fluxin(iE);  
                 },a_fluxdir,a_physFlux,a_deta);
     
-  for (int comp = 0; comp < NUMCOMPS;comp++)
-    {
-      BoxData<T,1,MEM> advfluxcomp = slice(a_fluxdir,comp);
-      BoxData<T,1,MEM> advfluxprod = advfluxcomp*a_adjDdir;
-      //BoxData<T,1,MEM> advfluxprod = faceProduct(advfluxcomp,a_adjDdir,a_dir);
-      advfluxprod.copyTo(advfluxcomp);
-    }        
+  // for (int comp = 0; comp < NUMCOMPS;comp++)
+  //   {
+  //     BoxData<T,1,MEM> advfluxcomp = slice(a_fluxdir,comp);
+  //     BoxData<T,1,MEM> advfluxprod = advfluxcomp*a_adjDdir;
+  //     //BoxData<T,1,MEM> advfluxprod = faceProduct(advfluxcomp,a_adjDdir,a_dir);
+  //     advfluxprod.copyTo(advfluxcomp);
+  //   }  
+  // Multiply a_adjDdir with a_fluxdir using lambda to avoid creating temporaries.
+  forallInPlace([ ] PROTO_LAMBDA
+                (Var<T,NUMCOMPS,MEM>& a_fluxdircomp,
+                 const Var<T,1,MEM>& a_adjDdir)
+                {                    
+                  for (int comp = 0; comp < NUMCOMPS; comp++)
+                    {
+                      a_fluxdircomp(comp) *= a_adjDdir(0);
+                    }   
+                },a_fluxdir,a_adjDdir);
+
 }
 template<
   typename T,

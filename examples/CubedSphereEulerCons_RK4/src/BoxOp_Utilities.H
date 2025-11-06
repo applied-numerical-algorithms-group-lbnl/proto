@@ -675,9 +675,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
 {
   // Get radial conserved variables.
   PR_TIMERS("BoxOp_EulerCubedSphere::sphToPrim()");
-  
-  Stencil<T> convolveStencil = (1.0*Shift(Point::Zeros())
-                                + (1.0/24.0)*Stencil<T>::Laplacian());
   Stencil<T> deconvolveStencil = (1.0*Shift(Point::Zeros())
                                   - (1.0/24.0)*Stencil<T>::Laplacian());
          
