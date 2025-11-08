@@ -386,40 +386,54 @@ def main():
                           ref_run_index=REF_RUN_INDEX)
 
     print(f"Matched call-paths in both runs (after threshold): {len(df)}")
-    out_csv = "scaling_treemap_data.csv"
-    df.to_csv(out_csv, index=False)
-    print(f"Scaling DataFrame saved to: {out_csv}")
+    # Save DataFrame for inspection (if desired)
+    # out_csv = "scaling_treemap_data.csv"
+    # df.to_csv(out_csv, index=False)
+    # print(f"Scaling DataFrame saved to: {out_csv}")
     print(df.head())
 
     # depth from number of " > " segments
     df["depth"] = df["full_path"].apply(lambda s: s.count(">"))
+    df["p_clamped"] = df["p"].clip(lower=0.0, upper=1.0)
 
-    # --- RANDOM COLORS BY DEPTH ---
-    rng = np.random.default_rng(123)
-    max_depth = max(df["depth"].max(), 1)
+    # # --- RANDOM COLORS BY DEPTH ---
+    # rng = np.random.default_rng(123)
+    # max_depth = max(df["depth"].max(), 1)
 
-    def depth_color(depth):
-        h = rng.random()
-        s = 0.6
-        v = 0.4 + 0.6 * (depth / max_depth)
-        r, g, b = colorsys.hsv_to_rgb(h, s, v)
-        return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
+    # def depth_color(depth):
+    #     h = rng.random()
+    #     s = 0.6
+    #     v = 0.4 + 0.6 * (depth / max_depth)
+    #     r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    #     return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
 
-    df["color"] = df["depth"].apply(depth_color)
+    # df["color"] = df["depth"].apply(depth_color)
 
     # Choose which run defines area: REF_RUN_INDEX
     value_col = "t2" if REF_RUN_INDEX == 1 else "t1"
 
     if VIEW_MODE == "treemap":
+        # fig = px.treemap(
+        #     df,
+        #     ids="id",
+        #     parents="parent",
+        #     names="name",
+        #     values=value_col,
+        #     custom_data=["full_path", "t1", "t2", "pct1", "pct2", "W1", "W2", "p"],
+        # )
         fig = px.treemap(
             df,
             ids="id",
             parents="parent",
             names="name",
             values=value_col,
+            color="p_clamped",
+            color_continuous_scale=[(0.0, "red"), (1.0, "green")],
+            range_color=(0.0, 1.0),
             custom_data=["full_path", "t1", "t2", "pct1", "pct2", "W1", "W2", "p"],
         )
-        fig.update_traces(marker=dict(colors=df["color"]))
+        fig.update_coloraxes(colorbar_title_text="p")
+        # fig.update_traces(marker=dict(colors=df["color"]))
     else:
         raise ValueError(f"Unknown VIEW_MODE = {VIEW_MODE}")
 

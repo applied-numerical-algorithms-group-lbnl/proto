@@ -270,10 +270,10 @@ def main():
     # Build DataFrame for treemap
     df = build_treemap_df(records, lineage, parent_map, threshold_pct=THRESHOLD_PCT)
 
-    # Save for inspection
-    out_csv = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.csv"
-    df.to_csv(out_csv, index=False)
-    print(f"DataFrame saved to: {out_csv}")
+    # Save for inspection (if desired)
+    # out_csv = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.csv"
+    # df.to_csv(out_csv, index=False)
+    # print(f"DataFrame saved to: {out_csv}")
     print(f"Nodes shown in plot: {len(df)}  (threshold = {THRESHOLD_PCT}%)")
     print(df.head())
 
@@ -306,11 +306,12 @@ def main():
     # Hover template
     hover_tmpl = (
         "<b>%{customdata[4]}</b><br>"            # name
+        "parent: %{parent}<br>"
         "time = %{value:.6f} s<br>"
         "% of total = %{customdata[0]:.2f}%<br>"
-        "file line = %{customdata[1]}<br>"
-        "parent line = %{customdata[2]}<br>"
-        "timer_id = %{customdata[3]}<br>"
+        # "file line = %{customdata[1]}<br>"
+        # "parent line = %{customdata[2]}<br>"
+        # "timer_id = %{customdata[3]}<br>"
         "calls = %{customdata[5]}<br>"
         "<extra></extra>"
     )
@@ -321,6 +322,11 @@ def main():
         title=f"Timer Tree Time Breakdown (≥ {THRESHOLD_PCT}% total, view={VIEW_MODE}) | File: {file_without_path}",
         margin=dict(t=40, l=0, r=0, b=0),
     )
+
+    #save to html (if desired)
+    # out_html = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.html"
+    # fig.write_html(out_html)
+    # print(f"Treemap plot saved to: {out_html}")
 
     fig.show()
 
