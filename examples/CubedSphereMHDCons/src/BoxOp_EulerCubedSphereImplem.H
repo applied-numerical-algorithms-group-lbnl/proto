@@ -137,16 +137,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
         // State WFaceBar_L_temp = idOP(WFaceBar_L);    
         // State WFace_R_temp = idOP(WFace_R);
         // State WFaceBar_R_temp = idOP(WFaceBar_R); 
-        State WFace_L_temp(WFace_L.box());
-        State WFaceBar_L_temp(WFaceBar_L.box());
-        State WFace_R_temp(WFace_R.box());
-        State WFaceBar_R_temp(WFaceBar_R.box());
-        WFace_L.copyTo(WFace_L_temp);
-        WFaceBar_L.copyTo(WFaceBar_L_temp);
-        WFace_R.copyTo(WFace_R_temp);
-        WFaceBar_R.copyTo(WFaceBar_R_temp);
-        Limiters_4O(WFace_L,WFace_R,WFace_L_temp,WFace_R_temp,W,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
-        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L_temp,WFaceBar_R_temp,WBar,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
+        // Call to limiter does not need temp variables 
+        Limiters_4O(WFace_L,WFace_R,WFace_L,WFace_R,W,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
+        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L,WFaceBar_R,WBar,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
       }
 
       if (limiter == 2){
