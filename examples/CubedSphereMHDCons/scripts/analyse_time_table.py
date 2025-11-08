@@ -4,197 +4,286 @@ import plotly.express as px
 import numpy as np
 import colorsys
 
-# ------- CONFIG -------
+# ---------------- CONFIG ----------------
 
-FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/90_DIM3_30_90_CubeSphereTest.time.table"
-THRESHOLD_PCT = 0.00      # plot nodes with >= this % of total time.
-VIEW_MODE = "treemap"
+FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_45_30_CubeSphereTest.time.table"
+THRESHOLD_PCT = 0.1   # keep nodes with >= this % of total time
+VIEW_MODE = "treemap"  # only treemap for now
 
-# ------- PARSER -------
 
-def parse_gprof_callgraph(text: str):
+# ------------- STEP 1: EXTRACT TIMER REPORT BLOCK ------------- #
+
+def extract_timer_lines_with_numbers(text: str):
     """
-    Parse a gprof-like callgraph report into:
-      - nodes: dict[id] = {id, name, time, calls}
-      - edges: list of (parent_id, child_id)
+    From the full file text, extract the timer tree block under
 
-    This version:
-      * Skips everything before the FIRST
-            ---------------------------------------------------------
-        and starts parsing from the line below (which in your file
-        is `[0]root ...`).
+        Timer report 0 (.... timers)
+        --------------
+
+    and before the first long dashed separator
+
+        ---------------------------------------------------------
+
+    Returns: list of (line_number, line_text) (1-based file line numbers)
+    Only lines that look like timers (start with [NN]) are kept.
+    """
+    lines = text.splitlines()
+
+    # 1) Find "Timer report 0" line
+    start_idx = None
+    for i, line in enumerate(lines):
+        if "Timer report 0" in line:
+            start_idx = i
+            break
+
+    if start_idx is None:
+        raise RuntimeError("Could not find 'Timer report 0' in file.")
+
+    # 2) Move to the line after "Timer report 0 (...)"
+    idx = start_idx + 1
+
+    # 3) Skip the short dashed separator(s) like "--------------"
+    while idx < len(lines):
+        s = lines[idx].strip()
+        if s and set(s) == {"-"}:
+            idx += 1
+        else:
+            break
+
+    # 4) Now collect timer lines [NN] ... until we hit the long dashed
+    #    separator that starts the callgraph part
+    timer_lines = []
+    seen_any_timer = False
+    timer_re = re.compile(r'^\s*\[\d+\]')  # line starts with [NN]
+
+    while idx < len(lines):
+        line = lines[idx]
+        stripped = line.strip()
+
+        # long dashed separator (20+ dashes) -> stop once we've seen timers
+        if stripped and set(stripped) == {"-"} and len(stripped) >= 20:
+            if seen_any_timer:
+                break
+
+        if timer_re.match(line):
+            # This is a timer line
+            timer_lines.append((idx + 1, line))  # store 1-based line number
+            seen_any_timer = True
+
+        idx += 1
+
+    return timer_lines
+
+
+# ------------- STEP 2: COMPUTE LINEAGE BY INDENTATION ------------- #
+
+def compute_lineage_for_lines(lines_with_numbers):
+    """
+    Given a list of (line_number, line_text) for the timer tree,
+    compute lineage of each line based on indentation.
+
+    Returns: dict[line_number] = [line_number, parent, grandparent, ...]
     """
 
-    # 1) Skip everything before the first long line of dashes
-    sep = "---------------------------------------------------------"
-    pos = text.find(sep)
-    if pos == -1:
-        raise RuntimeError("Could not find the '---------------------------------------------------------' separator in file.")
+    stack = []      # (indent_len, line_number)
+    parent = {}     # parent[line_number] = parent_line_number or None
 
-    # Start parsing from just after that separator
-    text = text[pos + len(sep):]
-
-    # 2) Now split the remaining text into blocks by the same separator
-    blocks = text.strip().split(sep)
-    nodes = {}
-    edges = []
-
-    # Header line pattern for callgraph blocks:
-    #   [0]root 316.62062 1
-    #   [1] MMBEuler 315.12823 1
-    header_re = re.compile(r'\[(\d+)\]\s*(.+?)\s+([0-9.]+)\s+(\d+)\s*$')
-
-    for block in blocks:
-        block = block.strip()
-        if not block:
+    for lnum, raw_line in lines_with_numbers:
+        if raw_line.strip() == "":
             continue
 
-        lines = block.splitlines()
-        if not lines:
-            continue
+        # Normalize tabs -> spaces, then count leading spaces as indent
+        s = raw_line.expandtabs(4)
+        indent_len = len(s) - len(s.lstrip(" "))
 
-        # Header line must look like: [id] name time calls
-        m = header_re.match(lines[0])
+        # Pop until the top has strictly smaller indent
+        while stack and stack[-1][0] >= indent_len:
+            stack.pop()
+
+        # Parent is now the last element in stack (if any)
+        if stack:
+            parent[lnum] = stack[-1][1]
+        else:
+            parent[lnum] = None  # top-level within timer tree
+
+        # Push this line on the stack
+        stack.append((indent_len, lnum))
+
+    # Build lineage: for each line, walk up parent[]
+    lineage = {}
+    for lnum, raw_line in lines_with_numbers:
+        if raw_line.strip() == "":
+            continue
+        chain = []
+        cur = lnum
+        while cur is not None:
+            chain.append(cur)
+            cur = parent.get(cur)
+        lineage[lnum] = chain  # [self, parent, grandparent, ...]
+
+    return lineage, parent
+
+
+# ------------- STEP 3: PARSE TIMER FIELDS FROM EACH LINE ------------- #
+
+def parse_timer_fields(lines_with_numbers):
+    """
+    Parse each timer line:
+
+        [id] name time pct% calls ...
+
+    Returns: dict[line_number] = {
+        "line": lnum,
+        "timer_id": int,
+        "name": str,
+        "time": float (seconds),
+        "pct": float,
+        "calls": int,
+    }
+    """
+    # Example line:
+    # [0] root 493.88826 100.0% 1 8954189530   18.1 MFlops
+    timer_re = re.compile(
+        r'^\s*\[(\d+)\]\s+(.+?)\s+([0-9.]+)\s+([0-9.]+)%\s+(\d+)\b'
+    )
+
+    records = {}
+    for lnum, line in lines_with_numbers:
+        m = timer_re.match(line)
         if not m:
+            # Shouldn't happen if extract_timer_lines_with_numbers worked,
+            # but we'll just skip if it does.
             continue
 
-        node_id = int(m.group(1))
-        name = m.group(2).strip()
-        total_time = float(m.group(3))
-        calls = int(m.group(4))
+        timer_id = int(m.group(1))
+        name     = m.group(2).strip()
+        time_val = float(m.group(3))
+        pct_val  = float(m.group(4))
+        calls    = int(m.group(5))
 
-        nodes[node_id] = {
-            "id": node_id,
+        records[lnum] = {
+            "line": lnum,
+            "timer_id": timer_id,
             "name": name,
-            "time": total_time,
+            "time": time_val,
+            "pct": pct_val,
             "calls": calls,
         }
 
-        # Child lines: "  94.5% 297.7679   10 ChildName [2]"
-        for line in lines[1:]:
-            line = line.rstrip()
-            if "Total" in line:
-                continue
-            cm = re.match(r'\s*([\d.]+)%\s+([0-9.]+)\s+(\d+)\s+(.+?)\s+\[(\d+)\]', line)
-            if not cm:
-                continue
-
-            parent_id = node_id
-            child_id = int(cm.group(5))
-            edges.append((parent_id, child_id))
-
-            # Ensure child exists in nodes dict, even if its own header appears later
-            if child_id not in nodes:
-                nodes[child_id] = {
-                    "id": child_id,
-                    "name": cm.group(4).strip(),
-                    "time": None,
-                    "calls": int(cm.group(3)),
-                }
-
-    return nodes, edges
+    return records
 
 
-# ------- BUILD DF + FILTERING -------
+# ------------- STEP 4: BUILD DATAFRAME FOR TREEMAP ------------- #
 
-def build_sunburst_df(nodes, edges, threshold_pct=0.0):
+def build_treemap_df(records, lineage, parent_map, threshold_pct=0.0):
     """
-    Build DataFrame for Plotly (sunburst or treemap).
+    records: dict[line] = parsed timer info
+    lineage: dict[line] = [self, parent, grandparent, ...]
+    parent_map: dict[line] = parent_line or None
 
-    - Keeps nodes whose global % of total time >= threshold_pct
-      (based on time in their header line),
-      BUT also keeps all ancestors of any kept node, so hierarchy is intact.
+    Returns a DataFrame with columns:
+      id, label, parent, value, pct_total, depth, timer_id, name
+    suitable for Plotly treemap.
     """
-    # total time from root [0]
-    if 0 in nodes and nodes[0]["time"] is not None:
-        total_time = nodes[0]["time"]
+
+    # Identify roots: lines that have parent None
+    roots = [ln for ln, p in parent_map.items() if p is None]
+
+    # Use the first root for total-time reference (usually [0] root)
+    if roots:
+        root_line = roots[0]
     else:
-        total_time = max(nd["time"] for nd in nodes.values() if nd["time"] is not None)
+        # fallback: pick smallest line number
+        root_line = min(records.keys())
 
-    # parent map: first parent per child
-    parent = {}
-    for p, c in edges:
-        if c not in parent:
-            parent[c] = p
-    parent[0] = ""  # root has no parent
+    # total time from root (just for sanity; pct is already absolute)
+    total_time = records[root_line]["time"]
 
-    # compute pct_total per node
-    pct_by_id = {}
-    for nid, nd in nodes.items():
-        value = nd["time"] or 0.0
-        pct = 100.0 * value / total_time if total_time > 0 else 0.0
-        pct_by_id[nid] = pct
+    # initial keep set: nodes with pct >= threshold
+    keep_lines = set()
+    for lnum, rec in records.items():
+        if rec["pct"] >= threshold_pct or lnum == root_line:
+            keep_lines.add(lnum)
 
-    # 1) initial keep set by threshold
-    keep_ids = set()
-    for nid, pct in pct_by_id.items():
-        if nid == 0 or pct >= threshold_pct:
-            keep_ids.add(nid)
-
-    # 2) closure under ancestry: include all parents of kept nodes
+    # closure under ancestry: include all ancestors of kept lines
     added = True
     while added:
         added = False
-        for nid in list(keep_ids):
-            p = parent.get(nid, "")
-            if isinstance(p, int) and p not in keep_ids:
-                keep_ids.add(p)
-                added = True
+        for lnum in list(keep_lines):
+            chain = lineage.get(lnum, [])
+            # chain[0] is self; ancestors are chain[1:]
+            for anc in chain[1:]:
+                if anc not in keep_lines:
+                    keep_lines.add(anc)
+                    added = True
 
-    # helper to compute depth from root
-    def get_depth(nid):
-        d = 0
-        cur = nid
-        while True:
-            p = parent.get(cur, "")
-            if p == "" or p is None:
-                break
-            d += 1
-            cur = p
-        return d
+    # depth = length of lineage - 1
+    def get_depth(lnum):
+        chain = lineage.get(lnum, [lnum])
+        return len(chain) - 1
 
-    # Build rows for DataFrame
     rows = []
-    for nid, nd in nodes.items():
-        if nid not in keep_ids:
+    for lnum, rec in records.items():
+        if lnum not in keep_lines:
             continue
-        value = nd["time"] or 0.0
-        pct_total = pct_by_id[nid]
-        depth = get_depth(nid)
+
+        pct_total = rec["pct"]
+        value = rec["time"]
+        depth = get_depth(lnum)
+
+        parent_line = parent_map.get(lnum)
+        parent_id = parent_line if parent_line is not None else ""
+
+        label = f"{rec['name']} ({pct_total:.2f}%)"
+
         rows.append({
-            "id": nid,
-            "label": f"{nd['name']} ({pct_total:.2f}%)",
-            "parent": parent.get(nid, ""),
-            "value": value,
+            "id": lnum,               # use file line number as node id
+            "label": label,
+            "parent": parent_id,      # parent is also a line number (or "")
+            "value": value,           # time in seconds
             "pct_total": pct_total,
             "depth": depth,
+            "timer_id": rec["timer_id"],
+            "name": rec["name"],
+            "calls": rec["calls"],
         })
 
     return pd.DataFrame(rows)
 
 
-# ------- MAIN -------
+# ------------- STEP 5: MAIN + PLOTTING ------------- #
 
 def main():
     with open(FILENAME, "r") as f:
         text = f.read()
 
-    nodes, edges = parse_gprof_callgraph(text)
-    df = build_sunburst_df(nodes, edges, threshold_pct=THRESHOLD_PCT)
+    # Extract timer tree lines
+    timer_lines = extract_timer_lines_with_numbers(text)
+    print(f"Found {len(timer_lines)} timer lines in Timer report 0 block.")
 
-    print(f"Total nodes parsed: {len(nodes)}")
-    print(f"Nodes shown in plot: {len(df)} (threshold = {THRESHOLD_PCT}%)")
+    # Compute lineage and parent map
+    lineage, parent_map = compute_lineage_for_lines(timer_lines)
+
+    # Parse fields (id, name, time, pct, calls)
+    records = parse_timer_fields(timer_lines)
+
+    # Build DataFrame for treemap
+    df = build_treemap_df(records, lineage, parent_map, threshold_pct=THRESHOLD_PCT)
+
+    # Save for inspection
+    out_csv = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.csv"
+    df.to_csv(out_csv, index=False)
+    print(f"DataFrame saved to: {out_csv}")
+    print(f"Nodes shown in plot: {len(df)}  (threshold = {THRESHOLD_PCT}%)")
     print(df.head())
 
     # --- RANDOM COLORS, BRIGHTER FOR DEEPER NODES ---
-    rng = np.random.default_rng(123)  # fixed seed for reproducibility
+    rng = np.random.default_rng(123)
     max_depth = max(df["depth"].max(), 1)
 
     def depth_color(depth):
-        # random hue
         h = rng.random()
         s = 0.6
-        # value/brightness increases with depth (children = brighter)
         v = 0.4 + 0.6 * (depth / max_depth)
         r, g, b = colorsys.hsv_to_rgb(h, s, v)
         return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
@@ -208,35 +297,31 @@ def main():
             names="label",
             parents="parent",
             values="value",
-            # use custom_data to keep pct_total & ids in hover
-            custom_data=["pct_total", "id", "parent"],
+            custom_data=["pct_total", "id", "parent", "timer_id", "name", "calls"],
         )
-        # override colors with our custom rgb list
         fig.update_traces(marker=dict(colors=df["color"]))
     else:
         raise ValueError(f"Unknown VIEW_MODE = {VIEW_MODE}")
 
-    # 🔹 Smaller, cleaner hover box
+    # Hover template
     hover_tmpl = (
-        "<b>%{label}</b><br>"
-        "time = %{value:.3f} s<br>"
+        "<b>%{customdata[4]}</b><br>"            # name
+        "time = %{value:.6f} s<br>"
         "% of total = %{customdata[0]:.2f}%<br>"
-        "id = %{customdata[1]}<br>"
-        "parent = %{customdata[2]}<br>"
+        "file line = %{customdata[1]}<br>"
+        "parent line = %{customdata[2]}<br>"
+        "timer_id = %{customdata[3]}<br>"
+        "calls = %{customdata[5]}<br>"
         "<extra></extra>"
     )
     fig.update_traces(hovertemplate=hover_tmpl)
-
-    # 🔹 Smaller hover font so it doesn’t feel huge when zoomed/focused
+    file_without_path = FILENAME.split("/")[-1]
     fig.update_layout(
         hoverlabel=dict(font_size=10),
-        title=f"Callgraph Time Breakdown (≥ {THRESHOLD_PCT}% total, view={VIEW_MODE})",
+        title=f"Timer Tree Time Breakdown (≥ {THRESHOLD_PCT}% total, view={VIEW_MODE}) | File: {file_without_path}",
         margin=dict(t=40, l=0, r=0, b=0),
     )
-    # Save to HTML
-    # out_html = FILENAME + f".{VIEW_MODE}.pct{THRESHOLD_PCT:.2f}.html"
-    # fig.write_html(out_html)
-    # print(f"Plot saved to: {out_html}")
+
     fig.show()
 
 
