@@ -30,26 +30,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
   Box bx = a_USph.box();
   State W;
   State WBar;
-  // cout << "inputbox = " << bx << endl;
-  
   sphToPrim(W,WBar,a_USph,a_block);
   BoxData<T,1,MEM> me = magneticEnergyW(WBar,a_block,0);
-  // State Wtemp(bx.grow(-NGHOST));
-  // W.copyTo(Wtemp);
-  // if (procID() == 5) h5.writePatch(1,Wtemp,"W_CME5");
   // Compute Fluxes, rhs.
   // a_Rhs.setVal(0.0);
   T dxiPerp = this->dx()[1];
-  if (a_counter >= 0)
-    {
-      string suffix = to_string(a_counter)+"_"+to_string(procID());
-      HDF5Handler h5;
-      //Box bx0 = a_Rhs.box();
-      //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-      h5.writePatch(1.0,a_USph,"USph_"+suffix);
-      h5.writePatch(1.0,W,"W_"+suffix);
-      h5.writePatch(1.0,WBar,"WBar_"+suffix);
-    }
+
   Box outputbox = bx;
   // Loop over directions.
   T one = 1.0;
@@ -66,37 +52,10 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
     {
       PR_TIME("BoxOp_Euler::operator()::directional flux calculation");   
       
-      // Piecewise constant for debugging.
-      // Stencil<T> m_copy;
-      // m_copy = 1.0*Shift(Point::Zeros());
-      // Stencil<T> m_shift;
-      // m_shift = 1.0*Shift(Point::Basis(dir));
-      // State WFace_L = m_shift(W);
-      // State WFace_R = m_copy(W);
-      // State WFaceBar_L = m_shift(WBar);
-      // State WFaceBar_R = m_copy(WBar);
-
       State WFace_L = Stencil<T>::CellToFace(dir)(W);   
-      State WFace_R = Stencil<T>::CellToFace(dir)(W);
-      State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);    
-      State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);  
-      
-      // State WFace_L = Stencil<T>::CellToFace(dir,Side::Lo,5)(W);      
-      // State WFace_R = ((1.0*Shift(Point::Basis(dir,-1)))*Stencil<T>::CellToFace(dir,Side::Hi,5))(W);
-      // State WFaceBar_L = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
-      // State WFaceBar_R = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);
-       
-      // forallInPlace([ ] PROTO_LAMBDA
-      //   ( Var<T,NUMCOMPS,MEM>& a_WFace_L,
-      //     Var<T,NUMCOMPS,MEM>& a_WFace_R,
-      //     Var<T,NUMCOMPS,MEM>& a_WFaceBar_L,
-      //     Var<T,NUMCOMPS,MEM>& a_WFaceBar_R)
-      //   { 
-      //     a_WFace_L(iRHO) = std::max(a_WFace_L(iRHO),RHO00);
-      //     a_WFace_R(iRHO) = std::max(a_WFace_R(iRHO),RHO00);
-      //     a_WFaceBar_L(iRHO) = std::max(a_WFaceBar_L(iRHO),RHO00);
-      //     a_WFaceBar_R(iRHO) = std::max(a_WFaceBar_R(iRHO),RHO00);             
-      //   }, WFace_L,WFace_R,WFaceBar_L,WFaceBar_R);
+      State WFace_R(WFace_L.box());
+      WFace_L.copyTo(WFace_R);
+      State WFaceBar = Stencil<T>::CellToFace(dir,Side::Lo,2)(WBar);    
 
       //Required mapping variables.
       Box bxface = WFace_L.box().grow(-2);     
@@ -132,14 +91,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
 
       if (limiter == 1){
         PR_TIMERS("BoxOp_Euler::operator()::limiters");
-        // Stencil<double> idOP = 1.0*Shift(Point::Zeros());
-        // State WFace_L_temp = idOP(WFace_L);
-        // State WFaceBar_L_temp = idOP(WFaceBar_L);    
-        // State WFace_R_temp = idOP(WFace_R);
-        // State WFaceBar_R_temp = idOP(WFaceBar_R); 
-        // Call to limiter does not need temp variables 
         Limiters_4O(WFace_L,WFace_R,WFace_L,WFace_R,W,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
-        Limiters_4O(WFaceBar_L,WFaceBar_R,WFaceBar_L,WFaceBar_R,WBar,WBar,me,dir,dxiR, dxiPerp, dxiPerp);
       }
 
       if (limiter == 2){
@@ -164,39 +116,20 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
           }                   
         },dx,ntrow,adjDrDir,deta,dVolr,Dr,dxiPerp,dxiR,dir);
         Limiters_minmod(WFace_L,WFace_R,W,dx,dir);
-        Limiters_minmod(WFaceBar_L,WFaceBar_R,WBar,dx,dir);
       }
 
       // Fluxes on dir face.
       // Average of advective fluxes in spherical variables at the
       // face center, given point values of W.
-      
       BoxData<T,NUMCOMPS> physFlux_L,physFlux_R;
-      primToFlux(physFlux_L,WFace_L,WFaceBar_L,adjDrDir,a_block,dir);
-      primToFlux(physFlux_R,WFace_R,WFaceBar_R,adjDrDir,a_block,dir);
-      if (a_counter >= 0)
-        {
-          string suffix =
-            to_string(dir) + "_"+to_string(a_counter)+"_"+to_string(procID());
-          HDF5Handler h5;
-          //Box bx0 = a_Rhs.box();
-          //BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-          h5.writePatch(1.0,physFlux_L,"physFlux_L_"+suffix);
-          h5.writePatch(1.0,physFlux_R,"physFlux_R_"+suffix);
-        }
+      primToFlux(physFlux_L,WFace_L,WFaceBar,adjDrDir,a_block,dir);
+      primToFlux(physFlux_R,WFace_R,WFaceBar,adjDrDir,a_block,dir);
       Box bxface0 = a_fluxes[dir].box();
       State fluxdir_L(bxface),fluxdir_R(bxface),fluxdir(bxface0),fluxdir_Rus(bxface);
-      primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
-      primToMappedFlux(fluxdir_R,physFlux_R,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,ntrow,a_block,dir);
-      primToMappedRusanovFlux(fluxdir_Rus,WFace_L,WFaceBar_L,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,A_matrix,ntrow,a_block,dir);
+      primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar,adjDrDir,deta_a,deta,ntrow,a_block,dir);
+      primToMappedFlux(fluxdir_R,physFlux_R,WFace_R,WFaceBar,adjDrDir,deta_a,deta,ntrow,a_block,dir);
+      primToMappedRusanovFlux(fluxdir_Rus,WFace_L,WFaceBar,WFace_R,WFaceBar,adjDrDir,deta_a,deta,A_matrix,ntrow,a_block,dir);
       
-
-      // fluxdir.setVal(0.0);
-      // fluxdir += fluxdir_R;
-      // fluxdir += fluxdir_L;
-      // fluxdir -= fluxdir_Rus;
-      // fluxdir *= 0.5;
-      // Replace above with forall lambda
       forallInPlace([ ] PROTO_LAMBDA
         (Var<T,NUMCOMPS,MEM>& a_fluxout,
           const Var<T,NUMCOMPS,MEM>& a_fluxin_L,
@@ -213,20 +146,9 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       fluxdir.copyTo(a_fluxes[dir]);
       BoxData<T,NUMCOMPS,MEM> rhsIncr;
       T dxInv = -a_scale/(this->dx()[dir]);
-      //DEBUG
-#ifndef PR_DISABLE_INIT_CHECKS
-      // bool infOrNanBlock =fluxdir.containsInfOrNAN();
-      // if (infOrNanBlock)
-      // {
-      //   h5.writePatch(1.0,fluxdir,"MHD_IO_InfOrNAN_"+to_string(dir) + "_" +to_string(a_block));
-      //   cout << "Inf or Nan at Point " << fluxdir.findInfOrNAN()
-      //        << ", block = " << a_block
-      //        << ", dir = " << dir << endl;
-      // }
-#endif
+
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
-      // a_Rhs += rhsIncr;
-      // Replace above with forall lambda
+
       forallInPlace([ ] PROTO_LAMBDA
         (Var<T,NUMCOMPS,MEM>& a_rhs,
           const Var<T,NUMCOMPS,MEM>& a_rhsIncr)
@@ -236,31 +158,8 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
             a_rhs(comp) += a_rhsIncr(comp);
           }
         },a_Rhs, rhsIncr);
-      outputbox &= rhsIncr.box();
-      if (a_counter >= 0)
-        {
-          string suffix =
-            to_string(dir) + "_"+to_string(a_counter)+"_"+to_string(procID());
-          HDF5Handler h5;
-          Box bx0 = a_Rhs.box();
-          bxface = bx0.extrude(dir);
-          BoxData<T,NUMCOMPS,MEM> dummy(bx0),dummyface(bxface);
-          a_fluxes[dir].copyTo(dummyface);
-          rhsIncr.copyTo(dummy);
-          h5.writePatch(1.0,dummyface,"fluxes_"+suffix);
-          h5.writePatch(1.0,dummy,"rhsIncr_"+suffix);
-        }
-    }
 
-  // a_dt_next = 1.0/speedMax.absMax();
-  // if (a_block == BLOCKTEST)
-  //   {
-  //     HDF5Handler h5;
-      
-  //     BoxData<T,NUMCOMPS,MEM> rhsRadial = checkRadial(a_Rhs,dxiPerp,a_block);
-  //     h5.writePatch(dxiPerp,rhsRadial,"rhsRadial");
-  //   }
-  // if (procID() == 0)cout << "output box = " << outputbox << endl;
+    }
 }
 template<
     typename T,
