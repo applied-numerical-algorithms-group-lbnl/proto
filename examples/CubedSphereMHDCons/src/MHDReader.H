@@ -79,7 +79,7 @@ public:
 				BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
 				BC_data[i].copyTo(BC_data_extended[i]);
 			}
-			cout << "Geometric + BC frames prepared on rank 0." << endl;
+			// cout << "Geometric + BC frames prepared on rank 0." << endl;
 		// }
 		barrier();
 		// All ranks keep these shapes for later
@@ -114,6 +114,7 @@ public:
 						int                             cells_to_rotate,
 						double                          a_frac)
 	{
+		PR_TIMERS("MHDReader::apply_frac_shift_phi");
 		// integer part: view shifted by cells_to_rotate
 		auto base = alias(a_src, Point::Basis(a_phiCoord) * -cells_to_rotate);
 
@@ -309,7 +310,7 @@ public:
 		// Copy BC "image" into the (one) source patch this operator expects
 		data_0.copyTo((*s_cache.srcData)[*s_cache.srcLayout.begin()]);
 
-		a_dstData.setVal(0);
+		// a_dstData.setVal(0);
 		{
 			PR_TIMERS("MHDReader::BoxData_to_BC::applyBCOp");
 			s_cache.BCOp.apply(a_dstData, *s_cache.srcData);
