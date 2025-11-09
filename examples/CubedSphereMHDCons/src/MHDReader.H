@@ -237,15 +237,21 @@ public:
 			// if(procID()==0) cout << " low_frame = " << low_frame << " needed_fraction = " << needed_fraction << " cells_to_rotate1 " << cells_to_rotate1 << " cells_to_rotate2 " << cells_to_rotate2 << endl;
 
 			if (procID()==0) {
+				PR_TIMERS("MHDReader::BoxData_to_BC | copyTo frames");
 				BC_data_extended[low_frame].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate1));
 				BC_data_extended[next_frame].copyTo(data_b, bx2, Point::Basis(phiCoord) * (-cells_to_rotate2));
 			}
+			{
+				PR_TIMERS("MHDReader::BoxData_to_BC | bcast frames");
 			bcast_boxdata(data_a);
 			bcast_boxdata(data_b);
+			}
 
+			{ PR_TIMERS("MHDReader::BoxData_to_BC | apply_frac_shift_phi");
 			apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction1);
 			apply_frac_shift_phi<T, MEM>(BC_data_temp2, data_b, phiCoord, needed_fraction2);
-
+			}
+			{ PR_TIMERS("MHDReader::BoxData_to_BC | final interpolation");
 			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data_interpolated,
 										Var<T, NUMCOMPS, MEM> & a_BC_data_lo,
 										Var<T, NUMCOMPS, MEM> & a_BC_data_hi,
@@ -256,6 +262,7 @@ public:
                 } 
 			},
 				data_0, BC_data_temp1, BC_data_temp2, needed_fraction);
+			}
 		}
 
 		// Making use of cached BC operator to avoid rebuild each time, much faster
