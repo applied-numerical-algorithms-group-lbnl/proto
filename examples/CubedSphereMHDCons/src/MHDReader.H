@@ -51,8 +51,8 @@ public:
 		Box bx2(low, high);
 
 		// Only rank 0 reads & prepares data frames
-		if (procID() == 0)
-		{
+		// if (procID() == 0)
+		// {
 			// readData(BC_data, a_filename);
 			readData(BC_data, a_filename, /*parallel_open=*/false);  // root-only serial open
 			int force_single_frame = ParseInputs::get_BC_force_single_frame();
@@ -80,57 +80,59 @@ public:
 				BC_data[i].copyTo(BC_data_extended[i]);
 			}
 			cout << "Geometric + BC frames prepared on rank 0." << endl;
-		}
+		// }
 		barrier();
 		// All ranks keep these shapes for later
 		Box_BC = BT;
 	}
 
 	// helper: broadcast a BoxData buffer (contiguous doubles)
-	inline void bcast_boxdata(BoxData<double,8,HOST>& buf, int root=0)
-	{
-	#ifdef PR_MPI
-		// Broadcast in chunks if ever larger than INT_MAX elements (rare)
-		const size_t nElems = (size_t)buf.size();  // (#cells * 8)
-		double* ptr = buf.data();
-		const size_t INT_MAX_ELEMS = (size_t)std::numeric_limits<int>::max();
-		size_t off = 0;
-		while (off < nElems) {
-			size_t chunk = std::min(nElems - off, INT_MAX_ELEMS);
-			MPI_Bcast(ptr + off, (int)chunk, MPI_DOUBLE, root, MPI_COMM_WORLD);
-			off += chunk;
-		}
-	#else
-		(void)buf; (void)root; // no-op in serial
-	#endif
-	}
+	// inline void bcast_boxdata(BoxData<double,8,HOST>& buf, int root=0)
+	// {
+	// #ifdef PR_MPI
+	// 	// Broadcast in chunks if ever larger than INT_MAX elements (rare)
+	// 	const size_t nElems = (size_t)buf.size();  // (#cells * 8)
+	// 	double* ptr = buf.data();
+	// 	const size_t INT_MAX_ELEMS = (size_t)std::numeric_limits<int>::max();
+	// 	size_t off = 0;
+	// 	while (off < nElems) {
+	// 		size_t chunk = std::min(nElems - off, INT_MAX_ELEMS);
+	// 		MPI_Bcast(ptr + off, (int)chunk, MPI_DOUBLE, root, MPI_COMM_WORLD);
+	// 		off += chunk;
+	// 	}
+	// #else
+	// 	(void)buf; (void)root; // no-op in serial
+	// #endif
+	// }
 
 	// Using this instead of Stencil-based fractional shift for BoxData increased speed significantly
 	template <typename T, MemType MEM>
 	inline void
 	apply_frac_shift_phi(BoxData<T,NUMCOMPS,MEM>       & a_out,
-						 BoxData<T,NUMCOMPS,MEM> & a_in,
-						int                            a_phiCoord,
-						double                         a_frac)
+						BoxData<T,NUMCOMPS,MEM>       & a_src,
+						int                             a_phiCoord,
+						int                             cells_to_rotate,
+						double                          a_frac)
 	{
-		// IMPORTANT: alias shift sign is opposite of Stencil::Shift
-		// To mimic Shift(-Basis(phiCoord)), we use +Basis(phiCoord) in alias:
-		auto in_left = alias(a_in, Point::Basis(a_phiCoord) * 1);
+		// integer part: view shifted by cells_to_rotate
+		auto base = alias(a_src, Point::Basis(a_phiCoord) * -cells_to_rotate);
+
+		// neighbor for fractional part (like your old in_left)
+		auto base_left = alias(base, Point::Basis(a_phiCoord) * 1);
 
 		forallInPlace(
-			[=] PROTO_LAMBDA(
-				Var<T,NUMCOMPS,MEM>       & l_a_out,
-				const Var<T,NUMCOMPS,MEM> & l_a_in,
-				const Var<T,NUMCOMPS,MEM> & l_in_left)
+			[=] PROTO_LAMBDA(Var<T,NUMCOMPS,MEM>       & out,
+							const Var<T,NUMCOMPS,MEM> & v0,
+							const Var<T,NUMCOMPS,MEM> & v1)
 			{
 				for (int c = 0; c < NUMCOMPS; ++c)
 				{
-					l_a_out(c) =
-						(T(1.0) - T(a_frac)) * l_a_in(c)
-					+ T(a_frac)            * l_in_left(c);
+					out(c) =
+						(T(1.0) - T(a_frac)) * v0(c)
+					+ T(a_frac)            * v1(c);
 				}
 			},
-			a_out, a_in, in_left);
+			a_out, base, base_left);
 	}
 
 	template <typename T, MemType MEM>
@@ -157,10 +159,11 @@ public:
 		int domainSizez = high[phiCoord] + 1;
 		// --- minimal change: broadcast num_frames so all ranks take same branch
 		int num_frames = 0;
-		if (procID()==0) num_frames = (int)BC_data_extended.size();
-#ifdef PR_MPI
-		MPI_Bcast(&num_frames, 1, MPI_INT, 0, MPI_COMM_WORLD);
-#endif
+		// if (procID()==0) num_frames = (int)BC_data_extended.size();
+		num_frames = (int)BC_data_extended.size();
+// #ifdef PR_MPI
+// 		MPI_Bcast(&num_frames, 1, MPI_INT, 0, MPI_COMM_WORLD);
+// #endif
 
 		int low_frame_now = (int)( (double)a_time / (ParseInputs::get_BC_cadence() * 3600.0) );
 		if (num_frames == 1 || low_frame_now >= num_frames - 1)
@@ -180,12 +183,15 @@ public:
 			double needed_fraction = angle_to_rotate / (360 / domainSizez) - cells_to_rotate;
 			cells_to_rotate = cells_to_rotate % domainSizez;
 			cells_to_rotate = domainSizez - cells_to_rotate;
-			if (procID()==0) {
-				if (num_frames == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
-				if (low_frame_now >= num_frames - 1) BC_data_extended[num_frames - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
-			}
-			bcast_boxdata(data_a);
-			apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction);
+			// if (procID()==0) {
+				// if (num_frames == 1) BC_data_extended[0].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+				// if (low_frame_now >= num_frames - 1) BC_data_extended[num_frames - 1].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate));
+				if (num_frames == 1) apply_frac_shift_phi<T, MEM>(BC_data_temp1, BC_data_extended[0], phiCoord, cells_to_rotate, needed_fraction);
+				if (low_frame_now >= num_frames - 1) apply_frac_shift_phi<T, MEM>(BC_data_temp1, BC_data_extended[num_frames - 1], phiCoord, cells_to_rotate, needed_fraction);
+			// }
+			// bcast_boxdata(data_a);
+			// apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction);
+			// BC_data_temp1.copyTo(data_0);
 			BC_data_temp1.copyTo(data_0);
 		}
 		else
@@ -236,21 +242,22 @@ public:
 
 			// if(procID()==0) cout << " low_frame = " << low_frame << " needed_fraction = " << needed_fraction << " cells_to_rotate1 " << cells_to_rotate1 << " cells_to_rotate2 " << cells_to_rotate2 << endl;
 
-			if (procID()==0) {
-				PR_TIMERS("MHDReader::BoxData_to_BC | copyTo frames");
-				BC_data_extended[low_frame].copyTo(data_a, bx2, Point::Basis(phiCoord) * (-cells_to_rotate1));
-				BC_data_extended[next_frame].copyTo(data_b, bx2, Point::Basis(phiCoord) * (-cells_to_rotate2));
-			}
-			{
-				PR_TIMERS("MHDReader::BoxData_to_BC | bcast frames");
-			bcast_boxdata(data_a);
-			bcast_boxdata(data_b);
-			}
+			apply_frac_shift_phi<T, MEM>(
+				BC_data_temp1,
+				BC_data_extended[low_frame],
+				phiCoord,
+				cells_to_rotate1,
+				needed_fraction1
+			);
 
-			{ PR_TIMERS("MHDReader::BoxData_to_BC | apply_frac_shift_phi");
-			apply_frac_shift_phi<T, MEM>(BC_data_temp1, data_a, phiCoord, needed_fraction1);
-			apply_frac_shift_phi<T, MEM>(BC_data_temp2, data_b, phiCoord, needed_fraction2);
-			}
+			apply_frac_shift_phi<T, MEM>(
+				BC_data_temp2,
+				BC_data_extended[next_frame],
+				phiCoord,
+				cells_to_rotate2,
+				needed_fraction2
+			);
+			
 			{ PR_TIMERS("MHDReader::BoxData_to_BC | final interpolation");
 			forallInPlace([] PROTO_LAMBDA(Var<T, NUMCOMPS, MEM> & a_BC_data_interpolated,
 										Var<T, NUMCOMPS, MEM> & a_BC_data_lo,
