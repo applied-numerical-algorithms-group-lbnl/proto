@@ -1887,25 +1887,55 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              const BoxData<T,1,MEM>& a_numerator)
 {
   PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
-  a_quot.setToZero();
-  a_quotBar.setToZero();
-  auto temp = a_denomInv*a_numerator;
-  temp.copyTo(a_quotBar);
+  // a_quot.setToZero();
+  // a_quotBar.setToZero();
+  // auto temp = a_denomInv*a_numerator;
+  // temp.copyTo(a_quotBar);
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },a_quotBar,a_numerator,a_denomInv);
   BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1));
   corr.setToZero();
-  T twelveth = -1.0/12.0;
+  // T twelveth = -1.0/12.0;
   // Note that we do not compute correction in the zero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
       BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
-      corr += prod;
+      // BoxData<T,1,MEM> prod = Dquotbar*Ddenom;    
+      // Replacing with forall lambda  
+      BoxData<T,1,MEM> prod(a_quotBar.box());
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_prod,
+                                     const Var<T,1,MEM>& l_dqbar,
+                                     const Var<T,1,MEM>& l_ddenom)
+                    {
+                      l_prod(0) = l_dqbar(0)*l_ddenom(0);
+                    },prod,Dquotbar,Ddenom);
+      // corr += prod;
+      // Replacing with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_corr,
+                                     const Var<T,1,MEM>& l_prod)
+                    {
+                      l_corr(0) += l_prod(0);
+                    },corr,prod);
     }
-  corr *= twelveth;
-  a_numerator.copyTo(a_quot);
-  a_quot += corr;
-  a_quot *=a_denomInv;
+  // corr *= twelveth;
+  // a_numerator.copyTo(a_quot);
+  // a_quot += corr;
+  // a_quot *=a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_corr)
+                {
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_corr(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,corr);
 }
 template <typename T, MemType MEM>
 void CubedSphereShell::cellQuotientValAndInv(
@@ -1918,35 +1948,54 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              bool a_debug)
 {
   PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
-  a_quot.setToZero();
-  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
-  // if (a_debug)
-  //   {
-  //     cout << "quotBar max = " << quotBar.absMax() << endl;
-  //   }
+  // a_quot.setToZero();
+  // BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  // Replacing with forall lambda
+  BoxData<T,1,MEM> quotBar(a_numerator.box());
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },quotBar,a_numerator,a_denomInv);
   BoxData<T,1,MEM> corr(a_quotBox);
   corr.setToZero();
-  T twelveth = -1.0/12.0;
+  // T twelveth = -1.0/12.0;
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> Dquotbar =
         CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir,a_debug);
-      // if (a_debug)
-      //   {
-      //     cout << "dir = " << dir << ", Dquotbar max = " << Dquotbar.absMax() << endl;
-      //   }
       BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
-      corr += prod;
+      // BoxData<T,1,MEM> prod = Dquotbar*Ddenom;   
+      // Replacing with forall lambda  
+      BoxData<T,1,MEM> prod(a_quotBox);
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_prod,
+                                     const Var<T,1,MEM>& l_dqbar,
+                                     const Var<T,1,MEM>& l_ddenom)
+                    {
+                      l_prod(0) = l_dqbar(0)*l_ddenom(0);
+                    },prod,Dquotbar,Ddenom);
+      // corr += prod;
+      // Replacing with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_corr,
+                                     const Var<T,1,MEM>& l_prod)
+                    {
+                      l_corr(0) += l_prod(0);
+                    },corr,prod);
     }
-  corr *= twelveth;
-  // if (a_debug)
-  //       {
-  //         cout << "corr max = " << corr.absMax() << endl << endl;
-  //       }
-  a_numerator.copyTo(a_quot);
-  a_quot += corr;
-  a_quot *=a_denomInv;
+  // corr *= twelveth;
+  // a_numerator.copyTo(a_quot);
+  // a_quot += corr;
+  // a_quot *=a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_corr)
+                {                  
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_corr(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,corr);
 }
 template <typename T, MemType MEM>
 void CubedSphereShell::
@@ -1960,15 +2009,33 @@ cellQuotientValAndInvRadial(
 {
   PR_TIMERS("CubedSphereShell::cellQuotientValAndInvRadial()");
   a_quot.setToZero();
-  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
-  T twelveth = -1.0/12.0;
+  // BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  // Replacing with forall lambda
+  BoxData<T,1,MEM> quotBar(a_numerator.box());
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },quotBar,a_numerator,a_denomInv);
+  // T twelveth = -1.0/12.0;
   BoxData<T,1,MEM> Dquotbar =
     CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,0);
   BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,0)(a_denominator);
-  BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
-  corr *= twelveth;
-  a_quot = a_numerator + corr;
-  a_quot *= a_denomInv;
+  // BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
+  // corr *= twelveth;
+  // a_quot = a_numerator + corr;
+  // a_quot *= a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_dqbar,
+                                 const Var<T,1,MEM>& l_ddenom)
+                {
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_dqbar(0)*l_ddenom(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,Dquotbar,Ddenom);
 }
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>
