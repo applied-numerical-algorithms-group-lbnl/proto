@@ -189,12 +189,25 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar_L,adjDrDir,deta_a,deta,ntrow,a_block,dir);
       primToMappedFlux(fluxdir_R,physFlux_R,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,ntrow,a_block,dir);
       primToMappedRusanovFlux(fluxdir_Rus,WFace_L,WFaceBar_L,WFace_R,WFaceBar_R,adjDrDir,deta_a,deta,A_matrix,ntrow,a_block,dir);
+      
 
-      fluxdir.setVal(0.0);
-      fluxdir += fluxdir_R;
-      fluxdir += fluxdir_L;
-      fluxdir -= fluxdir_Rus;
-      fluxdir *= 0.5;
+      // fluxdir.setVal(0.0);
+      // fluxdir += fluxdir_R;
+      // fluxdir += fluxdir_L;
+      // fluxdir -= fluxdir_Rus;
+      // fluxdir *= 0.5;
+      // Replace above with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA
+        (Var<T,NUMCOMPS,MEM>& a_fluxout,
+          const Var<T,NUMCOMPS,MEM>& a_fluxin_L,
+          const Var<T,NUMCOMPS,MEM>& a_fluxin_R,
+          const Var<T,NUMCOMPS,MEM>& a_fluxin_Rus)
+        {  
+          for (int comp = 0; comp < NUMCOMPS;comp++)
+          {                  
+            a_fluxout(comp) = 0.5*(a_fluxin_L(comp) + a_fluxin_R(comp) - a_fluxin_Rus(comp));
+          }
+        },fluxdir,fluxdir_L,fluxdir_R,fluxdir_Rus);
 
       // Save fluxes, update RHS.
       fluxdir.copyTo(a_fluxes[dir]);
@@ -212,7 +225,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
       // }
 #endif
       rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
-      a_Rhs += rhsIncr;
+      // a_Rhs += rhsIncr;
+      // Replace above with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA
+        (Var<T,NUMCOMPS,MEM>& a_rhs,
+          const Var<T,NUMCOMPS,MEM>& a_rhsIncr)
+        {  
+          for (int comp = 0; comp < NUMCOMPS;comp++)
+          {                  
+            a_rhs(comp) += a_rhsIncr(comp);
+          }
+        },a_Rhs, rhsIncr);
       outputbox &= rhsIncr.box();
       if (a_counter >= 0)
         {
@@ -329,8 +352,11 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
                                     - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   // Deconvolve W to obtain point values.
   BoxData<T,NUMCOMPS,MEM> WFacePoint_L = _deconvolveFace(a_WFace_L,a_WFaceBar_L,a_dir);  
-  BoxData<T,1,MEM> kePoint_L = kineticEnergyW(WFacePoint_L,a_block,a_dir);
-  BoxData<T,1,MEM> mePoint_L = magneticEnergyW(WFacePoint_L,a_block,a_dir);
+  // BoxData<T,1,MEM> kePoint_L = kineticEnergyW(WFacePoint_L,a_block,a_dir);
+  // BoxData<T,1,MEM> mePoint_L = magneticEnergyW(WFacePoint_L,a_block,a_dir);
+  BoxData<T,1,MEM> kePoint_L(WFacePoint_L.box());
+  BoxData<T,1,MEM> mePoint_L(WFacePoint_L.box());
+  EnergyW(kePoint_L,mePoint_L,WFacePoint_L,a_block,a_dir);
 
   BoxData<T,1,MEM> adjDdirPoint;
   if (a_dir != 0)
@@ -370,9 +396,12 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
 
   // Deconvolve W to obtain point values.
   BoxData<T,NUMCOMPS,MEM> WFacePoint_R = _deconvolveFace(a_WFace_R,a_WFaceBar_R,a_dir);  
-  BoxData<T,1,MEM> kePoint_R = kineticEnergyW(WFacePoint_R,a_block,a_dir);
-  BoxData<T,1,MEM> mePoint_R = magneticEnergyW(WFacePoint_R,a_block,a_dir);
- 
+  // BoxData<T,1,MEM> kePoint_R = kineticEnergyW(WFacePoint_R,a_block,a_dir);
+  // BoxData<T,1,MEM> mePoint_R = magneticEnergyW(WFacePoint_R,a_block,a_dir);
+  BoxData<T,1,MEM> kePoint_R(WFacePoint_R.box());
+  BoxData<T,1,MEM> mePoint_R(WFacePoint_R.box());
+  EnergyW(kePoint_R,mePoint_R,WFacePoint_R,a_block,a_dir);
+
   State q_R = forall<T,NUMCOMPS>
     ([ ] PROTO_LAMBDA
      (
@@ -492,9 +521,14 @@ primToFlux(
                                     - (1.0/24.0)*Stencil<T>::Derivative(2,0,2));
   // Deconvolve W to obtain point values.
   BoxData<T,NUMCOMPS,MEM> WFacePoint = _deconvolveFace(a_WFace,a_WFaceBar,a_centering);  
-  BoxData<T,1,MEM> kePoint = kineticEnergyW(WFacePoint,a_block,a_centering);
-  BoxData<T,1,MEM> mePoint = magneticEnergyW(WFacePoint,a_block,a_centering);
-  BoxData<T,1,MEM> vbPoint = vdotbW(WFacePoint,a_block,a_centering);
+  // BoxData<T,1,MEM> kePoint = kineticEnergyW(WFacePoint,a_block,a_centering);
+  // BoxData<T,1,MEM> mePoint = magneticEnergyW(WFacePoint,a_block,a_centering);
+  // BoxData<T,1,MEM> vbPoint = vdotbW(WFacePoint,a_block,a_centering);
+  BoxData<T,1,MEM> kePoint(WFacePoint.box());
+  BoxData<T,1,MEM> mePoint(WFacePoint.box());
+  BoxData<T,1,MEM> vbPoint(WFacePoint.box());
+  EnergyW(kePoint,mePoint,vbPoint,WFacePoint,a_block,a_centering);
+
  
   BoxData<T,1,MEM> adjDdirPoint;
   if (a_centering != 0)
@@ -974,8 +1008,11 @@ P_floor(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
       BoxData<double, NUMCOMPS, HOST> W_point(USph[dit].box());
       W.copyTo(W_point);
       W_point += Stencil<double>::Laplacian()(W,-1./24.);  
-      BoxData<T,1,MEM> ke = eulerOp[dit].kineticEnergyW(W_point,block,-1);
-      BoxData<T,1,MEM> me = eulerOp[dit].magneticEnergyW(W_point,block,-1);
+      // BoxData<T,1,MEM> ke = eulerOp[dit].kineticEnergyW(W_point,block,-1);
+      // BoxData<T,1,MEM> me = eulerOp[dit].magneticEnergyW(W_point,block,-1);
+      BoxData<double,1,HOST> ke(W_point.box());
+      BoxData<double,1,HOST> me(W_point.box());
+      eulerOp[dit].EnergyW(ke,me,W_point,block,-1);
       forallInPlace([ ] PROTO_LAMBDA
                   (Var<double, NUMCOMPS, HOST> &a_W,
                     const Var<double, 1, HOST> &a_ke,

@@ -8,7 +8,7 @@ import colorsys
 
 FILES = [
     "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_15_45_CubeSphereTest.time.table",
-    "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_45_30_CubeSphereTest.time.table",
+    "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_30_20_CubeSphereTest.time.table",
 ]
 NGHOST = 5  # number of ghost cells in each direction
 
@@ -461,6 +461,11 @@ def main():
         ),
         margin=dict(t=60, l=0, r=0, b=0),
     )
+
+    #Save to html (if desired)
+    out_html = "scaling_treemap.html"
+    fig.write_html(out_html)
+    print(f"Scaling treemap plot saved to: {out_html}")
 
     fig.show()
 

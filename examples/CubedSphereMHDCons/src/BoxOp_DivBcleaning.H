@@ -74,7 +74,17 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::DivBPowell(
     T dxInv = -1.0/(this->dx()[dir]);
     rhsIncr = Stencil<T>::FluxDivergence(dir)(fluxdir,dxInv);
 
-    rhs += rhsIncr;
+    // rhs += rhsIncr;
+    // replace += with forall lambda
+    forallInPlace([ ] PROTO_LAMBDA
+      (Var<T,NUMCOMPS,MEM>& a_rhs,
+        const Var<T,NUMCOMPS,MEM>& a_rhsIncr)
+      {  
+        for (int comp = 0; comp < NUMCOMPS;comp++)
+        {                  
+          a_rhs(comp) += a_rhsIncr(comp);
+        }
+      },rhs, rhsIncr);
     outputbox &= rhsIncr.box();   
   }
   if (a_block == BLOCKTEST)

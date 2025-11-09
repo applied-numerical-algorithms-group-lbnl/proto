@@ -335,7 +335,22 @@ public:
   inline BoxData<T,1,MEM> vdotbW(
                                 const State& a_WPoint,
                                 uint a_block,
-                                uint a_centering) const;                                       
+                                uint a_centering) const;    
+                                
+  inline void EnergyW(
+                                BoxData<T,1,MEM>& a_ke,
+                                BoxData<T,1,MEM>& a_me,
+                                BoxData<T,1,MEM>& a_vb,
+                                const State& a_WPoint,
+                                uint a_block,
+                                uint a_centering) const;
+                                
+  inline void EnergyW(
+                                BoxData<T,1,MEM>& a_ke,
+                                BoxData<T,1,MEM>& a_me,
+                                const State& a_WPoint,
+                                uint a_block,
+                                uint a_centering) const;
 
   inline void radialMetrics(
                             BoxData<T, 1, MEM>& a_radius,

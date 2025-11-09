@@ -29,24 +29,14 @@ viscFlux(
   State W;
   State WBar; 
   sphToPrim(W,WBar,a_USph,block);
-  
-  
   // Compute Fluxes, rhs.  
   Box outputbox = bx;
-  // Loop over directions.
   T one = 1.0;
   T half = 0.5;
   T dxiPerp = this->dx()[1];
-  
-  // Setup for nonlinear viscosity.
-  // compute and store volumetric flow rates.
-  int opswitchiv = ParseInputs::get_operator_switchiv();
-  int opswitchln = ParseInputs::get_operator_switchln();
-  bool viscl = (opswitchln % 4 != 1);
-  bool viscnl = (opswitchln % 4 != 2);
-  //if (procID() == 0) cout << opswitchln << ": viscl = " << viscl << endl;
-  //if (procID() == 0) cout << opswitchln << ": viscnl = " << viscnl << endl;
-  
+  bool viscl = true;
+  bool viscnl = true;
+
   for (int dir = 0; dir < DIM; dir++)
     {
       PR_TIME("BoxOp_Euler::viscous operator");
@@ -88,7 +78,6 @@ viscFlux(
       BoxData<T,NUMCOMPS,MEM> rhsIncr(bxface);
       if (viscl)
         {
-          // cout << "viscl = " << viscl << endl;
           State fluxtemp(bxface);
           fluxtemp.setToZero();
           // linearViscFlux = D5(a_USph, 1.0/128);
@@ -97,7 +86,6 @@ viscFlux(
                                deta_a,deta,A_matrix,ntrow,block,dir);
           BoxData<T,1,MEM> linvisccoef(bxface);
           LinearViscCoef(linvisccoef,WFace,deta,A_matrix,ntrow,block,dir);
-          // cout << procID() << ": max lin visc coef = " << linvisccoef.absMax() << endl;
           for (int comp = 0 ; comp < NUMCOMPS; comp++)
             {
               auto fluxtempcomp = slice(fluxtemp,comp);
@@ -108,7 +96,6 @@ viscFlux(
         }
       if (viscnl) 
         {
-          // cout << "viscnl = " << viscnl << endl;
           State fluxtemp(bxface);
           fluxtemp.setToZero();
           NLViscFlux = D1(a_USph);
@@ -199,13 +186,7 @@ primToMappedViscFlux(
                   a_fluxout(iE) = a_deta(0)*a_fluxin(iE);  
                 },a_fluxdir,a_physFlux,a_deta);
     
-  // for (int comp = 0; comp < NUMCOMPS;comp++)
-  //   {
-  //     BoxData<T,1,MEM> advfluxcomp = slice(a_fluxdir,comp);
-  //     BoxData<T,1,MEM> advfluxprod = advfluxcomp*a_adjDdir;
-  //     //BoxData<T,1,MEM> advfluxprod = faceProduct(advfluxcomp,a_adjDdir,a_dir);
-  //     advfluxprod.copyTo(advfluxcomp);
-  //   }  
+
   // Multiply a_adjDdir with a_fluxdir using lambda to avoid creating temporaries.
   forallInPlace([ ] PROTO_LAMBDA
                 (Var<T,NUMCOMPS,MEM>& a_fluxdircomp,
@@ -276,7 +257,6 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearViscCoef(
                   double a = ce*ce + B_mag*B_mag/4.0/M_PI/rho;
                   double b = abs(B_n)*ce/sqrt(M_PI*rho);
                   double af = 0.5*(sqrt(a + b) + sqrt(a - b));
-                  double af2 = sqrt(a); // Originally I had this.
                   double A_d_mag = sqrt(a_Amatrix(0,a_d)*a_Amatrix(0,a_d) + a_Amatrix(1,a_d)*a_Amatrix(1,a_d) + a_Amatrix(2,a_d)*a_Amatrix(2,a_d));
                   
                   a_linfluxcoef(0) = (abs(w_d) + af*A_d_mag);
@@ -352,53 +332,18 @@ NonLinearViscCoef(
                                     const Var<T,1,MEM>&      a_deta0,
                                     const Var<T,1,MEM>&      a_dvolr)
                     {
-                      //a_dvolfndn(0) /= a_deta0(0)*a_dvolr(0);
-                      //a_dvolft1dt1(0) /= a_deta0(0)*a_dvolr(0);
-                      //a_dvolft2dt2(0) /= a_deta0(0)*a_dvolr(0);
                       a_divu(0) =
                       (a_dvolfndn(0) + a_dvolft1dt1(0) + a_dvolft2dt2(0))
                       /(a_deta0(0)*a_dvolr(0));
                     },dvoldn[a_dir],dvft1dtan1,dvft1dtan2,deta0,a_dVolr);
   
   int nrad = int (1.0/a_dxi[0]);
-  #if 0
-  if (procID() == 0)
-    {
-      //h5.writePatch(a_dxi[0],divu,
-      //             "divu_"+to_string(a_dir) + to_string(nrad) +
-      //             "patch_"+to_string(procID()));
-      Box bxface = a_NLViscCoef.box();
-      auto adjDrdir = slice(a_adjDr,a_dir);
-      BoxData<T,1,MEM> dummy(bxface),dummy0(bxface),dummy1(bxface),
-        dummy2(bxface),dummy3(bxface),dummy4(bxface),dummy5(bxface);
-      divu.copyTo(dummy);
-      dvoldn[a_dir].copyTo(dummy0);
-      //dvoldn[dirtan1].copyTo(dummy1);
-      //dvoldn[dirtan2].copyTo(dummy2);
-      dvft1dtan1.copyTo(dummy1);
-      dvft1dtan2.copyTo(dummy2);
-      a_dVolr.copyTo(dummy3);
-      deta0.copyTo(dummy4);
-      adjDrdir.copyTo(dummy5);
-      
-      // cout << procID() << ",max divu = " << dummy.absMax() <<
-      //", dxi[dir] = " << a_dxi[a_dir] <<
-        // ", dvolf1dtan1 = " << dummy1.absMax() <<
-        //", dvolf1dtan2 = " << dummy2.absMax() <<
-        // ", a_dVolr = " << dummy3.absMax() <<
-        //", deta0 = " << dummy4.absMax() <<
-        //", adjDrdir = " << dummy5.absMax() <<
-        //endl;
-    }
-#endif
+  
   {
     divu *= a_dxi[a_dir];
     T alpha = .3;
     T beta = .3;
     BoxData<T,1,MEM> csq = forall<T,1,MEM>(f_csq,a_W,a_A,m_gamma);
-
-    //cout << procID() << ", lambda max = "
-    //    << divu.absMax() << ", csq max = " << csq.absMax() << endl;
     BoxData<T,1,MEM> csqshiftr = alias(csq,Point::Basis(a_dir));
     BoxData<T,1,MEM> csqshiftr2 = alias(csq,Point::Basis(a_dir,2));
     BoxData<T,1,MEM> csqshiftl = alias(csq,Point::Basis(a_dir,-1));
@@ -422,13 +367,5 @@ NonLinearViscCoef(
                   },a_NLViscCoef,divu,
                   csq,csqshiftr,csqshiftl,csqshiftr2,
                   a_dxi[a_dir],alpha,beta);
-#if 0    
-    if (procID() == 0)
-    {
-      h5.writePatch(a_dxi[0],a_NLViscCoef,
-                   "divu_"+to_string(a_dir) + to_string(nrad) +
-                   "patch_"+to_string(procID()));
-    }
-#endif
   }
 }

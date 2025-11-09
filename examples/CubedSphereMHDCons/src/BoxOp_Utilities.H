@@ -451,6 +451,175 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::vdotbW(
   return vb;
 }
 
+
+template<
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
+void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::EnergyW(
+                                              BoxData<T,1,MEM>& a_ke,
+                                              BoxData<T,1,MEM>& a_me,
+                                              BoxData<T,1,MEM>& a_vb,
+                                              const State& a_WPoint, 
+                                              uint a_block,
+                                              uint a_centering) const
+{
+  PR_TIMERS("BoxOp_EulerCubedSphere::EnergyW()");
+  Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};  
+  // Compute fluxes at face centers.
+  
+  // Compute Cartesian UPoint.
+  T dxiPerp = this->dx()[1];
+  Box bx = a_WPoint.box();
+  Point high = bx.high();
+  Point low = bx.low();
+  high[0] = low[0];
+  Box bx0(low,high);
+  BoxData<T,DIM,MEM,DIM> Amat(bx);
+  T half = .5;
+  T offseta = half;
+  T offsetb = half;
+  if (a_centering == 1)
+    {
+      offseta = 0.0;
+    }
+  if (a_centering == 2)
+    {
+      offsetb = 0.0;
+    }
+  forallInPlace_p(f_Amatrix,bx0,Amat,permute[a_block],sign[a_block],
+                  dxiPerp,offseta,offsetb);
+  spreadSlice(Amat);
+
+  forallInPlace([]PROTO_LAMBDA(
+                              Var<T,1,MEM>& l_ke,
+                              Var<T,1,MEM>& l_me,
+                              Var<T,1,MEM>& l_vb,
+                              const Var<T,DIM,MEM,DIM>& a_amat,
+                              const Var<T,NUMCOMPS>& a_wpoint)
+                  {
+                    vecType velSph;
+                    vecType velCart;
+                    vecType bSph;
+                    vecType bCart;
+
+                    velSph[0] = a_wpoint(iVX);       
+                    velSph[1] = a_wpoint(iVY);
+                    velSph[2] = a_wpoint(iVZ);
+                    velCart[0] = 0.;       
+                    velCart[1] = 0.;
+                    velCart[2] = 0.;
+                
+                    bSph[0] = a_wpoint(iBX);       
+                    bSph[1] = a_wpoint(iBY);
+                    bSph[2] = a_wpoint(iBZ);
+                    bCart[0] = 0.;       
+                    bCart[1] = 0.;
+                    bCart[2] = 0.;
+                    l_ke(0) = 0.;
+                    l_me(0) = 0.;
+                    l_vb(0) = 0.;
+                    for (int dir0 = 0; dir0 < DIM; dir0++)
+                      {
+                        for (int dir1 = 0; dir1 < DIM; dir1++)
+                          {
+                            velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
+                            bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
+                          }
+                        l_ke(0) += velCart[dir0]*velCart[dir0];
+                        l_me(0) += bCart[dir0]*bCart[dir0]/8.0/M_PI;
+                        l_vb(0) += velCart[dir0]*bCart[dir0];
+                      }
+                    l_ke(0) *= a_wpoint(iRHO)*.5;
+                  },a_ke,a_me,a_vb,Amat,a_WPoint);
+}
+
+template<
+  typename T,
+  template<MemType> typename MAP,
+  MemType MEM>
+void
+BoxOp_EulerCubedSphere<T,MAP,MEM>::EnergyW(
+                                              BoxData<T,1,MEM>& a_me,
+                                              BoxData<T,1,MEM>& a_ke,
+                                              const State& a_WPoint, 
+                                              uint a_block,
+                                              uint a_centering) const
+{
+  PR_TIMERS("BoxOp_EulerCubedSphere::EnergyW()");
+  Array<Array<uint,DIM>,6>
+     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
+  Array<Array<int,DIM>,6>
+    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};  
+  // Compute fluxes at face centers.
+  
+  // Compute Cartesian UPoint.
+  T dxiPerp = this->dx()[1];
+  Box bx = a_WPoint.box();
+  Point high = bx.high();
+  Point low = bx.low();
+  high[0] = low[0];
+  Box bx0(low,high);
+  BoxData<T,DIM,MEM,DIM> Amat(bx);
+  T half = .5;
+  T offseta = half;
+  T offsetb = half;
+  if (a_centering == 1)
+    {
+      offseta = 0.0;
+    }
+  if (a_centering == 2)
+    {
+      offsetb = 0.0;
+    }
+  forallInPlace_p(f_Amatrix,bx0,Amat,permute[a_block],sign[a_block],
+                  dxiPerp,offseta,offsetb);
+  spreadSlice(Amat);
+
+  forallInPlace([]PROTO_LAMBDA(
+                              Var<T,1,MEM>& l_me,
+                              Var<T,1,MEM>& l_ke,
+                              const Var<T,DIM,MEM,DIM>& a_amat,
+                              const Var<T,NUMCOMPS>& a_wpoint)
+                  {
+                    vecType velSph;
+                    vecType velCart;
+                    vecType bSph;
+                    vecType bCart;
+
+                    velSph[0] = a_wpoint(iVX);       
+                    velSph[1] = a_wpoint(iVY);
+                    velSph[2] = a_wpoint(iVZ);
+                    velCart[0] = 0.;       
+                    velCart[1] = 0.;
+                    velCart[2] = 0.;
+                
+                    bSph[0] = a_wpoint(iBX);       
+                    bSph[1] = a_wpoint(iBY);
+                    bSph[2] = a_wpoint(iBZ);
+                    bCart[0] = 0.;       
+                    bCart[1] = 0.;
+                    bCart[2] = 0.;
+                    l_ke(0) = 0.;
+                    l_me(0) = 0.;
+                    for (int dir0 = 0; dir0 < DIM; dir0++)
+                      {
+                        for (int dir1 = 0; dir1 < DIM; dir1++)
+                          {
+                            velCart[dir0] += a_amat(dir0,dir1)*velSph[dir1];
+                            bCart[dir0] += a_amat(dir0,dir1)*bSph[dir1];
+                          }
+                        l_ke(0) += velCart[dir0]*velCart[dir0];
+                        l_me(0) += bCart[dir0]*bCart[dir0]/8.0/M_PI;
+                      }
+                    l_ke(0) *= a_wpoint(iRHO)*.5;
+                  },a_me,a_ke,Amat,a_WPoint);
+}
+
 template<
   typename T,
   template<MemType> typename MAP,

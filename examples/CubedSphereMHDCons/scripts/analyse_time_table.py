@@ -6,7 +6,7 @@ import colorsys
 
 # ---------------- CONFIG ----------------
 
-FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_45_30_CubeSphereTest.time.table"
+FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/90_DIM3_30_90_CubeSphereTest.time.table"
 THRESHOLD_PCT = 0.1   # keep nodes with >= this % of total time
 VIEW_MODE = "treemap"  # only treemap for now
 
