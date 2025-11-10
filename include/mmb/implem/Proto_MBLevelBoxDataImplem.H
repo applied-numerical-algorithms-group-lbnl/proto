@@ -338,10 +338,10 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::exchange0()
 {
     if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
-    PR_TIME("MBLevelBoxData::exchange");
+    PR_TIME("MBLevelBoxData::exchange0");
 #ifdef PR_MPI
     {
-        PR_TIME("MBLevelBoxData::exchange (MPI barrier)");
+        PR_TIME("MBLevelBoxData::exchange0 (MPI barrier)");
         barrier();
     }
 #endif
