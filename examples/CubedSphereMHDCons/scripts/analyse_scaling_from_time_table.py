@@ -8,7 +8,7 @@ import colorsys
 
 FILES = [
     "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_15_45_CubeSphereTest.time.table",
-    "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_30_20_CubeSphereTest.time.table",
+    "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_30_45_CubeSphereTest.time.table",
 ]
 NGHOST = 5  # number of ghost cells in each direction
 
@@ -306,7 +306,7 @@ def combine_two_runs(run1, run2, W1, W2, threshold_pct_ref=0.0, ref_run_index=1)
         #     ratio_W = W2 / W1
         #     if ratio_W != 1.0:
         #         p = np.log(ratio_t) / np.log(ratio_W)
-        p = W1/W2 * (t2/t1)
+        p = W1/W2 * (t2/(t1+1e-30))
         # label the exponent nicely
         p_display = p if p is not None else np.nan
 

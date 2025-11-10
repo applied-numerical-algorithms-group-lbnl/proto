@@ -6,7 +6,8 @@ import colorsys
 
 # ---------------- CONFIG ----------------
 
-FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/90_DIM3_30_90_CubeSphereTest.time.table"
+FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/180_DIM3_15_45_CubeSphereTest.time.table"
+# FILENAME = "/Users/talwindersingh/Desktop/My_Computer/Work/UAH/Current_projects/SWQU/proto/examples/CubedSphereMHDCons/exec/90_DIM3_30_90_CubeSphereTest.time.table"
 THRESHOLD_PCT = 0.1   # keep nodes with >= this % of total time
 VIEW_MODE = "treemap"  # only treemap for now
 
@@ -254,6 +255,31 @@ def build_treemap_df(records, lineage, parent_map, threshold_pct=0.0):
 # ------------- STEP 5: MAIN + PLOTTING ------------- #
 
 def main():
+
+
+    # Match timer lines and expected "strict" format (id, name, time, %, calls)
+    timer_line_re = re.compile(r'^\s*\[(\d+)\]')
+    strict_re = re.compile(
+        r'^\s*\[(\d+)\]\s+(.+?)\s+([0-9.]+)\s+([0-9.]+)%\s+(\d+)\b'
+    )
+
+    malformed_lines = []
+    with open(FILENAME, "r") as f:
+        for lineno, line in enumerate(f, start=1):
+            # Stop checking once the dashed separator appears
+            if "------------------------------" in line:
+                break
+            
+            
+            # Check only lines that look like timers
+            if timer_line_re.match(line) and not strict_re.match(line):
+                print(f"⚠️ Malformed timer line at {lineno}: {line.rstrip()}")
+                malformed_lines.append((lineno, line.rstrip()))
+    if malformed_lines:
+        print(f"\nTotal malformed timer lines found: {len(malformed_lines)}")
+        return
+                
+
     with open(FILENAME, "r") as f:
         text = f.read()
 
@@ -305,7 +331,7 @@ def main():
 
     # Hover template
     hover_tmpl = (
-        "<b>%{customdata[4]}</b><br>"            # name
+        "<b>%{label}</b><br>"            # name
         "parent: %{parent}<br>"
         "time = %{value:.6f} s<br>"
         "% of total = %{customdata[0]:.2f}%<br>"

@@ -22,4 +22,5 @@ pout.*
 myjob.o*
 myjob.e*
 *.html
+*.csv
 visitlog.py

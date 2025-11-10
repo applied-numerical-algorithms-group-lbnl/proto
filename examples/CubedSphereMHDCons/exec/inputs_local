@@ -11,7 +11,7 @@
 -strength                        100.
 -write_cadence                   100
 -slice_cadence                   200
--write_time_cadence              180000
+-write_time_cadence              1800
 -slice_time_cadence              120000
 -checkpoint_cadence              100
 -P_floor_cadence                 100
