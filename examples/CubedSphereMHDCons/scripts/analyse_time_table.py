@@ -350,9 +350,9 @@ def main():
     )
 
     #save to html (if desired)
-    # out_html = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.html"
-    # fig.write_html(out_html)
-    # print(f"Treemap plot saved to: {out_html}")
+    out_html = FILENAME + f".timer_tree.pct{THRESHOLD_PCT:.2f}.html"
+    fig.write_html(out_html)
+    print(f"Treemap plot saved to: {out_html}")
 
     fig.show()
 

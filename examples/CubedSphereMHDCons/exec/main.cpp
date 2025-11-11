@@ -54,7 +54,6 @@ int main(int argc, char *argv[])
   int levmax = 3;
   auto domain =
     CubedSphereShell::Domain(domainSize, thickness, radialDir);
-  // #if 0 //short test
   if (convTestType == 0) levmax = 1;
   if (convTestType == 4) levmax = 1;
   for (int lev=0; lev<levmax; lev++)
@@ -73,7 +72,7 @@ int main(int argc, char *argv[])
         {
           count++;
         }
-      std::cout << "proc_id: " << procID() << ";      num boxes: " << count << std::endl;
+      pout(0) << "proc_id: " << procID() << ";      num boxes: " << count << std::endl;
 
       // initialize data and map
       auto map = CubedSphereShell::Map(layout, OP::ghost());
@@ -90,15 +89,10 @@ int main(int argc, char *argv[])
       int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
       int thetaCoord = (rCoord + 1) % 3;
       int phiCoord = (rCoord + 2) % 3;
-      //Point ghst = Point::Ones(NGHOST);
-      //MBLevelBoxData<double, 8, HOST> dstData(layout, ghst);
+
       MBLevelBoxData<double, 8, HOST> dstData(layout, Point::Basis(rCoord) + NGHOST*Point::Basis(thetaCoord) + NGHOST*Point::Basis(phiCoord));
       if (init_condition_type == 3) BC_global.BoxData_to_BC(dstData, map, time);
 
-      // Point ghostForInterp = OP::ghost() + Point::Ones();
-      //MBInterpOp iop = CubedSphereShell::InterpOpOld<HOST>(JU.layout(),
-      //                                                   ghostForInterp,4);
-      //Point offset = Point::Basis(1,1) + Point::Basis(2,1);
       MBInterpOp iop;
       iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost() ,4);
 
@@ -134,7 +128,6 @@ int main(int argc, char *argv[])
             eulerOp[dit].dtInv(dtinv,WPoint_i);
             eulerOp[dit].primToCons(JUTemp, WPoint_i, dVolrLev[dit], gamma, dx[2], block);
             WPoint_i.copyTo(Wout[dit]);
-            // if (procID()==5) h5.writePatch(1,Wout[dit],"W_CME0");
             JU_i.setVal(0.);
             JUTemp.copyTo(JU_i, layout[dit]);
           }
@@ -143,7 +136,7 @@ int main(int argc, char *argv[])
           time = h5.time();
 		      dt = h5.dt();   
           restart_step = h5.iter();
-          if (procID() == 0) cout << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
+          pout(0) << "Restarting from step " << restart_step << " at time " << time << " with dt " << dt << endl;
         }
 
       OP::Insert_CME(JU,dVolrLev,iop,layout,time,dt,gamma);
@@ -172,22 +165,6 @@ int main(int argc, char *argv[])
     int write_trigger_count_temp = -1;
     int slice_trigger_count_temp = -1;
 
-#if 0 // Begin debug comment.
-    auto initialCons = CubedSphereShell::conservationSum(JU);
-    for (int comp = 0; comp< 8; comp++)
-      {
-        if (procID()==0)
-          cout << "initial conserved quantity, component " << comp << " = " << initialCons[comp] << endl;
-      }
-    double mass = initialCons[0];
-    double energy =  initialCons[4];
-    double momentum = sqrt(energy*mass);
-    int discreteVol = domainSize*domainSize*thickness*6;
-    if (procID() == 0)
-      {
-        cout << "mass = " << mass/discreteVol << ", energy = " << energy/discreteVol << ", momentum scale = " << momentum/discreteVol << endl;
-      }
-#endif // End debug comment.
     if (lev == 0)
       {
         double dtcfl1 = OP::dtCFL(JU,iop,dVolrLev);
@@ -209,42 +186,7 @@ int main(int argc, char *argv[])
           rk4.advance(JU, dVolrLev, dt, time, temporal_order);
           time += dt;
         }
-#if 0
-      else
-        {
-          PROTO_ASSERT(max_iter == 1,"trying to take more then one time step in applyOp test.");
-          Array<double,8> opConsSums = OP::applyOp(JU,iop,dVolrLev);
-          HDF5Handler h5;
-          h5.writeMBLevel({}, map, JU, "applyOpTest" + to_string(lev));
-          if (procID() == 0)
-            {
-              for (int comp = 0; comp < 8 ; comp++)
-                {
-                  //opConsSums[comp] *= dt;
-                  if (comp == 0)
-                    {
-                      cout << "component:" << comp <<
-                        ", scaled conserved mass = " <<
-                        opConsSums[comp]/ mass  <<
-                        endl;
-                    }
-                  else if (comp == 4)
-                    {
-                      cout << "component:" << comp <<
-                        ", scaled conserved energy = " <<
-                        opConsSums[comp] / energy <<
-                        endl;
-                    }
-                  else
-                    {
-                      double norm = sqrt(energy/mass)*mass;
-                      cout << "component:" << comp <<
-                        ", scaled conserved quantity = " << opConsSums[comp] / norm <<  endl;
-                    }
-                }
-            }
-        }
-#endif
+
       int write_time_cadence_new = floor(time/write_time_cadence);
       int slice_time_cadence_new = floor(time/slice_time_cadence);
       int write_trigger_count_now = floor(time/write_time_cadence);
@@ -256,51 +198,6 @@ int main(int argc, char *argv[])
           Write_W(JU, eulerOp, iop, iter, time, dt, write_data, slice_data);
           if (write_data) write_trigger_count_temp = write_trigger_count_now;
           if (slice_data) slice_trigger_count_temp = slice_trigger_count_now;
-          // Check conservation.
-#if 0
-          if (convTestType < 3)
-            {
-              Array<double,8> consRadial = rk4.getCons<8>();
-              Array<double,8> consSum =
-                CubedSphereShell::conservationSum(JU);        
-              { 
-                for (int comp = 0; comp < 8; comp++)
-                  { 
-                    consSum[comp] -= initialCons[comp];           
-                  }
-              }
-              if (procID() == 0)
-                {
-                  double one = 1.0;
-                  if (convTestType > 2) one = 0.;
-                  for (int comp = 0; comp < 8; comp++)
-                    {
-                      if (comp == 0)
-                        {
-                          cout << "component:" << comp <<
-                            ", change in scaled conserved mass = " <<
-                            (consSum[comp] - consRadial[comp])/mass  <<
-                            endl;
-                        }
-                      else if (comp == 4)
-                        {
-                          cout << "component:" << comp <<
-                            ", change in scaled conserved energy = " <<
-                            (consSum[comp] - consRadial[comp]) /energy <<
-                            endl;
-                        }
-                      else
-                        {
-                          double norm = sqrt(energy/mass)*mass;
-                          cout << "component:" << comp <<
-                            ", change in scaled conserved quantity = " <<
-                            (consSum[comp] - consRadial[comp]) / norm <<
-                            endl;
-                        }
-                    }
-                }
-            }
-#endif
         }
       // Checkpointing.
       if ((iter % checkpoint_cadence == 0) || (iter == max_iter))
@@ -317,27 +214,30 @@ int main(int argc, char *argv[])
           Probe(JU, map, eulerOp, iop, iter, time, dx, give_space_in_probe_file, probe_coord, probe_filename);
         }
         give_space_in_probe_file = false;
-        probe_trigger_count_temp = probe_trigger_count_now;   
-        if (procID() == 0) cout << "Probed at iteration " << iter << endl;  
+        probe_trigger_count_temp = probe_trigger_count_now;
+        pout(0) << "Probed at iteration " << iter << endl;
       }
       
       auto end = chrono::steady_clock::now();
-      if (procID() == 0) cout << "iter = " << iter << " dt = " << dt << " time = " << time  << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms" << endl;
+      pout(0) << "iter = " << iter << " dt = " << dt << " time = " << time  << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms" << endl;
     }
 
       if ((convTestType > 0) && (convTestType != 4)) {
-      U_conv_test[lev].define(layout, {Point::Zeros(),Point::Zeros(),Point::Zeros(),Point::Zeros()});
+        Array<Point, DIM+1> zeroGhost;
+          for (int d = 0; d < DIM + 1; ++d)
+            {
+              zeroGhost[d] = Point::Zeros();
+            }
+      U_conv_test[lev].define(layout, zeroGhost);
       for (auto dit : layout)
       {
         JU[dit].copyTo(U_conv_test[lev][dit]);
       }
       h5.writeMBLevel({}, map, U_conv_test[lev], "U_conv_test_" + to_string(lev));
-      // int maxRadSize = 64;
       Point refRatio = 2*Point::Ones();
       if (radial_refinement)
         {
           refRatio = 2*Point::Ones() - Point::Basis(1) - Point::Basis(2);
-          // maxRadSize = 1024;
           domainSize *= refRatio[1];
           boxSize_nonrad *= refRatio[1];
         } else {
@@ -349,23 +249,16 @@ int main(int argc, char *argv[])
       boxSize_rad *= 2;
       time = 0.;
       domain = domain.refine(refRatio); 
-      // if (boxSize_nonrad > maxRadSize)
-      //   {
-      //     boxSize_nonrad = maxRadSize;
-      //     if (procID() == 0) cout << "radial Box Size = " << boxSize_nonrad << endl;
-      //   }
       if (convTestType == 2){
         dt /= 2;
         max_iter *= 2;
       }
-      if (procID() == 0 ) cout << "thickness = " << thickness/2 << " is done" << endl;
+      pout(0) << "thickness = " << thickness/2 << " is done" << endl;
     }
   }
 
     if((convTestType > 0) && (convTestType != 4))
       {
-        //Here, we perform the error calculations on a single patch.
-        // if(procID() == 0)
         Array<Array<double,8>,2> errmaxglobal;
         for(int lev=0; lev<2; lev++)
           {
@@ -417,21 +310,18 @@ int main(int argc, char *argv[])
             for (int comp = 0; comp < 8; comp++)
               {
                 errmaxglobal[lev][comp] = errmax[comp].fetch();
-                if (procID() == 0)
-                  {
-                    std::cout << "Lev = " << lev << ", component = "
-                              << comp <<", error = " << errmaxglobal[lev][comp] << std::endl;
-                  }
+
+               pout(0) << "Lev = " << lev << ", component = "
+                        << comp <<", error = " << errmaxglobal[lev][comp] << std::endl;
+
               }
           }
         for (int comp = 0; comp < 8 ; comp++)
           {
             double rate = log(abs(errmaxglobal[0][comp]/errmaxglobal[1][comp]))/log(2.0);
-            if (procID() == 0) std::cout << "order of accuracy for var " << comp << " = " << rate << std::endl;
+            pout(0) << "order of accuracy for var " << comp << " = " << rate << std::endl;
           }    
       }
-// #endif // end short test
-//#endif // end debug comment.
   PR_TIMER_REPORT();
 #ifdef PR_MPI
   MPI_Finalize();

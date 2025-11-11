@@ -354,7 +354,7 @@ Insert_CME(MBLevelBoxData<T, NUMCOMPS, MEM> &a_JU,
 {
     PR_TIME("BoxOp_EulerCubedSphere::Insert_CME()");
     if (ParseInputs::get_CME_type() == 1){
-        if (procID() == 0) cout << "Inserting CME" << endl;
+        pout(0) << "Inserting CME" << endl;
         HDF5Handler h5;
         auto map = CubedSphereShell::Map(a_JU.layout(), ghost());
         auto eulerOp = CubedSphereShell::Operator<BoxOp_EulerCubedSphere, double, HOST>(map);

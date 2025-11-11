@@ -463,7 +463,12 @@ def main():
     )
 
     #Save to html (if desired)
-    out_html = "scaling_treemap.html"
+    file1_name = FILES[0].split("/")[-1]
+    file2_name = FILES[1].split("/")[-1]
+    #path before filename 1
+    path1 = FILES[0][:FILES[0].rfind("/")]
+
+    out_html = f"{path1}/scaling_treemap_{file1_name}_vs_{file2_name}.html"
     fig.write_html(out_html)
     print(f"Scaling treemap plot saved to: {out_html}")
 

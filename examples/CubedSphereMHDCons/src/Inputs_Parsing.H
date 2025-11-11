@@ -3,10 +3,11 @@
 #include "Proto.H"
 #include "InputParser.H"
 #include <algorithm> // For std::remove
-#include <iostream>  // For std::cout, etc.
+#include <iostream>  // For std::pout(0), etc.
 #include <iomanip>   // For std::setw, etc.
 #include <vector>
 #include <sstream>
+#include "MHD_pout.H"
 
 using namespace Proto;
 using namespace std;
@@ -244,72 +245,70 @@ public:
         probe_filenames.resize((size_t)std::max(0, num_probes));
         probe_coords.resize((size_t)std::max(0, num_probes));
 
-        int pid = procID();
-        if (pid == 0) {
-            cout << "Running with the following inputs (these can be changed in the file 'inputs')" << endl;
-            cout << setw(75) << setfill('-') << "-" << endl;
-            cout << "convTestType: " << convTestType << endl;
-            cout << "init_condition_type: " << init_condition_type << endl;
-            cout << "domainSize: " << domainSize << endl;
-            cout << "thickness: " << thickness << endl;
-            cout << "boxSize_nonrad: " << boxSize_nonrad << endl;
-            cout << "boxSize_rad: " << boxSize_rad << endl;
-            cout << "max_iter: " << max_iter << endl;
-            cout << "CFL: " << CFL << endl;
-            cout << "limiter: " << limiter << endl;
-            cout << "strength: " << strength << endl;
-            cout << "write_cadence: " << write_cadence << endl;
-            cout << "slice_cadence: " << slice_cadence << endl;
-            cout << "write_time_cadence: " << write_time_cadence << endl;
-            cout << "slice_time_cadence: " << slice_time_cadence << endl;
-            cout << "checkpoint_cadence: " << checkpoint_cadence << endl;
-            cout << "P_floor_cadence: " << P_floor_cadence << endl;
-            cout << "data_file_prefix: " << data_file_prefix << endl;
-            cout << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
-            cout << "Slices: " << slices_raw << endl;
-            cout << "scale_data_with_r: " << scale_data_with_r << endl;
-            cout << "max_checkpoint_files: " << max_checkpoint_files << endl;
-            cout << "restart_file: " << restart_file << endl;
-            cout << "gamma: " << gamma << endl;
-            cout << "temporal_order: " << temporal_order << endl;
-            cout << "divergence_cleaning: " << divergence_cleaning << endl;
-            cout << "linear_viscosity: " << linear_viscosity << endl;
-            cout << "boundary_reflux: " << boundary_reflux << endl;
-            cout << "radial_refinement: " << radial_refinement << endl;
-            cout << "operator_switchiv: " << operator_switchiv << endl;
-            cout << "operator_switchln: " << operator_switchln << endl;
-            cout << "MBInterp_define: " << MBInterp_define << endl;
-            cout << "BC_file: " << BC_file << endl;
-            cout << "Probe_cadence: " << Probe_cadence << endl;
-            cout << "num_probes: " << num_probes << endl; 
-            for (int i = 0; i < num_probes; ++i) {        
-                cout << "  probe" << i << ".filename: " << probe_filenames[static_cast<size_t>(i)] << endl;
-                cout << "  probe" << i << ".coords:   " << probe_coords[static_cast<size_t>(i)]   << endl;
-            }
-            cout << "Probe_cadence: " << Probe_cadence << endl;
-            cout << "BC_start_time: " << BC_start_time << endl;
-            cout << "BC_cadence: " << BC_cadence << endl;
-            cout << "BC_frame_rotate: " << BC_frame_rotate << endl;
-            cout << "BC_force_single_frame: " << BC_force_single_frame << endl;
-            cout << "CME_type: " << CME_type << endl;
-            cout << "CME_Enter_Time: " << CME_Enter_Time << endl;
-            cout << "CME_r1: " << CME_r1 << endl;
-            cout << "CME_r0: " << CME_r0 << endl;
-            cout << "CME_halfangle: " << CME_halfangle << endl;
-            cout << "CME_pol_flux_control: " << CME_pol_flux_control << endl;
-            cout << "CME_FRiED_n: " << CME_FRiED_n << endl;
-            cout << "CME_lat: " << CME_lat << endl;
-            cout << "CME_lon: " << CME_lon << endl;
-            cout << "CME_tilt: " << CME_tilt << endl;
-            cout << "CME_Vandas_R0: " << CME_Vandas_R0 << endl;
-            cout << "CME_apex_speed: " << CME_apex_speed << endl;
-            cout << "CME_energy_control: " << CME_energy_control << endl;
-            cout << "CME_density: " << CME_density << endl;
-            cout << "CME_helicity_sign: " << CME_helicity_sign << endl;
-            cout << "CME_a1: " << CME_a1 << endl;
-            cout << "CME_shift: " << CME_shift << endl;
-            cout << setw(75) << setfill('-') << "-" << endl;
+        pout(0) << "Running with the following inputs (these can be changed in the file 'inputs')" << endl;
+        pout(0) << setw(75) << setfill('-') << "-" << endl;
+        pout(0) << "convTestType: " << convTestType << endl;
+        pout(0) << "init_condition_type: " << init_condition_type << endl;
+        pout(0) << "domainSize: " << domainSize << endl;
+        pout(0) << "thickness: " << thickness << endl;
+        pout(0) << "boxSize_nonrad: " << boxSize_nonrad << endl;
+        pout(0) << "boxSize_rad: " << boxSize_rad << endl;
+        pout(0) << "max_iter: " << max_iter << endl;
+        pout(0) << "CFL: " << CFL << endl;
+        pout(0) << "limiter: " << limiter << endl;
+        pout(0) << "strength: " << strength << endl;
+        pout(0) << "write_cadence: " << write_cadence << endl;
+        pout(0) << "slice_cadence: " << slice_cadence << endl;
+        pout(0) << "write_time_cadence: " << write_time_cadence << endl;
+        pout(0) << "slice_time_cadence: " << slice_time_cadence << endl;
+        pout(0) << "checkpoint_cadence: " << checkpoint_cadence << endl;
+        pout(0) << "P_floor_cadence: " << P_floor_cadence << endl;
+        pout(0) << "data_file_prefix: " << data_file_prefix << endl;
+        pout(0) << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+        pout(0) << "Slices: " << slices_raw << endl;
+        pout(0) << "scale_data_with_r: " << scale_data_with_r << endl;
+        pout(0) << "max_checkpoint_files: " << max_checkpoint_files << endl;
+        pout(0) << "restart_file: " << restart_file << endl;
+        pout(0) << "gamma: " << gamma << endl;
+        pout(0) << "temporal_order: " << temporal_order << endl;
+        pout(0) << "divergence_cleaning: " << divergence_cleaning << endl;
+        pout(0) << "linear_viscosity: " << linear_viscosity << endl;
+        pout(0) << "boundary_reflux: " << boundary_reflux << endl;
+        pout(0) << "radial_refinement: " << radial_refinement << endl;
+        pout(0) << "operator_switchiv: " << operator_switchiv << endl;
+        pout(0) << "operator_switchln: " << operator_switchln << endl;
+        pout(0) << "MBInterp_define: " << MBInterp_define << endl;
+        pout(0) << "BC_file: " << BC_file << endl;
+        pout(0) << "Probe_cadence: " << Probe_cadence << endl;
+        pout(0) << "num_probes: " << num_probes << endl; 
+        for (int i = 0; i < num_probes; ++i) {        
+            pout(0) << "  probe" << i << ".filename: " << probe_filenames[static_cast<size_t>(i)] << endl;
+            pout(0) << "  probe" << i << ".coords:   " << probe_coords[static_cast<size_t>(i)]   << endl;
         }
+        pout(0) << "Probe_cadence: " << Probe_cadence << endl;
+        pout(0) << "BC_start_time: " << BC_start_time << endl;
+        pout(0) << "BC_cadence: " << BC_cadence << endl;
+        pout(0) << "BC_frame_rotate: " << BC_frame_rotate << endl;
+        pout(0) << "BC_force_single_frame: " << BC_force_single_frame << endl;
+        pout(0) << "CME_type: " << CME_type << endl;
+        pout(0) << "CME_Enter_Time: " << CME_Enter_Time << endl;
+        pout(0) << "CME_r1: " << CME_r1 << endl;
+        pout(0) << "CME_r0: " << CME_r0 << endl;
+        pout(0) << "CME_halfangle: " << CME_halfangle << endl;
+        pout(0) << "CME_pol_flux_control: " << CME_pol_flux_control << endl;
+        pout(0) << "CME_FRiED_n: " << CME_FRiED_n << endl;
+        pout(0) << "CME_lat: " << CME_lat << endl;
+        pout(0) << "CME_lon: " << CME_lon << endl;
+        pout(0) << "CME_tilt: " << CME_tilt << endl;
+        pout(0) << "CME_Vandas_R0: " << CME_Vandas_R0 << endl;
+        pout(0) << "CME_apex_speed: " << CME_apex_speed << endl;
+        pout(0) << "CME_energy_control: " << CME_energy_control << endl;
+        pout(0) << "CME_density: " << CME_density << endl;
+        pout(0) << "CME_helicity_sign: " << CME_helicity_sign << endl;
+        pout(0) << "CME_a1: " << CME_a1 << endl;
+        pout(0) << "CME_shift: " << CME_shift << endl;
+        pout(0) << setw(75) << setfill('-') << "-" << endl;
+        
     }
 
     // Utility function to remove spaces from a string

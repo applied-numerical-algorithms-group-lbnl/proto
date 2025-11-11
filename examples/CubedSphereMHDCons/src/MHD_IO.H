@@ -1010,7 +1010,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   if (write_data){
     std::string output_file = ParseInputs::get_data_file_prefix() + "." + std::to_string(iter); 
     h5.writeMBLevel({"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, map, W_sph_out, output_file);
-    if (procID() == 0) cout << "Data file written at iteration " << iter << endl;
+    pout(0) << "Data file written at iteration " << iter << endl;
     // Print this for more detailed output
     // h5.writeMBLevel({"density", "VxPerp", "VyPerp", "VzPerp", "P", "BxPerp", "ByPerp", "BzPerp","Vr","Br"}, map, Wout, "W_" + to_string(iter));
   }
@@ -1033,7 +1033,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
       std::string tecplot_spherical_slice_file = ParseInputs::get_data_file_prefix() + ".r." + std::to_string(iter) + ".dat";
       writeTecplotSlice_spherical(map, W_sph_out, {"density", "Vr", "Vt", "Vp", "P", "Br", "Bt", "Bp"}, tecplot_spherical_slice_file, physical_time, time, iter, /*radius=*/1.5e13); 
     }
-    if (procID() == 0) cout << "Tecplot slice files written at iteration " << iter << endl;                                     
+    pout(0) << "Tecplot slice files written at iteration " << iter << endl;                                     
   }
   
 }
@@ -1051,7 +1051,7 @@ void Write_W(MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
   h5.setTimestep(dt);
   h5.setIter(iter);
   h5.writeMBLevel(a_JU, check_file_name);
-  if (procID() == 0) cout << "Checkpoint file written at iteration " << iter << endl;
+  pout(0) << "Checkpoint file written at iteration " << iter << endl;
   int checkpoint_cadence = ParseInputs::get_checkpoint_cadence();
   int iter_to_delete = iter - (checkpoint_cadence*ParseInputs::get_max_checkpoint_files());
   if (iter_to_delete > restart_step)

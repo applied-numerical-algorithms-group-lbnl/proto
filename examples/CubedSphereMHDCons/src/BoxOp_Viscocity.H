@@ -103,7 +103,6 @@ viscFlux(
                                deta_a,deta,A_matrix,ntrow,block,dir);
           BoxData<T,1,MEM> nlvisccoef(bxface);
           NonLinearViscCoef(nlvisccoef,W,adjDr,A_matrix,ntrow,dVolr,deta,dxi,block,dir);
-          // if (procID() == 0) cout << "dir =" << dir << ", max nlvisc coef = " << nlvisccoef.absMax() << endl;
           for (int comp = 0 ; comp < NUMCOMPS; comp++)
             {
               auto fluxtempcomp = slice(fluxtemp,comp);

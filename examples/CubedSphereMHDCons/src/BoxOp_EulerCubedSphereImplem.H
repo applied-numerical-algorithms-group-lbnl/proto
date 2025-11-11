@@ -693,7 +693,7 @@ BoxOp_EulerCubedSphere<T,MAP,MEM>::
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
     preStageLevel(JUTemp, rhs, a_dVolrLev, a_iop, blockreg, consSum,
                   time,dt, weight, 0);
-  if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;  
+  pout(0) << opswitchiv << ": flagi = " << flagi << endl;  
   if (flagi) 
   BoxOp_EulerCubedSphere<T,MAP,MEM>::
     StageLevel(rhs, JUTemp, blockreg, consSum,

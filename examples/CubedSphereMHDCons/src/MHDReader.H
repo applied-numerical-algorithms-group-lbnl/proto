@@ -26,7 +26,7 @@ public:
 		int thetaCoord = (rCoord + 1) % 3;
 		int phiCoord   = (rCoord + 2) % 3;
 
-		if (procID() == 0) cout << "Reading BC data from file: " << a_filename << endl;
+		pout(0) << "Reading BC data from file: " << a_filename << endl;
 
 		// Geometry can be read by all (small)
 		readGeom(dtheta, a_filename, /*parallel_open=*/true);
@@ -79,8 +79,9 @@ public:
 				BC_data[i].copyTo(BC_data_extended[i], BT, Point::Basis(phiCoord) * (BT.high()[phiCoord] + 1));
 				BC_data[i].copyTo(BC_data_extended[i]);
 			}
-			cout << "Geometric + BC frames prepared on rank 0." << endl;
+			
 		}
+		pout(0) << "Geometric + BC frames prepared on rank 0." << endl;
 		barrier();
 		// All ranks keep these shapes for later
 		Box_BC = BT;
@@ -201,8 +202,8 @@ public:
 					PROTO_ASSERT(frameIdx >= 0 && frameIdx < (int)BC_data_extended.size(),
 						"MHDReader::BoxData_to_BC | Requested frame %i out of range.", frameIdx);
 					BC_data_extended[frameIdx].copyTo(buffer);
-					cout << "Broadcasting BC frame " << frameIdx << " to all ranks." << endl;
 				}
+				pout(0) << "Broadcasting BC frame " << frameIdx << " to all ranks." << endl;
 				bcast_boxdata(buffer);
 				cachedIdx = frameIdx;
 			}
