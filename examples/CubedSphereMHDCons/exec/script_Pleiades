@@ -1,42 +1,24 @@
 #PBS -S /bin/csh
 #PBS -N Ron
 
-##PBS -l select=60:ncpus=24:mpiprocs=24:model=has
-##PBS -l select=72:ncpus=20:mpiprocs=20:model=ivy
-##PBS -l select=43:ncpus=12:mpiprocs=12:model=wes
-##PBS -l select=64:ncpus=8:mpiprocs=8:model=neh
-##PBS -l select=64:ncpus=8:mpiprocs=8:model=har
-##PBS -l select=50:ncpus=16:mpiprocs=16:model=san
-#PBS -l select=1:ncpus=6:mpiprocs=6:model=sky_ele
+#PBS -l select=22:ncpus=40:mpiprocs=40:model=sky_ele
 
-#PBS -l walltime=02:00:00
-#PBS -j oe
+#PBS -l walltime=01:00:00
 #PBS -W group_list=s3048
 #PBS -m n
 #PBS -r n
 
-# Set up separate output and error files
-# The %j will be replaced by the job ID.
-#PBS -o job.o%j
-#PBS -e job.e%j
-
-# Currently, there is no default compiler and MPI library set.
-# You should load in the version you want.
-# Currently, MVAPICH or SGI MPT are available in 64-bit only,
-# you should use a 64-bit version of the compiler.
+# output control:
+# merge stderr into stdout:
+#PBS -j oe
+#PBS -k oe
 
 module load comp-intel/2020.0.166
 module load mpi-hpe/mpt
 module load hdf5/1.8.18_mpt
 
-# By default, PBS executes your job from your home directory.
-# However, you can use the environment variable
-# PBS_O_WORKDIR to change to the directory where
-# you submitted your job.
-
 cd $PBS_O_WORKDIR
 
-# OpenBLAS runtime (prepend, don't replace)
 setenv OPENBLAS_ROOT "/home6/tsingh4/opt/openblas"
 if ( $?LD_LIBRARY_PATH ) then
   setenv LD_LIBRARY_PATH "${OPENBLAS_ROOT}/lib:${LD_LIBRARY_PATH}"
@@ -46,14 +28,4 @@ endif
 
 echo $LD_LIBRARY_PATH
 
-# use of dplace to pin processes to processors may improve performance
-# Here you request to pin processes to processors 2, 3, 6, 7 of each node.
-
-# The resource request of select=64 and mpiprocs=4 implies
-# that you want to have 256 MPI processes in total.
-# If this is correct, you can omit the -np 256 for mpiexec
-# that you might have used before.
-
-echo "Calling mpiexec ..."
-
-mpiexec -np 6 /nobackup/tsingh4/proto/examples/CubedSphereEulerCons_RK4/exec_Convergence/cubedSphereTest.exe inputs
+mpiexec -np 864 /nobackup/tsingh4/proto/examples/CubedSphereMHDCons/exec/cubedSphereTest.exe inputs_local
