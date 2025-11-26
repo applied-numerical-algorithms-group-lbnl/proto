@@ -119,10 +119,7 @@ advance(
     m_delta.setVal(0.);
     m_blockreg.clear();
     
-    //int opswitchiv = ParseInputs::get_operator_switchiv();
-    //bool flagi = (opswitchiv != 1);
     bool flagi = true; 
-    //if (procID() == 0) cout << opswitchiv << ": flagi = " << flagi << endl;
     
     if (a_order == 1)
     {
@@ -131,7 +128,7 @@ advance(
       kstage = 0;
         {
           OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
-                        a_time, a_dt, weight, kstage);
+                        a_time, a_dt, weight, kstage, true);
           m_delta.increment(m_k, weight*a_dt);
           if (flagi)
             {
@@ -148,9 +145,15 @@ advance(
         kstage = 0;
         T weight = sixth;
         
+        // Taking the Euler step for artificial viscosity
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
-                          a_time, a_dt, weight, kstage);
-        m_delta.increment(m_k, a_dt);
+                          a_time, a_dt, weight, kstage, true);
+        a_state.increment(m_k, a_dt);
+
+        // Now doing the RK4 steps
+        a_state.copyTo(m_U0);
+        OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
+                          a_time, a_dt, weight, kstage, false);
         if (flagi)
           {
             OP::StageLevel
@@ -168,7 +171,7 @@ advance(
         weight = third;
         OP::preStageLevel
           (m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
-           a_time+0.5*a_dt, a_dt, weight, kstage);
+           a_time+0.5*a_dt, a_dt, weight, kstage, false);
         if (flagi)
           {
             OP::StageLevel
@@ -185,7 +188,7 @@ advance(
         kstage = 2;
         weight = third;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp,m_blockreg, m_consSum,
-                          a_time+0.5*a_dt,a_dt, weight, kstage);
+                          a_time+0.5*a_dt,a_dt, weight, kstage, false);
         if (flagi)
           {
             OP::StageLevel
@@ -202,7 +205,7 @@ advance(
         kstage = 3;
         weight = sixth;
         OP::preStageLevel(m_U0, m_k, a_dVolrLev, m_interp, m_blockreg, m_consSum,
-                          a_time+a_dt,a_dt, weight, kstage);
+                          a_time+a_dt,a_dt, weight, kstage, false);
         if (flagi)
           {
             OP::StageLevel
@@ -226,15 +229,6 @@ advance(
     }
     a_state.increment(m_delta, 1.0);
     m_counter++;
-    // auto layout = m_delta.layout();
-    // LevelStateData bregtest(layout,Point::Zeros());
-    // bregtest.setVal(0.);
-    // m_blockreg.reflux(bregtest);
-    // auto map = CubedSphereShell::Map(layout, OP::ghost());
-    //  HDF5Handler h5;
-    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta, "delta"+to_string(m_counter));
-    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "P", "Bx", "By", "Bz"}, map,m_delta_by_J, "delta_by_J"+to_string(m_counter));
-    // h5.writeMBLevel({"density", "Vx", "Vy", "Vz", "E", "Bx", "By", "Bz"}, map,bregtest, "bregtest"+to_string(m_counter));
 }
 } //end Proto namespace
 
