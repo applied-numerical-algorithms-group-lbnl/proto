@@ -108,7 +108,10 @@ TEST(HDF5, ReadWriteMBLevel)
     MBDisjointBoxLayout layout(domain, patches, boxSizes);
     MBLevelBoxData<double, DIM, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
-    h5.writeMBLevel(data, "TEST_WRITE_MB_LEVEL");
+    
+    // initialize map
+    MBLevelMap<MBMap_XPointRigid<numBlocks,HOST>, HOST> map = XPoint<numBlocks>::Map(layout, Point::Ones());
+    h5.writeMBLevel(map, data, "TEST_WRITE_MB_LEVEL");
     
     MBDisjointBoxLayout newLayout;
     h5.readMBLayout(newLayout, domain.graphPtr(), "TEST_WRITE_MB_LEVEL");

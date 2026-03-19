@@ -15,7 +15,7 @@ Proto requires very little effort to include in an external project. Proto consi
  * PR_MPI - If defined, MPI code will be toggled on. Compatible with either of the following GPU backend options
  * PROTO_CUDA - If defined, the cuda GPU compatible backend will be toggled on. Not compatible with PROTO_HIP
  * PROTO_HIP - If defined, the HIP GPU compatible backend will be toggled on. Not compatible with PROTO_CUDA
- * PR_HDF5 - If defined, HDF5 I/O tools will be included. 
+ * PR_HDF5 - If defined, HDF5 I/O tools will be included.  (requires HDF5_ROOT to be set)
  * PR_AMR - If defined, adaptive mesh refinement tools will be included
  * PR_MMB - If defined, mapped multiblock tools will be included. Requires PR_OPS
  * PR_OPS - If defined, built in linear algebra tools will be included. Requires LAPACK.
