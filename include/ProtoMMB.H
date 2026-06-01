@@ -38,6 +38,7 @@
 #include "utils/MBMap_CubedSphereShell.H"
 
 // Utils
+#include "utils/Proto_MBLevelRK3.H"
 #include "utils/Proto_MBLevelRK4.H"
 #include "utils/Proto_MBMultigrid.H"
 #ifdef PR_AMR

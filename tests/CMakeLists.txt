@@ -128,6 +128,10 @@ endif()
             DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME MBLevelRK4Tests COMMAND MBLevelRK4Tests)
+        blt_add_executable(NAME MBLevelRK3Tests SOURCES MBLevelRK3Tests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelRK3Tests COMMAND MBLevelRK3Tests)
         # blt_add_executable(NAME MBMultigridTests SOURCES MBMultigridTests.cpp
         #     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
         #     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
