@@ -69,10 +69,13 @@ void DistributedSet<DATA>::exchange()
     }
 
     // WRITE TO SEND BUFFER
+    // Standard C++ does not define arithmetic on void*. Use a char pointer
+    // because writeIndex is a byte offset into the allocation.
+    auto* sendBufferBytes = static_cast<char*>(m_sendBuffer);
     int writeIndex = 0;
     for (auto item : m_localBuffer)
     {
-        proto_memcpy(&item, m_sendBuffer + writeIndex, sizeof(DATA));
+        proto_memcpy(&item, sendBufferBytes + writeIndex, sizeof(DATA));
         writeIndex += sizeof(DATA);
     }
 
@@ -98,11 +101,14 @@ void DistributedSet<DATA>::exchange()
                    m_recvBuffer, m_localBufferSizesInBytes, m_bufferOffsetsInBytes, MPI_BYTE, MPI_COMM_WORLD);
 
     // READ DATA FROM BUFFER
+    // Use a byte-addressable pointer for the same reason. This pointer is const
+    // because the receive buffer is the source of each copy below.
+    const auto* recvBufferBytes = static_cast<const char*>(m_recvBuffer);
     int readIndex = 0;
     for (int readIndex = 0; readIndex < globalBufferSizeInBytes; readIndex += sizeof(DATA))
     {
         DATA item;
-        proto_memcpy(m_recvBuffer + readIndex, &item, sizeof(DATA));
+        proto_memcpy(recvBufferBytes + readIndex, &item, sizeof(DATA));
         m_globalSet.insert(item);
     }
 #endif

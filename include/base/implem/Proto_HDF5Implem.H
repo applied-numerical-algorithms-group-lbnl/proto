@@ -124,9 +124,11 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     // VALIDATION
     PROTO_ASSERT(a_data.layout().compatible(layout),
         "HDF5Handler::readLevel | Error: input data has incompatible layout");
+    // PROTO_ASSERT forwards these values to fprintf. The %s conversion requires
+    // C-string pointers; passing std::string objects through varargs is invalid.
     PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
         "HDF5Handler::readLevel | Error: input data has incorrect box size. Input: %s | Read: %s",
-        a_data.layout().boxSize().str(), boxSize.str());
+        a_data.layout().boxSize().str().c_str(), boxSize.str().c_str());
     PROTO_ASSERT(a_data.layout().domain().box() == domainBox,
         "HDF5Handler::readLevel | Error: input data has incorrect domain box. ");
     PROTO_ASSERT(a_data.ghost() == ghost,
