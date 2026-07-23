@@ -72,7 +72,7 @@ void DistributedSet<DATA>::exchange()
     int writeIndex = 0;
     for (auto item : m_localBuffer)
     {
-        proto_memcpy(&item, m_sendBuffer + writeIndex, sizeof(DATA));
+      proto_memcpy(&item, (char *) m_sendBuffer + writeIndex, sizeof(DATA));
         writeIndex += sizeof(DATA);
     }
 
@@ -102,7 +102,7 @@ void DistributedSet<DATA>::exchange()
     for (int readIndex = 0; readIndex < globalBufferSizeInBytes; readIndex += sizeof(DATA))
     {
         DATA item;
-        proto_memcpy(m_recvBuffer + readIndex, &item, sizeof(DATA));
+        proto_memcpy((char *) m_recvBuffer + readIndex, &item, sizeof(DATA));
         m_globalSet.insert(item);
     }
 #endif
