@@ -815,7 +815,7 @@ T* BoxData<T,C,MEM,D,E>::data(
 template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
 {
-    PR_TIME("BoxData::var");
+  //PR_TIME("BoxData::var");
     PROTO_ASSERT(m_box.containsPoint(a_pt),
         "BoxData::var | Error: a_pt not in this->box()");
     Var<T,C,MEM,D,E> rtn;
@@ -823,7 +823,7 @@ Var<T,C,MEM,D,E> BoxData<T,C,MEM,D,E>::var(const Point& a_pt)
         for(unsigned int dd = 0; dd < D; ++dd)
             for(unsigned int cc = 0; cc < C; ++cc)
             {
-                PR_TIME("set pointers");
+              //PR_TIME("set pointers");
                 rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
             }
     rtn.boxDimX=this->box().size(0);
@@ -1027,8 +1027,10 @@ BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
     BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
         "A division generated values of inf or nan");
+#endif
     return ret;
 }
 
@@ -1077,8 +1079,10 @@ BoxData<T,C,MEM,D,E>::operator/=(const BoxData<T,C,MEM,D,E>& a_rhs)
 {
     PR_TIME("BoxData::operator/=");
     this->operatorT<BoxDataOp::Divide>(a_rhs);
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
     "A division generated values of inf or nan");
+#endif
     return *this;
 }
 
@@ -1211,8 +1215,10 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_
         auto data = slice(*this,cc,dd,ee);
         data.template operatorT<BoxDataOp::Divide>(scale);
     }
+#ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsInfOrNAN(),
     "A division generated values of inf or nan");
+#endif
     return *this;
 }
 
@@ -1884,6 +1890,7 @@ template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool BoxData<T,C,MEM,D,E>::containsInfOrNAN() const
 {
     // NAN only applies to floating point data
+  PR_TIMERS("BoxData::containsInfOrNAN()");
     if (!std::is_floating_point<T>::value) { return false; }
     if (MEM != HOST) { return false; }
     for (int ii = 0; ii < numValues(); ii++)
@@ -1897,6 +1904,7 @@ template<class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 bool BoxData<T,C,MEM,D,E>::containsInfOrNAN(Box domain) const
 {
     // NAN only applies to floating point data
+  PR_TIMERS("BoxData::containsInfOrNAN(Box domain)");
     if (!std::is_floating_point<T>::value) { return false; }
     if (MEM != HOST) { return false; }
     for (auto pi : domain)

@@ -1,0 +1,322 @@
+#pragma once
+
+#include "Proto.H"
+#include "InputParser.H"
+#include <algorithm> // For std::remove
+#include <iostream>  // For std::pout(0), etc.
+#include <iomanip>   // For std::setw, etc.
+#include <vector>
+#include <sstream>
+#include "MHD_pout.H"
+
+using namespace Proto;
+using namespace std;
+
+/// @brief ParseInputs Singleton class
+class ParseInputs {
+private:
+    int convTestType; // 0: No convergence test, 1: Space Convergence test, 2: Space and Time Convergence test
+    int init_condition_type; 
+    // 0 for radial shell, 
+    // 1 for nonradial pulse, 
+    // 2 for radial outflow
+    // 3 for H5 BCs
+    // 4 for radial shell with small constant cartesian velocity
+    // 5 for radial Shock
+    // 6 for radial shell with small constant cartesian magnetic field
+    int domainSize; // Number of cells in non radial direction
+    int thickness; // Number of cells in radial direction
+    int boxSize_nonrad; // Size of the box for domain decomposition
+    int boxSize_rad; // Size of the box for domain decomposition
+    int max_iter; 
+    double CFL;
+    int limiter; // 1:4th order, 2: Minmod
+    double strength; // Strength of perturbation for test problems.
+    int write_cadence; 
+    int slice_cadence;
+    double write_time_cadence; // In seconds
+    double slice_time_cadence; // In seconds
+    int checkpoint_cadence;
+    int P_floor_cadence; // Iteration cadence for P_floor
+    string data_file_prefix;
+    string checkpoint_file_prefix;
+    std::string slices_raw;
+    bool slice_X = false;
+    bool slice_Y = false;
+    bool slice_Z = false;
+    bool slice_R = false;
+    void parseSlices() {
+        slice_X = slice_Y = slice_Z = slice_R = false;
+        std::istringstream iss(slices_raw);
+        std::string token;
+        while (iss >> token) {
+            if (token == "X") slice_X = true;
+            else if (token == "Y") slice_Y = true;
+            else if (token == "Z") slice_Z = true;
+            else if (token == "R") slice_R = true;
+        }
+    }
+    int scale_data_with_r; // 0: No scaling, 1: Scale with r
+    int max_checkpoint_files;
+    string restart_file;
+    double gamma; // Ratio of specific heats
+    int temporal_order; // Temporal order of accuracy
+    int divergence_cleaning; // 0: No divergence cleaning, 1: Divergence cleaning
+    int linear_viscosity; // 0: No linear viscosity, 1: Linear viscosity
+    int boundary_reflux; // 0: don't reflux at block boundaries, 1: reflux
+    int radial_refinement; // 0: refine in all directions by 2 for convergence studies;
+                           // 1 refine only in radial direction.
+    int operator_switchiv;   // no inviscid (1) no viscous (2) both on (0).
+    int operator_switchln;   // no linear (1) no nonlinear (2) both on (0)
+    int MBInterp_define;   // old define (0) new define (1)
+    string BC_file;
+    int num_probes = 0;                                
+    std::vector<std::string> probe_filenames;           
+    std::vector<std::string> probe_coords;  // Accepts HGI coordinates              
+    double Probe_cadence; // In seconds
+    double BC_start_time; // Like 2024.0 for year 2024
+    double BC_cadence; // In hours
+    int BC_frame_rotate; // 0: Frames don't rotate (SWiG), 1: Frames rotate
+    int BC_force_single_frame; // 1: Use only one frame for BCs, 0: Use all frames for BCs (if present)
+    int CME_type; // 0: No CME, 1: CME
+    double CME_Enter_Time;
+    double CME_r1;
+    double CME_r0;
+    double CME_halfangle;
+    double CME_pol_flux_control;
+    double CME_FRiED_n;
+    double CME_lat;
+    double CME_lon;
+    double CME_tilt;
+    double CME_Vandas_R0;
+    double CME_apex_speed;
+    double CME_energy_control;
+    double CME_density;
+    double CME_helicity_sign;
+    double CME_a1;
+    double CME_shift;
+    
+    // Private Constructor
+    ParseInputs() {}
+
+    // Private Copy Constructor and Assignment Operator
+    ParseInputs(const ParseInputs&) = delete;
+    ParseInputs& operator=(const ParseInputs&) = delete;
+
+public:
+    // Static method to get the instance of the class
+    static ParseInputs& getInstance() {
+        static ParseInputs instance; // Guaranteed to be destroyed and instantiated on first use
+        return instance;
+    }
+
+    // Static Getters
+    static int get_convTestType() {return getInstance().convTestType;}
+    static int get_init_condition_type() {return getInstance().init_condition_type;}
+    static int get_domainSize() {return getInstance().domainSize;}
+    static int get_thickness() {return getInstance().thickness;}
+    static int get_boxSize_nonrad() {return getInstance().boxSize_nonrad;}
+    static int get_boxSize_rad() {return getInstance().boxSize_rad;}
+    static int get_max_iter() {return getInstance().max_iter;}
+    static double get_CFL() {return getInstance().CFL;}
+    static int get_limiter() {return getInstance().limiter;}
+    static double get_strength() {return getInstance().strength;}
+    static int get_write_cadence() {return getInstance().write_cadence;}
+    static int get_slice_cadence() {return getInstance().slice_cadence;}
+    static double get_write_time_cadence() {return getInstance().write_time_cadence;}
+    static double get_slice_time_cadence() {return getInstance().slice_time_cadence;}
+    static int get_checkpoint_cadence() {return getInstance().checkpoint_cadence;}
+    static int get_P_floor_cadence() {return getInstance().P_floor_cadence;}
+    static string get_data_file_prefix() {return getInstance().data_file_prefix;}
+    static string get_checkpoint_file_prefix() {return getInstance().checkpoint_file_prefix;}
+    static bool get_slice_X() { return getInstance().slice_X; }
+    static bool get_slice_Y() { return getInstance().slice_Y; }
+    static bool get_slice_Z() { return getInstance().slice_Z; }
+    static bool get_slice_R() { return getInstance().slice_R; }
+    static int get_scale_data_with_r() {return getInstance().scale_data_with_r;}
+    static int get_max_checkpoint_files() {return getInstance().max_checkpoint_files;}
+    static string get_restart_file() {return getInstance().restart_file;}
+    static double get_gamma() {return getInstance().gamma;}
+    static int get_temporal_order() {return getInstance().temporal_order;}
+    static int get_divergence_cleaning() {return getInstance().divergence_cleaning;}
+    static int get_linear_viscosity() {return getInstance().linear_viscosity;}
+    static int get_boundary_reflux() {return getInstance().boundary_reflux;}
+    static int get_radial_refinement() {return getInstance().radial_refinement;}
+    static int get_operator_switchiv() {return getInstance().operator_switchiv;}
+    static int get_operator_switchln() {return getInstance().operator_switchln;}
+    static int get_MBInterp_define() {return getInstance().MBInterp_define;}
+    static string get_BC_file() {return getInstance().BC_file;}
+    static int get_num_probes() { return getInstance().num_probes; }                               
+    static const std::vector<std::string>& get_probe_filenames() { return getInstance().probe_filenames; } 
+    static const std::vector<std::string>& get_probe_coords()     { return getInstance().probe_coords; }     
+    static double get_Probe_cadence() {return getInstance().Probe_cadence;}
+    static double get_BC_start_time() {return getInstance().BC_start_time;}
+    static double get_BC_cadence() {return getInstance().BC_cadence;}
+    static int get_BC_frame_rotate() {return getInstance().BC_frame_rotate;}
+    static int get_BC_force_single_frame() {return getInstance().BC_force_single_frame;}
+    static int get_CME_type() {return getInstance().CME_type;}
+    static double get_CME_Enter_Time() {return getInstance().CME_Enter_Time;}
+    static double get_CME_r1() {return getInstance().CME_r1;}
+    static double get_CME_r0() {return getInstance().CME_r0;}
+    static double get_CME_halfangle() {return getInstance().CME_halfangle;}
+    static double get_CME_pol_flux_control() {return getInstance().CME_pol_flux_control;}
+    static double get_CME_FRiED_n() {return getInstance().CME_FRiED_n;}
+    static double get_CME_lat() {return getInstance().CME_lat;}
+    static double get_CME_lon() {return getInstance().CME_lon;}
+    static double get_CME_tilt() {return getInstance().CME_tilt;}
+    static double get_CME_Vandas_R0() {return getInstance().CME_Vandas_R0;}
+    static double get_CME_apex_speed() {return getInstance().CME_apex_speed;}
+    static double get_CME_energy_control() {return getInstance().CME_energy_control;}
+    static double get_CME_density() {return getInstance().CME_density;}
+    static double get_CME_helicity_sign() {return getInstance().CME_helicity_sign;}
+    static double get_CME_a1() {return getInstance().CME_a1;}
+    static double get_CME_shift() {return getInstance().CME_shift;}
+
+    // Parses now with command-line arguments
+    void parsenow(int argc, char* argv[]) {
+        InputArgs args;
+        args.add("convTestType", convTestType);
+        args.add("init_condition_type", init_condition_type);
+        args.add("domainSize", domainSize);
+        args.add("thickness", thickness);
+        args.add("boxSize_nonrad", boxSize_nonrad);
+        args.add("boxSize_rad", boxSize_rad);
+        args.add("max_iter", max_iter);
+        args.add("CFL", CFL);
+        args.add("limiter", limiter);
+        args.add("strength", strength);
+        args.add("write_cadence", write_cadence);
+        args.add("slice_cadence", slice_cadence);
+        args.add("write_time_cadence", write_time_cadence);
+        args.add("slice_time_cadence", slice_time_cadence);
+        args.add("checkpoint_cadence", checkpoint_cadence);
+        args.add("P_floor_cadence", P_floor_cadence);
+        args.add("data_file_prefix", data_file_prefix);
+        args.add("checkpoint_file_prefix", checkpoint_file_prefix);
+        args.add("slices", slices_raw);
+        args.add("scale_data_with_r", scale_data_with_r);
+        args.add("max_checkpoint_files", max_checkpoint_files);
+        args.add("restart_file", restart_file);
+        args.add("gamma", gamma);
+        args.add("temporal_order", temporal_order);
+        args.add("divergence_cleaning", divergence_cleaning);
+        args.add("linear_viscosity", linear_viscosity);
+        args.add("boundary_reflux", boundary_reflux);
+        args.add("radial_refinement", radial_refinement);
+        args.add("operator_switchiv", operator_switchiv);
+        args.add("operator_switchln", operator_switchln);
+        args.add("MBInterp_define", MBInterp_define);
+        args.add("BC_file", BC_file);
+        args.add("num_probes", num_probes); 
+        constexpr int MAX_PROBES = 32; // or more if needed
+        // ensure storage exists before parse:
+        probe_filenames.assign(MAX_PROBES, "");
+        probe_coords.assign(MAX_PROBES, "");
+        for (int i = 0; i < MAX_PROBES; ++i) {
+            const std::string base = "probe" + std::to_string(i) + ".";
+            args.add(base + "filename", probe_filenames[(size_t)i]);
+            args.add(base + "coords",   probe_coords[(size_t)i]);
+        }
+        args.add("Probe_cadence", Probe_cadence);
+        args.add("BC_start_time", BC_start_time);
+        args.add("BC_cadence", BC_cadence);
+        args.add("BC_frame_rotate", BC_frame_rotate);
+        args.add("BC_force_single_frame", BC_force_single_frame);
+        args.add("CME_Enter_Time", CME_Enter_Time);
+        args.add("CME_type", CME_type);
+        args.add("CME_r1", CME_r1);
+        args.add("CME_r0", CME_r0);
+        args.add("CME_halfangle", CME_halfangle);
+        args.add("CME_pol_flux_control", CME_pol_flux_control);
+        args.add("CME_FRiED_n", CME_FRiED_n);
+        args.add("CME_lat", CME_lat);
+        args.add("CME_lon", CME_lon);
+        args.add("CME_tilt", CME_tilt);
+        args.add("CME_Vandas_R0", CME_Vandas_R0);
+        args.add("CME_apex_speed", CME_apex_speed);
+        args.add("CME_energy_control", CME_energy_control);
+        args.add("CME_density", CME_density);
+        args.add("CME_helicity_sign", CME_helicity_sign);
+        args.add("CME_a1", CME_a1);
+        args.add("CME_shift", CME_shift);
+        args.parse(argc, argv);
+        parseSlices();
+        // use only the first num_probes entries
+        probe_filenames.resize((size_t)std::max(0, num_probes));
+        probe_coords.resize((size_t)std::max(0, num_probes));
+
+        pout(0) << "Running with the following inputs (these can be changed in the file 'inputs')" << endl;
+        pout(0) << setw(75) << setfill('-') << "-" << endl;
+        pout(0) << "convTestType: " << convTestType << endl;
+        pout(0) << "init_condition_type: " << init_condition_type << endl;
+        pout(0) << "domainSize: " << domainSize << endl;
+        pout(0) << "thickness: " << thickness << endl;
+        pout(0) << "boxSize_nonrad: " << boxSize_nonrad << endl;
+        pout(0) << "boxSize_rad: " << boxSize_rad << endl;
+        pout(0) << "max_iter: " << max_iter << endl;
+        pout(0) << "CFL: " << CFL << endl;
+        pout(0) << "limiter: " << limiter << endl;
+        pout(0) << "strength: " << strength << endl;
+        pout(0) << "write_cadence: " << write_cadence << endl;
+        pout(0) << "slice_cadence: " << slice_cadence << endl;
+        pout(0) << "write_time_cadence: " << write_time_cadence << endl;
+        pout(0) << "slice_time_cadence: " << slice_time_cadence << endl;
+        pout(0) << "checkpoint_cadence: " << checkpoint_cadence << endl;
+        pout(0) << "P_floor_cadence: " << P_floor_cadence << endl;
+        pout(0) << "data_file_prefix: " << data_file_prefix << endl;
+        pout(0) << "checkpoint_file_prefix: " << checkpoint_file_prefix << endl;
+        pout(0) << "Slices: " << slices_raw << endl;
+        pout(0) << "scale_data_with_r: " << scale_data_with_r << endl;
+        pout(0) << "max_checkpoint_files: " << max_checkpoint_files << endl;
+        pout(0) << "restart_file: " << restart_file << endl;
+        pout(0) << "gamma: " << gamma << endl;
+        pout(0) << "temporal_order: " << temporal_order << endl;
+        pout(0) << "divergence_cleaning: " << divergence_cleaning << endl;
+        pout(0) << "linear_viscosity: " << linear_viscosity << endl;
+        pout(0) << "boundary_reflux: " << boundary_reflux << endl;
+        pout(0) << "radial_refinement: " << radial_refinement << endl;
+        pout(0) << "operator_switchiv: " << operator_switchiv << endl;
+        pout(0) << "operator_switchln: " << operator_switchln << endl;
+        pout(0) << "MBInterp_define: " << MBInterp_define << endl;
+        pout(0) << "BC_file: " << BC_file << endl;
+        pout(0) << "Probe_cadence: " << Probe_cadence << endl;
+        pout(0) << "num_probes: " << num_probes << endl; 
+        for (int i = 0; i < num_probes; ++i) {        
+            pout(0) << "  probe" << i << ".filename: " << probe_filenames[static_cast<size_t>(i)] << endl;
+            pout(0) << "  probe" << i << ".coords:   " << probe_coords[static_cast<size_t>(i)]   << endl;
+        }
+        pout(0) << "Probe_cadence: " << Probe_cadence << endl;
+        pout(0) << "BC_start_time: " << BC_start_time << endl;
+        pout(0) << "BC_cadence: " << BC_cadence << endl;
+        pout(0) << "BC_frame_rotate: " << BC_frame_rotate << endl;
+        pout(0) << "BC_force_single_frame: " << BC_force_single_frame << endl;
+        pout(0) << "CME_type: " << CME_type << endl;
+        pout(0) << "CME_Enter_Time: " << CME_Enter_Time << endl;
+        pout(0) << "CME_r1: " << CME_r1 << endl;
+        pout(0) << "CME_r0: " << CME_r0 << endl;
+        pout(0) << "CME_halfangle: " << CME_halfangle << endl;
+        pout(0) << "CME_pol_flux_control: " << CME_pol_flux_control << endl;
+        pout(0) << "CME_FRiED_n: " << CME_FRiED_n << endl;
+        pout(0) << "CME_lat: " << CME_lat << endl;
+        pout(0) << "CME_lon: " << CME_lon << endl;
+        pout(0) << "CME_tilt: " << CME_tilt << endl;
+        pout(0) << "CME_Vandas_R0: " << CME_Vandas_R0 << endl;
+        pout(0) << "CME_apex_speed: " << CME_apex_speed << endl;
+        pout(0) << "CME_energy_control: " << CME_energy_control << endl;
+        pout(0) << "CME_density: " << CME_density << endl;
+        pout(0) << "CME_helicity_sign: " << CME_helicity_sign << endl;
+        pout(0) << "CME_a1: " << CME_a1 << endl;
+        pout(0) << "CME_shift: " << CME_shift << endl;
+        pout(0) << setw(75) << setfill('-') << "-" << endl;
+        
+    }
+
+    // Utility function to remove spaces from a string
+    string removeSpaces(string str) {
+        str.erase(remove(str.begin(), str.end(), ' '), str.end());
+        return str;
+    }
+
+    // Additional getters and setters as needed
+};
+

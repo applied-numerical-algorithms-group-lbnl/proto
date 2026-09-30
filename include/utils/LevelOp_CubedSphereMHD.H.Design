@@ -1,0 +1,105 @@
+#pragma once
+#ifndef _LEVEL_OP_MHD_
+#define _LEVEL_OP_MHD_
+
+#include "BoxOp_CubedSphereEuler.H"
+
+using namespace Proto;
+typedef MBLevelBoxData<double> LevelScalar;
+typedef MBLevelBoxData<double, NUMCOMPS> LevelState;
+typedef MBLevelBoxData<double, DIM> LevelVector;
+template<typename T,
+         template<MemType> typename MAP,
+         MemType MEM = MEMTYPE_DEFAULT>
+class LevelOp_CubedSphereMHD
+{
+ public:
+  inline LevelOp_CubedSphereMHD(){};
+  inline LevelOp_CubedSphereMHD(
+                                MBDisjointBoxLayout& a_layout,
+                                MBDisjointBoxLayout& a_layoutC,
+                                Point a_ghost,
+                                int a_nref,
+                                int a_nrefTime,
+                                int a_lev,
+                                int a_maxlev);
+  
+  inline void define(
+                     MBDisjointBoxLayout& a_layout,
+                     MBDisjointBoxLayout& a_layoutC,
+                     Point a_ghost,
+                     int a_nref,
+                     int a_nrefTime,
+                     int a_lev,
+                     int a_maxlev);
+  
+  /// Evaluate rhs (a_k) for this level at stage a_stage.
+  /**
+  a_k : a_stage rhs (not scaled by dt, stage weighting).
+  a_rhsTotal: cumulative rhs. Need to perform the one-time increment at a_stage = 0 by 
+              artificial viscosity, divergence cleaning terms. Increment by a_k not
+              done here.
+  a_bReg: boundary register, defined for all levels.
+  a_lfReg: flux register for current level. Defined for m_lev < m_maxlev - 1.
+  a_lfRegFine: flux register for next finer level. Defined for m_lev > 0.
+  a_JU: conserved quantities at current level.
+  a_JUCoarsened: conserved quantities interpolated in time, on coarsened version
+                 of m_layout. Used to interpolate ghost-cell boundary conditions.
+  a_refratio: refinement ratio between current level and next coarser level.
+  a_dt, a_time: current dt, time.
+  a_stage: which RK stage. 
+   */
+  
+  inline void StageLevel(
+                         LevelStateData& a_k,
+                         LevelStateData& a_rhsTotal,
+                         MBBlockRegister<T,NUMCOMPS,MEM>& a_bReg,
+                         MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfReg,
+                         MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfRegFine,
+                         const LevelStateData& a_JU,
+                         const LevelStateData& a_JUCoarsened,         
+                         int a_refratio,
+                         T a_dt,
+                         T a_time,
+                         int a_stage);
+  
+
+  inline void JUToUSemiSph(
+                         MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_USemiSph,
+                         const LevelStateData& a_JU);
+
+  inline void USemiSphToUSph(
+                           LevelStateData& a_USph,
+                           MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_USemiSph);
+  
+  inline void PhysBCs(
+                      LevelStateData& a_U,
+                      T a_time,
+                      T a_dt,
+                      int a_stage);
+  
+  inline void artificialViscosity(
+                                  LevelStateData& a_rhsTotal,
+                                  LevelStateData& a_USph,
+                                  MBBlockRegister<T,NUMCOMPS,MEM>& a_bReg,
+                                  MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfReg,
+                                  MBBLevelFluxRegister<T,NUMCOMPS,MEM>& a_lfRegFine);
+
+ inline void InterpBoundaries(
+                              MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_UStage,
+                              MBLevelBoxData<T,NUMCOMPS+2,MEM>& a_UStageC);
+  
+  inline void tags(LevelTagData& a_tags,
+                   LevelStateData& a_U);
+  
+  inline void getVolr(LevelScalar& a_dVolr,
+                      MBDisjointBoxLayout a_layout);
+                     
+ private:
+  m_MBDisjointBoxLayout m_layout;
+  InterpStencil<T> m_cfInterp;
+  MBInterpOp m_iop,m_iopC;
+  Point m_ghost;
+  int m_nref,m_nrefTime,m_lev,m_maxlev;
+
+#endif //end include guard

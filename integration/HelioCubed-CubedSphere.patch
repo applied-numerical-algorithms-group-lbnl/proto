@@ -1,0 +1,689 @@
+--- a/exec/GNUmakefile
++++ b/exec/GNUmakefile
+@@ -31,7 +31,7 @@
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+= -DPR_DISABLE_INIT_CHECKS
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+=-DPR_CFD
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+ CXXOPTFLAGS+= -DCUBED_SPHERE_SHELL_R0=$(CUBED_SPHERE_SHELL_R0)
+@@ -60,7 +60,7 @@
+ VPATH=o. ../src  ../../_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
+ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
+ 
+ LIBS += $(LAPACK_LIB)
+--- a/exec/GNUmakefile.clang
++++ b/exec/GNUmakefile.clang
+@@ -12,7 +12,7 @@
+ CXXOPTFLAGS+=-DmemoryFootPrint
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+=-DPR_CFD
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+ #HDF5_LIB=/usr/local/lib
+@@ -35,7 +35,17 @@
+ VPATH=o. ../src  ../../_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
++# Preserve the cubedSphereDev shell configuration explicitly.
++CUBED_SPHERE_SHELL_R0 ?= 0.1
++CUBED_SPHERE_SHELL_R1 ?= 2.0
++CUBED_SPHERE_SHELL_RADIAL_COORD ?= 0
++CUBED_SPHERE_RADIAL_STRETCH ?= 1.5
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_R0=$(CUBED_SPHERE_SHELL_R0)
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_R1=$(CUBED_SPHERE_SHELL_R1)
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_RADIAL_COORD=$(CUBED_SPHERE_SHELL_RADIAL_COORD)
++CXXOPTFLAGS += -DCUBED_SPHERE_RADIAL_STRETCH=$(CUBED_SPHERE_RADIAL_STRETCH)
++
+ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
+ 
+ LIBS += $(LAPACK_LIB)
+--- a/exec/GNUmakefile.gcc
++++ b/exec/GNUmakefile.gcc
+@@ -14,7 +14,7 @@
+ CXXOPTFLAGS+=-DmemoryFootPrint
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+ CXXOPTFLAGS+=-DPR_CFD
+ #HDF5_LIB=/usr/local/lib
+@@ -39,7 +39,17 @@
+ VPATH=o. ../src  ../../_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
++# Preserve the cubedSphereDev shell configuration explicitly.
++CUBED_SPHERE_SHELL_R0 ?= 0.1
++CUBED_SPHERE_SHELL_R1 ?= 2.0
++CUBED_SPHERE_SHELL_RADIAL_COORD ?= 0
++CUBED_SPHERE_RADIAL_STRETCH ?= 1.5
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_R0=$(CUBED_SPHERE_SHELL_R0)
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_R1=$(CUBED_SPHERE_SHELL_R1)
++CXXOPTFLAGS += -DCUBED_SPHERE_SHELL_RADIAL_COORD=$(CUBED_SPHERE_SHELL_RADIAL_COORD)
++CXXOPTFLAGS += -DCUBED_SPHERE_RADIAL_STRETCH=$(CUBED_SPHERE_RADIAL_STRETCH)
++
+ CXXFLAGS:= $(CXXOPTFLAGS) --std=c++2a
+ 
+ LIBS += $(LAPACK_LIB)
+--- a/exec/GNUmakefile_Anvil
++++ b/exec/GNUmakefile_Anvil
+@@ -33,7 +33,7 @@
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+= -DPR_DISABLE_INIT_CHECKS
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+=-DPR_CFD
+ CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+@@ -60,7 +60,7 @@
+ VPATH=o. ../src  $(PROTO)/examples/_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
+ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++17
+ 
+ ifdef HDF5_LIB
+--- a/exec/GNUmakefile_Pleiades
++++ b/exec/GNUmakefile_Pleiades
+@@ -33,7 +33,7 @@
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+= -DPR_DISABLE_INIT_CHECKS
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+=-DPR_CFD
+ CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+@@ -60,7 +60,7 @@
+ VPATH=o. ../src  $(PROTO)/examples/_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
+ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++17
+ 
+ ifdef HDF5_LIB
+--- a/exec/GNUmakefile_TS
++++ b/exec/GNUmakefile_TS
+@@ -34,7 +34,7 @@
+ #CXXOPTFLAGS+=-DPR_AMR
+ CXXOPTFLAGS+= -DPR_DISABLE_INIT_CHECKS
+ CXXOPTFLAGS+=-DPR_MMB
+-CXXOPTFLAGS+=-DPR_OPS
++CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+=-DPR_CFD
+ CXXOPTFLAGS+=-DPR_LAPACK
+ CXXOPTFLAGS+= -DPR_HDF5=TRUE
+@@ -61,7 +61,7 @@
+ VPATH=o. ../src  $(PROTO)/examples/_common
+ 
+ 
+-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
++CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/lapack -I$(PROTO)/include/utils -I$(PROTO)/include/tests -I$(PROTO)/include/lapack -I. -I../src -I$(PROTO)/examples/_common
+ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
+ 
+ ifdef HDF5_LIB
+--- a/exec/main.cpp
++++ b/exec/main.cpp
+@@ -151,7 +151,7 @@
+     }
+   for (int lev=0; lev<levmax; lev++)
+     {
+-      typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
++      typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell<HOST>, HOST> OP;
+       
+       Array<Array<uint, DIM>, 6> permute = {{2, 1, 0}, {2, 1, 0}, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, {0, 1, 2}};
+       Array<Array<int, DIM>, 6> sign = {{-1, 1, 1}, {1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1}}; 
+@@ -185,7 +185,7 @@
+       if (init_condition_type == 0) BC_global.BoxData_to_BC(dstData, map, time);
+ 
+       MBInterpOp iop;
+-      iop = CubedSphereShell::InterpOp<HOST>(JU.layout(),OP::ghost() ,4);
++      iop = CubedSphereShell::MHDInterpOp<HOST>(JU.layout(),OP::ghost() ,4);
+ 
+       // Set input solution.
+       for (auto dit : layout)
+@@ -261,7 +261,7 @@
+ 
+       OP::Insert_CME(JU,dVolrLev,iop,layout,time,dt,gamma);
+ 
+-      MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell, double> rk4(map, iop);
++      MBLevelRK4<BoxOp_EulerCubedSphere, MBMap_CubedSphereShell<HOST>, double> rk4(map, iop);
+       // OP::P_floor(JU,dVolrLev,iop,layout,time,dt,gamma);
+       Write_W(JU, eulerOp, iop, restart_step, time, dt, true, true);            
+       {
+--- a/src/BoxOp_BertaCubedSphereImplem.H
++++ b/src/BoxOp_BertaCubedSphereImplem.H
+@@ -18,7 +18,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphPointToPrim(
+@@ -77,7 +77,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphAvgToPrim(
+@@ -229,7 +229,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaComputeThetaJameson(
+@@ -398,7 +398,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaComputeThetaDerivativeRatio(
+@@ -511,7 +511,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaAverageToPoint(
+@@ -817,7 +817,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaReconstructWithFallback(
+@@ -964,7 +964,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaPrimPointToFluxAverage(
+@@ -1029,7 +1029,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaPrimPointToMappedFlux(
+@@ -1156,7 +1156,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaPrimPointToMappedRusanovFlux(
+@@ -1392,7 +1392,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::BertaOperator
+--- a/src/BoxOp_DivBcleaning.H
++++ b/src/BoxOp_DivBcleaning.H
+@@ -1,6 +1,6 @@
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::DivBPowell1(
+@@ -38,7 +38,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::DivBPowell2(
+@@ -74,7 +74,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::computeDivB(
+--- a/src/BoxOp_EulerCubedSphere.H
++++ b/src/BoxOp_EulerCubedSphere.H
+@@ -271,7 +271,7 @@
+ PROTO_KERNEL_END(f_csq_F, f_csq);
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM = MEMTYPE_DEFAULT>
+ class BoxOp_EulerCubedSphere : public MBBoxOp<T, MAP, NUMCOMPS, 0, MEM>
+ {
+--- a/src/BoxOp_EulerCubedSphereImplem.H
++++ b/src/BoxOp_EulerCubedSphereImplem.H
+@@ -3,7 +3,7 @@
+ // ====================================================================================
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::operator()
+@@ -319,7 +319,7 @@
+ // primToMappedFlux(fluxdir_L,physFlux_L,WFace_L,WFaceBar,adjDrDir,deta_a,deta,ntrow,a_block,dir);
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedFlux(
+@@ -392,7 +392,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRusanovFlux(
+@@ -567,7 +567,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::
+ primToFlux(
+@@ -627,7 +627,7 @@
+ // ====================================================================================
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline bool BoxOp_EulerCubedSphere<T,MAP,MEM>::validConservedState(
+     const MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU)
+@@ -647,7 +647,7 @@
+   return invalid.fetch() == 0.0;
+ }
+ 
+-template<typename T, template<MemType> typename MAP, MemType MEM>
++template<typename T, typename MAP, MemType MEM>
+ inline T BoxOp_EulerCubedSphere<T,MAP,MEM>::
+ dtCFL(MBLevelBoxData<T,NUMCOMPS,MEM>& a_JU,
+       MBInterpOp& a_iop,
+@@ -737,7 +737,7 @@
+ }
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+@@ -793,7 +793,7 @@
+ }
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+@@ -952,7 +952,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+--- a/src/BoxOp_Gravity.H
++++ b/src/BoxOp_Gravity.H
+@@ -2,7 +2,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::Gravity(
+@@ -48,7 +48,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::Gravity_Euler(
+--- a/src/BoxOp_Initialize.H
++++ b/src/BoxOp_Initialize.H
+@@ -46,7 +46,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::
+ initialize(State& a_W,
+--- a/src/BoxOp_Limiters.H
++++ b/src/BoxOp_Limiters.H
+@@ -240,7 +240,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_4O(BoxData<double,NUMCOMPS>& a_W_ave_L_lim_flat,
+@@ -388,7 +388,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::Limiters_minmod
+--- a/src/BoxOp_PreStage.H
++++ b/src/BoxOp_PreStage.H
+@@ -50,7 +50,7 @@
+ // Radial boundary conditions here.
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+@@ -321,7 +321,7 @@
+ /// Exchange, block boundary conditions, transform from JU to USph. Set state variables in boundary registers.
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+--- a/src/BoxOp_RoeCubedSphere.H
++++ b/src/BoxOp_RoeCubedSphere.H
+@@ -2,7 +2,7 @@
+ 
+ #include "MHD_Roe8Wave.H"
+ 
+-template<typename T, template<MemType> typename MAP, MemType MEM>
++template<typename T, typename MAP, MemType MEM>
+ inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::repairRoeFaceStates(
+     State& a_WFace_L, State& a_WFace_R,
+     const State& a_WFaceBar, const State& a_WBar, uint a_dir) const
+@@ -26,7 +26,7 @@
+     },a_WFace_L,a_WFace_R,pointLeft,pointRight,donorLeft,a_WBar,correction);
+ }
+ 
+-template<typename T, template<MemType> typename MAP, MemType MEM>
++template<typename T, typename MAP, MemType MEM>
+ inline void BoxOp_EulerCubedSphere<T,MAP,MEM>::primToMappedRoeFlux(
+     State& a_fluxdir,
+     const State& a_WFace_L,
+--- a/src/BoxOp_TestProblems.H
++++ b/src/BoxOp_TestProblems.H
+@@ -244,7 +244,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::addTestProblemBackgroundB(
+@@ -267,7 +267,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::testProblemDeltaMagneticEnergy(
+--- a/src/BoxOp_Utilities.H
++++ b/src/BoxOp_Utilities.H
+@@ -1,6 +1,6 @@
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::radialMetrics(
+@@ -58,7 +58,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::primToCons(
+@@ -186,7 +186,7 @@
+ }
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ BoxData<T,1,MEM> 
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::kineticEnergyW(
+@@ -257,7 +257,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ BoxData<T,1,MEM> 
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::magneticEnergyW(
+@@ -327,7 +327,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ BoxData<T,1,MEM> 
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::vdotbW(
+@@ -408,7 +408,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::EnergyW(
+@@ -494,7 +494,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::EnergyW(
+@@ -576,7 +576,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim(
+@@ -674,7 +674,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::sphToPrim_2O(
+--- a/src/BoxOp_Viscocity.H
++++ b/src/BoxOp_Viscocity.H
+@@ -1,4 +1,4 @@
+-template<typename T, template<MemType> typename MAP, MemType MEM>
++template<typename T, typename MAP, MemType MEM>
+ inline State BoxOp_EulerCubedSphere<T,MAP,MEM>::viscosityFaceState(
+     const State& a_W, uint a_dir) const
+ {
+@@ -19,7 +19,7 @@
+ 
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+@@ -212,7 +212,7 @@
+ }
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+@@ -268,7 +268,7 @@
+ }
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::LinearViscCoef(
+@@ -356,7 +356,7 @@
+ }
+ template<
+   typename T,
+-  template<MemType> typename MAP,
++  typename MAP,
+   MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+--- a/src/MHDReader.H
++++ b/src/MHDReader.H
+@@ -139,7 +139,7 @@
+ 
+ 	template <typename T, MemType MEM>
+ 	inline void BoxData_to_BC(MBLevelBoxData<T, 8, MEM> &a_dstData,
+-							const MBLevelMap<MBMap_CubedSphereShell, MEM> &a_map,
++							const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> &a_map,
+ 							T a_time)
+ 	{
+ 		PR_TIMERS("MHDReader::BoxData_to_BC");
+--- a/src/MHD_CME.H
++++ b/src/MHD_CME.H
+@@ -340,7 +340,7 @@
+ 
+ template<
+     typename T,
+-    template<MemType> typename MAP,
++    typename MAP,
+     MemType MEM>
+ inline void
+ BoxOp_EulerCubedSphere<T,MAP,MEM>::
+--- a/src/MHD_IO.H
++++ b/src/MHD_IO.H
+@@ -181,7 +181,7 @@
+ }
+ 
+ template<
+-  template<MemType> typename MAP,
++  typename MAP,
+   typename T, unsigned int C, MemType MEM, Centering CTR
+ >
+ void writeTecplotSlice_plane(
+@@ -722,7 +722,7 @@
+ // Usage:
+ // writeTecplotSlice_spherical(map, data, varNames, "r1.50.dat", time, /*radius=*/1.50);
+ template<
+-  template<MemType> typename MAP,
++  typename MAP,
+   typename T, unsigned int C, MemType MEM, Centering CTR
+ >
+ void writeTecplotSlice_spherical(
+@@ -999,7 +999,7 @@
+   h5.setTime(time);
+ 	h5.setTimestep(dt);
+   h5.setIter(iter);
+-  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
++  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell<HOST>, HOST> OP;
+   auto layout = a_JU.layout();
+   auto map = CubedSphereShell::Map(layout, OP::ghost());
+   MBLevelBoxData<double, NUMCOMPS+2, HOST> Wout(layout, Point::Zeros());
+@@ -1384,7 +1384,7 @@
+ 
+ template<typename BOX_OP>
+ void Probe(const MBLevelBoxData<double, NUMCOMPS, HOST> &a_JU,
+-          const MBLevelMap<MBMap_CubedSphereShell, HOST>& a_map,
++          const MBLevelMap<MBMap_CubedSphereShell<HOST>, HOST>& a_map,
+           BOX_OP &a_eulerOp,
+           MBInterpOp &a_iop,
+           int a_iter,
+@@ -1563,7 +1563,7 @@
+   Point index_n2(pt0_nearest, pt1_nearest, pt2_neigbor);
+ 
+ 
+-  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell, HOST> OP;
++  typedef BoxOp_EulerCubedSphere<double, MBMap_CubedSphereShell<HOST>, HOST> OP;
+ 
+   MBLevelBoxData<double, NUMCOMPS, HOST> JUTemp(layout, OP::ghost());
+   MBLevelBoxData<double, 1, HOST> dVolrLev(layout, OP::ghost() + Point::Basis(0, 2));

@@ -60,7 +60,27 @@ void MBLevelOp<OPType,MAP,T,BCType,MEM>::operator()(
         auto& state = a_state[index];
         auto& output = a_output[index];
         op(output, state, a_scale);
+        // FIXME: should look like this:
+#if 0
+        FluxBoxData<T, OP::numState(), MEM> fluxes(layout[index]);
+        op(output, fluxes, state, a_scale);
+        for (int dd = 0; dd < DIM; dd++)
+        {
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
+            {
+                Point dir = Point::Basis(dd, *siter);
+                if (layout.isBlockBoundary(index, dir))
+                {
+                    // copy fluxes into the register
+                }
+            }
+        }
+#endif
     }
+    //FIXME: This function applies the operator all over again to populate the register
+    //and then applies the register. We should be JUST applying the register. See the implementation
+    //of MBLevelOp::matchFlux below
     //matchFlux(a_output, a_state);
 }
 

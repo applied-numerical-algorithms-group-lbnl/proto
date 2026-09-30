@@ -76,14 +76,14 @@ namespace Proto
          *  boundary. In this case, the sign of depth has no effect.
          */
         inline MBBoundaryRegister(
-                const MBDisjointBoxLayout&  a_layout,           
+                MBDisjointBoxLayout         a_layout,           
                 int                         a_depth,            
                 Point                       a_ghost,            
                 bool                        a_bothSides = true);
         
         /// Lazy Constructor
         inline void define(
-                const MBDisjointBoxLayout&  a_layout,   
+                MBDisjointBoxLayout         a_layout,   
                 int                         a_depth,    
                 Point                       a_ghost,    
                 bool                        a_bothSides = true);
@@ -172,7 +172,13 @@ namespace Proto
         
         // Get Ghost Size
         inline Point ghost() {return m_ghost; }
-        
+        /// Increment registers.  
+        inline void increment(
+                              Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
+                              MBIndex a_dit,
+                              T a_weight);
+      
+      void reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal);  
 
         private:
 

@@ -78,6 +78,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             auto R = a_layout.domain().graph().rotation(patch.block, adjPatch.block);
             
             int ghostSize = a_ghost[patchConnectivity.codim()].max();
+            if (ghostSize <= 0) { continue; }
             Box patchBox = a_layout[iter];
             Box patchBoundary = patchBox.adjacent(patchConnectivity, ghostSize);
             Box adjPatchBoundary = layout().domain().convertBox(patchBoundary, patch.block, adjPatch.block, PR_CELL);
@@ -235,6 +236,30 @@ void MBLevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     }
 }
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template <MemType DST_MEM>
+void MBLevelBoxData<T, C, MEM, CTR>::
+coarsenTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_dest,
+          Point                               a_refRatio) const
+{
+    if (CTR == PR_CELL)
+    {
+        auto AVG = Stencil<T>::AvgDown(a_refRatio);
+        MBDisjointBoxLayout cfLayout = m_layout.coarsen(a_refRatio);
+        
+        MBLevelBoxData<T, C, MEM, CTR> cfLevel(cfLayout, Point::Zeros());
+        for (auto iter : m_layout)
+        {
+            auto& fine = (*this)[iter]; 
+            auto& crse = cfLevel[iter];
+            
+            crse |= AVG(fine);
+        }
+        cfLevel.copyTo(a_dest);
+    } else {
+        MayDay<void>::Warning("LevelBoxData::coarsenTo | Warning: Non-Cell centered implementation not yet implemented");
+    }
+}
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::setRandom(T a_low, T a_high)
 {
@@ -263,6 +288,22 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::exchange0()
+{
+    if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
+    PR_TIME("MBLevelBoxData::exchange0");
+#ifdef PR_MPI
+    {
+        PR_TIME("MBLevelBoxData::exchange0 (MPI barrier)");
+        barrier();
+    }
+#endif
+    for (int bi = 0; bi < layout().numBlocks(); bi++)
+    {
+        m_data[bi]->exchange();
+    }
+}
 template <typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
 template <MemType DST_MEM>
 void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyTo(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const

@@ -1,7 +1,7 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBBoundaryRegister<T,C,MEM,CTR>::MBBoundaryRegister(
-        const MBDisjointBoxLayout&  a_layout,   // layout
+        MBDisjointBoxLayout         a_layout,   // layout
         int                         a_depth,    // distance from boundary
         Point                       a_ghost,    
         bool                        a_bothSides)
@@ -12,7 +12,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::MBBoundaryRegister(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBBoundaryRegister<T,C,MEM,CTR>::define(
-        const MBDisjointBoxLayout&  a_layout,   // layout
+        MBDisjointBoxLayout         a_layout,   // layout
         int                         a_depth,    // distance from boundary
         Point                       a_ghost,    // additional space around each register
         bool                        a_bothSides)// allocate space on both "sides" of the boundary
@@ -24,7 +24,7 @@ MBBoundaryRegister<T,C,MEM,CTR>::define(
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto& localLayout = a_layout.getBlock(block);
+        auto localLayout = a_layout.getBlock(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
@@ -314,14 +314,129 @@ void MBBoundaryRegister<T,C,MEM,CTR>::clear()
 {
     for (auto src : m_bounds)
     {
-        for (auto bound : src)
+        for (auto& bound : src.second)
         {
             bound.localData->setVal(0);
             bound.adjData->setVal(0);
         }
     }
 }
-
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBBoundaryRegister<T,C,MEM,CTR>::
+increment(Array<BoxData<T,C,MEM>,DIM>& a_fluxes,
+        MBIndex a_dit,
+        T a_weight)
+{
+    PR_TIMERS("MBBoundaryRegister::increment");
+    auto layout = this -> layout();
+    auto block = layout.block(a_dit);
+    Box bx = layout[a_dit];
+    for (auto mb : bounds(a_dit))
+    {
+        if (mb.localDir.codim() != 1) { continue; }
+        int dir = mb.localFace().dir;
+        auto side = mb.localFace().side;
+        Box bxfaces = bx.extrude(Point::Basis(dir));
+        Box bxLocal = bxfaces.face(dir,side) & a_fluxes[dir].box(); 
+        BoxData<T,C,MEM> tmp = forall<T,C,MEM>
+            ([ ] PROTO_LAMBDA(
+                              Var<T,C,MEM>& a_corr,
+                              const Var<T,C,MEM>& a_fluxdir,
+                              T a_weight)
+             {
+                for (int comp = 0; comp < C; comp++)
+                {
+                    a_corr(comp) = a_fluxdir(comp)*a_weight;
+                }
+             },bxLocal,a_fluxes[dir],a_weight);
+        if (!((mb.localData->box()).containsBox(bxLocal)))
+        {
+            cout << mb.localData -> box() << ", " << bxLocal << endl;
+        }
+        *mb.localData += tmp;
+    } 
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBBoundaryRegister<T,C,MEM,CTR>::
+reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
+{
+    PR_TIMERS("MBBoundaryRegister::reflux");
+    auto layout = a_rhsTotal.layout();
+    this->exchange();
+    auto domain = layout.domain();
+    for (auto dit : layout)
+    {   
+        auto block = layout.block(dit);
+        auto nvec = layout.domain().getBlock(block).box().high();
+        auto& a_rhsTotal_i = a_rhsTotal[dit];
+        auto bx = layout[dit];
+        for (auto mb : bounds(dit))
+        {
+            if (mb.localDir.codim() != 1) { continue; } //ignore non-face boundaries
+            int dir = mb.localFace().dir;
+            auto side = mb.localFace().side;
+            T dx = 1.0/(nvec[dir]+1);
+            auto R = mb.adjToLocal;
+            auto Rinv = R.inverse();
+            Point normal = Point::Basis(dir,side);
+            Point adjNormal = Rinv(normal);
+            auto adjblock = mb.adjIndex.local();          
+            Point signflipPoint = Rinv(Point::Basis(dir));
+            int signflip = signflipPoint.dot(Point::Ones());
+            Array<int,C> signflipArray;
+            signflipArray.fill(1);
+            //#ifdef PR_CFD
+            signflipArray.fill(signflip);
+            //signflipArray[0] = 1;
+            //signflipArray[4] = 1;
+            //#endif
+            PROTO_ASSERT(signflip*signflip == 1,"signflip from Coordinate transform != +-1");
+            adjNormal *= -1;
+            Point adjBasis = adjNormal*adjNormal;
+            int dp = adjNormal.dot(adjBasis);
+            Box bxfaces = bx.extrude(Point::Basis(dir));
+            Box bxedge = bxfaces.face(dir,side);
+            BoxData<double,C,HOST> adjCopy(bxedge);
+            if (dp*(2*side-1) == 1)
+            {
+                mb.adjData->shift(Point::Basis(dir));
+                mb.adjData -> copyTo(adjCopy);
+                mb.adjData->shift(Point::Basis(dir,-1));
+            }
+            else
+            {
+                mb.adjData -> copyTo(adjCopy);
+            }
+            signflip = 1;
+            BoxData<T,C,MEM> fluxCorr = forall<T,C,MEM>
+              ([ ] PROTO_LAMBDA
+               (Var<T,C,MEM>& a_corr,
+                Var<T,C,MEM>& a_local,
+                Var<T,C,MEM>& a_adj,
+                Array<int,C> a_signfliparray)
+               {
+                 for (int comp = 0; comp < C; comp++)
+                   { 
+                     a_corr(comp) =
+                     .5*(a_local(comp) - a_signfliparray[comp]*a_adj(comp));
+                   }                       
+               },*mb.localData,adjCopy,signflipArray);
+            
+            Stencil<T> faceStencil;
+            if (side == Side::LoHiSide::Lo)
+            {
+                faceStencil = 1.0*Shift(Point::Zeros());
+            }
+            else if (side == Side::LoHiSide::Hi)
+            { 
+                faceStencil = (-1.0)*Shift(Point::Basis(dir));
+            }          
+            T wgt = -1.0/dx;
+            BoxData<T,C,MEM> tmp = faceStencil(fluxCorr,wgt);
+            a_rhsTotal_i += tmp;
+        }
+    }
+}
 // Exchange and fill adjacent data
 /** Local data is maintained
 */

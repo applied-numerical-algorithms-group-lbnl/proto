@@ -1,8 +1,10 @@
+#include <iomanip>  // include this at the top
 MBProblemDomain CubedSphereShell::Domain(
     int a_domainSize,
     int a_thickness,
     int a_radialDir)
 {
+    PR_TIMERS("CubedSphereShell::Domain()");
     MBProblemDomain domain(6);
     auto CCW = CoordPermutation::ccw(a_radialDir);
     auto CW = CoordPermutation::cw(a_radialDir);
@@ -33,7 +35,6 @@ MBProblemDomain CubedSphereShell::Domain(
         RNorth = RNorth*CW;
         RSouth = RSouth*CCW;
     }
-    domain.graph().fixRotations();
     Point domainSize = Point::Ones(a_domainSize);
     domainSize[a_radialDir] = a_thickness;
     for (int bi = 0; bi < 6; bi++)
@@ -110,13 +111,71 @@ CubedSphereShell::InterpOp(
 }
 
 template<typename T>
-int _findIndex(std::vector<T> sorted, T value)
+int _findUpperIndex(std::vector<T> sorted, T value)
 {
     for (int ii = 0; ii < sorted.size(); ii++)
     {
         if (sorted[ii] > value) { return ii; }
     }
     return sorted.size()-1;
+}
+
+template<MemType MEM>
+MBInterpOp
+CubedSphereShell::MHDInterpOp(
+        const MBDisjointBoxLayout& a_layout,
+        Point a_ghost,
+        int a_order)
+{
+    PR_TIMERS("CubedSphereShell::InterpOp()");
+    MBInterpLayout interpLayout(a_layout, a_order);
+    interpLayout.ignoreAxis(CUBED_SPHERE_SHELL_RADIAL_COORD);
+    interpLayout.setCopy(CUBED_SPHERE_SHELL_RADIAL_COORD, true);
+
+    // MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM> map;
+    // map.define(a_layout, a_ghost);
+    std::vector<std::shared_ptr<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>> polarMaps;
+    for (int bi = 0; bi < 6; bi++)
+    {
+      polarMaps.push_back(std::make_shared<MBLevelMap<MBMap_CubedSphereShellPolar<MEM>, MEM>>());
+      polarMaps[bi]->define(a_layout, a_ghost, bi);
+    }
+    MBInterpOp op;
+    if (CUBED_SPHERE_SHELL_RADIAL_COORD == 0 && a_order == 4)
+    {
+        op.defineCubedSphere(polarMaps, interpLayout, a_ghost, a_order);
+    }
+    else
+    {
+        op.define(polarMaps, interpLayout, a_order);
+    }
+    return op; 
+}
+
+template<typename T>
+int _findIndex(const std::vector<T>& sorted, T value)
+{
+    if (sorted.empty()) return -1;
+
+    // Use lower_bound to find the first element not less than value
+    auto it = std::lower_bound(sorted.begin(), sorted.end(), value);
+    
+    if (it == sorted.begin()) {
+        return 0;
+    }
+    if (it == sorted.end()) {
+        return sorted.size() - 1;
+    }
+
+    int idx_upper = std::distance(sorted.begin(), it);
+    int idx_lower = idx_upper - 1;
+
+    // Compare which is closer
+    if (std::abs(sorted[idx_lower] - value) <= std::abs(sorted[idx_upper] - value)) {
+        return idx_lower;
+    } else {
+        return idx_upper;
+    }
 }
 
 template<typename T>
@@ -168,7 +227,6 @@ Point _getPolarImage(Box b, Point p)
     return q + shift;
 }
 #endif
-
 template<typename T, MemType MEM>
 MBInterpOp
 CubedSphereShell::BCInterpOp(
@@ -177,9 +235,8 @@ CubedSphereShell::BCInterpOp(
         std::vector<T>             a_dtheta,
         Side::LoHiSide             a_side)
 {
-    HDF5Handler h5;
-    PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
-            "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
+    // PROTO_ASSERT(a_srcLayout.numBlocks() == 1,
+    //         "CubedSphereShell::BCInterpOp | Input data should be on a single block layout.");
 
     // SETUP
     const auto& layout = a_map.layout();
@@ -226,6 +283,7 @@ CubedSphereShell::BCInterpOp(
         srcMap(pi,thetaCoord) = thetaArray[pi[thetaCoord]];
         srcMap(pi,phiCoord) = (pi[phiCoord] + 0.5)*dphi;
     }
+    HDF5Handler h5;
     h5.writePatch(varnames, srcMap, "SRC_MAP");
 
 
@@ -268,7 +326,7 @@ CubedSphereShell::BCInterpOp(
             
             p_src[rCoord] = RIndex;
             p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
-            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            p_src[thetaCoord] = _findUpperIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
             auto r_src = srcMap.array(p_src);
 
             // FIND DIRECTION FROM P_SRC TO P_DST
@@ -339,34 +397,856 @@ CubedSphereShell::BCInterpOp(
     return op;
 }
 
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCNearestOp(
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        std::vector<T>             a_theta,
+        std::vector<T>             a_phi,
+        Side::LoHiSide             a_side,
+        int a_ghost)
+{
+    PR_TIMERS("CubedSphereShell::BCNearestOp()");
+    // SETUP
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+
+
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+    
+    // CACHE THETA ON EACH LATITUDE (used for fast search)
+    std::vector<T> thetaArray(srcBoxSizes[thetaCoord]);
+    for (int ii = 0; ii < srcBoxSizes[thetaCoord]; ii++)
+    {
+        thetaArray[ii] = (ii == 0 ? a_dtheta[0]/2 : thetaArray[ii-1] + a_dtheta[ii-1]/2 + a_dtheta[ii]/2);
+    }
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+
+
+
+    // BUILD THE INTERPOLATION OPERATOR
+    MBInterpOp op;
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // All points in this block (not including ghost)
+        Box blockDomain = layout.domain().getBlock(block).box();
+        // Boundary of this block and this patch respectively
+        Box boundDomain, boundDomain_i;
+
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1);// & boundDomain; // Commenting this so ghost layer of not innermost boxes get BCs too
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1);// & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        boundDomain_i = boundDomain_i.grow(a_ghost*Point::Basis(thetaCoord) + a_ghost*Point::Basis(phiCoord));
+        // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+        // CREATE POINT INTERP OP FOR EACH POINT IN CUBE SPHERE BOUNDARY
+        for (auto p_dst : X.box())
+        {
+            auto x_dst = X.array(p_dst);    //get cartesian coords at this point
+            auto r_dst = _getPolar(x_dst);  //convert cartesian to spherical polar
+            
+            // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
+            Point p_src = Point::Zeros();
+            
+            p_src[rCoord] = RIndex;
+            p_src[phiCoord] = r_dst[phiCoord] / dphi; //works because dphi is constant
+            p_src[thetaCoord] = _findIndex(thetaArray, r_dst[thetaCoord]); // same idea but accounts for non constant dtheta
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(p_src);
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            MBDataPoint d_dst(iter, p_dst, layout);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+          
+            //arguments are dst point, src points, coefficients
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+        }
+    }
+    return op;
+}
+
+
+
+template<typename T, MemType MEM>
+MBInterpOp
+CubedSphereShell::BCBilinearOp(
+    const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
+    MBDisjointBoxLayout& a_srcLayout,
+    std::vector<T>             a_dtheta,
+    std::vector<T>             a_theta,
+    std::vector<T>             a_phi,
+    Side::LoHiSide a_side,
+    int a_ghost)
+{
+    PR_TIMERS("CubedSphereShell::BCBilinearOp()");
+    // SETUP
+    const auto& layout = a_map.layout();
+    int rCoord = CUBED_SPHERE_SHELL_RADIAL_COORD;
+    int thetaCoord = (rCoord + 1) % 3;
+    int phiCoord = (rCoord + 2) % 3;
+
+
+    int rSize = layout.domain().getBlock(0).box().sizes()[rCoord];
+    Point srcBoxSizes;
+    srcBoxSizes[rCoord] = 1;
+    srcBoxSizes[thetaCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[thetaCoord];
+    srcBoxSizes[phiCoord] = a_srcLayout.domain().getBlock(0).box().sizes()[phiCoord];
+    Box srcBox(srcBoxSizes);
+    T R = 1.0;
+    int RIndex = 0;
+    if (a_side == Side::Lo)
+    {
+        R = CUBED_SPHERE_SHELL_R0; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, -1));
+        RIndex = -1;
+    } else {
+        R = CUBED_SPHERE_SHELL_R1; 
+        srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
+        RIndex = rSize;
+    }
+    
+    T dphi = 2.0*M_PI / srcBoxSizes[phiCoord];
+    int phiSize = srcBoxSizes[phiCoord];
+
+
+    // BUILD THE INTERPOLATION OPERATOR
+    MBInterpOp op;
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        // All points in this block (not including ghost)
+        Box blockDomain = layout.domain().getBlock(block).box();
+        // Boundary of this block and this patch respectively
+        Box boundDomain, boundDomain_i;
+
+        if (a_side == Side::Lo)
+        {
+            boundDomain = blockDomain.face(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].face(rCoord, a_side, 1);// & boundDomain; // Commenting this so ghost layer of not innermost boxes get BCs too
+        } else {
+            boundDomain = blockDomain.adjacent(rCoord, a_side, 1);
+            boundDomain_i = layout[iter].adjacent(rCoord, a_side, 1);// & boundDomain;
+        }
+        if (boundDomain_i.size() <= 0) { continue; }
+
+        boundDomain_i = boundDomain_i.grow(a_ghost*Point::Basis(thetaCoord) + a_ghost*Point::Basis(phiCoord));
+        // Get Cartesian coordinates of cubed sphere map (J is unused; ignore it)
+        BoxData<double, DIM, MEM> X(boundDomain_i);
+        BoxData<double, 1, MEM> J(boundDomain_i);
+        a_map.apply(X, J, block);
+        if (a_side == Side::Lo)
+        {
+            X.shift(Point::Basis(rCoord, Side::Lo));
+        }
+        // CREATE POINT INTERP OP FOR EACH POINT IN CUBE SPHERE BOUNDARY
+        for (auto p_dst : X.box())
+        {
+          auto x_dst = X.array(p_dst);    //get cartesian coords at this point
+          auto r_dst = _getPolar(x_dst);  //convert cartesian to spherical polar
+
+          T theta_dst = r_dst[thetaCoord];
+          T phi_dst   = r_dst[phiCoord];
+          // cout << "theta_dst: " << theta_dst << ", phi_dst: " << phi_dst << endl;
+          // phi already in [0, 2π]
+
+          // Find theta bracket index
+          int i_theta = -1;
+          for (int i = 0; i < static_cast<int>(a_theta.size()) - 1; ++i) {
+              if (a_theta[i] <= theta_dst && theta_dst < a_theta[i + 1]) {
+                  i_theta = i;
+                  break;
+              }
+          }
+          // Nearest at the poles, bilinear interpolation otherwise
+          if (i_theta < 0 || i_theta + 1 >= static_cast<int>(a_theta.size())) {
+            // FIND POINT P_SRC IN POLAR DATA CLOSE TO P_DST IN ANGULAR DISTANCE
+            Point p_src = Point::Zeros();
+            
+            p_src[rCoord] = RIndex;
+            p_src[phiCoord] = _findIndex(a_phi, r_dst[phiCoord]);
+            p_src[thetaCoord] = _findIndex(a_theta, r_dst[thetaCoord]); 
+            std::vector<T> coefs(4);
+            for (int ii = 0; ii < 4; ii++) { coefs[ii] = 0.25; };
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            srcPoints.push_back(p_src);
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            MBDataPoint d_dst(iter, p_dst, layout);
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+          
+            //arguments are dst point, src points, coefficients
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+          } else {
+            // This assumes that the phi data is given on cell faces
+            // Compute phi index (wrap if necessary)
+            int j_phi = static_cast<int>(std::floor(phi_dst / dphi));
+
+            // Extract theta and phi bracket values
+            T theta1 = a_theta[i_theta];
+            T theta2 = a_theta[i_theta + 1];
+            T phi1 = j_phi * dphi;
+            T phi2 = ((j_phi + 1) % phiSize) * dphi;
+
+            // Compute bilinear interpolation weights
+            T wt_theta = (theta_dst - theta1) / (theta2 - theta1);
+            T wt_phi   = (phi_dst   - phi1)   / (phi2 - phi1);
+            // Handle wrap-around for phi
+            if (j_phi == phiSize-1) {
+              wt_phi = (phi_dst   - phi1)   / (phi2 + 2*M_PI - phi1);
+            }
+
+            std::vector<T> coefs(4);
+            coefs[0] = (1 - wt_theta) * (1 - wt_phi); // (i, j)
+            coefs[1] = (1 - wt_theta) * wt_phi;       // (i, j+1)
+            coefs[2] = wt_theta * (1 - wt_phi);       // (i+1, j)
+            coefs[3] = wt_theta * wt_phi;             // (i+1, j+1)
+
+            std::vector<MBDataPoint> srcs(4);
+            std::vector<Point> srcPoints;
+            for (int k = 0; k < 4; ++k) {
+                int di = (k == 2 || k == 3) ? 1 : 0; // i+1 or i
+                int dj = (k == 1 || k == 3) ? 1 : 0; // j+1 or j
+                int j_index = (j_phi + dj) % phiSize; // wrap around phi index
+                Point p_src = Point::Zeros();
+                p_src[rCoord] = RIndex;
+                p_src[thetaCoord] = i_theta + di; // i or i+1
+                p_src[phiCoord] = j_index; // j or j+1
+                srcPoints.push_back(p_src);
+            }
+            for (auto& pi : srcPoints) { pi[rCoord] = 0; }
+            srcs[0] = MBDataPoint(*a_srcLayout.begin(), srcPoints[0], a_srcLayout);
+            srcs[1] = MBDataPoint(*a_srcLayout.begin(), srcPoints[1], a_srcLayout);
+            srcs[2] = MBDataPoint(*a_srcLayout.begin(), srcPoints[2], a_srcLayout);
+            srcs[3] = MBDataPoint(*a_srcLayout.begin(), srcPoints[3], a_srcLayout);
+
+            MBDataPoint d_dst(iter, p_dst, layout);
+            op.insert(std::make_shared<MBPointInterpOp>(d_dst, srcs, coefs));
+          }
+        }
+    }
+
+    return op;
+}
+
+
+
+
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Array<T,C>
+CubedSphereShell::conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU)
+{
+  PR_TIMERS("CubedSphereShell::conservationSum()");
+  auto layout = a_JU.layout();
+  MBLevelBoxData<T,C,MEM,CTR> temp(layout,Point::Zeros());
+  a_JU.copyTo(temp);
+  Array<T,C> retval;
+  for (int comp = 0; comp < C; comp++)
+      {
+        retval[comp] = a_JU.sum(comp);
+      }
+  return retval;
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 CubedSphereShell::InterpBoundaries(
                                    MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                    int a_order)
-{
+{ 
+    PR_TIMERS("CubedSphereShell::InterpBoundaries()");
     auto op = InterpOp(a_data, a_order);
     op.apply(a_data, a_data);
 }
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      const BoxData<T,C,MEM>& a_W,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WCartToWSemiPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_W.box() & a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM> normal(bx);
+  forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(normal);
+  forallInPlace([] PROTO_LAMBDA (
+                                 Var<T,C+2,MEM>& a_wsemi,
+                                 Var<T,C,MEM>& a_w,
+                                 Var<T,DIM,MEM>& a_normal)
+                {
+                  a_wsemi(iRHOCS) = a_w(iRHOCS);
+                  a_wsemi(iPECS) = a_w(iPECS);
+                  T uRadial = 0;
+                  T BRadial = 0.;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      uRadial += a_normal(dir)*a_w(iVECX1 + dir);
+                      BRadial += a_normal(dir)*a_w(iVECX2 + dir);
+                    }
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_wsemi(iVECX1 + dir) = a_w(iVECX1 + dir) - uRadial*a_normal(dir);
+                      a_wsemi(iVECX2 + dir) = a_w(iVECX2 + dir) - BRadial*a_normal(dir);
+                    }
+                  a_wsemi(C) = uRadial;
+                  a_wsemi(C+1) = BRadial;
+                },a_WSemi,a_W,normal);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WCartToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                      const BoxData<T,C,MEM>& a_WCart,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WCartToWSphPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_WCart.box() & a_WSph.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM,DIM> A(btm);
+  BoxData<T,DIM,MEM,DIM> Ainv(bx);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  forallInPlace(f_matinv3by3,btm,Ainv,A); 
+  Operator::spreadSlice(Ainv);
+  forallInPlace([] PROTO_LAMBDA (
+                                 Var<T,C,MEM>& a_wsph,
+                                 const Var<T,C,MEM>& a_wcart,
+                                 const Var<T,DIM,MEM,DIM>& a_ainv)
+                {
+                  a_wsph(iRHOCS) = a_wcart(iRHOCS);
+                  a_wsph(iPECS) = a_wcart(iPECS);
+                  
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      a_wsph(iVECX1 + dir0) = 0;
+                      a_wsph(iVECX2 + dir0) = 0;
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          a_wsph(iVECX1 + dir0) 
+                            += a_ainv(dir0,dir1)*a_wcart(iVECX1 + dir1);
+                          a_wsph(iVECX2 + dir0) 
+                            += a_ainv(dir0,dir1)*a_wcart(iVECX2 + dir1);
+                        }
+                    }
+                },a_WSph,a_WCart,Ainv);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSphToWCartPointwise(BoxData<T,C,MEM>& a_WCart,
+                     const BoxData<T,C,MEM>& a_WSph,
+                     T a_h,
+                     unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WSphToWCartPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_WCart.box() & a_WSph.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM,DIM> A(bx);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(A);
+  forallInPlace([] PROTO_LAMBDA (
+                                 Var<T,C,MEM>& a_wcart,
+                                 const Var<T,C,MEM>& a_wsph,
+                                 const Var<T,DIM,MEM,DIM>& a_amat)
+                {
+                  a_wcart(iRHOCS) = a_wsph(iRHOCS);
+                  a_wcart(iPECS) = a_wsph(iPECS);
+                  
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      a_wcart(iVECX1 + dir0) = 0;
+                      a_wcart(iVECX2 + dir0) = 0;
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          a_wcart(iVECX1 + dir0) 
+                            += a_amat(dir0,dir1)*a_wsph(iVECX1 + dir1);
+                          a_wcart(iVECX2 + dir0) 
+                            += a_amat(dir0,dir1)*a_wsph(iVECX2 + dir1);
+                        }
+                    }
+                },a_WCart,a_WSph,A);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSemiToWCartPointwise(BoxData<T,C,MEM>& a_W,
+                      const BoxData<T,C+2,MEM>& a_WSemi,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WSemiToWCartPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_W.box() & a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM> normal(bx);
+  forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(normal);
+  forallInPlace([] PROTO_LAMBDA (
+                                 Var<T,C,MEM>& a_w,
+                                 Var<T,C+2,MEM>& a_wsemi,
+                                 Var<T,DIM,MEM>& a_normal)
+                {
+                  a_w(iRHOCS) = a_wsemi(iRHOCS);
+                  a_w(iPECS) = a_wsemi(iPECS);
 
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_w(iVECX1 + dir) =
+                        a_w(iVECX1 + dir) + a_wsemi(C)*a_normal(dir);
+                      a_w(iVECX2 + dir) =
+                        a_wsemi(iVECX2 + dir) + a_wsemi(C+1)*a_normal(dir);
+                    }
+                },a_W,a_WSemi,normal);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      const BoxData<T,C,MEM>& a_WSph,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WSphToWSemiPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_WSph.box() & a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM,DIM> A(bx);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(A);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C+2,MEM>& a_wsemi,
+                                const Var<T,C,MEM>& a_w,
+                                const Var<T,DIM,MEM,DIM>& a_amat)
+                {
+                  a_wsemi(iRHOCS) = a_w(iRHOCS);
+                  a_wsemi(iPECS) = a_w(iPECS);
+                  T uRadial = a_w(iVECX1);
+                  T BRadial = a_w(iVECX2);
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      a_wsemi(iVECX1+dir0) = 0.0;
+                      a_wsemi(iVECX2+dir0) = 0.0;
+
+                      for (int dir1 = 0; dir1 < DIM; dir1++) 
+                        {
+                          a_wsemi(iVECX1+dir0) +=
+                            a_amat(dir0,dir1)*a_w(iVECX1 + dir1);
+                          a_wsemi(iVECX2+dir0) +=
+                            a_amat(dir0,dir1)*a_w(iVECX2 + dir1);
+                        }
+                      a_wsemi(iVECX1 + dir0) -= a_amat(dir0,0)*uRadial;
+                      a_wsemi(iVECX2 + dir0) -= a_amat(dir0,0)*BRadial;
+                    }
+                  a_wsemi(C) = uRadial;
+                  a_wsemi(C+1) = BRadial;
+                },a_WSemi,a_WSph,A);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                      const BoxData<T,C+2,MEM>& a_WSemi,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WSemiToWSphPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx = a_WSph.box() & a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM,DIM> A(btm);
+  BoxData<T,DIM,MEM,DIM> Ainv(bx);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  forallInPlace(f_matinv3by3,btm,Ainv,A);
+  Operator::spreadSlice(Ainv);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C,MEM>& a_w,
+                                const Var<T,C+2,MEM>& a_wsemi,
+                                const Var<T,DIM,MEM,DIM>& a_ainvmat)
+                {
+                  a_w(iRHOCS) = a_wsemi(iRHOCS);
+                  a_w(iPECS) = a_wsemi(iPECS);
+                  T uRadial = a_wsemi(C);
+                  T BRadial = a_wsemi(C+1);
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      a_w(iVECX1+dir0) = 0.;
+                      a_w(iVECX2+dir0) = 0.;
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          a_w(iVECX1+dir0) +=
+                            a_ainvmat(dir0,dir1)*a_wsemi(iVECX1 + dir1);
+                          a_w(iVECX2+dir0) +=
+                            a_ainvmat(dir0,dir1)*a_wsemi(iVECX2 + dir1);
+                        }
+                    }
+                  a_w(iVECX1) = uRadial;
+                  a_w(iVECX2) = BRadial;
+                },a_WSph,a_WSemi,Ainv);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
+                         const BoxData<T,C,MEM>& a_WSph,
+                         const BoxData<T,1,MEM>& a_dVolr,
+                         Box a_bx0,
+                         T a_h,
+                         T a_gamma,
+                         unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::WSphPointwiseToJUAverage()");
+  Stencil<T> convolveStencil =
+    1.0*Shift(Point::Zeros()) + (1.0/24.0)*Stencil<T>::Laplacian();
+  // tranform WSph -> USph.
+  Box bx = a_JU.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,C,MEM> USph(bx);
+  BoxData<T,DIM,MEM,DIM> A(bx);
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  forallInPlace_p(f_Amatrix,btm,A,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(A);
+  BoxData<T,4,MEM> energy(bx);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C,MEM>& a_usph,
+                                Var<T,4,MEM>& a_energy,
+                                const Var<T,C,MEM>& a_wsph,
+                                const Var<T,DIM,MEM,DIM>& a_amat,
+                                T a_gamma)
+                {
+                  T ke = 0.;
+                  T me = 0.;
+                  for (int dir0 = 0; dir0 < DIM; dir0++)
+                    {
+                      T velcart = 0.;
+                      T bcart = 0.;
+                      for (int dir1 = 0; dir1 < DIM; dir1++)
+                        {
+                          velcart += a_amat(dir0,dir1)*a_wsph(dir1 + iVECX1);
+                          bcart += a_amat(dir0,dir1)*a_wsph(dir1 + iVECX2);
+                        }
+                      ke += velcart*velcart;
+                      me += bcart*bcart;
+                    }
+                  ke *= 0.5*a_wsph(iRHOCS);
+                  me *= 1.0/(M_PI*8);
+                  a_usph(iRHOCS) = a_wsph(iRHOCS);
+                  a_usph(iPECS) = a_wsph(iPECS)/(a_gamma - 1.0) + ke + me;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_usph(dir+iVECX1) = a_wsph(iRHOCS)*a_wsph(dir + iVECX1);
+                      a_usph(dir+iVECX2) = a_wsph(dir + iVECX2);
+                    }
+                  a_energy(0) = a_usph(iPECS);
+                  a_energy(3) = a_wsph(iPECS)/ke;
+                  a_energy(1) = ke;
+                  a_energy(2) = me/ke;
+                },USph,energy,a_WSph,A,a_gamma);
+  // Compute average of U.
+  BoxData<T,C,MEM> UAverage = convolveStencil(USph);
+  //BoxData<T,C,MEM> UAverage = ((1.0)*Shift(Point::Zeros()))(USph);
+  // product rule for U -> JU.
+  Box bxAv = UAverage.box();
+  BoxData<T,1,MEM> J = detA<T,MEM>(bxAv,a_h,0);
+  BoxData<T,DIM,MEM,DIM> J_amat =
+    CubedSphereShell::detA_A<T,MEM>(bxAv,a_h,a_block,0);
+  J *= a_dVolr;
+  for (int dir0 = 0;dir0 < DIM; dir0++)
+    {
+      for (int dir1 = 0;dir1 < DIM; dir1++)
+        {
+          slice(J_amat,dir0,dir1) *= a_dVolr;
+        }
+    }
+  T one = 1.0;
+  auto JUVel = slice<T,C,DIM,MEM>(a_JU,iVECX1);
+  auto JUB = slice<T,C,DIM,MEM>(a_JU,iVECX2);
+  auto UVel = slice<T,C,DIM,MEM>(UAverage,iVECX1);
+  auto UB = slice<T,C,DIM,MEM>(UAverage,iVECX2);
+  //forallInPlace(f_matVecProd,JUVel,J_amat,UVel,one);
+  //forallInPlace(f_matVecProd,JUB,J_amat,UB,one);               
+  Operator::matrixProductAB(JUVel,J_amat,UVel);
+  Operator::matrixProductAB(JUB,J_amat,UB);
+  auto URho = slice(UAverage,iRHOCS);
+  auto UE = slice(UAverage,iPECS);         
+  auto JURho = slice(a_JU,iRHOCS);
+  auto JUE = slice(a_JU,iPECS);
+  URho.copyTo(JURho);
+  UE.copyTo(JUE);
+  //JURho *= J;
+  //JUE *= J;
+  Operator::cellProduct(JURho,J,slice(UAverage,iRHOCS));
+  Operator::cellProduct(JUE,J,slice(UAverage,iPECS));
+  {
+    BoxData<T,4,MEM> eng0(a_bx0);
+    energy.copyTo(eng0);
+    HDF5Handler h5;
+    h5.writePatch(1.,UAverage,"UAverage"+to_string(procID()));
+    h5.writePatch(1.,USph,"USphPatch"+to_string(procID()));
+    h5.writePatch(1.,a_WSph,"WSphPatch"+to_string(procID()));
+    h5.writePatch(1.,eng0,"Energy"+to_string(procID()));
+    h5.writePatch(1.,a_JU,"JUPatch"+to_string(procID()));
+  }
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
+                      const BoxData<T,C+2,MEM>& a_WSemi,
+                      T a_gamma)
+{
+  PR_TIMERS("CubedSphereShell::WSemiToUSemiPointwise()");
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C + 2,MEM>& a_usemi,
+                                const Var<T,C + 2,MEM>& a_wsemi,
+                                T a_gamma)
+                {
+                  T ke = a_wsemi(C)*a_wsemi(C);
+                  T me = a_wsemi(C+1)*a_wsemi(C+1);
+                  for (int dir = 0; dir < DIM; dir++)
+                    {                     
+                      a_usemi(dir + iVECX1) = a_wsemi(dir + iVECX1)*a_usemi(iRHOCS);
+                      ke += a_wsemi(dir + iVECX1)*a_wsemi(dir + iVECX1);
+                      a_usemi(dir + iVECX2) = a_wsemi(dir + iVECX2);
+                      me += a_wsemi(dir + iVECX2)*a_wsemi(dir + iVECX2);
+                    }
+                  ke *= .5*a_usemi(iRHOCS);
+                  me *= 1./(M_PI*8);
+                  a_usemi(iRHOCS) = a_wsemi(iRHOCS);
+                  a_usemi(iPECS) = (a_wsemi(iPECS)/(a_gamma-1.0) + ke + me);
+                 
+                  a_usemi(C) = a_usemi(C)*a_wsemi(iRHOCS);
+                  a_usemi(C+1) = a_wsemi(C+1);
+                },a_USemi,a_WSemi,a_gamma);
+}
+    
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      const BoxData<T,C+2,MEM>& a_USemi,
+                      T a_gamma)
+{
+  PR_TIMERS("CubedSphereShell::USemiToWSemiPointwise()");
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,C + 2,MEM>& a_wsemi,
+                                const Var<T,C + 2,MEM>& a_usemi,
+                                T a_gamma)
+                {
+                  a_wsemi(C) = a_usemi(C)/a_wsemi(iRHOCS);
+                  a_wsemi(C+1) = a_usemi(C+1);
+                  T ke = a_wsemi(C)*a_wsemi(C);
+                  T me = a_wsemi(C+1)*a_wsemi(C+1);
+                  for (int dir = 0; dir < DIM; dir++)
+                    {                     
+                      a_wsemi(dir + iVECX1) = a_usemi(dir + iVECX1)/a_usemi(iRHOCS);
+                      ke += a_wsemi(dir + iVECX1)*a_wsemi(dir + iVECX1);
+                      a_wsemi(dir + iVECX2) = a_usemi(dir + iVECX2);
+                      me += a_wsemi(dir + iVECX2)*a_wsemi(dir + iVECX2);
+                    }
+                  ke *= .5*a_usemi(iRHOCS);
+                  me *= 1./(M_PI*8);
+                  a_wsemi(iRHOCS) = a_usemi(iRHOCS);
+                  a_wsemi(iPECS) = (a_usemi(iPECS) - ke - me)*(a_gamma-1.0);
+                },a_WSemi,a_USemi,a_gamma);
+}
+template<typename T,unsigned int C,MemType MEM>
+void CubedSphereShell::
+PerpCheckPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                      T a_h,
+                      unsigned int a_block)
+{
+  PR_TIMERS("CubedSphereShell::PerpCheckPointwise()");
+  auto permute = perm(a_block);
+  auto sign = permsign(a_block);
+  Box bx =  a_WSemi.box();
+  Box btm = bx.face(0,Side::Lo);
+  BoxData<T,DIM,MEM> normal(bx);
+  forallInPlace_p(f_normal,btm,normal,permute,sign,a_h,.5,.5);
+  Operator::spreadSlice(normal);
+  BoxData<T,2,MEM> perpcheck(bx);
+  forallInPlace([] PROTO_LAMBDA(
+                                Var<T,2,MEM>& a_perp,
+                                const Var<T,C+2,MEM>& a_wsemi,
+                                const Var<T,DIM,MEM>& a_normal)
+                {
+                  a_perp(0) = 0.;
+                  a_perp(1) = 0.;
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_perp(0) +=
+                        + a_wsemi(dir + iVECX1)*a_normal(dir);
+                      a_perp(1) +=
+                        + a_wsemi(dir + iVECX2)*a_normal(dir);
+                    }                 
+                },perpcheck,a_WSemi,normal);
+  
+  cout << "block = " << a_block << ":vel perp = "
+       << slice(perpcheck,0).absMax()
+       << ", vel radial = " << slice(a_WSemi,C).absMax()
+       << ", B perp = " << slice(perpcheck,1).absMax()
+       << ", B radial = " << slice(a_WSemi,C+1).absMax()
+       << endl;
+}
+template<typename T, MemType MEM>
+void
+CubedSphereShell::consToSemiSphVecNG(
+                                     BoxData<T,DIM,MEM>& a_UPerp,
+                                     BoxData<T,1,MEM>& a_uRadial,
+                                     const BoxData<T,DIM,MEM>& a_JUVec,
+                                     const BoxData<T,DIM,MEM,DIM>& a_AdetA,
+                                     const BoxData<T,DIM,MEM,DIM>& a_invAdetA,
+                                     const BoxData<T,DIM,MEM,DIM>& a_Amat,
+                                     const BoxData<T,1,MEM>& a_detA,
+                                     const BoxData<T,1,MEM>& a_invDetA,
+                                     Box a_bx,
+                                     Box a_blockBox,
+                                     bool a_debug)
+{
+  PR_TIMERS("CubedSphereShell::consToSemiSphVecNG");
+  HDF5Handler h5;
+  Box vsphbx3 = a_bx.grow(Point::Ones(3) - Point::Basis(0,2)) & a_blockBox;
+  Box vsphbx2 = a_bx.grow(Point::Ones(2) - Point::Basis(0,1)) & a_blockBox;
+  Box vsphbx1 = a_bx.grow(Point::Ones()) & a_blockBox;
+  BoxData<T,DIM,MEM> USph(vsphbx2);
+  USph.setVal(0.);
+  BoxData<T,DIM,MEM> USphRadial(a_bx);
+  USph.setToZero();
+  cellMatrixQuotientMatAndInv(USph,a_AdetA,a_invAdetA,a_JUVec,vsphbx2,a_blockBox,a_debug);
+  // if (a_debug)
+  //   {
+  //     h5.writePatch(1.0,USph,"USph" + to_string(a_bx.size(2)));
+  //   }
+  BoxData<T,1,MEM> uRadial = slice(USph,0);  
+  uRadial.copyTo(a_uRadial);
+  uRadial.setToZero();
+  BoxData<T,DIM,MEM> JUCart(vsphbx1);
+  JUCart.setVal(0.);
+  cellMatrixVectorProd(JUCart,a_AdetA,USph,vsphbx1,a_blockBox);  
+  // if (a_debug)
+  //   {
+  //     h5.writePatch(1.0,JUCart,"JUCart" + to_string(a_bx.size(2)));
+  //   }
+  
+  a_UPerp.setVal(0.);
+  for (int dir = 0; dir < DIM; dir++)
+  {
+    auto JUCartComp = slice(JUCart,dir);
+    auto UPerpComp = slice(a_UPerp,dir);
+    cellQuotientValAndInv(UPerpComp,a_detA,a_invDetA,JUCartComp,vsphbx1,a_blockBox);
+  }  
+  // if (a_debug)
+  //   {
+  //     h5.writePatch(1.0,a_UPerp,"a_UPerp" + to_string(a_bx.size(2)));
+  //   }    
+}
 template<typename T, unsigned int C, MemType MEM>
 void CubedSphereShell::
-consToSphNGEuler(                    
-                 BoxData<T,C,MEM>& a_JU,
-                 BoxData<T,1,MEM>& a_dVolr,
-                 Box a_bx,
-                 Box a_blockBox,
-                 T a_dxiPerp,
-                 int a_block,                 
-                 unsigned int a_order)
+radialCons(
+           BoxData<T,C,MEM>& a_flux,
+           Array<Reduction<T,Operation::Sum,MEM>, C>& a_rxn,
+           T a_dxi0,
+           Box a_validBox,
+           T a_weight
+           )
 {
-  PR_TIMERS("consToSphNGEuler");
+  PR_TIMERS("CubedSphereShell::radialCons()");
+  Box lowBox =
+    a_validBox.face(0,Side::Lo)&a_flux.box();
+  if (!lowBox.empty())
+    {
+      BoxData<T,C,MEM> dfluxInner(lowBox);
+      a_flux.copyTo(dfluxInner);
+      dfluxInner *= a_weight/a_dxi0;
+      
+      for (int c = 0; c < C; c++)
+        {
+          auto dfdrSlice = slice(dfluxInner,c);
+          dfdrSlice.reduce(a_rxn[c]);
+        }
+    }
+  Box highBox =
+    a_validBox.face(0,Side::Hi)&(a_flux.box().shift(Point::Basis(0,-1)));
+  if (!highBox.empty())
+    {
+      BoxData<T,C,MEM> dfluxInner(highBox);
+      BoxData<T,C,MEM> fluxShift = alias(a_flux,Point::Basis(0,-1));
+      fluxShift.copyTo(dfluxInner);
+      
+      dfluxInner *= -a_weight/a_dxi0;
   
-  //HDF5Handler h5;
-  BoxData<T,C,MEM> USph(a_bx);
-  USph.setVal(1.);
-  // Get geometric data.
-  Box bxMetric = a_bx.grow(1);
+      for (int c = 0; c < C; c++)
+        {
+          auto dfdrSlice = slice(dfluxInner,c);
+          dfdrSlice.reduce(a_rxn[c]);
+        }
+    }
+}
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::
+consToSemiSphNGEuler(                    
+                     BoxData<T,C+2,MEM>& a_USemiSph,
+                     const BoxData<T,C,MEM>& a_JU,
+                     const BoxData<T,1,MEM>& a_dVolr,
+                     Box a_bx,
+                     Box a_blockBox,
+                     T a_dxiPerp,
+                     unsigned int a_block,                 
+                     unsigned int a_order)
+{
+  PR_TIMERS("CubedSphereShell::consToSemiSphNGEuler()");
+  Box bx = a_bx.grow(Point::Basis(0))&a_blockBox;
+  // cout << "input box " << bx <<", blockbox" << a_blockBox << endl;
+  BoxData<T,C,MEM> USph(bx);
+  USph.setVal(0.);
+  // Get geometric data on box one cell larger in the tangential directions.
+  Box bxMetric = bx.grow(Point::Ones(3) - Point::Basis(0,2));
   BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
   BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA
@@ -377,29 +1257,303 @@ consToSphNGEuler(
      ,deta);
       
   BoxData<T,DIM,MEM,DIM> deta_amat =
-    CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
-  BoxData<T,DIM,MEM,DIM> invcoef(a_bx);
+    CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0);
+  BoxData<T,DIM,MEM,DIM> amat =
+    CubedSphereShell::AMatrix<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
+  BoxData<T,DIM,MEM,DIM> invcoef(bxMetric);
   invcoef.setToZero();
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
-
+  bool debugflag = false;
+  // if ((a_block == 0) && (bx.low() == Point(0,0,0)))
+  //   {
+  //     debugflag = true;
+  //     cout << "consToSemiSphNGEuler:\n"
+  //          << "a_bx = " << a_bx << "\n"
+  //          << "bx = " << bx<< "\n"
+  //          << "a_blockBox = " << a_blockBox << "\n"
+  //          << "bxMetric = " << bxMetric
+  //          << endl << endl;
+  //   }
+        
   // Slice data and compute quotients.
   BoxData<T,1,MEM> JRho = slice(a_JU,0);
-  BoxData<T,1,MEM> rho = slice(USph,0);      
-  cellQuotientValAndInv(rho,deta,detaInv,JRho,a_bx,a_blockBox);
+  BoxData<T,1,MEM> rho = slice(a_USemiSph,0);      
+  cellQuotientValAndInv(rho,deta,detaInv,JRho,bx,a_blockBox);
       
-  BoxData<T,1,MEM> JRhoE = slice(a_JU,1+DIM);
-  BoxData<T,1,MEM> rhoE = slice(USph,1+DIM);
-  cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,a_bx,a_blockBox);
+  BoxData<T,1,MEM> JRhoE = slice(a_JU,DIM+1);
+  BoxData<T,1,MEM> rhoE = slice(a_USemiSph,DIM+1);
+  cellQuotientValAndInv(rhoE,deta,detaInv,JRhoE,bx,a_blockBox);
       
   BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(a_JU,1);
-  BoxData<T,DIM,MEM> USphMom = slice<T,C,DIM,MEM>(USph,1);
-  cellMatrixQuotientMatAndInv(USphMom,deta_amat,invcoef,JUMom,a_bx,a_blockBox);
+  BoxData<T,DIM,MEM> USphMom = slice<T,C+2,DIM,MEM>(a_USemiSph,1);
+  USphMom.setToZero();
+  BoxData<T,1,MEM> URadial = slice<T,C+2,1,MEM>(a_USemiSph,C);
+  URadial.setToZero();
+// if ((a_block == 0) && (a_bx.low() == Point(0,0,0)))
+//     {
+//       HDF5Handler h5;
+//       auto size = a_bx.size(2);
+//       Box bx0(Point(0,0,0),Point(59,15,15));
+//       BoxData<T,DIM,MEM> output(bx0);
+//       output.setToZero();
+//       JUMom.copyTo(output);
+//       h5.writePatch(1.0,output,"JUMom"+to_string(size));
+//     }  
+  consToSemiSphVecNG(USphMom,URadial,JUMom,
+                     deta_amat,invcoef,
+                     amat,deta,detaInv,
+                     bx,a_blockBox,debugflag);
+  // if ((a_block == 0) && (a_bx.low() == Point(0,0,0)))
+  //   {
+  //     HDF5Handler h5;
+  //     auto size = a_bx.size(2);
+  //     Box bx0(Point(0,0,0),Point(59,14,14));
+  //     BoxData<T,DIM,MEM> output(bx0);
+  //     output.setToZero();
+  //     USphMom.copyTo(output);
+  //     h5.writePatch(1.0,output,"USphMom"+to_string(size));
+  //   }
+  // if ((procID() == 0) && debugflag) cout << endl;
+  
+  BoxData<T,DIM,MEM> JUB = slice<T,C,DIM,MEM>(a_JU,DIM+2);
+  BoxData<T,DIM,MEM> USphB = slice<T,C+2,DIM,MEM>(a_USemiSph,DIM+2);
+  USphB.setToZero();
+  BoxData<T,1,MEM> BRadial = slice<T,C+2,1,MEM>(a_USemiSph,C+1);
+  BRadial.setToZero();
+  consToSemiSphVecNG(USphB,BRadial,JUB,
+                     deta_amat,invcoef,
+                     amat,deta,detaInv,
+                     bx,a_blockBox);
+  
+  BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
+     {
+       a_output(0) = 1.0/a_dvolr(0);
+     }
+     ,a_dVolr);
+  
+  for (int comp = 0; comp < C+2; comp++)
+    {
+      BoxData<T,1,MEM> USphcomp = slice(a_USemiSph,comp);
+      BoxData<T,1,MEM> USphtemp(a_USemiSph.box());
+      cellQuotientValAndInvRadial(USphtemp,a_dVolr,dVolrInv,USphcomp,a_bx,a_blockBox);
+      USphtemp.copyTo(USphcomp,a_bx);    
+    }
+}
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::semiSphToSph(
+                                      BoxData<T,C,MEM>& a_VSph,
+                                      const BoxData<T,C+2,MEM>& a_VSemiSph,
+                                      const BoxData<T,DIM,MEM,DIM>& a_ADetA,
+                                      const BoxData<T,DIM,MEM,DIM>& a_invADetA,
+                                      const BoxData<T,1,MEM>& a_detA,
+                                      const BoxData<T,1,MEM>& a_invDetA,
+                                      int a_compvec,
+                                      int a_compradial)
+{
+  PR_TIMERS("CubedSphereShell::semiSphToSph()");
+  Box bx = a_VSph.box();
+  BoxData<T,DIM,MEM> tmp(bx);
+  tmp.setToZero();
+  BoxData<T,DIM,MEM> VecSemiSph = slice<T,C+2,DIM,MEM>(a_VSemiSph,a_compvec);
+  BoxData<T,DIM,MEM> VecSph = slice<T,C,DIM,MEM>(a_VSph,a_compvec);
+  BoxData<T,DIM,MEM> VecSphBar(VecSph.box());
+  
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      BoxData<T,1,MEM> tmpComp = slice(tmp,dir);
+      BoxData<T,1,MEM> VecSemiSphComp = slice(VecSemiSph,dir);
+      tmpComp += VecSemiSphComp*a_detA;
+      // WARNING: Eventually we need to replace this with the 4th order product formula.
+    }
+  bool debug = false;
+  cellMatrixQuotientMatAndInv(VecSph,VecSphBar,a_ADetA,a_invADetA,tmp,debug);
+  BoxData<T,1,MEM> VSphRadial = slice<T,C+2,1,MEM>(a_VSemiSph,a_compradial);
+  BoxData<T,1,MEM> VRadial = slice<T,C,1,MEM>(a_VSph,a_compvec);
+  VRadial += VSphRadial;
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void CubedSphereShell::
+consToSphInterpEuler(
+                     MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                     MBInterpOp& a_iop,
+                     MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                     unsigned int a_order,
+                     int a_counter)
+{
+  PR_TIMERS("CubedSphereShell::consToSphInterpEuler()");
+  auto layout = a_JU.layout();
+  auto ghost = a_JU.ghost();
+  HDF5Handler h5;
+  bool debugpre = false;
+  
+  // copy input a_JU into temp variables, with the temp have 3 cells wide
+  // ghost cells, and no interblock ghost points. This is just enough data
+  // perform the transform to semispherical variables without having
+  // the result depend on the decomposition of the domain into patches.
+  
+  Array<Point,DIM+1> ghostTemp =
+    {Point::Ones(3),Point::Zeros(),Point::Zeros(),Point::Zeros()};
+  MBLevelBoxData<T,C,MEM> JUTemp(layout,ghostTemp);  
+  // Transform JU to USemiSph.
+  JUTemp.setVal(0.);
+  a_JU.copyTo(JUTemp);
+  JUTemp.exchange0();
+  Point offset = Point(0,2,2);
+  MBLevelBoxData<T,C+2,MEM> USemiSphIn(layout,ghost+offset);
+  MBLevelBoxData<T,C+2,MEM> USemiSph(layout,ghost);
+  
+  Point size = layout.domain().getBlock(0).sizes();
+  T dxiPerp = 1.0/size[1];
+  for (auto dit : JUTemp.layout())
+    {
+      PR_TIMERS("CubedSphereShell::consToSphInterpEuler() pre-exchange");
+      // Transform JU -> USemiSph on valid cells in layout.
+      unsigned int block = JUTemp.layout().block(dit);
+      Box blockBox = JUTemp.layout().getBlock(block).domain().box();
+      auto& JU_i = JUTemp[dit];
+      auto& USemiSph_i = USemiSphIn[dit];
+      USemiSph_i.setToZero();
+      USemiSph[dit].setVal(0.);
+      auto& dVolr_i = a_dVolr[dit];
+      Box bx_i = JUTemp.layout()[dit]; 
+      CubedSphereShell::
+        consToSemiSphNGEuler(USemiSph_i,JU_i,dVolr_i,bx_i,
+                             blockBox,dxiPerp,block,4);
+      USemiSph_i.copyTo(USemiSph[dit],layout[dit]);    
+    }
+#if 0
+  if ((a_counter > 0) && debugpre)
+    {
+      for (auto dit : layout)
+        {
+          unsigned int block = USemiSph.layout().block(dit);
+          Box blockbox = USemiSph.layout().getBlock(block).domain().box();
+          BoxData<T,C+2,MEM>& USemiSph_i = USemiSphIn[dit];
+          {
+            Box bxvalid = USemiSph_i.box();
+            auto low = bxvalid.low();
+            auto high = bxvalid.high();
+            low[0] = max(low[0],0);
+            high[0] = min(high[0],blockbox.high()[0]);
+            bxvalid = Box(low,high);
+          
+            BoxData<T,C+2,MEM> USemiOut(bxvalid);
+            BoxData<T,C+2,MEM> USemiOut0(layout[dit]);
+            a_iop.m_UOut = make_shared<MBLevelBoxData<T,C+2,MEM> >(layout,USemiSphIn.ghost());
+            for (auto dit : layout)
+              {
+                USemiSphIn[dit].copyTo((*(a_iop.m_UOut))[dit]);              
+              }
+          }    
+          //radialExtrapolate(USemiSph_i,blockBox);
+        }
+    }
+#endif
+  USemiSphIn.exchange();
+  USemiSphIn.copyTo(USemiSph);
+  a_iop.apply(USemiSph,USemiSphIn);  
+  USemiSph.exchange0(); 
+#if 0 
+  if ((a_counter > 0) && !debugpre)
+    {
+      for (auto dit : layout)
+        {
+          unsigned int block = USemiSph.layout().block(dit);
+          Box blockbox = USemiSph.layout().getBlock(block).domain().box();
+          BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
+          Box bxvalid = USemiSph_i.box();
+          auto low = bxvalid.low();
+          auto high = bxvalid.high();
+          low[0] = max(low[0],0);
+          high[0] = min(high[0],blockbox.high()[0]);
+          bxvalid = Box(low,high);
+          BoxData<T,C+2,MEM> USemiOut(bxvalid);
+          BoxData<T,C+2,MEM> USemiOut0(layout[dit]);
+          a_iop.m_UOut = make_shared<MBLevelBoxData<T,C+2,MEM> >(layout,USemiSph.ghost());
+          for (auto dit : layout)
+            {
+              USemiSph[dit].copyTo((*(a_iop.m_UOut))[dit]);              
+            }
+          //radialExtrapolate(USemiSph_i,blockBox);
+        }
+    }
+#endif
+      for (auto dit : USemiSph.layout())
+    {
+       PR_TIMERS("CubedSphereShell::consToSphInterpEuler() post-exchange");
+      BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
+      Box bxOut = a_JU[dit].box();     
+      Box bxIn = USemiSph_i.box();
+      auto& USphere_i = a_JU[dit];     
+      
+      unsigned int block = a_JU.layout().block(dit);
+      Box bxMetric = bxIn;
+      BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxMetric,dxiPerp,0);
+      
+      BoxData<T,1,MEM> invDetA = forall<T,1,MEM>
+        ([ ] PROTO_LAMBDA
+         (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+         {
+           a_output(0) = 1.0/a_deta(0);
+         }
+         ,deta);
+      BoxData<T,DIM,MEM,DIM> ADetA =
+        CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
+      BoxData<T,DIM,MEM,DIM> invADetA(bxMetric);
+      invADetA.setToZero();
+      forallInPlace(f_matinv3by3,invADetA,ADetA);
+      CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,deta,
+                                       invDetA,1,2*DIM+2);
+      CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,
+                                       deta,invDetA,DIM+2,2*DIM+3);
 
-  BoxData<T,DIM,MEM> JUB = slice<T,C,DIM,MEM>(a_JU,2+DIM);
-  BoxData<T,DIM,MEM> USphB = slice<T,C,DIM,MEM>(USph,2+DIM);
-  cellMatrixQuotientMatAndInv(USphB,deta_amat,invcoef,JUB,a_bx,a_blockBox);
+      BoxData<T,1,MEM> rhoSph = slice(USemiSph_i,0);
+      BoxData<T,1,MEM> rhoOut = slice(USphere_i,0);
+      rhoSph.copyTo(rhoOut);
 
-  // scale out radial dVol.
+      BoxData<T,1,MEM> rhoESph = slice(USemiSph_i,DIM+1);
+      BoxData<T,1,MEM> rhoEOut = slice(USphere_i,DIM+1);
+      rhoESph.copyTo(rhoEOut);
+      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+    }
+  a_JU.exchange0();
+}
+template<typename T, unsigned int C, MemType MEM>
+void CubedSphereShell::
+consToCartNGEuler(                    
+                 BoxData<T,C,MEM>& a_JU,
+                 BoxData<T,1,MEM>& a_dVolr,
+                 Box a_bx,
+                 Box a_blockBox,
+                 T a_dxiPerp,
+                 unsigned int a_block,                 
+                 unsigned int a_order)
+{
+  PR_TIMERS("consToCartNGEuler");
+  
+  //HDF5Handler h5;
+  BoxData<T,C,MEM> UCart(a_bx);
+  UCart.setVal(1.);
+  // Get geometric data.
+  Box bxMetric = a_bx.grow(1);
+  BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
+  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+    ([ ] PROTO_LAMBDA
+     (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
+     {
+       a_output(0) = 1.0/a_deta(0);
+     }
+     ,deta);
+
+  // Slice data and compute quotients.
+  for (int comp = 0; comp < C; comp++)
+  {
+    BoxData<T,1,MEM> JCart = slice(a_JU,comp);
+    BoxData<T,1,MEM> Cart = slice(UCart,comp);      
+    cellQuotientValAndInv(Cart,deta,detaInv,JCart,a_bx,a_blockBox);
+  }
   BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
@@ -409,54 +1563,61 @@ consToSphNGEuler(
      ,a_dVolr); 
   for (int comp = 0; comp < C; comp++)
     {
-      BoxData<T,1,MEM> USphcomp = slice(USph,comp);
-      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp);
-      BoxData<T,1,MEM> USphtemp(USphcomp.box());
-      cellQuotientValAndInvRadial(USphtemp,a_dVolr,dVolrInv,USphcomp,a_bx,a_blockBox);
-      USphtemp.copyTo(JUcomp);
+      BoxData<T,1,MEM> UCartcomp = slice(UCart,comp);
+      BoxData<T,1,MEM> JUcomp = slice(a_JU,comp); 
+      BoxData<T,1,MEM> UCarttemp(UCartcomp.box());
+      cellQuotientValAndInvRadial(UCarttemp,a_dVolr,dVolrInv,UCartcomp,a_bx,a_blockBox);
+      UCarttemp.copyTo(JUcomp);
     }
   // cout << "In InterpBoundariesEuler: USph_i.box() = " << USph_i.box() << endl;
   // h5.writePatch(a_dxiPerp,a_JU,"USph:Block=" + to_string(a_block));
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
-consToSphInterpEuler(                    
+consToCartInterpEuler(                    
                         MBLevelBoxData<T,C,MEM,CTR>& a_JU,
                         MBInterpOp& a_iop,
                         MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                        Array<T,DIM> a_dx,
                         unsigned int a_order)
 {
+  PR_TIMERS("CubedSphereShell::consToCartInterpEuler()");
   //HDF5Handler h5;
+  Point ghostIn = a_JU.ghost()[0] + Point::Basis(1,1) + Point::Basis(2,1);
+  MBLevelBoxData<T,C,MEM,CTR> JUIn(a_JU.layout(),ghostIn);
+  auto layout = a_JU.layout();
+  Point size = layout.domain().getBlock(0).sizes();
+  T dxiPerp = 1.0/size[1];
   for (auto dit : a_JU.layout())
     {
       unsigned int block = a_JU.layout().block(dit);
       auto& JU_i = a_JU[dit];
+      auto& JUIn_i = JUIn[dit];
+      JU_i.copyTo(JUIn_i);
       auto& dVolr_i = a_dVolr[dit];
-      Box bx_i = a_JU.layout()[dit];
-      T dxiPerp = a_dx[2];
-      T dxi0 = a_dx[0];
-      Box blockBox = a_JU.layout().getBlock(block).domain().box();
+      Box bx_i = JUIn.layout()[dit];      
+      Box blockBox = JUIn.layout().getBlock(block).domain().box();
       CubedSphereShell::
-        consToSphNGEuler(JU_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
-      //h5.writePatch(dxiPerp, JU_i, "consToSphInterpEuler:USph:Block" + to_string(block));
+        consToCartNGEuler(JUIn_i,dVolr_i,bx_i,blockBox,dxiPerp,block,a_order);
+      JUIn_i.copyTo(JU_i);
     } 
-  a_JU.exchange();
-  // cout <<  "Building interpolation operator" << endl;
-  // auto op = CubedSphereShell::InterpOp(a_JU,4);
-  a_iop.apply(a_JU,a_JU);
+  JUIn.exchange();
+  a_iop.apply(a_JU,JUIn);
 }
+
+
+#if 0
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void CubedSphereShell::
 consToSphInterpEuler(                    
-                        MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                        MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                        Array<T,DIM> a_dx,
-                        unsigned int a_order)
+                     MBLevelBoxData<T,C,MEM,CTR>& a_USphere,
+                     MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                     MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
+                     unsigned int a_order)
 {
   auto iop = CubedSphereShell::InterpOp(a_JU,a_order);
-  CubedSphereShell::consToSphInterpEuler(a_JU,iop,a_dVolr,a_dx,a_order);
+  CubedSphereShell::consToSphInterpEuler(a_USphere,a_JU,iop,a_dVolr,a_dx,a_order);
 }
+#endif
 template <typename T, MemType MEM>
 void CubedSphereShell::
 cellMatrixQuotientMatAndInv(
@@ -464,13 +1625,18 @@ cellMatrixQuotientMatAndInv(
                             BoxData<T,DIM,MEM,1>& a_quotBar,
                             const BoxData<T,DIM,MEM,DIM>& a_denominator,
                             const BoxData<T,DIM,MEM,DIM>& a_denomInv,
-                            const BoxData<T,DIM,MEM,1>& a_numerator)
+                            const BoxData<T,DIM,MEM,1>& a_numerator,
+                            bool a_debug)
 {
+  PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
+  
   forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
-  BoxData<T,DIM,MEM,1> corr(a_quotBar.box().grow(-1));
+  Box bx = a_quot.box();
+  BoxData<T,DIM,MEM,1> corr(bx);
+  
   corr.setToZero();
-  // Note that we do not compute correction in the zero direction.
+  // Note that we do not compute correction in the z ero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,DIM,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
@@ -500,22 +1666,61 @@ cellMatrixQuotientMatAndInv(
                             const BoxData<T,DIM,MEM,DIM>& a_denomInv,
                             const BoxData<T,DIM,MEM,1>& a_numerator,
                             Box a_quotBox,
-                            Box a_blockBox)
+                            Box a_blockBox,
+                            bool a_debug)
 {
+  PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
-  BoxData<T,DIM,MEM,1> quotBar(a_quotBox);
+  BoxData<T,DIM,MEM,1> quotBar(a_numerator.box());
   BoxData<T,DIM,MEM,1> corr(a_quotBox);
+ 
   forallInPlace(f_matVecProd,quotBar,a_denomInv,a_numerator,one);
   corr.setToZero();
-  // Note that we do not compute correction in the zero direction.
+  // Note that we do not compute a correction in the zero direction.
+  // if ((a_debug) && (procID()==0))
+  //       {
+  //         auto size = a_quotBox.size(2);
+  //         ofstream str("quotbar_"+to_string(size)+".mac",std::ofstream::out);
+  //         str.precision(12);
+  //         Point pt(0,0,14);
+  //         outpointvalue(str,quotBar,pt,"quotbar_"+to_string(size));
+  //         outpointvalue(str,a_numerator,pt,"numerator_"+to_string(size));
+  //       }
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,DIM,MEM,1> Dquotbar =
-        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
+        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir,a_debug);
       BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,DIM,MEM,1> prod(Ddenom.box());
+      BoxData<T,DIM,MEM,1> prod(a_quotBox);
+      
       T twelveth = -1.0/12.0;
-      forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
+      forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);
+      // if ((a_debug) && (procID()==0))
+      //   {
+      //     auto size = a_quotBox.size(2);
+      //     ofstream str("correction4_"+to_string(dir)+"_"+to_string(size)+".mac",std::ofstream::out);
+      //     str.precision(12);
+      //     Point pt(0,0,14);
+      //     outpointvalue(str,Ddenom,pt,
+      //                                  "Ddenom_"+to_string(dir) + "_"+to_string(size));
+      //     outpointvalue(str,Dquotbar,pt,"dquotbar_"
+      //                                +to_string(dir) + "_"+to_string(size));
+      //     cout << "In cellMatrixQuotientMatAndInv, dir = " << dir << ":\n"
+      //          << "Dquotbar.box() = " << Dquotbar.box() << "\n"
+      //          << "Ddenom.box() = " << Ddenom.box() << "\n"
+      //          << "prod.box() = " << prod.box() << "\n"
+      //          << "corr.box() = " << corr.box()
+      //          << endl<< endl;
+      //     HDF5Handler h5;
+      //     Box bx0(Point(0,0,0),Point(59,14,14));
+      //     BoxData<T,DIM,MEM> output(bx0);
+      //     output.setToZero();
+      //     prod.copyTo(output);
+      //     h5.writePatch(1.0,output,"prod_QMat"+to_string(dir) + "_"+to_string(size));
+      //     output.setToZero();
+      //     Dquotbar.copyTo(output);
+      //     h5.writePatch(1.0,output,"Dquotbar_QMat"+to_string(dir) + "_"+to_string(size));
+      //   }
       corr += prod;
     }
   BoxData<T,DIM,MEM> temp2 = forall<T,DIM,MEM>
@@ -528,35 +1733,244 @@ cellMatrixQuotientMatAndInv(
            a_output(dir) = a_num(dir) + a_corr(dir);
          }
      },a_numerator,corr);
-  forallInPlace(f_matVecProd,a_quot,a_denomInv,temp2,one);
+   a_quot.setVal(0.);
+   forallInPlace(f_matVecProd,a_quot,a_denomInv,temp2,one);
+   
+  // for (int dir00 = 0; dir00 < DIM; dir00++)
+  //   {
+  //     int dir0 = (dir00 + 1)%DIM;
+  //     BoxData<T,1,MEM> dotprod(a_quotBox);
+  //     dotprod.setVal(0.);
+  //     for (int dir1 = 0; dir1 < DIM; dir1++)
+  //       {
+  //         BoxData<T,1,MEM> dotprodcomp = forall<T,1,MEM>
+  //           ([ ]PROTO_LAMBDA(Var<T,1,MEM>& a_output,
+  //                            const Var<T,DIM,MEM,DIM>& a_mat,
+  //                            const Var<T,DIM,MEM>& a_temp2,
+  //                            int a_row,
+  //                            int a_col)
+  //            {
+  //              a_output(0) = a_mat(a_row,a_col)*a_temp2(a_col);
+  //            },a_denomInv,temp2,dir0,dir1);
+  //         dotprod += dotprodcomp;
+          
+  //         if ((a_debug) && (procID()==0))
+  //           {
+  //             HDF5Handler h5;
+  //             auto size = a_quotBox.size(2);
+  //             Box bx0(Point(0,0,0),Point(59,14,14));
+  //             BoxData<T,1,MEM> output(bx0);
+  //             output.setToZero();
+  //             dotprodcomp.copyTo(output);
+  //             h5.writePatch(1.0,output,"dotprodcomp_QMat"+to_string(dir0) + "_"
+  //                           +to_string(dir1) + "_"+to_string(size));
+  //             output.setToZero();
+  //             dotprod.copyTo(output);
+  //             h5.writePatch(1.0,output,"dotprodcumul_QMat"+to_string(dir0) + "_"
+  //                           +to_string(dir1) + "_"+to_string(size));
+  //           }
+  //       }
+  //     auto a_quotSlice = slice(a_quot,dir0);
+  //     dotprod.copyTo(a_quotSlice);
+  //     if ((a_debug) && (procID()==0))
+  //           {
+  //             HDF5Handler h5;
+  //             auto size = a_quotBox.size(2);
+  //             Box bx0(Point(0,0,0),Point(59,14,14));
+  //             BoxData<T,1,MEM> output(bx0);
+  //             output.setToZero();
+  //             dotprod.copyTo(output);
+  //             h5.writePatch(1.0,output,"dotprod_QMat"+to_string(dir0) + "_"
+  //                           +to_string(size));
+  //           }
+  //   }                      
+  
+  // if ((a_debug) && (procID()==0))
+  //   {
+  //     auto size = a_quotBox.size(2);
+  //     ofstream str("singlePoint_"+to_string(size)+".mac",std::ofstream::out);
+  //     str.precision(12);
+  //     Point pt(0,0,14);
+  //     outpointvalue<T,MEM,DIM,1>(str,temp2,pt,"temp2_"+to_string(size));
+  //     outpointvalue<T,MEM,DIM,DIM>(str,a_denomInv,pt,"denomInv_"+to_string(size));
+  //     outpointvalue<T,MEM,DIM,1>(str,a_quot,pt,"a_quot_"+to_string(size));
+  //     str.close();
+  //     cout << "In cellMatrixQuotientMatAndInv:\n"
+  //          << "a_quot.box() = " << a_quot.box() << "\n"
+  //          << "a_denominator.box() = " << a_denominator.box() 
+  //          << endl;
+  //     HDF5Handler h5;      
+      
+      // if (size == 16)
+      //   {
+      //     T dxiPerp = 1.0/30;
+      //     Box bxMetric(Point(0,-1,-1),Point(59,30,30));
+      //     uint block = 0;
+      //     BoxData<T,DIM,MEM,DIM> deta_amatBig =
+      //       CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0);
+      //     //BoxData<T,DIM,MEM,DIM> amatBig =
+      //     //  CubedSphereShell::AMatrix<T,MEM>(bxMetric,dxiPerp,block,0); 
+      //     BoxData<T,DIM,MEM,DIM> invcoef(bxMetric);
+      //     invcoef.setToZero();
+      //     forallInPlace(f_matinv3by3,invcoef,deta_amatBig);
+      //     Box bxMetricCur(Point(0,-1,-1),Point(59,15,15));
+      //     BoxData<T,DIM,MEM,DIM> deltaDenomBig(bxMetricCur);
+      //     deta_amatBig.copyTo(deltaDenomBig);
+      //     deltaDenomBig *= -1.0;
+      //     deltaDenomBig += a_denominator;
+      //     BoxData<T,DIM,MEM,DIM> deltaDenomInvBig(bxMetricCur);
+      //     invcoef.copyTo(deltaDenomInvBig);
+      //     deltaDenomInvBig *= -1.0;
+      //     deltaDenomInvBig += a_denomInv;
+      //     HDF5Handler h5;
+      //     for (int dir = 0; dir < DIM; dir++)
+      //       {
+      //         BoxData<T,DIM,MEM> ddenom = plane(deltaDenomBig,dir);
+      //         BoxData<T,DIM,MEM> ddenominv = plane(deltaDenomInvBig,dir);
+      //         h5.writePatch(1.0,ddenom,"deltaDenomBig"+to_string(dir));
+      //         h5.writePatch(1.0,ddenominv,"deltaDenomBigInv"+to_string(dir));
+      //       }
+      //   }
+      // Box bx0(Point(0,0,0),Point(59,14,14));
+      // BoxData<T,DIM,MEM> output(bx0);
+      
+      // output.setToZero();
+      // corr.copyTo(output);
+      // h5.writePatch(1.0,output,"corr_QMat"+to_string(size));
+      // output.setToZero();
+      // a_numerator.copyTo(output);
+      // h5.writePatch(1.0,output,"a_num_QMat"+to_string(size));
+      // output.setToZero();
+      // temp2.copyTo(output);
+      // h5.writePatch(1.0,output,"temp2_QMat"+to_string(size));
+      // output.setToZero();
+      // a_quot.copyTo(output);
+      // h5.writePatch(1.0,output,"a_quot_QMat"+to_string(size));
+      // for (int dir = 0; dir < DIM; dir++)
+      //   {
+      //     BoxData<T,DIM,MEM> denomInvSlice = forall<T,DIM,MEM>
+      //       ([ ]PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
+      //                        const Var<T,DIM,MEM,DIM>& a_mat,
+      //                        int a_row)
+      //        {
+      //          for (int dir = 0; dir < DIM; dir++)
+      //            {
+      //              a_output(dir) = a_mat(a_row,dir);
+      //            }
+      //        },a_denomInv,dir);
+      //     output.setToZero();
+      //     denomInvSlice.copyTo(output);
+      //     h5.writePatch(1.0,output,"a_denomInv_QMat"+to_string(dir) + "_" +to_string(size));
+      //   }
+  // if ((a_debug) && (procID()==0))
+  //   {
+  //     cout << "corr.box() = " << corr.box() << "\n"
+  //          << "temp2.box() = " << temp2.box() << "\n"
+  //          << "a_denomInv.box() = " << a_denomInv.box()
+  //          << endl << endl;
+  //   }
+  
+  //if ((procID() == 0) && a_debug)
+  //{
+    //cout << "output box = " << a_quotBox << ", input box = " << a_numerator.box() << endl;
+//}
+}
+template <typename T, MemType MEM>
+void CubedSphereShell::
+cellMatrixVectorProd(
+                     BoxData<T,DIM,MEM,1>& a_qvecOut,
+                     const BoxData<T,DIM,MEM,DIM>& a_Amat,
+                     const BoxData<T,DIM,MEM,1>& a_qvecIn,
+                     Box a_qBox,
+                     Box a_blockBox)
+{
+  PR_TIMERS("CubedSphereShell::cellMatrixVectorProd()");
+  T one = 1.0;
+  BoxData<T,DIM,MEM,1> qvecBar(a_qBox);
+  BoxData<T,DIM,MEM,1> corr(a_qBox);
+  forallInPlace(f_matVecProd,qvecBar,a_Amat,a_qvecIn,one);
+  //qvecBar.copyTo(a_qvecOut);
+  corr.setToZero();
+  // Note that we do not compute correction in the zero direction.
+  for (int dir = 1; dir < DIM; dir++)
+    {
+      BoxData<T,DIM,MEM,1> Dqvec =
+        CubedSphereShell::deriv3case(a_qvecIn,a_qBox,a_blockBox,dir);
+      BoxData<T,DIM,MEM,DIM> DAmat = Stencil<T>::Derivative(1,dir,2)(a_Amat);
+      BoxData<T,DIM,MEM,1> prod(Dqvec.box());
+      T twelveth = 1.0/12.0;
+      forallInPlace(f_matVecProd,prod,DAmat,Dqvec,twelveth);      
+      corr += prod;
+    }
+  //cout << "correction = " << corr.absMax() << endl;
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
+                                 const Var<T,DIM,MEM>& a_qbar,
+                                 const Var<T,DIM,MEM>& a_corr)
+                {
+                  for (int dir = 0; dir < DIM; dir++)
+                    {
+                      a_output(dir) = a_qbar(dir) + a_corr(dir);
+                    }
+                },a_qvecOut,qvecBar,corr);
 }
 template <typename T, MemType MEM>
 void CubedSphereShell::cellQuotientValAndInv(
                                              BoxData<T,1,MEM>& a_quot,
                                              BoxData<T,1,MEM>& a_quotBar,
-
                                              const BoxData<T,1,MEM>& a_denominator,
                                              const BoxData<T,1,MEM>& a_denomInv,
                                              const BoxData<T,1,MEM>& a_numerator)
 {
-  a_quot.setToZero();
-  a_quotBar.setToZero();
-  auto temp = a_denomInv*a_numerator;
-  temp.copyTo(a_quotBar);
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
+  // a_quot.setToZero();
+  // a_quotBar.setToZero();
+  // auto temp = a_denomInv*a_numerator;
+  // temp.copyTo(a_quotBar);
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },a_quotBar,a_numerator,a_denomInv);
   BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1));
   corr.setToZero();
-  T twelveth = -1.0/12.0;
+  // T twelveth = -1.0/12.0;
   // Note that we do not compute correction in the zero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
       BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
-      corr += prod;
+      // BoxData<T,1,MEM> prod = Dquotbar*Ddenom;    
+      // Replacing with forall lambda  
+      BoxData<T,1,MEM> prod(a_quotBar.box());
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_prod,
+                                     const Var<T,1,MEM>& l_dqbar,
+                                     const Var<T,1,MEM>& l_ddenom)
+                    {
+                      l_prod(0) = l_dqbar(0)*l_ddenom(0);
+                    },prod,Dquotbar,Ddenom);
+      // corr += prod;
+      // Replacing with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_corr,
+                                     const Var<T,1,MEM>& l_prod)
+                    {
+                      l_corr(0) += l_prod(0);
+                    },corr,prod);
     }
-  corr *= twelveth;
-  a_quotBar.copyTo(a_quot);
-  a_quot += corr;
+  // corr *= twelveth;
+  // a_numerator.copyTo(a_quot);
+  // a_quot += corr;
+  // a_quot *=a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_corr)
+                {
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_corr(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,corr);
 }
 template <typename T, MemType MEM>
 void CubedSphereShell::cellQuotientValAndInv(
@@ -565,24 +1979,58 @@ void CubedSphereShell::cellQuotientValAndInv(
                                              const BoxData<T,1,MEM>& a_denomInv,
                                              const BoxData<T,1,MEM>& a_numerator,
                                              Box a_quotBox,
-                                             Box a_blockBox)
+                                             Box a_blockBox,
+                                             bool a_debug)
 {
-  a_quot.setToZero();
-  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInv()");
+  // a_quot.setToZero();
+  // BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  // Replacing with forall lambda
+  BoxData<T,1,MEM> quotBar(a_numerator.box());
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },quotBar,a_numerator,a_denomInv);
   BoxData<T,1,MEM> corr(a_quotBox);
   corr.setToZero();
-  T twelveth = -1.0/12.0;
+  // T twelveth = -1.0/12.0;
   for (int dir = 1; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> Dquotbar =
-        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir);
+        CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir,a_debug);
       BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,1,MEM> prod = Dquotbar*Ddenom;      
-      corr += prod;
+      // BoxData<T,1,MEM> prod = Dquotbar*Ddenom;   
+      // Replacing with forall lambda  
+      BoxData<T,1,MEM> prod(a_quotBox);
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_prod,
+                                     const Var<T,1,MEM>& l_dqbar,
+                                     const Var<T,1,MEM>& l_ddenom)
+                    {
+                      l_prod(0) = l_dqbar(0)*l_ddenom(0);
+                    },prod,Dquotbar,Ddenom);
+      // corr += prod;
+      // Replacing with forall lambda
+      forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_corr,
+                                     const Var<T,1,MEM>& l_prod)
+                    {
+                      l_corr(0) += l_prod(0);
+                    },corr,prod);
     }
-  corr *= twelveth;
-  quotBar.copyTo(a_quot);
-  a_quot += corr;
+  // corr *= twelveth;
+  // a_numerator.copyTo(a_quot);
+  // a_quot += corr;
+  // a_quot *=a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_corr)
+                {                  
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_corr(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,corr);
 }
 template <typename T, MemType MEM>
 void CubedSphereShell::
@@ -594,17 +2042,35 @@ cellQuotientValAndInvRadial(
                             Box a_quotBox,
                             Box a_blockBox)
 {
+  PR_TIMERS("CubedSphereShell::cellQuotientValAndInvRadial()");
   a_quot.setToZero();
-  BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
-  T twelveth = -1.0/12.0;
+  // BoxData<T,1,MEM> quotBar = a_denomInv*a_numerator;
+  // Replacing with forall lambda
+  BoxData<T,1,MEM> quotBar(a_numerator.box());
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quotBar,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv)
+                {
+                  l_quotBar(0) = l_denomInv(0)*l_num(0);
+                },quotBar,a_numerator,a_denomInv);
+  // T twelveth = -1.0/12.0;
   BoxData<T,1,MEM> Dquotbar =
     CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,0);
   BoxData<T,1,MEM> Ddenom = Stencil<T>::Derivative(1,0)(a_denominator);
-  BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
-  corr *= twelveth;
-  corr *= a_denomInv;
-  quotBar.copyTo(a_quot);
-  a_quot += corr;
+  // BoxData<T,1,MEM> corr = Dquotbar*Ddenom;      
+  // corr *= twelveth;
+  // a_quot = a_numerator + corr;
+  // a_quot *= a_denomInv;
+  // Replacing with forall lambda
+  forallInPlace([ ] PROTO_LAMBDA(Var<T,1,MEM>& l_quot,
+                                 const Var<T,1,MEM>& l_num,
+                                 const Var<T,1,MEM>& l_denomInv,
+                                 const Var<T,1,MEM>& l_dqbar,
+                                 const Var<T,1,MEM>& l_ddenom)
+                {
+                  T twelveth = -1.0/12.0;
+                  l_quot(0) = (l_num(0) + twelveth*l_dqbar(0)*l_ddenom(0))*l_denomInv(0);
+                },a_quot,a_numerator,a_denomInv,Dquotbar,Ddenom);
 }
 template<typename T, MemType MEM>
 inline BoxData<T,DIM,MEM,DIM>
@@ -614,11 +2080,7 @@ CubedSphereShell::detA_A(
                          unsigned int a_block,
                          unsigned int a_centering) 
 {
-  PR_TIMERS("detA_A");
-  Array<Array<uint,DIM>,6>
-     permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6>
-    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  PR_TIMERS("CubedSphereShell::detA_A()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -689,7 +2151,7 @@ CubedSphereShell::detA_A(
            a_deta_amat(dir0,2) = deta_amatav[dir0][2];          
          } 
        
-     },bx0,output,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+     },bx0,output,a_h,weight1,weight2,q1d1,q1d2,perm(a_block),permsign(a_block));
   Operator::spreadSlice(output);
   if (a_centering == 0)
     {
@@ -724,11 +2186,7 @@ inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
                                                         unsigned int a_block,
                                                         unsigned int a_centering)
 {
-  PR_TIMERS("AMatrix");
-  Array<Array<uint,DIM>,6>
-    permute = {{1,2,0},{1,2,0},{1,0,2},{0,1,2},{1,0,2},{0,1,2}};
-  Array<Array<int,DIM>,6>
-    sign = {{1,-1,-1},{1,1,1},{1,-1,1},{1,1,1},{-1,1,1},{-1,-1,1}};
+  PR_TIMERS("CubedSphereShell::AMatrix()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -789,7 +2247,7 @@ inline BoxData<T,DIM,MEM,DIM> CubedSphereShell::AMatrix(
                  }
              }
          }
-     },bx0,a_h,weight1,weight2,q1d1,q1d2,permute[a_block],sign[a_block]);
+     },bx0,a_h,weight1,weight2,q1d1,q1d2,perm(a_block),permsign(a_block));
   BoxData<T,DIM,MEM,DIM> output(bxCentered);
   output0.copyTo(output);
   spreadSlice(output);
@@ -802,7 +2260,7 @@ BoxData<T,1,MEM> CubedSphereShell::detA(
                                         T a_h,
                                         unsigned int a_centering)
 {
-  PR_TIMERS("detA");
+  PR_TIMERS("CubedSphereShell::detA()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -858,10 +2316,10 @@ template<typename T, MemType MEM>
 BoxData<T,DIM,MEM> CubedSphereShell::adjA(
                                           Box a_bx,
                                           T a_h,
-                                          int a_block,
+                                          unsigned int a_block,
                                           int a_centering)
 {
-  PR_TIMERS("adjA");
+  PR_TIMERS("CubedSphereShell::adjA()");
   BoxData<T,DIM,MEM,1> output(a_bx);
   T hInvHalf = .5/a_h;
   switch(a_centering)
@@ -898,7 +2356,7 @@ CubedSphereShell::d1nCrossN(
                             T a_h,
                             uint a_block)
 {
-  PR_TIMERS("d1nCrossN");
+  PR_TIMERS("CubedSphereShell::d1nCrossN()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -959,7 +2417,7 @@ CubedSphereShell::nCrossD2n(
                             T a_h,
                             uint a_block)
 {
-  PR_TIMERS("nCrossD2n");
+  PR_TIMERS("CubedSphereShell::nCrossD2n()");
   Array<T,5>
     weights={7.0/90.0,32.0/90.0,12.0/90.0,32.0/90.0,7.0/90.0};
   Array<T,5>
@@ -1018,9 +2476,10 @@ CubedSphereShell::deriv3case(
                              const BoxData<T,C,MEM>& a_input,
                              Box a_outputBox,
                              Box a_validBox,
-                             uint a_dir)
+                             uint a_dir,
+                             bool a_debug)
 {
-  PR_TIMERS("deriv3case");
+  PR_TIMERS("CubedSphereShell::deriv3case()");
   BoxData<T,C,MEM> output(a_outputBox);
   Stencil<T> loStencil = (-1.5)*Shift(Point::Zeros()) +
     2.0*Shift(Point::Basis(a_dir)) + (-.5)*Shift(Point::Basis(a_dir,2));
@@ -1031,6 +2490,7 @@ CubedSphereShell::deriv3case(
   Box loBox = a_outputBox.face(a_dir,Side::Lo,1);
   Box hiBox = a_outputBox.face(a_dir,Side::Hi,1);
   output |= Stencil<T>::Derivative(1,a_dir,2)(a_input);
+
   if (!a_validBox.containsBox(loGhostBox))
     {     
       output |= loStencil(a_input,loBox);
@@ -1039,4 +2499,78 @@ CubedSphereShell::deriv3case(
     {      
       output |= hiStencil(a_input,hiBox);
     }
+  // if (a_debug)
+  // {
+  //   cout << "in deriv3case: \n"
+  //        << " a_dir = " << a_dir << "\n"
+  //        << "loGhostBox = " << loGhostBox << "\n"
+  //        << "hiGhostBox = " << hiGhostBox << "\n"
+  //        << "loBox = " << loBox << "\n"
+  //        << "hiBox = " << hiBox << "\n"
+  //        << "!a_validBox.containsBox(loGhostBox) = "
+  //        << !a_validBox.containsBox(loGhostBox) << "\n"
+  //        << "!a_validBox.containsBox(hiGhostBox) = "
+  //        << !a_validBox.containsBox(hiGhostBox) 
+  //        << endl << endl;
+  // }
+    return output;
 }
+ template<typename T, unsigned int C, MemType MEM>
+ void
+ CubedSphereShell::radialExtrapolate( 
+                                     BoxData<T,C,MEM>& a_U,
+                                     Box a_blockBox)
+ {
+    PR_TIMERS("CubedSphereShell::radialExtrapolate()");
+   Box bx = a_U.box();
+   if (bx.high()[0] > a_blockBox.high()[0])
+     {
+       Point low = bx.low();
+       Point high = bx.high();
+       low[0] = a_blockBox.high()[0] + 1;
+       Point low0 = low;
+       low0[0] =a_blockBox.high()[0];
+       Point high0 = high;
+       high0[0] = low0[0]; 
+       Box bdryBoxHigh(low,high);
+       Box bx0(low0,high0);
+       for (int c = 0; c < C; c++)
+         {
+           for (auto bit : bx0)
+             {
+               T* data0 = a_U.data(bit,c);
+               for (int i = 1;
+                    i < bdryBoxHigh.high()[0] -  bdryBoxHigh.low()[0]+2; i++)
+                 {
+                   *(data0 + i) = *data0;
+                 }
+             }
+         }
+     }
+   if (bx.low()[0] < a_blockBox.low()[0])
+     {
+       Point low = bx.low();
+       Point high = bx.high();
+       high[0] = a_blockBox.low()[0] - 1;
+       Point low0 = low;
+       Point high0 = high;
+       high0[0] = a_blockBox.low()[0];
+       low0[0] = high0[0]; 
+       Box bdryBoxLow(low,high);
+       Box bx0(low0,high0);
+       for (int c = 0; c < C; c++)
+         {
+           for (auto bit : bx0)
+             {
+               T* data0 = a_U.data(bit,c);
+               for (int i = 1;
+                    i < bdryBoxLow.high()[0] -  bdryBoxLow.low()[0]+2;
+                    i++)
+                 {
+                   *(data0 - i) = *data0;
+                 }
+             }
+         }
+     }
+ }
+   

@@ -228,7 +228,6 @@ MBProblemDomain buildRing(Point a_domainSize)
     {
         domain.defineBoundary(bi, (bi+1)%4, Point::X(), I);
     }
-    domain.graph().fixRotations();
     for (int bi = 0; bi < 4; bi++)
     {
         domain.defineDomain(bi, a_domainSize);
@@ -244,7 +243,6 @@ MBProblemDomain buildPolarShell(int a_domainSize, int a_thickness = 1)
     {
         domain.defineBoundary(bi, (bi+1)%4, Point::Z(), I);
     }
-    domain.graph().fixRotations();
     Point domainSize(a_thickness, a_domainSize, a_domainSize);
     for (int bi = 0; bi < 4; bi++)
     {

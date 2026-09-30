@@ -94,10 +94,16 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     // READ TIME VARIABLES
     auto att_time = H5Aopen(g_level, "time", H5P_DEFAULT);
     auto att_dt = H5Aopen(g_level, "dt", H5P_DEFAULT);
+    // Checkpoints written by master before iteration metadata remain readable.
+    m_iter = 0;
+    hid_t att_iter = H5Aexists(g_level, "iteration") > 0
+        ? H5Aopen(g_level, "iteration", H5P_DEFAULT) : -1;
     assert(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
     assert(H5Aclose(att_time) >= 0);
     assert(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
     
     assert(H5Gclose(g_level) >= 0);
     
@@ -121,6 +127,8 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     // VALIDATION
     PROTO_ASSERT(a_data.layout().compatible(layout),
         "HDF5Handler::readLevel | Error: input data has incompatible layout");
+    // PROTO_ASSERT forwards these values to fprintf. The %s conversion requires
+    // C-string pointers; passing std::string objects through varargs is invalid.
     PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
         "HDF5Handler::readLevel | Error: input data has incorrect box size. Input: %s | Read: %s",
         a_data.layout().boxSize().str().c_str(), boxSize.str().c_str());
@@ -495,6 +503,8 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     // CREATE ATTRIBUTES
     auto att_dt   =
         H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_iter =
+        H5Acreate2(g_level, "iteration", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_time =
         H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   =
@@ -513,12 +523,14 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     }
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &domainBox) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
     assert(H5Aclose(att_time) >= 0);
     assert(H5Aclose(att_dx) >= 0);
     assert(H5Aclose(att_ref_ratio) >= 0);
@@ -747,7 +759,6 @@ void HDF5Handler::readMBLayout(
     free(boxData);
     free(blockData);
 }
-
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::readMBLevel(
         MBLevelBoxData<T, C, MEM, CTR>& a_data,
@@ -842,6 +853,23 @@ void HDF5Handler::readMBLevel(
     assert(H5Dclose(ds_boxes) >= 0);
     assert(H5Dclose(ds_data) >= 0);
 
+    // READ TIME VARIABLES
+    auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
+    auto att_time = H5Aopen(g_level, "time", H5P_DEFAULT);
+    auto att_dt = H5Aopen(g_level, "dt", H5P_DEFAULT);
+    // Checkpoints written by master before iteration metadata remain readable.
+    m_iter = 0;
+    hid_t att_iter = H5Aexists(g_level, "iteration") > 0
+        ? H5Aopen(g_level, "iteration", H5P_DEFAULT) : -1;
+    assert(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    assert(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
+    assert(H5Aclose(att_time) >= 0);
+    assert(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
+    
+    assert(H5Gclose(g_level) >= 0);
+
     a_data.linearIn(rawData);
     free(rawData);
     barrier();
@@ -908,6 +936,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     // CREATE ATTRIBUTES
     auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_iter = H5Acreate2(g_level, "iteration", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
@@ -924,12 +953,14 @@ void HDF5Handler::addLevel(hid_t* a_file,
     Box problemDomain = a_data.layout().domain().box();
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
     assert(H5Aclose(att_time) >= 0);
     assert(H5Aclose(att_dx) >= 0);
     assert(H5Aclose(att_ref_ratio) >= 0);
@@ -1081,6 +1112,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
 
     // CREATE ATTRIBUTES
     auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_iter = H5Acreate2(g_level, "iteration", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
@@ -1097,12 +1129,14 @@ void HDF5Handler::addPatch(hid_t* a_file,
     Box problemDomain = a_data.box();
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
     assert(H5Aclose(att_time) >= 0);
     assert(H5Aclose(att_dx) >= 0);
     assert(H5Aclose(att_ref_ratio) >= 0);
@@ -1509,7 +1543,7 @@ void HDF5Handler::writeMBLevelBounds(
                     {
                         case 0: dirString += "0"; break;
                         case 1: dirString += "H"; break;
-                        case 2: dirString += "L"; break;
+                        case -1: dirString += "L"; break;
                     }
                     //dirString += std::to_string(dir[ii]);
                 }

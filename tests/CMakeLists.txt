@@ -170,3 +170,13 @@ if (MMB AND AMR)
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
     blt_add_test(NAME MBAMRTests COMMAND MBAMRTests)
 endif()
+
+if (MMB AND LAPACK AND ENABLE_HDF5 AND DIM EQUAL 3)
+    blt_add_executable(NAME CubedSphereIntegrationTests SOURCES CubedSphereIntegrationTests.cpp
+        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_definitions(CubedSphereIntegrationTests PRIVATE
+        CUBED_SPHERE_SHELL_R0=0.1 CUBED_SPHERE_SHELL_R1=2.0
+        CUBED_SPHERE_SHELL_RADIAL_COORD=0 CUBED_SPHERE_RADIAL_STRETCH=1.5)
+    blt_add_test(NAME CubedSphereIntegrationTests COMMAND CubedSphereIntegrationTests)
+endif()

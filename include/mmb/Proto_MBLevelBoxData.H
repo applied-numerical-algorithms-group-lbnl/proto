@@ -214,6 +214,10 @@ namespace Proto
          */
         inline void exchange();
 
+      /// exchange only the ghost values within a block.
+
+      inline void exchange0();
+
         /// Parallel Data Copy
         /** Executes a parallel copy between two compatible MBLevelBoxData. Only copies valid data;
          *  ghost data will need to be initialized afterwards by calling exchange().
@@ -221,6 +225,16 @@ namespace Proto
          */
         template<MemType DST_MEM>
         inline void copyTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
+        
+      
+        /// Parallel Data Copy, with coarsening.
+        /** Executes a parallel copy between two MBLevelBoxData, 
+         * for which the destination is coarsened by a_refRatio. Only copies valid data;
+         *  ghost data will need to be initialized afterwards by calling exchange().
+         *  TODO: exchange might actually be copied as well, but I need to test this -CLG
+         */
+        template<MemType DST_MEM>
+        inline void coarsenTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs,Point a_refRatio) const;
 
         template<MemType DST_MEM>
         inline void copyToFull(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;

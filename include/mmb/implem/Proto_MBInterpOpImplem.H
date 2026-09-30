@@ -38,6 +38,9 @@ void MBInterpOp::define(
     PROTO_ASSERT(a_interpLayout.layout().compatible(a_map.layout()),
         "MBInterpOp::define | Error: Incompatible layouts among inputs");
 
+    m_ops.clear();
+    m_points.clear();
+    m_cubedSphere = false;
     m_order = a_order;
     m_ghost = a_map.ghost()[0];
     m_interpLayout = a_interpLayout;
@@ -67,6 +70,9 @@ void MBInterpOp::define(
             "MBInterpOp::define | Error: Input maps have different ghost regions");
     }
 
+    m_ops.clear();
+    m_points.clear();
+    m_cubedSphere = false;
     m_order = a_order;
     m_ghost = a_maps[0]->ghost()[0];
     m_interpLayout = a_interpLayout;
@@ -96,7 +102,9 @@ void MBInterpOp::addPointOps(const MBIndex& index, Point dir, const MBLevelMap<M
     else if (layout.isRefinementBoundary(patch, dir)) { return; }
     else {
         Box patchBox = layout[index];
-        Box boundBox = patchBox.adjacent(m_ghost * dir);
+        Point targetGhost = m_ghost;
+        if (m_cubedSphere) { targetGhost -= Point::Ones(2) - Point::Basis(0, 2); }
+        Box boundBox = patchBox.adjacent(targetGhost * dir);
         for (auto boundPoint : boundBox)
         {
             if (this->containsOp(boundPoint, index))
@@ -127,8 +135,16 @@ void MBInterpOp::addPointOp(
         "MBInterpOp::adPointOp | Error: Trying to add duplicate op");
     
     MBDataPoint dstDataPoint(index, dataPoint, m_interpLayout.layout());
-    auto op = std::make_shared<MBPointInterpOp>(
-        dstDataPoint, m_ghost, map, m_interpLayout, m_order);
+    std::shared_ptr<MBPointInterpOp> op;
+    if (m_cubedSphere)
+    {
+        if (map.layout().domain().getBlock(dstDataPoint.dstBlock()).box().containsPoint(dataPoint)) { return; }
+        op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, map, m_order);
+    }
+    else
+    {
+        op = std::make_shared<MBPointInterpOp>(dstDataPoint, m_ghost, map, m_interpLayout, m_order);
+    }
     
     m_ops.push_back(op);
     MBPointID key(dataPoint, index.global());
@@ -206,15 +222,22 @@ void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 template<typename T, unsigned int C, MemType MEM>
 void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
-        MBLevelBoxData<T, C, MEM>& a_src)
+        MBLevelBoxData<T, C, MEM>& a_src) const
 {
     PR_TIME("MBInterpOp::apply");
-    PROTO_ASSERT(m_interpLayout.layout().compatible(a_src.layout()), "Incompatible Input Data");
-    PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
+    // Manually inserted operators can connect different boundary-data layouts.
+    if (m_interpLayout.layout().defined())
+    {
+        PROTO_ASSERT(m_interpLayout.layout().compatible(a_src.layout()), "Incompatible Input Data");
+        PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
+    }
     for (auto& op : m_ops)
     {
         auto block = a_dst.layout().block(op->target().dstIndex());
-        op->apply(a_dst, a_src);
+        if (a_dst[op->target().dstIndex()].box().containsPoint(op->target().dstPoint()))
+        {
+            op->apply(a_dst, a_src);
+        }
     }
 }
 void MBInterpOp::print() const
@@ -320,3 +343,31 @@ void interpBoundaries(
 
 
 
+
+// Specialized construction is explicit so generic AMR interpolation keeps its
+// own footprint selection and refinement-boundary handling.
+template<typename MAP, MemType MEM>
+void MBInterpOp::defineCubedSphere(
+    const std::vector<std::shared_ptr<MBLevelMap<MAP, MEM>>>& maps,
+    MBInterpLayout interpLayout, Point ghost, int order)
+{
+    PROTO_ASSERT(DIM == 3 && order == 4, "Cubed-sphere interpolation requires DIM=3 and order=4");
+    PROTO_ASSERT(maps.size() == interpLayout.layout().numBlocks(), "Expected one map per block");
+    m_ops.clear();
+    m_points.clear();
+    m_cubedSphere = true;
+    m_order = order;
+    m_ghost = ghost;
+    m_interpLayout = interpLayout;
+    for (const auto& map : maps)
+    {
+        PROTO_ASSERT(map && map->layout().compatible(interpLayout.layout()), "Incompatible cubed-sphere map");
+    }
+    for (auto index : interpLayout.layout())
+    {
+        for (auto dir : Box::Kernel(1))
+        {
+            addPointOps(index, dir, *maps[interpLayout.layout().block(index)]);
+        }
+    }
+}

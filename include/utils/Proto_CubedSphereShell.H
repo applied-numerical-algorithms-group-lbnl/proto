@@ -4,7 +4,10 @@
 #include "Proto.H"
 #include "MBMap_CubedSphereShell.H"
 #include "Proto_CubedSphereKernels.H"
-
+#define iVECX1 1
+#define iVECX2 5
+#define iPECS 4
+#define iRHOCS 0
 namespace Proto {
 
   /// Cubed Sphere Shell Utility
@@ -59,11 +62,16 @@ namespace Proto {
     /** 
      */
     template<MemType MEM>
-    static MBInterpOp InterpOp(
+    static MBInterpOp MHDInterpOp(
                                const MBDisjointBoxLayout& a_layout,
                                Point a_ghost,
                                int a_order = 4);
-    
+    /// General interpolation with the requested target ghost width.
+    template<MemType MEM>
+    static MBInterpOp InterpOp(
+                               const MBDisjointBoxLayout& a_layout,
+                               Point a_ghost,
+                               int a_order = 4); 
     /// Get MB Interpolation Operator
     /** 
      */
@@ -79,6 +87,26 @@ namespace Proto {
         std::vector<T>             a_dtheta,
         Side::LoHiSide             a_side);
 
+    template<typename T, MemType MEM>
+    static MBInterpOp BCNearestOp(
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        std::vector<T>             a_theta,
+        std::vector<T>             a_phi,
+        Side::LoHiSide             a_side,
+        int                       a_ghost);
+    
+    template<typename T, MemType MEM>
+    static MBInterpOp BCBilinearOp(
+        const MBLevelMap<MBMap_CubedSphereShell<MEM>, MEM>& a_map,
+        MBDisjointBoxLayout&       a_srcLayout,
+        std::vector<T>             a_dtheta,
+        std::vector<T>             a_theta,
+        std::vector<T>             a_phi,
+        Side::LoHiSide             a_side,
+        int                       a_ghost);
+
     /// Interpolate Block Boundary Ghost Cells
     /** Creates and throws away an MBInterpOp. This operator is expensive to build,
      *  so it's usually better to build the operator using InterpOp and keeping it cached.
@@ -88,7 +116,7 @@ namespace Proto {
     static void InterpBoundaries(
                                  MBLevelBoxData<T,C,MEM,CTR>& a_data,
                                  int a_order = 4);
-    
+#if 0    
     template<typename T, unsigned int C, MemType MEM>
     static void consToSphNGEuler( 
                                  BoxData<T,C,MEM>& a_JU,
@@ -96,22 +124,60 @@ namespace Proto {
                                  Box a_bx,
                                  Box a_blockBox,
                                  T a_dxiPerp,
-                                 int a_block,                 
+                                 unsigned int a_block,                 
+                                 unsigned int a_order = 4);
+#endif
+    template<typename T, unsigned int C, MemType MEM>
+    static void radialCons(
+                           BoxData<T,C,MEM>& a_flux,
+                           Array<Reduction<T,Operation::Sum,MEM>, C>& a_rxn,
+                           T a_dxi0,
+                           Box a_validBox,
+                           T a_weight
+                           );  
+     template<typename T, unsigned int C, MemType MEM, Centering CTR>
+     static void consToSphInterpEuler(
+                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                      MBInterpOp& a_iop,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                      unsigned int a_order = 4,
+                                      int a_counter = 0);
+    
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static Array<T,C> conservationSum(MBLevelBoxData<T,C,MEM,CTR>& a_JU);
+                                      
+#if 0
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    static void consToSphInterpEuler( 
+                                     MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                     MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                     unsigned int a_order = 4,
+                                      uint a_counter = 0);
+#endif 
+     template<typename T, unsigned int C, MemType MEM>
+    static void consToCartNGEuler( 
+                                 BoxData<T,C,MEM>& a_JU,
+                                 BoxData<T,1,MEM>& a_dVolr,
+                                 Box a_bx,
+                                 Box a_blockBox,
+                                 T a_dxiPerp,
+                                 unsigned int a_block,                 
                                  unsigned int a_order = 4);
     
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void consToSphInterpEuler( 
-                                      MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                                      MBInterpOp& a_iop,
-                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                                      Array<T,DIM> a_dx,
-                                      unsigned int a_order = 4);
+     static void consToCartInterpEuler(
+                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
+                                       MBInterpOp& a_iop,
+                                       MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
+                                       unsigned int a_order = 4);
+#if 0
      template<typename T, unsigned int C, MemType MEM, Centering CTR>
-     static void consToSphInterpEuler( 
+     static void consToSphInterpEuler(
+                                      MBLevelBoxData<T,C,MEM,CTR>& a_USphere,
                                       MBLevelBoxData<T,C,MEM,CTR>& a_JU,
-                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr,
-                                      Array<T,DIM> a_dx,
+                                      MBLevelBoxData<T,1,MEM,CTR>& a_dVolr, 
                                       unsigned int a_order = 4);
+#endif
     
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     static void interpBoundariesMHD( 
@@ -119,6 +185,10 @@ namespace Proto {
                                     const MBInterpOp& a_op,
                                     unsigned int a_order = 4);
     
+    template<typename T, unsigned int C, MemType MEM>
+    static void radialExtrapolate( 
+                                    BoxData<T,C,MEM>& a_data,
+                                    Box a_blockBox);
   
     /// Average of n x \partial_{xi_2} n over the {xi_1 = const.} face.
 
@@ -160,7 +230,7 @@ namespace Proto {
     static BoxData<T,DIM,MEM> adjA(
                                    Box a_bx,
                                    T a_h,
-                                   int a_block,
+                                   unsigned int a_block,
                                    int a_centering);
 
     /// Average of determinant(A) over faces.
@@ -193,7 +263,8 @@ namespace Proto {
                                      BoxData<T,DIM,MEM,1>& a_quotBar,
                                      const BoxData<T,DIM,MEM,DIM>& a_denominator,
                                      const BoxData<T,DIM,MEM,DIM>& a_denomInv,
-                                     const BoxData<T,DIM,MEM,1>& a_numerator);
+                                     const BoxData<T,DIM,MEM,1>& a_numerator,
+                                     bool a_debug = false);
     template <typename T, MemType MEM>
     inline
     static void cellMatrixQuotientMatAndInv(
@@ -202,7 +273,8 @@ namespace Proto {
                                      const BoxData<T,DIM,MEM,DIM>& a_denomInv,
                                      const BoxData<T,DIM,MEM,1>& a_numerator,
                                      Box a_quotBox,
-                                     Box a_blockBox);
+                                     Box a_blockBox,
+                                     bool a_debug = false);
     template <typename T, MemType MEM>
     inline
     static void cellQuotientValAndInv(
@@ -219,7 +291,8 @@ namespace Proto {
                                const BoxData<T,1,MEM>& a_denomInv,
                                const BoxData<T,1,MEM>& a_numerator,
                                Box a_quotBox,
-                               Box a_blockBox);
+                               Box a_blockBox,
+                               bool a_debug = false);
     
     template <typename T, MemType MEM>
     inline
@@ -236,7 +309,133 @@ namespace Proto {
                                        const BoxData<T,C,MEM>& a_input,
                                        Box a_outputBox,
                                        Box a_validBox,
-                                       uint a_dir);
+                                       uint a_dir,
+                                       bool a_debug = false);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void USemiSphPointwiseToJUAverage(MBLevelBoxData<T,C,MEM>& a_JU,
+                                             const MBLevelBoxData<T,C+2,MEM>& a_USemi,
+                                             MBInterpOp& a_iop,
+                                             MBLevelBoxData<T,1,MEM>& a_dVolr,
+                                             Array<T,DIM> a_dx);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToUSemiPointwise(BoxData<T,C+2,MEM>& a_USemi,
+                                      const BoxData<T,C+2,MEM>& a_WSemi,
+                                      T a_gamma);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToUSphPointwise(BoxData<T,C,MEM>& a_USph,
+                                      const BoxData<T,C,MEM>& a_WSph,
+                                      T a_h,
+                                      T a_gamma,
+                                      unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToJUSphAverage(BoxData<T,C,MEM>& a_USph,
+                                      const BoxData<T,C,MEM>& a_WSph,
+                                      T a_h,
+                                      T a_gamma,
+                                      unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void USemiToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                                      const BoxData<T,C+2,MEM>& a_USemi,
+                                      T a_gamma);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                              const BoxData<T,C,MEM>& a_WSph,
+                              T a_h,
+                              unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                                     const BoxData<T,C+2,MEM>& a_WSemi,
+                                     T a_h,
+                                     unsigned int a_block);
+    
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WCartToWSemiPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                                      const BoxData<T,C,MEM>& a_W,
+                                      T a_h,
+                                      unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSemiToWCartPointwise(BoxData<T,C,MEM>& a_W,
+                                      const BoxData<T,C+2,MEM>& a_WSemi,
+                                      T a_h,
+                                      unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void WCartToWSphPointwise(BoxData<T,C,MEM>& a_WSph,
+                                     const BoxData<T,C,MEM>& a_WCart,
+                                     T a_h,
+                                     unsigned int a_block);
+
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphToWCartPointwise(BoxData<T,C,MEM>& a_WCart,
+                              const BoxData<T,C,MEM>& a_WSph,
+                              T a_h,
+                              unsigned int a_block);
+    template<typename T,unsigned int C,MemType MEM>
+    static void WSphPointwiseToJUAverage(BoxData<T,C,MEM>& a_JU,
+                                         const BoxData<T,C,MEM>& a_WSph,
+                                         const BoxData<T,1,MEM>& a_dVolr,
+                                         Box a_bx,
+                                         T a_h,
+                                         T a_gamma,
+                                         unsigned int a_block);
+    
+    template<typename T,unsigned int C,MemType MEM>
+    static void PerpCheckPointwise(BoxData<T,C+2,MEM>& a_WSemi,
+                                   T a_h,
+                                   unsigned int a_block);
+    
+    template<typename T, unsigned int C, MemType MEM>
+    static void consToSemiSphNGEuler(                    
+                                     BoxData<T,C+2,MEM>& a_USemiSph,
+                                     const BoxData<T,C,MEM>& a_JU,
+                                     const BoxData<T,1,MEM>& a_dVolr,
+                                     Box a_bx,
+                                     Box a_blockBox,
+                                     T a_dxiPerp,
+                                     unsigned int a_block,                 
+                                     unsigned int a_order);
+   
+    template<typename T, MemType MEM>
+    static void
+    consToSemiSphVecNG(
+                       BoxData<T,DIM,MEM>& a_UPerp,
+                       BoxData<T,1,MEM>& a_uRadial,
+                       const BoxData<T,DIM,MEM>& a_JUVec,
+                       const BoxData<T,DIM,MEM,DIM>& a_AdetA,
+                       const BoxData<T,DIM,MEM,DIM>& a_invAdetA,
+                       const BoxData<T,DIM,MEM,DIM>& a_Amat,
+                       const BoxData<T,1,MEM>& a_detA,
+                       const BoxData<T,1,MEM>& a_invDetA,
+                       Box a_bx,
+                       Box a_blockBox,
+                       bool a_debug = false);
+ 
+  template<typename T, unsigned int C, MemType MEM>
+  static void semiSphToSph(
+                             BoxData<T,C,MEM>& a_VSph,
+                             const BoxData<T,C+2,MEM>& a_VSemiSph,
+                             const BoxData<T,DIM,MEM,DIM>& a_ADetA,
+                             const BoxData<T,DIM,MEM,DIM>& a_invADetA,
+                             const BoxData<T,1,MEM>& a_detA,
+                             const BoxData<T,1,MEM>& a_invDetA,
+                             int a_compvec,
+                             int a_compradial);
+    template <typename T, MemType MEM>
+    static void cellMatrixVectorProd(
+                                     BoxData<T,DIM,MEM,1>& a_qvecOut,
+                                     const BoxData<T,DIM,MEM,DIM>& a_Amat,
+                                     const BoxData<T,DIM,MEM,1>& a_qvecIn,
+                                     Box a_qBox,
+                                     Box a_blockBox);
   };
 #if 0
   template<typename T,MemType MEM>
@@ -247,5 +446,5 @@ namespace Proto {
        unsigned int a_centering);
 #endif
 #include "implem/Proto_CubedSphereShellImplem.H"
-} // end namespace Proto
+}// end namespace Proto
 #endif // end include guard

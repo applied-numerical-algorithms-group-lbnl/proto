@@ -131,6 +131,11 @@ class MBMapOp
 
     ///
     inline unsigned int focalBlock() const { return m_focalBlock; }
+  inline virtual MBPoint findValid(MBProblemDomain a_domain, MBPoint a_mbpt) const
+    {
+        MayDay<void>::Abort("MBMapOp::findValid must be implemented by the map");
+        return a_mbpt;
+    }
     private:
    
 

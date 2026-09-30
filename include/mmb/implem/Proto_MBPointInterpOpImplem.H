@@ -368,3 +368,70 @@ Box MBPointInterpOp::span() const {
     }
     return spanBox;
 }
+
+template<typename MAP, MemType MEM>
+MBPointInterpOp::MBPointInterpOp(MBDataPoint dst, Point ghost,
+    const MBLevelMap<MAP, MEM>& map, unsigned int order)
+    : m_dst(dst), m_order(order)
+{
+    PROTO_ASSERT(DIM == 3 && order == 4, "Cubed-sphere interpolation requires DIM=3 and order=4");
+    const auto& layout = map.layout();
+    const auto& domain = layout.domain();
+    auto center = map.op(0).findValid(domain, MBPoint(dst.dstPoint(), dst.dstBlock()));
+    std::vector<Point> footprint;
+    Point low = -Point::Ones();
+    Point high = Point::Ones();
+    low[0] = high[0] = 0;
+    for (auto point : Box(low, high)) { footprint.push_back(point); }
+    for (int dir = 1; dir < DIM; ++dir)
+    {
+        footprint.push_back(Point::Basis(dir, 2));
+        footprint.push_back(Point::Basis(dir, -2));
+    }
+    std::set<Point> pullbacks;
+    for (auto shift : footprint)
+    {
+        MBPoint source(center.point + shift, center.block);
+        if (!domain.getBlock(source.block).box().containsPoint(source.point))
+        {
+            // Across a face, retain the exact index-space rotation used by
+            // cubedSphereDev. Geometric nearest-cell selection is needed only
+            // at corners where more than one adjacent block is possible.
+            Point dir = domain.getBlock(source.block).box().whichBoundaryContains(source.point);
+            auto boundaries = domain.boundaries(source.block, dir);
+            if (dir.codim() == 1 && boundaries.size() == 1)
+            {
+                auto adjacentBlock = boundaries[0].dstBlock;
+                source.point = domain.convertPoint(source.point, source.block, adjacentBlock, PR_CELL);
+                source.block = adjacentBlock;
+            }
+            else
+            {
+                source = map.op(0).findValid(domain, source);
+            }
+        }
+        Point localPoint = domain.convertPoint(source.point, source.block, dst.dstBlock(), PR_CELL);
+        if (!pullbacks.insert(localPoint).second) { continue; }
+        if (source.block == dst.dstBlock())
+        {
+            m_srcs.emplace_back(dst.dstIndex(), localPoint, layout);
+        }
+        else
+        {
+            // A radial ghost point belongs to the nearest physical patch.
+            Point patchPoint = source.point;
+            const Box blockBox = domain.getBlock(source.block).box();
+            for (int dir = 0; dir < DIM; ++dir)
+            {
+                patchPoint[dir] = std::max(blockBox.low()[dir], std::min(patchPoint[dir], blockBox.high()[dir]));
+            }
+            auto sourceIndex = layout.find(patchPoint / layout.boxSize(source.block), source.block);
+            PROTO_ASSERT(sourceIndex != *layout.end(), "Cubed-sphere interpolation source is absent");
+            m_srcs.emplace_back(dst.dstIndex(), localPoint, sourceIndex, source.point, layout);
+        }
+    }
+    computeExponents();
+    validateMatrixDimensions();
+    auto moments = computeMoments(map);
+    computeCoefficients(moments);
+}

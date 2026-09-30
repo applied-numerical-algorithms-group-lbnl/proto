@@ -1,6 +1,11 @@
 #ifndef __PROTO_HEADER__
 #define __PROTO_HEADER__
 
+// PR_OPS was the public spelling before the LAPACK build refactor.
+#if defined(PR_OPS) && !defined(PR_LAPACK)
+#define PR_LAPACK
+#endif
+
 // UTILITY
 #include "base/Proto_Timer.H"
 #include "base/Proto_PAssert.H"

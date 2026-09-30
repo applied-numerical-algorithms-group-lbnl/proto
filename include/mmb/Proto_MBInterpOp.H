@@ -111,6 +111,22 @@ namespace Proto
          */
         inline void insert(std::shared_ptr<MBPointInterpOp> a_op);
 
+        /// Build the cubedSphereDev angular interpolation stencil. The extra
+        /// two angular ghost cells hold stencil sources, not output targets.
+        template<typename MAP, MemType MEM>
+        inline void defineCubedSphere(
+            const std::vector<std::shared_ptr<MBLevelMap<MAP, MEM>>>& maps,
+            MBInterpLayout interpLayout, Point ghost, int order = 4);
+
+        inline std::vector<std::shared_ptr<MBPointInterpOp>>& getOps()
+        { return m_ops; }
+
+        inline const std::vector<std::shared_ptr<MBPointInterpOp>>& getOps() const
+        { return m_ops; }
+
+        // Optional scratch state retained for cubedSphereDev callers.
+        std::shared_ptr<MBLevelBoxData<double, 10, HOST>> m_UOut;
+
         /// Apply
         /** Interpolates from source data to all block boundary ghost cells in the destination.
          *  It is assumed that MBLevelBoxData::fillBoundaries() has been called on the source
@@ -118,7 +134,7 @@ namespace Proto
         template<typename T, unsigned int C, MemType MEM>
         inline void apply(
                 MBLevelBoxData<T, C, MEM>& a_dst,
-                MBLevelBoxData<T, C, MEM>& a_src);
+                MBLevelBoxData<T, C, MEM>& a_src) const;
         
         /// Coefficients
         /** Writes the first P coefficients of the interpolating polynomial to a specified
@@ -170,6 +186,7 @@ namespace Proto
         int m_order;
         std::vector<std::shared_ptr<MBPointInterpOp>> m_ops;
         std::unordered_set<MBPointID, MBPointID::Hash> m_points;
+        bool m_cubedSphere = false;
     };
 
     // Interpolate Block Boundaries

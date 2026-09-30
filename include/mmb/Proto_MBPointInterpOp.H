@@ -36,6 +36,11 @@ namespace Proto
             MBDataPoint a_dst,
             std::vector<MBDataPoint> a_srcs,
             std::vector<double> a_coefs);
+
+        /// Fourth-order angular stencil used by the cubed-sphere MHD solver.
+        template<typename MAP, MemType MEM>
+        inline MBPointInterpOp(MBDataPoint dst, Point ghost,
+            const MBLevelMap<MAP, MEM>& map, unsigned int order);
         
         /// Apply
         /** computes the interpolation */

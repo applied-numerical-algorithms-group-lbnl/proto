@@ -3,6 +3,7 @@ build
 blis
 blt
 *.hdf5
+*.h5
 *.vtk
 *.d
 *.o
@@ -13,4 +14,13 @@ blt
 *.err
 *.out
 *.sh
+*.jpeg
+*.png
+*.mpg
+*.gif
 pout.*
+myjob.o*
+myjob.e*
+*.html
+*.csv
+visitlog.py
