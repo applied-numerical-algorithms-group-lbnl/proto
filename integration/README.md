@@ -29,15 +29,19 @@ Both remote tips were fetched on 2026-09-30. The local `master` and
   to the now-private `MBGraph::fixRotations`, and gate CUDA-only performance
   targets on CUDA builds.
 
-The active `CubedSphereMHDCons` example is updated to the current interfaces and
-registered under that name in CMake. Its viscosity stage hook is aligned with
-cubedSphereDev's integrator. Master's archived examples remain archived.
+The legacy `CubedSphereMHDCons` example is excluded from this integration because
+it was an earlier version of the standalone HelioCubed application. Its sources,
+inputs, scripts, sample data, and CMake targets have been removed. The library
+support needed by HelioCubed and the independent cubed-sphere integration tests
+are retained. Master's archived examples remain archived.
 
 ## HelioCubed migration
 
 `HelioCubed-CubedSphere.patch` applies to HelioCubed's `CubedSphere` commit
-`455a495`. It was checked against a clean export and applied only in a temporary
-validation copy. The actual HelioCubed checkout and branches were not modified.
+`455a495`. It was checked against a clean export, then applied directly to the
+HelioCubed `CubedSphere` working tree at the user's request. Those changes remain
+uncommitted and unpushed. The default HelioCubed makefile also now points to the
+sibling `proto` checkout and its `examples/_common` headers.
 
 The patch changes:
 
@@ -46,7 +50,8 @@ The patch changes:
 3. The MHD interpolation factory call to `CubedSphereShell::MHDInterpOp`.
 4. Build flags/includes from OPS to LAPACK, preserving explicit MHD shell parameters.
 
-When ready, apply it on a new HelioCubed branch based on `CubedSphere`:
+For a separate clean checkout, apply it on a new HelioCubed branch based on
+`CubedSphere` (do not reapply it to the already updated working tree):
 
 ```sh
 git switch -c integrate/proto-master CubedSphere
@@ -84,10 +89,14 @@ On this Apple Silicon machine the additional settings were
 ## Validation
 
 CPU builds succeeded in 2D and 3D with AMR, MMB, MPI, HDF5, and LAPACK enabled.
-The active MHD example builds. Five added regression cases pass on both one and
-two MPI ranks: generic RK4 stages, zero-width boundaries, constant-preserving
-angular interpolation, coarsening across different patch sizes, and new/legacy
-checkpoint metadata.
+Five added regression cases pass on both one and two MPI ranks: generic RK4
+stages, zero-width boundaries, constant-preserving angular interpolation,
+coarsening across different patch sizes, and new/legacy checkpoint metadata.
+
+After removing the legacy example, the 3D configuration and full build were
+rechecked successfully with examples enabled. The five cubed-sphere integration
+cases were rerun on one MPI rank and passed; the removed example is absent from
+the generated build targets.
 
 | Suite | Result |
 | --- | --- |
