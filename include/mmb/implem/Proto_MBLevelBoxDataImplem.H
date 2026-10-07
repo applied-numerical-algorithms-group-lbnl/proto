@@ -928,8 +928,11 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                         "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
                 int adjRank = layout.procID(bound.adjIndex);
                 auto adjBlock = layout.block(bound.adjIndex);
-                auto boundCodim = graph.connectivity(localBlock, adjBlock).codim();
-                Point ghost = ghostArray[boundCodim];
+                // Boundary storage is sized by the patch connection, which
+                // can have a higher codimension than the block connection.
+                // Use that same width when shifting the outgoing corner/edge
+                // region back into the local patch (also for anisotropic halos).
+                Point ghost = ghostArray[dir.codim()];
                 Point adjDir = graph.mirrorDirAcrossBoundary(localBlock, adjBlock, dir);
 
                 Box adjBox_to = bound.adjData->box();

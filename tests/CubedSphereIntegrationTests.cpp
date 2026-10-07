@@ -143,6 +143,50 @@ TEST(CubedSphereIntegration, CheckpointMetadataAndLegacyIteration)
     EXPECT_DOUBLE_EQ(reader.time(), 1.25);
 }
 
+TEST(CubedSphereIntegration, AnisotropicExchangePreservesBlockCoordinates)
+{
+    auto domain = CubedSphereShell::Domain(30, 60, 0);
+    MBDisjointBoxLayout layout(domain, Point::Ones(15));
+    for (int radialGhost : {0, 1, 7})
+    {
+        Point ghost = Point::Basis(0, radialGhost)
+                    + Point::Basis(1, 5) + Point::Basis(2, 5);
+        MBLevelBoxData<double, 1, HOST> data(layout, ghost);
+        auto value = [](unsigned int block, Point point)
+        {
+            return 1000000.0*block + 10000.0*point[0] + 100.0*point[1] + point[2];
+        };
+        // Give physical ghosts known values too, so every exchanged cell can
+        // be checked independently of physical boundary conditions.
+        for (auto index : layout)
+            for (auto point : data[index].box())
+                data[index](point) = value(layout.block(index), point);
+        data.exchange();
+        for (auto index : layout)
+            for (auto dir : Box::Kernel(1))
+                for (const auto& bound : data.bounds(index, dir))
+                {
+                    auto adjBlock = layout.block(bound.adjIndex);
+                    Point origin = bound.localData->box().low();
+                    auto adjOrigin = domain.convertPoint(
+                        origin, layout.block(index), adjBlock, PR_CELL);
+                    Array<Point, DIM> axes;
+                    for (int axis = 0; axis < DIM; ++axis)
+                        axes[axis] = domain.convertPoint(origin + Point::Basis(axis),
+                            layout.block(index), adjBlock, PR_CELL) - adjOrigin;
+                    // Block coordinate transforms are affine. Cache the axes
+                    // instead of repeating expensive graph queries per cell.
+                    for (auto point : bound.localData->box())
+                    {
+                        Point adjPoint = adjOrigin;
+                        for (int axis = 0; axis < DIM; ++axis)
+                            adjPoint += axes[axis] * (point[axis] - origin[axis]);
+                        EXPECT_DOUBLE_EQ((*bound.localData)(point), value(adjBlock, adjPoint));
+                    }
+                }
+    }
+}
+
 int main(int argc, char* argv[])
 {
     ::testing::InitGoogleTest(&argc, argv);
