@@ -258,11 +258,11 @@ CubedSphereShell::BCInterpOp(
     int RIndex = 0;
     if (a_side == Side::Lo)
     {
-        R = CUBED_SPHERE_SHELL_R0; 
+        R = cubedSphereShellGeometry().r0;
         srcBox = srcBox.shift(Point::Basis(rCoord, -1));
         RIndex = -1;
     } else {
-        R = CUBED_SPHERE_SHELL_R1; 
+        R = cubedSphereShellGeometry().r1;
         srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
         RIndex = rSize;
     }
@@ -426,11 +426,11 @@ CubedSphereShell::BCNearestOp(
     int RIndex = 0;
     if (a_side == Side::Lo)
     {
-        R = CUBED_SPHERE_SHELL_R0; 
+        R = cubedSphereShellGeometry().r0;
         srcBox = srcBox.shift(Point::Basis(rCoord, -1));
         RIndex = -1;
     } else {
-        R = CUBED_SPHERE_SHELL_R1; 
+        R = cubedSphereShellGeometry().r1;
         srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
         RIndex = rSize;
     }
@@ -536,11 +536,11 @@ CubedSphereShell::BCBilinearOp(
     int RIndex = 0;
     if (a_side == Side::Lo)
     {
-        R = CUBED_SPHERE_SHELL_R0; 
+        R = cubedSphereShellGeometry().r0;
         srcBox = srcBox.shift(Point::Basis(rCoord, -1));
         RIndex = -1;
     } else {
-        R = CUBED_SPHERE_SHELL_R1; 
+        R = cubedSphereShellGeometry().r1;
         srcBox = srcBox.shift(Point::Basis(rCoord, rSize));
         RIndex = rSize;
     }

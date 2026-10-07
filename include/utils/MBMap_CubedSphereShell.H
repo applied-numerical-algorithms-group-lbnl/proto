@@ -21,19 +21,35 @@
 namespace Proto
 {
 
+/// Runtime shell parameters. Set once before constructing maps or operators.
+/// Compile-time definitions remain the defaults for existing applications.
+struct CubedSphereShellGeometry
+{
+    double r0 = CUBED_SPHERE_SHELL_R0;
+    double r1 = CUBED_SPHERE_SHELL_R1;
+    double radialStretch = CUBED_SPHERE_RADIAL_STRETCH;
+};
+
+inline CubedSphereShellGeometry& cubedSphereShellGeometry()
+{
+    static CubedSphereShellGeometry geometry;
+    return geometry;
+}
+
 namespace {
     ACCEL_DECORATION
     void f_cubedSphereMap(
             Array<double, DIM>& a_X,
             double& a_J,
             const Array<double, DIM>& a_X0,
-            int a_block)
+            int a_block,
+            CubedSphereShellGeometry a_geometry)
     {
         constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-        constexpr double r0 = CUBED_SPHERE_SHELL_R0;
-        constexpr double r1 = CUBED_SPHERE_SHELL_R1;
+        const double r0 = a_geometry.r0;
+        const double r1 = a_geometry.r1;
         double r, xi, eta, C_rad, R_t;
-        C_rad = CUBED_SPHERE_RADIAL_STRETCH;
+        C_rad = a_geometry.radialStretch;
         R_t = C_rad == 0.0 ? (r1 - r0) : (r1 - r0) / std::expm1(C_rad);
         switch (r_dir)
         {
@@ -103,11 +119,12 @@ namespace {
     void f_cubedSphereInverseMap(
             Array<double, DIM>& a_XMap,
             const Array<double, DIM>& a_XCart,
-            int a_block)
+            int a_block,
+            CubedSphereShellGeometry a_geometry)
     {
         constexpr int r_dir = CUBED_SPHERE_SHELL_RADIAL_COORD;
-        constexpr double r0 = CUBED_SPHERE_SHELL_R0;
-        constexpr double r1 = CUBED_SPHERE_SHELL_R1;
+        const double r0 = a_geometry.r0;
+        const double r1 = a_geometry.r1;
         double xi = 0;
         double eta = 0;
         double x = a_XCart[0];
@@ -152,7 +169,7 @@ namespace {
                 break;
         }
         // r = (r - r0)/(r1-r0);
-        double C_rad = CUBED_SPHERE_RADIAL_STRETCH;
+        double C_rad = a_geometry.radialStretch;
         if (C_rad == 0.0)
         {
             r = (r - r0)/(r1 - r0);
@@ -437,16 +454,16 @@ public:
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double>& a_J, Var<double, DIM, MEM>& a_X0,
-                int a_block)
+                int a_block, CubedSphereShellGeometry a_geometry)
             {
                 Array<double, DIM> X0;
                 Array<double, DIM> X;
                 double J;
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
-                f_cubedSphereMap(X, J, X0, a_block);
+                f_cubedSphereMap(X, J, X0, a_block, a_geometry);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
                 a_J(0) = J;
-            }, a_X, a_J, X0, block);
+            }, a_X, a_J, X0, block, cubedSphereShellGeometry());
     }
     
     inline Array<double, DIM> apply(const Array<double, DIM>& a_Xi)
@@ -454,7 +471,7 @@ public:
         Array<double, DIM> X;
         double J;
         auto block = this->block();
-        f_cubedSphereMap(X, J, a_Xi, block);
+        f_cubedSphereMap(X, J, a_Xi, block, cubedSphereShellGeometry());
         return X;
     }
     
@@ -466,21 +483,21 @@ public:
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_X0,
-                int a_block)
+                int a_block, CubedSphereShellGeometry a_geometry)
             {
                 Array<double, DIM> X0;
                 Array<double, DIM> X;
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
-                f_cubedSphereInverseMap(X, X0, a_block);
+                f_cubedSphereInverseMap(X, X0, a_block, a_geometry);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
-            }, a_XMap, a_XCart, block);
+            }, a_XMap, a_XCart, block, cubedSphereShellGeometry());
     }
     
     inline Array<double, DIM> inverse(const Array<double, DIM>& a_XCart)
     {
         Array<double, DIM> XMap;
         auto block = this->block();
-        f_cubedSphereInverseMap(XMap, a_XCart, block);
+        f_cubedSphereInverseMap(XMap, a_XCart, block, cubedSphereShellGeometry());
         return XMap;
     }
 };
@@ -515,16 +532,16 @@ public:
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double>& a_J, Var<double, DIM, MEM>& a_X0,
-                int a_block)
+                int a_block, CubedSphereShellGeometry a_geometry)
             {
                 Array<double, DIM> X0;
                 Array<double, DIM> X;
                 double J;
                 for (int dir = 0; dir < DIM; dir++) { X0[dir] = a_X0(dir); };
-                f_cubedSphereMap(X, J, X0, a_block);
+                f_cubedSphereMap(X, J, X0, a_block, a_geometry);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X[dir]; }
                 a_J(0) = J;
-            }, Xc, Jc, X0, block);
+            }, Xc, Jc, X0, block, cubedSphereShellGeometry());
 
         // Cartesian -> Spherical Polar
         int focalBlock = this->focalBlock();
@@ -646,7 +663,7 @@ public:
         double J;
         auto block = this->block();
         auto focalBlock = this->focalBlock();
-        f_cubedSphereMap(Xc, J, a_Xi, block);
+        f_cubedSphereMap(Xc, J, a_Xi, block, cubedSphereShellGeometry());
         f_cartesianToPolar(X, J, Xc, focalBlock);
         return X;
     }
@@ -672,14 +689,14 @@ public:
         forallInPlace(
             [] PROTO_LAMBDA (
                 Var<double, DIM, MEM>& a_X, Var<double, DIM, MEM>& a_XCart,
-                int a_block)
+                int a_block, CubedSphereShellGeometry a_geometry)
             {
                 Array<double, DIM> X0;
                 Array<double, DIM> X;
                 for (int dir = 0; dir < DIM; dir++) { X[dir] = a_XCart(dir); };
-                f_cubedSphereInverseMap(X0, X, a_block);
+                f_cubedSphereInverseMap(X0, X, a_block, a_geometry);
                 for (int dir = 0; dir < DIM; dir++) { a_X(dir) = X0[dir]; }
-            }, a_XMap, XCart, block);
+            }, a_XMap, XCart, block, cubedSphereShellGeometry());
     }
     
     inline Array<double, DIM> inverse(const Array<double, DIM>& a_R)
@@ -689,7 +706,7 @@ public:
         auto focus = this->focalBlock();
         auto block = this->block();
         f_polarToCartesian(X, a_R, focus);
-        f_cubedSphereInverseMap(XMap, X, block);
+        f_cubedSphereInverseMap(XMap, X, block, cubedSphereShellGeometry());
         return XMap;
     }
 };
