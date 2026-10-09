@@ -1354,18 +1354,26 @@ void CubedSphereShell::semiSphToSph(
 {
   PR_TIMERS("CubedSphereShell::semiSphToSph()");
   Box bx = a_VSph.box();
-  BoxData<T,DIM,MEM> tmp(bx);
+  // The matrix quotient differentiates this product, so retain one extra
+  // angular layer. Forming the product itself consumes another layer.
+  Box productBox = bx.grow(Point(0,1,1));
+  BoxData<T,DIM,MEM> tmp(productBox);
   tmp.setToZero();
   BoxData<T,DIM,MEM> VecSemiSph = slice<T,C+2,DIM,MEM>(a_VSemiSph,a_compvec);
   BoxData<T,DIM,MEM> VecSph = slice<T,C,DIM,MEM>(a_VSph,a_compvec);
-  BoxData<T,DIM,MEM> VecSphBar(VecSph.box());
+  BoxData<T,DIM,MEM> VecSphBar(productBox);
   
   for (int dir = 0; dir < DIM; dir++)
     {
       BoxData<T,1,MEM> tmpComp = slice(tmp,dir);
       BoxData<T,1,MEM> VecSemiSphComp = slice(VecSemiSph,dir);
-      tmpComp += VecSemiSphComp*a_detA;
-      // WARNING: Eventually we need to replace this with the 4th order product formula.
+      // Both factors are cell averages. detA has no radial variation, so
+      // the face product normal to direction 0 supplies the angular covariance.
+      auto product = Operator::_faceProduct(
+          VecSemiSphComp,a_detA,VecSemiSphComp,a_detA,0);
+      PROTO_ASSERT((product.box() & productBox) == productBox,
+          "semiSphToSph: insufficient angular padding for averaged product");
+      product.copyTo(tmpComp);
     }
   bool debug = false;
   cellMatrixQuotientMatAndInv(VecSph,VecSphBar,a_ADetA,a_invADetA,tmp,debug);
@@ -1384,7 +1392,8 @@ consToSphInterpEuler(
 {
   PR_TIMERS("CubedSphereShell::consToSphInterpEuler()");
   auto layout = a_JU.layout();
-  auto ghost = a_JU.ghost();
+  // Preserve the requested output halo after the angular product and quotient.
+  auto ghost = a_JU.ghost() + Point(0,2,2);
   HDF5Handler h5;
   bool debugpre = false;
   

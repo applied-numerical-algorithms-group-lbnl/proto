@@ -146,10 +146,9 @@ advance(
         "Supported MHD temporal orders are 1, 3 and 4");
     if (!m_stageDefined)
     {
-        Array<Point, DIM+1> ghost;
-        ghost.fill(OP::ghost() + Point::Ones(2));
-        ghost[0] = OP::ghost();
-        m_stageState.define(a_state.layout(), ghost);
+        // Stage interpolation needs the same face, edge and corner buffers
+        // as a normal solution array, including the wider corner padding.
+        m_stageState.define(a_state.layout(), OP::ghost());
         m_stageDefined = true;
     }
     T sixth = 1, third=1, twoThirds = 2, half = 1;
