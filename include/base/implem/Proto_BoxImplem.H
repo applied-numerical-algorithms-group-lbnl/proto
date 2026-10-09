@@ -845,12 +845,14 @@ BoxIterator::BoxIterator(const Box& a_box, int a_pos)
 {
     m_box = a_box;
     m_pos = a_pos;
+    if (ok()) { m_point = m_pos == 0 ? m_box.low() : m_box[m_pos]; }
 }
 
 BoxIterator::BoxIterator(const Box& a_box, const Point& a_pt)
 {
     m_box = a_box;
     m_pos = a_box.index(a_pt);
+    m_point = a_pt;
 }
 
 bool BoxIterator::ok() const
@@ -865,27 +867,53 @@ bool BoxIterator::operator==(const BoxIterator& a_iter) const
 
 BoxIterator& BoxIterator::operator++()
 {
-    m_pos++;
+    bool wasValid = ok();
+    ++m_pos;
+    if (ok())
+    {
+        if (!wasValid) { m_point = m_box[m_pos]; }
+        else
+        {
+            for (int dir = 0; dir < DIM; ++dir)
+            {
+                if (m_point[dir] < m_box.high()[dir]) { ++m_point[dir]; break; }
+                m_point[dir] = m_box.low()[dir];
+            }
+        }
+    }
     return *this;
 }
 
 BoxIterator& BoxIterator::operator--()
 {
-    m_pos--;
+    bool wasValid = ok();
+    --m_pos;
+    if (ok())
+    {
+        if (!wasValid) { m_point = m_box[m_pos]; }
+        else
+        {
+            for (int dir = 0; dir < DIM; ++dir)
+            {
+                if (m_point[dir] > m_box.low()[dir]) { --m_point[dir]; break; }
+                m_point[dir] = m_box.high()[dir];
+            }
+        }
+    }
     return *this;
 }
 
 BoxIterator BoxIterator::operator++(int)
 {
     BoxIterator ptr(*this);
-    m_pos++;
+    ++(*this);
     return ptr;
 }
 
 BoxIterator BoxIterator::operator--(int)
 {
     BoxIterator ptr(*this);
-    m_pos--;
+    --(*this);
     return ptr;
 }
 } // end namespace Proto

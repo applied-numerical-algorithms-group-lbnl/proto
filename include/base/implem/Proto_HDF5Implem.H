@@ -1,3 +1,19 @@
+// HDF5 calls must execute exactly once, including in NDEBUG builds.
+namespace detail {
+inline void checkHDF5(bool a_success, const char* a_operation,
+        const char* a_file, int a_line)
+{
+    if (!a_success)
+    {
+        std::fprintf(stderr, "%s:%d: HDF5 operation failed: %s\n",
+                     a_file, a_line, a_operation);
+        std::abort();
+    }
+}
+}
+#define PR_HDF5_CHECK(operation) \
+    ::Proto::detail::checkHDF5((operation), #operation, __FILE__, __LINE__)
+
 HDF5Handler::HDF5Handler()
 {
  
@@ -27,9 +43,9 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
 #endif
@@ -55,41 +71,41 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     hsize_t dataCount[] = {numData_local};
     
     auto slab_boxes = H5Dget_space(ds_boxes); 
-    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxCount, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxCount, NULL) >= 0);
     auto slab_data = H5Dget_space(ds_data); 
-    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
    
     auto s_boxes = H5Screate_simple(1, boxCount,  NULL);
     auto s_data =  H5Screate_simple(1, dataCount, NULL);
     
-    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dread(ds_data,  H5T_T,         s_data,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_boxes, H5T_PROTO_BOX(), s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_data,  H5T_T,         s_data,  slab_data,  H5P_DEFAULT, rawData) >= 0);
 
-    assert(H5Sclose(slab_boxes) >= 0);
-    assert(H5Sclose(slab_data) >= 0);
-    assert(H5Sclose(s_boxes) >= 0);
-    assert(H5Sclose(s_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data) >= 0);
 #else
-    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
 #endif
-    assert(H5Dclose(ds_boxes) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_boxes) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_data) >= 0);
     
     // READ GHOST SIZE
     Point ghost;
     auto g_level_meta = H5Gopen(file, "/level_0/data_attributes", H5P_DEFAULT);
     auto att_ghost = H5Aopen(g_level_meta, "ghost", H5P_DEFAULT);
-    assert(H5Aread(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    assert(H5Aclose(att_ghost) >= 0);
-    assert(H5Gclose(g_level_meta) >= 0);
+    PR_HDF5_CHECK(H5Aread(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ghost) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level_meta) >= 0);
 
     // READ DOMAIN BOX
     Box domainBox;
     auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
     auto att_prob_domain = H5Aopen(g_level, "prob_domain", H5P_DEFAULT);
-    assert(H5Aread(att_prob_domain, H5T_PROTO_BOX(), &domainBox) >= 0);
-    assert(H5Aclose(att_prob_domain) >= 0);
+    PR_HDF5_CHECK(H5Aread(att_prob_domain, H5T_PROTO_BOX(), &domainBox) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_prob_domain) >= 0);
 
     // READ TIME VARIABLES
     auto att_time = H5Aopen(g_level, "time", H5P_DEFAULT);
@@ -98,14 +114,14 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     m_iter = 0;
     hid_t att_iter = H5Aexists(g_level, "iteration") > 0
         ? H5Aopen(g_level, "iteration", H5P_DEFAULT) : -1;
-    assert(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
-    assert(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
-    assert(H5Aclose(att_time) >= 0);
-    assert(H5Aclose(att_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aclose(att_time) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aclose(att_iter) >= 0); }
     
-    assert(H5Gclose(g_level) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
     
     // COMPUTE BOX SIZE (ASSUMING FIXED BOX SIZE)
     Point boxSize = boxData[0].high() - boxData[0].low() + Point::Ones();
@@ -144,7 +160,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     free(rawData);
     free(boxData);
     barrier();
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
@@ -237,20 +253,20 @@ void HDF5Handler::writeHeader(
     std::string filetype = "VanillaAMRFileType";
     int numComponents = C;
 
-    assert(H5Awrite(att_filetype, H5T_PROTO_STRING(), filetype.c_str()) >= 0);
-    assert(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
-    assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_filetype, H5T_PROTO_STRING(), filetype.c_str()) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
 
-    assert(H5Aclose(att_filetype) >= 0);
-    assert(H5Aclose(att_num_components) >= 0);
-    assert(H5Aclose(att_num_levels) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_filetype) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_num_components) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_num_levels) >= 0);
 
     if (CTR == PR_NODE)
     {
         auto att_data_centering = H5Acreate2(g_root, "data_centering", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
         int centering = CTR;
-        assert(H5Awrite(att_data_centering, H5T_NATIVE_INT, &centering) >= 0);
-        assert(H5Aclose(att_data_centering) >= 0);
+        PR_HDF5_CHECK(H5Awrite(att_data_centering, H5T_NATIVE_INT, &centering) >= 0);
+        PR_HDF5_CHECK(H5Aclose(att_data_centering) >= 0);
     }
     
     while (a_varNames.size() < C)
@@ -266,11 +282,11 @@ void HDF5Handler::writeHeader(
 
         auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
         std::string c = a_varNames[ii];
-        assert(H5Awrite(att_component, H5T_PROTO_STRING(), c.c_str()) >= 0);
-        assert(H5Aclose(att_component) >= 0);
+        PR_HDF5_CHECK(H5Awrite(att_component, H5T_PROTO_STRING(), c.c_str()) >= 0);
+        PR_HDF5_CHECK(H5Aclose(att_component) >= 0);
     }
 
-    assert(H5Gclose(g_root) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_root) >= 0);
     
     // CHOMBO GROUP
     char g_chombo_name[] = "/Chombo_global";
@@ -280,12 +296,12 @@ void HDF5Handler::writeHeader(
     auto att_testReal = H5Acreate2(g_chombo, "testReal", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
 
     int SpaceDim = DIM;
-    assert(H5Awrite(att_SpaceDim, H5T_NATIVE_INT, &SpaceDim) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_SpaceDim, H5T_NATIVE_INT, &SpaceDim) >= 0);
 
-    assert(H5Aclose(att_SpaceDim) >= 0);
-    assert(H5Aclose(att_testReal) >= 0);
-    assert(H5Gclose(g_chombo) >= 0);
-    assert(H5Sclose(s_scalar) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_SpaceDim) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_testReal) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_chombo) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_scalar) >= 0);
 }
 
 template<typename T, unsigned int C, Centering CTR, typename... Args>
@@ -335,15 +351,15 @@ void HDF5Handler::writeLevel(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
     writeHeader<C,CTR>(&file, 1, a_varNames);
     addLevel(&file, a_data, a_dx, Point::Ones(), 0);
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 }
 
 #ifdef PR_AMR
@@ -420,9 +436,9 @@ void HDF5Handler::writeAMRData(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
@@ -441,7 +457,7 @@ void HDF5Handler::writeAMRData(
             dx[dir] /= refRatio[dir];
         }
     }
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 }
 #endif
 
@@ -522,19 +538,19 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
         refRatio[dir] = a_refRatio[dir];
     }
 
-    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
-    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
-    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
-    assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
-    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &domainBox) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &domainBox) >= 0);
 
-    assert(H5Aclose(att_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
-    assert(H5Aclose(att_time) >= 0);
-    assert(H5Aclose(att_dx) >= 0);
-    assert(H5Aclose(att_ref_ratio) >= 0);
-    assert(H5Aclose(att_prob_domain) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aclose(att_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aclose(att_time) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dx) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ref_ratio) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_prob_domain) >= 0);
       
     // CREATE DATASPACES
     hsize_t procDims[] = {numProc()};
@@ -604,44 +620,44 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
 
     // WRITE DATA
     // FIXME: write processor data
-    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG,H5S_ALL,H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
-    assert(H5Dwrite(ds_blocks, H5T_PROTO_BOX(),H5S_ALL,H5S_ALL, H5P_DEFAULT, blockData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_offsets, H5T_NATIVE_LONG,H5S_ALL,H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_blocks, H5T_PROTO_BOX(),H5S_ALL,H5S_ALL, H5P_DEFAULT, blockData) >= 0);
     #ifdef PR_MPI
     hsize_t boxStart[] = {a_data.layout().offset(procID())};
     hsize_t dataStart[] = {a_data.offset(procID())};
     hsize_t stride[] = {1};
     
     auto slab_boxes = H5Dget_space(ds_boxes); 
-    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
     auto slab_data = H5Dget_space(ds_data); 
-    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
     PR_START(timer);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
     PR_STOP(timer);
 
-    assert(H5Sclose(slab_boxes) >= 0);
-    assert(H5Sclose(slab_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_data) >= 0);
     #else
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     #endif
     
     // CLEANUP
-    assert(H5Dclose(ds_processors) >= 0);
-    assert(H5Dclose(ds_boxes) >= 0);
-    assert(H5Dclose(ds_blocks) >= 0);
-    assert(H5Dclose(ds_offsets) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_processors) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_boxes) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_blocks) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_offsets) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_data) >= 0);
 
-    assert(H5Sclose(s_offsets) >= 0);
-    assert(H5Sclose(s_processors) >= 0);
-    assert(H5Sclose(s_boxes) >= 0);
-    assert(H5Sclose(s_blocks) >= 0);
-    assert(H5Sclose(s_data) >= 0);
-    assert(H5Sclose(s_boxes_local) >= 0);
-    assert(H5Sclose(s_data_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_offsets) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_processors) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_blocks) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data_local) >= 0);
 
     // METADATA
     std::string g_level_meta_name = g_level_name + "/data_attributes";
@@ -656,19 +672,19 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     Point ghost = a_data.ghost()[0];
     Point outputGhost = a_data.ghost()[0]; //FIXME No idea what this attribute is meant to be
 
-    assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
-    assert(H5Aclose(att_comps) >= 0);
-    assert(H5Aclose(att_ghost) >= 0);
-    assert(H5Aclose(att_object_type) >= 0);
-    assert(H5Aclose(att_outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ghost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_object_type) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_outputGhost) >= 0);
     // FINAL CLEAN UP
-    assert(H5Gclose(g_level_meta) >= 0);
-    assert(H5Gclose(g_level) >= 0);
-    assert(H5Sclose(s_scalar) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level_meta) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_scalar) >= 0);
 
     free(offsetData);
     free(boxData);
@@ -704,9 +720,9 @@ void HDF5Handler::readMBLayout(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
 #endif
@@ -722,8 +738,8 @@ void HDF5Handler::readMBLayout(
    
     Box* boxData = (Box*)malloc(n_boxes*sizeof(Box));
     Box* blockData = (Box*)malloc(n_blocks*sizeof(Box));
-    assert(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dread(ds_blocks, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, blockData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_blocks, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, blockData) >= 0);
 
     std::vector<MBPoint> patches;
     std::vector<Point> boxSizes;
@@ -785,9 +801,9 @@ void HDF5Handler::readMBLevel(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
 #endif
@@ -834,24 +850,24 @@ void HDF5Handler::readMBLevel(
     hsize_t dataCount[] = {n_data_local};
 
     auto slab_data = H5Dget_space(ds_data);
-    assert(H5Sselect_hyperslab(slab_data, H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_data, H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
     auto s_data_local = H5Screate_simple(1,dataCount, NULL);
 
-    assert(H5Dread(ds_data, H5T_T, s_data_local, slab_data, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_data, H5T_T, s_data_local, slab_data, H5P_DEFAULT, rawData) >= 0);
 
-    assert(H5Sclose(slab_data) >= 0);
-    assert(H5Sclose(s_data_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data_local) >= 0);
 #else
-    assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
 #endif
 
-    assert(H5Sclose(s_blocks) >= 0);
-    assert(H5Sclose(s_boxes) >= 0);
-    assert(H5Sclose(s_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_blocks) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data) >= 0);
 
-    assert(H5Dclose(ds_blocks) >= 0);
-    assert(H5Dclose(ds_boxes) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_blocks) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_boxes) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_data) >= 0);
 
     // READ TIME VARIABLES
     auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
@@ -861,19 +877,19 @@ void HDF5Handler::readMBLevel(
     m_iter = 0;
     hid_t att_iter = H5Aexists(g_level, "iteration") > 0
         ? H5Aopen(g_level, "iteration", H5P_DEFAULT) : -1;
-    assert(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
-    assert(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
-    assert(H5Aclose(att_time) >= 0);
-    assert(H5Aclose(att_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aread(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Aread(att_dt, H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aread(att_iter, H5T_NATIVE_INT, &m_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aclose(att_time) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aclose(att_iter) >= 0); }
     
-    assert(H5Gclose(g_level) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
 
     a_data.linearIn(rawData);
     free(rawData);
     barrier();
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 }
 
 #endif
@@ -952,19 +968,19 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     Box problemDomain = a_data.layout().domain().box();
 
-    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
-    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
-    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
-    assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
-    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
-    assert(H5Aclose(att_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
-    assert(H5Aclose(att_time) >= 0);
-    assert(H5Aclose(att_dx) >= 0);
-    assert(H5Aclose(att_ref_ratio) >= 0);
-    assert(H5Aclose(att_prob_domain) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aclose(att_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aclose(att_time) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dx) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ref_ratio) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_prob_domain) >= 0);
     
       
     // CREATE DATASPACES
@@ -1017,41 +1033,41 @@ void HDF5Handler::addLevel(hid_t* a_file,
     
     // WRITE DATA
     // FIXME: write processor data
-    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
     #ifdef PR_MPI
     hsize_t boxStart[] = {a_data.layout().offset()};
     hsize_t dataStart[] = {a_data.offset()};
     hsize_t stride[] = {1};
     
     auto slab_boxes = H5Dget_space(ds_boxes); 
-    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
     auto slab_data = H5Dget_space(ds_data); 
-    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
+    PR_HDF5_CHECK(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
     PR_START(timer);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
     PR_STOP(timer);
 
-    assert(H5Sclose(slab_boxes) >= 0);
-    assert(H5Sclose(slab_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(slab_data) >= 0);
     #else
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     #endif
     
     // CLEANUP
-    assert(H5Dclose(ds_processors) >= 0);
-    assert(H5Dclose(ds_boxes) >= 0);
-    assert(H5Dclose(ds_offsets) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_processors) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_boxes) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_offsets) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_data) >= 0);
 
-    assert(H5Sclose(s_offsets) >= 0);
-    assert(H5Sclose(s_processors) >= 0);
-    assert(H5Sclose(s_boxes) >= 0);
-    assert(H5Sclose(s_data) >= 0);
-    assert(H5Sclose(s_boxes_local) >= 0);
-    assert(H5Sclose(s_data_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_offsets) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_processors) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data_local) >= 0);
 
     // METADATA
     std::string g_level_meta_name = g_level_name + "/data_attributes";
@@ -1066,19 +1082,19 @@ void HDF5Handler::addLevel(hid_t* a_file,
     Point ghost = a_data.ghost();
     Point outputGhost = a_data.ghost(); //FIXME No idea what this attribute is meant to be
 
-    assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
-    assert(H5Aclose(att_comps) >= 0);
-    assert(H5Aclose(att_ghost) >= 0);
-    assert(H5Aclose(att_object_type) >= 0);
-    assert(H5Aclose(att_outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ghost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_object_type) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_outputGhost) >= 0);
     // FINAL CLEAN UP
-    assert(H5Gclose(g_level_meta) >= 0);
-    assert(H5Gclose(g_level) >= 0);
-    assert(H5Sclose(s_scalar) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level_meta) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_scalar) >= 0);
 
     free(offsetData);
     free(boxData);
@@ -1128,19 +1144,19 @@ void HDF5Handler::addPatch(hid_t* a_file,
 
     Box problemDomain = a_data.box();
 
-    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
-    assert(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
-    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
-    assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
-    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
-    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_iter, H5T_NATIVE_INT, &m_iter) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_prob_domain, H5T_PROTO_BOX(),  &problemDomain) >= 0);
 
-    assert(H5Aclose(att_dt) >= 0);
-    if (att_iter >= 0) { assert(H5Aclose(att_iter) >= 0); }
-    assert(H5Aclose(att_time) >= 0);
-    assert(H5Aclose(att_dx) >= 0);
-    assert(H5Aclose(att_ref_ratio) >= 0);
-    assert(H5Aclose(att_prob_domain) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dt) >= 0);
+    if (att_iter >= 0) { PR_HDF5_CHECK(H5Aclose(att_iter) >= 0); }
+    PR_HDF5_CHECK(H5Aclose(att_time) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_dx) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ref_ratio) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_prob_domain) >= 0);
     
       
     // CREATE DATASPACES
@@ -1187,22 +1203,22 @@ void HDF5Handler::addPatch(hid_t* a_file,
     a_data.linearOut(rawData, a_data.box(), {0,C-1});
 
     // WRITE DATA
-    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_boxes, H5T_PROTO_BOX(), H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    PR_HDF5_CHECK(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
     
     // CLEANUP
-    assert(H5Dclose(ds_processors) >= 0);
-    assert(H5Dclose(ds_boxes) >= 0);
-    assert(H5Dclose(ds_offsets) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_processors) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_boxes) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_offsets) >= 0);
+    PR_HDF5_CHECK(H5Dclose(ds_data) >= 0);
 
-    assert(H5Sclose(s_offsets) >= 0);
-    assert(H5Sclose(s_processors) >= 0);
-    assert(H5Sclose(s_boxes) >= 0);
-    assert(H5Sclose(s_data) >= 0);
-    assert(H5Sclose(s_boxes_local) >= 0);
-    assert(H5Sclose(s_data_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_offsets) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_processors) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_boxes_local) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_data_local) >= 0);
 
     // METADATA
     std::string g_level_meta_name = g_level_name + "/data_attributes";
@@ -1217,19 +1233,19 @@ void HDF5Handler::addPatch(hid_t* a_file,
     Point ghost = a_ghost;
     Point outputGhost = a_ghost; //FIXME No idea what this attribute is meant to be
 
-    assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
-    assert(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    assert(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
-    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
-    assert(H5Aclose(att_comps) >= 0);
-    assert(H5Aclose(att_ghost) >= 0);
-    assert(H5Aclose(att_object_type) >= 0);
-    assert(H5Aclose(att_outputGhost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_ghost) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_object_type) >= 0);
+    PR_HDF5_CHECK(H5Aclose(att_outputGhost) >= 0);
     // FINAL CLEAN UP
-    assert(H5Gclose(g_level_meta) >= 0);
-    assert(H5Gclose(g_level) >= 0);
-    assert(H5Sclose(s_scalar) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level_meta) >= 0);
+    PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
+    PR_HDF5_CHECK(H5Sclose(s_scalar) >= 0);
 
     free(offsetData);
     free(boxData);
@@ -1374,7 +1390,7 @@ void HDF5Handler::writePatch(
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     writeHeader<C,PR_CELL>(&file, 1, a_varnames);
     addPatch(&file, a_data, a_dx, Point::Zeros());
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 }
 
 template<typename T, unsigned int C, typename... Args>
@@ -1481,9 +1497,9 @@ void HDF5Handler::writeMBLevel(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access); //FIXME: NUKES A_DATA'S LAYOUT
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
@@ -1491,7 +1507,7 @@ void HDF5Handler::writeMBLevel(
     dx.fill(1.0);
     writeHeader<C,CTR>(&file, 1, a_varNames);
     addMBLevel(&file, a_data, dx, Point::Ones(), 0); //FIXME: NUKES A_DATA'S LAYOUT
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 
 }
 
@@ -1584,9 +1600,9 @@ void HDF5Handler::writeMBAMRData(
     auto mpi_info = MPI_INFO_NULL;
 
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
-    assert(H5Pclose(p_access) >= 0);
+    PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
@@ -1605,7 +1621,7 @@ void HDF5Handler::writeMBAMRData(
         Array<double, DIM> r = refRatio;
         dx /= r;
     }
-    assert(H5Fclose(file) >= 0);
+    PR_HDF5_CHECK(H5Fclose(file) >= 0);
 
 }
 
@@ -1728,3 +1744,5 @@ HDF5Handler::getH5DataType<std::string>(hid_t* a_type){
 hid_t HDF5Handler::H5T_PROTO_POINT(){  hid_t rtn; getH5DataType<Point>(&rtn); return rtn;}
 hid_t HDF5Handler::H5T_PROTO_BOX(){    hid_t rtn; getH5DataType<Box>(&rtn); return rtn;}
 hid_t HDF5Handler::H5T_PROTO_STRING(){ hid_t rtn; getH5DataType<std::string>(&rtn); return rtn;}
+
+#undef PR_HDF5_CHECK

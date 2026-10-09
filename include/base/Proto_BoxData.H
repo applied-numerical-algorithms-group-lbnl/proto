@@ -1427,6 +1427,8 @@ namespace Proto
         }
 
         private:
+        // Internal allocation for operations that provably overwrite every value.
+        void defineStorage(const Box& a_box);
         bool                    m_alias; ///< was this created as an alias
         bool                    m_stackAlloc;
         mutable Box             m_box; ///< Box defining the domain of *this

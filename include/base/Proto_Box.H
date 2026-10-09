@@ -992,7 +992,7 @@ namespace Proto
     {
         public:
             /// Default Constructor
-            inline BoxIterator(){};
+            inline BoxIterator() : m_pos(0) {};
 
             /// Index Constructor
             inline BoxIterator(const Box& a_box, int a_pos = 0);
@@ -1001,7 +1001,7 @@ namespace Proto
             inline BoxIterator(const Box& a_box, const Point& a_pos);
             
             /// Reset Iterator
-            inline void begin() { m_pos = 0; }
+            inline void begin() { m_pos = 0; m_point = m_box.low(); }
 
             /// Continue Iteration Query
             inline bool ok() const;
@@ -1020,7 +1020,11 @@ namespace Proto
             /**
               Returns a Point
             */
-            inline Point operator*() const { return m_box[m_pos]; };
+            inline Point operator*() const
+            {
+                // Preserve the existing bounds checks for invalid dereferences.
+                return ok() ? m_point : m_box[m_pos];
+            };
 
             /// Get Index
             /**
@@ -1043,6 +1047,7 @@ namespace Proto
         private:
             Box m_box;
             int m_pos;
+            Point m_point; // Cached coordinates avoid division on each dereference.
     }; //end class BoxIterator
 
 } //end namespace Proto

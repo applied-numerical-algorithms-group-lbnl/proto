@@ -13,6 +13,7 @@ static struct_##local_name app_name;
 // Constructors ||
 //==============++
 #include "../Proto_BoxData.H"
+#include "../Proto_HostBufferCache.H"
 
 namespace Proto {
 
@@ -59,6 +60,13 @@ template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::define(const Box& a_box, T a_init)
 {
     PR_TIME("BoxData::define(Box)");
+    defineStorage(a_box);
+    setVal(a_init);
+}
+
+template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::defineStorage(const Box& a_box)
+{
     m_box=a_box;
     auto& stack = Stack<MEM>::getStack();
     if (stack.enabled())
@@ -70,11 +78,20 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box, T a_init)
         m_data = std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata<MEM>));
         m_stackAlloc = true;
     } else {
+#ifndef PROTO_ACCEL
+        if constexpr (MEM == HOST)
+        {
+            m_data = detail::allocateHostBoxData<T>(size()*sizeof(T));
+            m_rawPtr = m_data.get();
+        }
+        else
+#endif
+        {
         m_rawPtr = (T*)proto_malloc<MEM>(size()*sizeof(T));
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
+        }
         m_stackAlloc = false;
     }
-    setVal(a_init);
     m_alias = false;
 }
 
@@ -119,7 +136,21 @@ BoxData<T,C,MEM,D,E>::BoxData(LazyStencil<T, C, MEM, D, E>&& a_op)
 {
     Box range = a_op.m_range;
     if (range.empty()) { range = a_op.inferredRange(); }
-    define(range);
+    bool fullOverwrite = false;
+    if constexpr (MEM == HOST)
+    {
+        if (a_op.size() == 1 && a_op.m_stencil[0]->size() > 0)
+        {
+            const auto& stencil = *a_op.m_stencil[0];
+            fullOverwrite = stencil.destRatio() == Point::Ones() &&
+                stencil.range(a_op.m_src[0]->box()).containsBox(range) &&
+                (a_op.m_box[0].empty() ||
+                 a_op.m_box[0].shift(stencil.destShift()) == range);
+        }
+    }
+    // Sparse/refined outputs and empty stencils retain the sentinel fill.
+    if (fullOverwrite) { defineStorage(range); }
+    else { define(range); }
     a_op.apply(*this, true);
 #ifndef PR_DISABLE_INIT_CHECKS
     PROTO_ASSERT(!containsUninitialized(),
@@ -254,6 +285,43 @@ struct boxdataIndexer {
             Box a_box, Box a_srcBox, Box a_dstBox,
             Point  a_dstShift, int srcSize, int dstSize)
     {
+        // On disjoint HOST arrays, work along contiguous pencils. Computing
+        // a multidimensional index once per pencil avoids integer division
+        // for every cell and lets the compiler vectorize each component.
+        const auto srcBegin = reinterpret_cast<std::uintptr_t>(a_src);
+        const auto dstBegin = reinterpret_cast<std::uintptr_t>(a_dst);
+        const bool separateStorage =
+            srcBegin + C*srcSize*sizeof(T) <= dstBegin ||
+            dstBegin + C*dstSize*sizeof(T) <= srcBegin;
+        if (separateStorage)
+        {
+            unsigned int idx = a_begin;
+            while (idx < a_end)
+            {
+                Point pt = a_box[idx];
+                unsigned int count = std::min(a_end - idx,
+                    static_cast<unsigned int>(a_box.high()[0] - pt[0] + 1));
+                auto srcOff = a_srcBox.index(pt);
+                auto dstOff = a_dstBox.index(pt + a_dstShift);
+                for (int c = 0; c < C; ++c)
+                {
+                    const T* src = a_src + c*srcSize + srcOff;
+                    T* dst = a_dst + c*dstSize + dstOff;
+                    for (unsigned int ii = 0; ii < count; ++ii)
+                    {
+                        if constexpr (Op == BoxDataOp::Copy || Op == BoxDataOp::Assign)
+                            dst[ii] = src[ii];
+                        else if constexpr (Op == BoxDataOp::Add) dst[ii] += src[ii];
+                        else if constexpr (Op == BoxDataOp::Subtract) dst[ii] -= src[ii];
+                        else if constexpr (Op == BoxDataOp::Multiply) dst[ii] *= src[ii];
+                        else if constexpr (Op == BoxDataOp::Divide) dst[ii] /= src[ii];
+                    }
+                }
+                idx += count;
+            }
+            return;
+        }
+        // Keep the original cell/component order for overlapping raw storage.
         for(int idx = a_begin ; idx < a_end ; idx++)
         {
             Point boxPt = a_box[idx];
@@ -380,57 +448,23 @@ struct scalarIndexer
 {
     static void cpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
     {
-        for(int idx = a_begin ; idx < a_end ; idx++)
+        // Linear indexing is already in storage order; each component is
+        // contiguous and independent for a scalar operation.
+        for (int c = 0; c < C; ++c)
         {
-            Point boxPt = a_box[idx];
-            unsigned int dstOff = a_box.index(boxPt);
-
-            T* tmp_dst;
-            for(int c = 0 ; c < C ; c++)
+            T* dst = a_dst + c*dstSize;
+            for (int idx = a_begin; idx < a_end; ++idx)
             {
-                tmp_dst = a_dst + c * dstSize;
-                if(Op == BoxDataOp::Copy)
-                {
-                    tmp_dst[dstOff] = a_scalar;
-                }
-                else if(Op == BoxDataOp::Add)
-                {
-                    tmp_dst[dstOff] += a_scalar;
-                }
-                else if(Op == BoxDataOp::Subtract)
-                {
-                    tmp_dst[dstOff] -= a_scalar;
-                }
-                else if(Op == BoxDataOp::Multiply)
-                {
-                    tmp_dst[dstOff] *= a_scalar;
-                }
-                else if(Op == BoxDataOp::Divide)
-                {
-                    tmp_dst[dstOff] /= a_scalar;
-                }
-                else if(Op == BoxDataOp::Assign)
-                {
-                    tmp_dst[dstOff] = a_scalar;
-                }
-                /*
-                else if (Op == BoxDataOp::ThresholdMax)
-                {
-                    tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
-                } 
-                else if (Op == BoxDataOp::ThresholdMin)
-                {
-                    tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
-                }
-                */
-                else
-                {
-                    printf("scalarIndexer error: bogus boxdata op input!!!\n");
-                }
+                if constexpr (Op == BoxDataOp::Copy || Op == BoxDataOp::Assign)
+                    dst[idx] = a_scalar;
+                else if constexpr (Op == BoxDataOp::Add) dst[idx] += a_scalar;
+                else if constexpr (Op == BoxDataOp::Subtract) dst[idx] -= a_scalar;
+                else if constexpr (Op == BoxDataOp::Multiply) dst[idx] *= a_scalar;
+                else if constexpr (Op == BoxDataOp::Divide) dst[idx] /= a_scalar;
             }
         }
     }
- #ifdef PROTO_ACCEL
+#ifdef PROTO_ACCEL
     __device__ static  void gpu(
             int a_begin, int a_end, T* a_dst, T a_scalar,
             const Box& a_box, unsigned int dstSize)
@@ -991,7 +1025,9 @@ BoxData<T,C,MEM,D,E>
 BoxData<T,C,MEM,D,E>::operator+(const BoxData<T,C,MEM,D,E>& a_rhs) const
 {
     PR_TIME("BoxData::operator+");
-    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    BoxData<T,C,MEM,D,E> ret;
+    if constexpr (MEM == HOST) { ret.defineStorage(m_box & a_rhs.box()); }
+    else { ret.define(m_box & a_rhs.box()); }
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Add>(a_rhs);
     return ret;
@@ -1003,7 +1039,9 @@ BoxData<T,C,MEM,D,E>
 BoxData<T,C,MEM,D,E>::operator-(const BoxData<T,C,MEM,D,E>& a_rhs) const
 {
     PR_TIME("BoxData::operator-");
-    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    BoxData<T,C,MEM,D,E> ret;
+    if constexpr (MEM == HOST) { ret.defineStorage(m_box & a_rhs.box()); }
+    else { ret.define(m_box & a_rhs.box()); }
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Subtract>(a_rhs);
     return ret;
@@ -1015,7 +1053,9 @@ BoxData<T,C,MEM,D,E>
 BoxData<T,C,MEM,D,E>::operator*(const BoxData<T,C,MEM,D,E>& a_rhs) const
 {
     PR_TIME("BoxData::operator*");
-    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    BoxData<T,C,MEM,D,E> ret;
+    if constexpr (MEM == HOST) { ret.defineStorage(m_box & a_rhs.box()); }
+    else { ret.define(m_box & a_rhs.box()); }
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Multiply>(a_rhs);
     return ret;
@@ -1027,7 +1067,9 @@ BoxData<T,C,MEM,D,E>
 BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
 {
     PR_TIME("BoxData::operator/");
-    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    BoxData<T,C,MEM,D,E> ret;
+    if constexpr (MEM == HOST) { ret.defineStorage(m_box & a_rhs.box()); }
+    else { ret.define(m_box & a_rhs.box()); }
     this->copyTo(ret);
     ret.template operatorT<BoxDataOp::Divide>(a_rhs);
 #ifndef PR_DISABLE_INIT_CHECKS
@@ -1063,6 +1105,17 @@ BoxData<T,C,MEM,D,E>&
 BoxData<T,C,MEM,D,E>::operator*=(const BoxData<T,C,MEM,D,E>& a_rhs)
 {
     PR_TIME("BoxData::operator*=");
+    if constexpr (MEM == HOST)
+    {
+        const auto lhs = reinterpret_cast<std::uintptr_t>(m_rawPtr);
+        const auto rhs = reinterpret_cast<std::uintptr_t>(a_rhs.m_rawPtr);
+        if (lhs + numValues()*sizeof(T) <= rhs ||
+            rhs + a_rhs.numValues()*sizeof(T) <= lhs)
+        {
+            this->operatorT<BoxDataOp::Multiply>(a_rhs);
+            return *this;
+        }
+    }
     // PC: Replacing with forallInPlace
     //this->operatorT<BoxDataOp::Multiply>(a_rhs);
     forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,Var<T,C,MEM,D,E>& a_in)
@@ -1136,6 +1189,11 @@ template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
 BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator*=(T a_scale)
 {
     PR_TIME("BoxData::operator*=(scale)");
+    if constexpr (MEM == HOST)
+    {
+        this->operatorT<BoxDataOp::Multiply>(a_scale);
+        return *this;
+    }
     // PC: Replacing with forallInPlace
     //this->operatorT<BoxDataOp::Multiply>(a_scale);
     forallInPlace([] PROTO_LAMBDA (Var<T,C,MEM,D,E>& a_out,T& a_in)

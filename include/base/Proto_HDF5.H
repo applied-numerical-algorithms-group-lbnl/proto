@@ -2,6 +2,8 @@
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
 #include "Proto_BoxData.H"
+#include <cstdio>
+#include <cstdlib>
 #ifdef PR_HDF5
 #include "hdf5.h"
 #ifdef PR_MMB

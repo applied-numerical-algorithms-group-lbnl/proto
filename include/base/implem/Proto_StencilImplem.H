@@ -725,6 +725,37 @@ struct sIndexer3 {
 };
 
 
+namespace detail {
+// A fixed term count exposes the ordered reduction to CPU vectorization.
+// Each cell retains exactly the original coefficient and addition sequence.
+template<int N, typename T>
+inline void hostStencilPencil(T* __restrict a_dst,
+        const T* __restrict a_src, const T* a_coefs, const int* a_offsets,
+        int a_count, bool a_initialize)
+{
+    if (a_initialize)
+    {
+        for (int ii = 0; ii < a_count; ++ii)
+        {
+            T value = 0;
+            for (int jj = 0; jj < N; ++jj)
+                value += a_coefs[jj]*a_src[ii + a_offsets[jj]];
+            a_dst[ii] = value;
+        }
+    }
+    else
+    {
+        for (int ii = 0; ii < a_count; ++ii)
+        {
+            T value = a_dst[ii];
+            for (int jj = 0; jj < N; ++jj)
+                value += a_coefs[jj]*a_src[ii + a_offsets[jj]];
+            a_dst[ii] = value;
+        }
+    }
+}
+} // namespace detail
+
 template <typename T>
 template <unsigned int C, unsigned int D, unsigned int E>
 void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
@@ -816,6 +847,28 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
         }
     }
 
+    using PencilKernel = void (*)(T*, const T*, const T*, const int*, int, bool);
+    PencilKernel pencilKernel = nullptr;
+    if (separateStorage && m_srcRefratio[0] == 1 && m_destRefratio[0] == 1)
+    {
+        switch (this->size())
+        {
+            case 1: pencilKernel = &detail::hostStencilPencil<1, T>; break;
+            case 2: pencilKernel = &detail::hostStencilPencil<2, T>; break;
+            case 3: pencilKernel = &detail::hostStencilPencil<3, T>; break;
+            case 4: pencilKernel = &detail::hostStencilPencil<4, T>; break;
+            case 5: pencilKernel = &detail::hostStencilPencil<5, T>; break;
+            case 6: pencilKernel = &detail::hostStencilPencil<6, T>; break;
+            case 7: pencilKernel = &detail::hostStencilPencil<7, T>; break;
+            case 8: pencilKernel = &detail::hostStencilPencil<8, T>; break;
+            case 9: pencilKernel = &detail::hostStencilPencil<9, T>; break;
+            case 10: pencilKernel = &detail::hostStencilPencil<10, T>; break;
+            case 11: pencilKernel = &detail::hostStencilPencil<11, T>; break;
+            case 12: pencilKernel = &detail::hostStencilPencil<12, T>; break;
+            case 13: pencilKernel = &detail::hostStencilPencil<13, T>; break;
+        }
+    }
+
     // apply the stencil
 
     {
@@ -830,6 +883,12 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
                 if (!a_dest.box().containsPoint(dpt)){continue;} //can happen when destShift is non-trivial
                 Point spt = (*iter)*m_srcRefratio;
                 T* destVal = a_dest.data(dpt,cc,dd,ee);
+                if (pencilKernel)
+                {
+                    pencilKernel(destVal, a_src.data(spt,cc,dd,ee), coefs.data(),
+                                 offsets.data(), npencil, fusedInit);
+                    continue;
+                }
                 int firstTerm = 0;
                 if (fusedInit)
                 {
