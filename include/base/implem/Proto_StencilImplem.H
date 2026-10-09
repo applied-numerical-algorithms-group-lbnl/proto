@@ -1,3 +1,4 @@
+#include <cstdint>
 #pragma once
 
 #include "../Proto_Stencil.H"
@@ -749,7 +750,18 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
 
     Box cross = a_box.flatten(0);
     int npencil = a_box.size(0);
-    if (a_initToZero)
+    // Keep the original all-destination zeroing order when storage overlaps,
+    // including separately constructed raw-pointer aliases. Otherwise the
+    // first term can initialize each value without a separate memory pass.
+    const auto srcBegin = reinterpret_cast<std::uintptr_t>(a_src.data());
+    const auto dstBegin = reinterpret_cast<std::uintptr_t>(a_dest.data());
+    const bool separateStorage =
+        srcBegin + a_src.numValues()*sizeof(T) <= dstBegin ||
+        dstBegin + a_dest.numValues()*sizeof(T) <= srcBegin;
+    const bool fusedInit = a_initToZero && a_scale != 0 && separateStorage &&
+        a_dest.box().containsPoint(a_box.low()*m_destRefratio + m_destShift) &&
+        a_dest.box().containsPoint(a_box.high()*m_destRefratio + m_destShift);
+    if (a_initToZero && !fusedInit)
     {
         PR_TIME("Stencil::hostApply::initToZero");
         for (int ee = 0; ee < E; ee++)
@@ -769,16 +781,18 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
     // if a_scale is 0, nothing left to do...
     if (a_scale == 0){return;}
 
-    // ...otherwise make a copy of m_coefs and multiply by a_scale
-    std::vector<T> coefs = m_coefs;
+    // Unit scale can read the immutable coefficients without a heap copy.
+    std::vector<T> scaledCoefs;
     if (a_scale != 1)
     {
         PR_TIME("Stencil::hostApply::initToZero");
+        scaledCoefs = m_coefs;
         for (int ii = 0; ii < this->size(); ii++)
         {
-            coefs[ii] *= a_scale;
+            scaledCoefs[ii] *= a_scale;
         }
     }
+    const auto& coefs = (a_scale == 1) ? m_coefs : scaledCoefs;
 
     // convert Points in m_offsets to linear offsets in a_src's data
     int offsetFactor[DIM];
@@ -814,10 +828,23 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
             {
                 Point dpt = (*iter)*m_destRefratio + m_destShift;
                 if (!a_dest.box().containsPoint(dpt)){continue;} //can happen when destShift is non-trivial
-                for (int jj = 0; jj < this->size(); jj++)
+                Point spt = (*iter)*m_srcRefratio;
+                T* destVal = a_dest.data(dpt,cc,dd,ee);
+                int firstTerm = 0;
+                if (fusedInit)
                 {
-                    Point spt = (*iter)*m_srcRefratio;
-                    T* destVal = a_dest.data(dpt,cc,dd,ee);
+                    const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[0];
+                    for (int ii = 0; ii < npencil; ++ii)
+                    {
+                        // Retain the addition to +0, including signed-zero behavior.
+                        T value = 0;
+                        value += coefs[0]*srcVal[ii*m_srcRefratio[0]];
+                        destVal[ii*m_destRefratio[0]] = value;
+                    }
+                    firstTerm = 1;
+                }
+                for (int jj = firstTerm; jj < this->size(); jj++)
+                {
                     const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
                     for (int ii = 0; ii < npencil; ii++)
                     {

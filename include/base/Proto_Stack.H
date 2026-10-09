@@ -150,6 +150,29 @@ namespace Proto {
 
     }; // end class Stack
 
+// CPU scratch storage for a scope whose allocated arrays cannot escape it.
+// Declare this guard before temporary BoxData objects so they are destroyed
+// before the arena is reset. A nested guard leaves its caller's arena active.
+// Device allocations retain their existing lifetime and allocation behavior.
+template<MemType MEM>
+class ScopedHostStack
+{
+public:
+    ScopedHostStack()
+      : m_owned(MEM == HOST && !Stack<MEM>::getStack().enabled())
+    {
+        if (m_owned) { Stack<MEM>::getStack().toggleStack(true); }
+    }
+    ~ScopedHostStack()
+    {
+        if (m_owned) { Stack<MEM>::getStack().toggleStack(false); }
+    }
+    ScopedHostStack(const ScopedHostStack&) = delete;
+    ScopedHostStack& operator=(const ScopedHostStack&) = delete;
+private:
+    bool m_owned;
+};
+
 #define PR_STACK_ON Stack<MEMTYPE_DEFAULT>::getStack().toggleStack(true);
 #define PR_STACK_OFF Stack<MEMTYPE_DEFAULT>::getStack().toggleStack(false);
 

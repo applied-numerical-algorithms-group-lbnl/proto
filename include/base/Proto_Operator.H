@@ -2,6 +2,7 @@
 #ifndef _PROTO_OPERATOR_H_
 #define _PROTO_OPERATOR_H_
 #include "Proto.H"
+#include <array>
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
 #include "Proto_LevelBoxData.H"
@@ -867,7 +868,8 @@ namespace Operator {
             const BoxData<T,CR,MEM,DR,E>& a_qr4,
             const BoxData<T,CL,MEM,DL,E>& a_ql2,
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
-            int a_dir);
+            int a_dir,
+            const std::array<BoxData<T,CL,MEM,DL,E>,2>* a_leftDifferences = nullptr);
     
     template<class T, unsigned int CL,unsigned int DL,
            unsigned int CR, unsigned int DR, unsigned int E, MemType MEM>

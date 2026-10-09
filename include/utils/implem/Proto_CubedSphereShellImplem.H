@@ -1409,6 +1409,7 @@ consToSphInterpEuler(
   for (auto dit : JUTemp.layout())
     {
       PR_TIMERS("CubedSphereShell::consToSphInterpEuler() pre-exchange");
+      ScopedHostStack<MEM> scratch;
       // Transform JU -> USemiSph on valid cells in layout.
       unsigned int block = JUTemp.layout().block(dit);
       Box blockBox = JUTemp.layout().getBlock(block).domain().box();
@@ -1483,6 +1484,7 @@ consToSphInterpEuler(
       for (auto dit : USemiSph.layout())
     {
        PR_TIMERS("CubedSphereShell::consToSphInterpEuler() post-exchange");
+      ScopedHostStack<MEM> scratch;
       BoxData<T,C+2,MEM>& USemiSph_i = USemiSph[dit];
       Box bxOut = a_JU[dit].box();     
       Box bxIn = USemiSph_i.box();

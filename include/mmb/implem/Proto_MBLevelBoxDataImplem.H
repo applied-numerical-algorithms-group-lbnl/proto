@@ -276,6 +276,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange()
     if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
     PR_TIME("MBLevelBoxData::exchange");
 #ifdef PR_MPI
+    if constexpr (MEM != HOST)
     {
         PR_TIME("MBLevelBoxData::exchange (MPI barrier)");
         barrier();
@@ -294,6 +295,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::exchange0()
     if (ghost()[0] == Point::Zeros()) {return; } //nothing to do if there are no ghost cells
     PR_TIME("MBLevelBoxData::exchange0");
 #ifdef PR_MPI
+    if constexpr (MEM != HOST)
     {
         PR_TIME("MBLevelBoxData::exchange0 (MPI barrier)");
         barrier();

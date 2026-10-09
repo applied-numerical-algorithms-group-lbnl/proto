@@ -81,6 +81,7 @@ protected:
     LOP                 m_f;
     std::shared_ptr<BC> m_bc;
     LevelStateData      m_U0;
+    bool                m_U0Defined = false;
     LevelStateData      m_stageState;
     bool m_stageDefined = false;
     const MBInterpOp&   m_interp;
@@ -108,8 +109,7 @@ MBLevelRK4<OPType, MAP, T, BCType, MEM>::MBLevelRK4(
     m_k.define(a_map.layout(), ghost);
     m_k1.define(a_map.layout(), ghost);
     m_k2.define(a_map.layout(), ghost);
-    ghost.fill(OP::ghost());
-    m_U0.define(a_map.layout(), ghost);
+    // The MHD advance overload does not use the generic RK4 scratch state.
     m_bc = std::make_shared<BC>(a_map);
     for (int comp = 0; comp < OP::numState();comp++) m_consSum[comp].init();
     m_counter = 0;
@@ -345,6 +345,13 @@ void MBLevelRK4<OPType, MAP, T, BCType, MEM>::advance(
     double&         a_dt,
     double          a_time)
 {
+    if (!m_U0Defined)
+    {
+        Array<Point,DIM+1> ghost;
+        ghost.fill(OP::ghost());
+        m_U0.define(a_state.layout(), ghost);
+        m_U0Defined = true;
+    }
     double sixth = 1, third=1, half = 1;
     sixth/=6; third/=3; half/=2;
 

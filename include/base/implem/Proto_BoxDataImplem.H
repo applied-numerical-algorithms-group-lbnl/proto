@@ -34,8 +34,7 @@ BoxData<T,C,MEM,D,E>::BoxData(const Box& a_box)
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
 BoxData<T,C,MEM,D,E>::BoxData(const Box& a_box, T a_init) 
 {
-    define(a_box);
-    setVal(a_init);
+    define(a_box, a_init);
 }
 
 // Move Constructor
@@ -53,6 +52,12 @@ BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E> 
 void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
 {
+    define(a_box, proto_unallocated<T>());
+}
+
+template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::define(const Box& a_box, T a_init)
+{
     PR_TIME("BoxData::define(Box)");
     m_box=a_box;
     auto& stack = Stack<MEM>::getStack();
@@ -69,9 +74,7 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
-//#ifndef PR_DISABLE_INIT_CHECKS
-    setVal(proto_unallocated<T>());
-//#endif
+    setVal(a_init);
     m_alias = false;
 }
 
@@ -2035,8 +2038,7 @@ BoxData<T, CL, MEM, DR, E> matrixProduct(
     const BoxData<T,CR,MEM,DR,E>& B,
     T scale)
 {
-    BoxData<T,CL,MEM,DR,E> AB(A.box() & B.box());
-    AB.setToZero();
+    BoxData<T,CL,MEM,DR,E> AB(A.box() & B.box(), T(0));
     for (int ee = 0; ee < E;  ee++)
     for (int ii = 0; ii < CL; ii++)
     for (int jj = 0; jj < DR; jj++)
@@ -2057,8 +2059,7 @@ BoxData<T, DL, MEM, DR, E> matrixProductLeftTranspose(
     const BoxData<T,CR,MEM,DR,E>& B,
     T scale)
 {
-    BoxData<T,DL,MEM,DR,E> ATB(A.box() & B.box());
-    ATB.setToZero();
+    BoxData<T,DL,MEM,DR,E> ATB(A.box() & B.box(), T(0));
     for (int ee = 0; ee < E;  ee++)
     for (int ii = 0; ii < DL; ii++)
     for (int jj = 0; jj < DR; jj++)
@@ -2079,8 +2080,7 @@ BoxData<T, CL, MEM, CR, E> matrixProductRightTranspose(
     const BoxData<T,CR,MEM,DR,E>& B,
     T scale)
 {
-    BoxData<T,CL,MEM,CR,E> ABT(A.box() & B.box());
-    ABT.setToZero();
+    BoxData<T,CL,MEM,CR,E> ABT(A.box() & B.box(), T(0));
     for (int ee = 0; ee < E;  ee++)
     for (int ii = 0; ii < CL; ii++)
     for (int jj = 0; jj < CR; jj++)

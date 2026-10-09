@@ -48,6 +48,14 @@ namespace Proto
         inline void apply(
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
+
+        /// Apply an already verified sequence of identical radial shifts.
+        /// The source order, coefficients and component arithmetic are unchanged.
+        template<typename T, unsigned int C, MemType MEM>
+        inline void applyRadialRun(
+                MBLevelBoxData<T, C, MEM>& a_dst,
+                MBLevelBoxData<T, C, MEM>& a_src,
+                int a_offset, int a_count);
         
         /// Size
         /** Returns the number of coeffcients used in the interpolation */

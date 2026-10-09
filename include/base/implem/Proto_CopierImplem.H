@@ -110,7 +110,9 @@ template<class OP, typename P_SRC, typename P_DST, MemType SRC_MEM, MemType DST_
 void
 Copier<OP, P_SRC, P_DST, SRC_MEM, DST_MEM>::execute()
 {
-    barrier();
+    // HOST packing is synchronous. writeToSendBuffers still supplies the
+    // collective barrier before any sends, so no entry barrier is needed.
+    if constexpr (SRC_MEM != HOST || DST_MEM != HOST) { barrier(); }
     // execute() and makeItSo() are aliases of eachother.
     // "makeItSo" is maintained for the sake of posterity
     // and clarity to the development team who are used to

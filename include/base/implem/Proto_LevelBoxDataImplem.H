@@ -318,6 +318,7 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
     if (m_ghost == Point::Zeros()) { return; }
     PR_TIME("LevelBoxData::exchange");
 #ifdef PR_MPI
+    if constexpr (MEM != HOST)
     {
         PR_TIME("MPI_Barrier exchange");
         barrier();

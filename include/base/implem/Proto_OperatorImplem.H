@@ -526,6 +526,31 @@ _faceTensorProduct(
         }
     }
     BoxData<T,C,MEM,D,E> quot(bx);
+    if constexpr (MEM == HOST && DIM == 3 && C*D*E > 1)
+    {
+        // Share the scalar factor's transverse differences among components.
+        const int firstDir = (a_dir == 0) ? 1 : 0;
+        const int secondDir = (a_dir == 2) ? 1 : 2;
+        const Stencil<T> firstDiff =
+            0.5*Shift::Basis(firstDir,1) - 0.5*Shift::Basis(firstDir,-1);
+        const Stencil<T> secondDiff =
+            0.5*Shift::Basis(secondDir,1) - 0.5*Shift::Basis(secondDir,-1);
+        BoxData<T,C,MEM,D,E> leftFirst = firstDiff(a_ql2);
+        BoxData<T,C,MEM,D,E> leftSecond = secondDiff(a_ql2);
+        BoxData<T,1,MEM> rightFirst = firstDiff(a_qr2);
+        BoxData<T,1,MEM> rightSecond = secondDiff(a_qr2);
+        quot.setToZero();
+        for (int ee = 0; ee < E; ++ee)
+        for (int dd = 0; dd < D; ++dd)
+        for (int cc = 0; cc < C; ++cc)
+        {
+            auto output = slice(quot,cc,dd,ee);
+            output.incrementProduct(slice(leftFirst,cc,dd,ee),rightFirst,T(1.0/12.0));
+            output.incrementProduct(slice(leftSecond,cc,dd,ee),rightSecond,T(1.0/12.0));
+            output.incrementProduct(slice(a_ql4,cc,dd,ee),a_qr4);
+        }
+        return quot;
+    }
     for (int ee = 0; ee < E;ee++)
     for (int dd = 0; dd < D; dd++)
     for (int cc = 0; cc < C; cc++)
@@ -664,8 +689,7 @@ cofactor(
 #if DIM==2
     int dirperp = (a_dir+1)%DIM;
     Box bxret = a_X.box()&a_X.box().shift(dirperp,-1);
-    BoxData<T,DIM,MEM> ret(bxret);
-    ret.setToZero();
+    BoxData<T,DIM,MEM> ret(bxret, T(0));
 
     for (int comp = 0;comp < DIM;comp++)
     {
@@ -1399,8 +1423,7 @@ _cellMatrixProductAB(
     {
         bx = bx&a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
     }
-    BoxData<T,CL,MEM,DR,E> prod(bx);
-    prod.setToZero();
+    BoxData<T,CL,MEM,DR,E> prod(bx, T(0));
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
     for (int j = 0; j < DR; j++)
@@ -1426,7 +1449,8 @@ _faceMatrixProductAB(
         const BoxData<T,CR,MEM,DR,E>& a_qr4,
         const BoxData<T,CL,MEM,DL,E>& a_ql2,
         const BoxData<T,CR,MEM,DR,E>& a_qr2,
-        int a_dir)
+        int a_dir,
+        const std::array<BoxData<T,CL,MEM,DL,E>,2>* a_leftDifferences)
 {
     PR_TIME("Operator::faceMatrixProductAB");
     PR_assert(uint(DL) == CR);
@@ -1440,6 +1464,45 @@ _faceMatrixProductAB(
         }
     }
     BoxData<T,CL,MEM,DR,E> prod(bx);
+    if constexpr (MEM == HOST && DIM == 3 && CL == 3 && DL == 3 && CR == 3 && DR == 1 && E == 1)
+    {
+        // The same vector derivatives serve every matrix row. Form each
+        // transverse derivative once, while retaining the scalar product's
+        // original arithmetic and accumulation order.
+        const int firstDir = (a_dir == 0) ? 1 : 0;
+        const int secondDir = (a_dir == 2) ? 1 : 2;
+        const Stencil<T> firstDiff =
+            0.5*Shift::Basis(firstDir,1) - 0.5*Shift::Basis(firstDir,-1);
+        const Stencil<T> secondDiff =
+            0.5*Shift::Basis(secondDir,1) - 0.5*Shift::Basis(secondDir,-1);
+        // Callers applying the same matrix to several vectors may share
+        // these differences. They must come from a_ql2 in this direction.
+        std::array<BoxData<T,CL,MEM,DL,E>,2> ownedLeft;
+        if (!a_leftDifferences)
+        {
+            ownedLeft[0] = firstDiff(a_ql2);
+            ownedLeft[1] = secondDiff(a_ql2);
+            a_leftDifferences = &ownedLeft;
+        }
+        const auto& leftFirst = (*a_leftDifferences)[0];
+        const auto& leftSecond = (*a_leftDifferences)[1];
+        BoxData<T,CR,MEM,DR,E> rightFirst = firstDiff(a_qr2);
+        BoxData<T,CR,MEM,DR,E> rightSecond = secondDiff(a_qr2);
+        const Box termBox = (a_ql2.box() & a_qr2.box()).grow(-1).grow(a_dir,1);
+        BoxData<T,1,MEM> term(termBox);
+        prod.setToZero();
+        for (int ii = 0; ii < 3; ++ii)
+        for (int kk = 0; kk < 3; ++kk)
+        {
+            term.setToZero();
+            term.incrementProduct(slice(leftFirst,ii,kk),slice(rightFirst,kk),T(1.0/12.0));
+            term.incrementProduct(slice(leftSecond,ii,kk),slice(rightSecond,kk),T(1.0/12.0));
+            term.incrementProduct(slice(a_ql4,ii,kk),slice(a_qr4,kk));
+            auto output = slice(prod,ii);
+            output += term;
+        }
+        return prod;
+    }
     prod.setToZero();
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
@@ -1554,8 +1617,7 @@ _faceMatrixProductATB(
         if (dir!=a_dir) bx = bx
             &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
     }
-    BoxData<T,DL,MEM,DR,E> prod(bx);
-    prod.setToZero();
+    BoxData<T,DL,MEM,DR,E> prod(bx, T(0));
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < DL; i++)
     for (int j = 0; j < DR; j++)
@@ -1590,8 +1652,7 @@ _faceMatrixProductATB(
         if (dir!=a_dir) bx = bx
             &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
     }
-    BoxData<T,DL,MEM,DR,E> prod(bx);
-    prod.setToZero();
+    BoxData<T,DL,MEM,DR,E> prod(bx, T(0));
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < DL; i++)
     for (int j = 0; j < DR; j++)
@@ -1624,8 +1685,7 @@ _faceMatrixProductABT(
         if (dir!=a_dir) bx = bx
             &a_ql2.box().grow(dir,-1)&a_qr2.box().grow(dir,-1);
     }
-    BoxData<T,CL,MEM,CR,E> prod(bx);
-    prod.setToZero();
+    BoxData<T,CL,MEM,CR,E> prod(bx, T(0));
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
     for (int j = 0; j < CR; j++)
@@ -1702,8 +1762,7 @@ _matrixProductAB2(
   PR_TIME("Operator::matrixProductAB2");
   PR_assert(uint(DL) == CR);
   Box bx = a_ql.box()&a_qr.box();
-  BoxData<T,CL,MEM,DR,E> prod(bx);
-  prod.setToZero();
+  BoxData<T,CL,MEM,DR,E> prod(bx, T(0));
   for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
       for (int j = 0; j < DR; j++)
@@ -1726,8 +1785,7 @@ _matrixProductATB2(
   PR_TIME("Operator::matrixProductATB2");
   PR_assert(CR == CL);
   Box bx = a_ql.box()&a_qr.box();
-  BoxData<T,DL,MEM,DR,E> prod(bx);
-  prod.setToZero();
+  BoxData<T,DL,MEM,DR,E> prod(bx, T(0));
   for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < DL; i++)
       for (int j = 0; j < DR; j++)
@@ -1750,8 +1808,7 @@ _matrixProductABT2(
   PR_TIME("Operator::faceMatrixProductABT");
   PR_assert(DL == DR);
   Box bx = a_ql.box()&a_qr.box();
-  BoxData<T,CL,MEM,CR,E> prod(bx);
-  prod.setToZero();
+  BoxData<T,CL,MEM,CR,E> prod(bx, T(0));
   for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
       for (int j = 0; j < CR; j++)

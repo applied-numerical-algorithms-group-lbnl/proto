@@ -371,6 +371,9 @@ namespace Proto
         */  
         void define(const Box& a_box);
 
+        /// Allocate and initialize every component to a_init in one pass.
+        void define(const Box& a_box, T a_init);
+
 
         /// Alias Define
         /**@private */

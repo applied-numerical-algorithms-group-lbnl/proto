@@ -39,6 +39,7 @@ void MBInterpOp::define(
         "MBInterpOp::define | Error: Incompatible layouts among inputs");
 
     m_ops.clear();
+    m_radialRuns.clear();
     m_points.clear();
     m_cubedSphere = false;
     m_order = a_order;
@@ -71,6 +72,7 @@ void MBInterpOp::define(
     }
 
     m_ops.clear();
+    m_radialRuns.clear();
     m_points.clear();
     m_cubedSphere = false;
     m_order = a_order;
@@ -209,6 +211,7 @@ void MBInterpOp::addShiftedOp(
 void MBInterpOp::insert(std::shared_ptr<MBPointInterpOp> a_op)
 {
     PR_TIME("MBInterpOp::insert");
+    m_radialRuns.clear();
     Point dst = a_op->target().dstPoint();
     int globalIndex = a_op->target().dstIndex();
     MBPointID key(dst, globalIndex);
@@ -230,6 +233,26 @@ void MBInterpOp::apply(
     {
         PROTO_ASSERT(m_interpLayout.layout().compatible(a_src.layout()), "Incompatible Input Data");
         PROTO_ASSERT(m_interpLayout.layout().compatible(a_dst.layout()), "Incompatible Output Data");
+    }
+    if constexpr (MEM == HOST)
+    {
+        if (m_cubedSphere && !m_radialRuns.empty() && &a_dst != &a_src)
+        {
+            for (const auto& run : m_radialRuns)
+            {
+                const auto& op = m_ops[run.first];
+                const Point first = op->target().dstPoint();
+                const Box& box = a_dst[op->target().dstIndex()].box();
+                Point probe = first;
+                probe[0] = box.low()[0];
+                if (!box.containsPoint(probe)) { continue; }
+                const int low = std::max(first[0], box.low()[0]);
+                const int high = std::min(first[0] + run.count - 1, box.high()[0]);
+                if (low > high) { continue; }
+                op->applyRadialRun(a_dst, a_src, low - first[0], high - low + 1);
+            }
+            return;
+        }
     }
     for (auto& op : m_ops)
     {
@@ -354,6 +377,7 @@ void MBInterpOp::defineCubedSphere(
     PROTO_ASSERT(DIM == 3 && order == 4, "Cubed-sphere interpolation requires DIM=3 and order=4");
     PROTO_ASSERT(maps.size() == interpLayout.layout().numBlocks(), "Expected one map per block");
     m_ops.clear();
+    m_radialRuns.clear();
     m_points.clear();
     m_cubedSphere = true;
     m_order = order;
@@ -369,5 +393,38 @@ void MBInterpOp::defineCubedSphere(
         {
             addPointOps(index, dir, *maps[interpLayout.layout().block(index)]);
         }
+    }
+    buildRadialRuns();
+}
+
+void MBInterpOp::buildRadialRuns()
+{
+    PR_TIME("MBInterpOp::buildRadialRuns");
+    m_radialRuns.clear();
+    const Point step = Point::Basis(0);
+    auto shifted = [&](const MBDataPoint& a, const MBDataPoint& b)
+    {
+        return a.dstIndex() == b.dstIndex() && a.srcIndex() == b.srcIndex()
+            && a.dstBlock() == b.dstBlock() && a.srcBlock() == b.srcBlock()
+            && a.boundaryDir() == b.boundaryDir()
+            && b.dstPoint() == a.dstPoint() + step
+            && b.srcPoint() == a.srcPoint() + step;
+    };
+    for (size_t ii = 0; ii < m_ops.size(); ++ii)
+    {
+        bool append = ii > 0 && shifted(m_ops[ii-1]->target(), m_ops[ii]->target())
+            && m_ops[ii-1]->coefs() == m_ops[ii]->coefs()
+            && m_ops[ii-1]->sources().size() == m_ops[ii]->sources().size();
+        if (append)
+        {
+            const auto& previous = m_ops[ii-1]->sources();
+            const auto& current = m_ops[ii]->sources();
+            for (size_t jj = 0; jj < current.size(); ++jj)
+            {
+                if (!shifted(previous[jj], current[jj])) { append = false; break; }
+            }
+        }
+        if (append) { ++m_radialRuns.back().count; }
+        else { m_radialRuns.push_back({ii, 1}); }
     }
 }

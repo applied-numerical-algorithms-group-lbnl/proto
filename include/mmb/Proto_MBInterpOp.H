@@ -119,7 +119,7 @@ namespace Proto
             MBInterpLayout interpLayout, Point ghost, int order = 4);
 
         inline std::vector<std::shared_ptr<MBPointInterpOp>>& getOps()
-        { return m_ops; }
+        { m_radialRuns.clear(); return m_ops; }
 
         inline const std::vector<std::shared_ptr<MBPointInterpOp>>& getOps() const
         { return m_ops; }
@@ -151,6 +151,7 @@ namespace Proto
         /** Returns the MBPointInterpOp associated with a specified target cell. */
         inline MBPointInterpOp& operator()(const MBDataPoint& a_target)
         {
+            m_radialRuns.clear();
             for (auto& op : m_ops)
             {
                 if (a_target == op->target()) {return *op;}
@@ -180,6 +181,12 @@ namespace Proto
             const MBPointInterpOp& baseOp,
             Point shift);
         void copyAlongSymmetryAxes(const MBPointInterpOp& pointOp);
+
+        // Runs retain the original operator order and are valid only until
+        // the operator list is redefined or exposed for mutation.
+        struct RadialRun { size_t first; int count; };
+        std::vector<RadialRun> m_radialRuns;
+        void buildRadialRuns();
 
         MBInterpLayout m_interpLayout;
         Point m_ghost;

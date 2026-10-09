@@ -290,11 +290,15 @@ void MBPointInterpOp::apply(
     PROTO_ASSERT(a_dst[m_dst.dstIndex()].containsAddress(&dst(0)), "Data Corruption");
     for (int ii = 0; ii < size(); ii++)
     {
-        auto src = a_src[m_srcs[ii]]; //src is a Var<T, C, MEM>
+        // Resolve the source patch once for all components. Boundary lookups
+        // search the connectivity and boundary-data tables.
+        auto& patch = m_srcs[ii].srcPatch(a_src);
+        PROTO_ASSERT(patch.box().containsPoint(m_srcs[ii].dstPoint()),
+                "Interpolation source is outside its patch");
+        auto src = patch.var(m_srcs[ii].dstPoint());
         for (int cc = 0; cc < C; cc++)
         {
             if (ii == 0) { dst(cc) = 0.0; }
-            auto& patch = m_srcs[ii].srcPatch(a_src);
             PROTO_ASSERT(patch.containsAddress(&src(cc)), "Data Corruption");
             dst(cc) += m_coefs[ii]*src(cc);
         }
@@ -304,6 +308,50 @@ void MBPointInterpOp::apply(
 unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBPointInterpOp::applyRadialRun(
+        MBLevelBoxData<T, C, MEM>& a_dst,
+        MBLevelBoxData<T, C, MEM>& a_src,
+        int a_offset, int a_count)
+{
+    PR_TIME("MBPointInterpOp::applyRadialRun");
+    PROTO_ASSERT(MEM == HOST && a_count > 0, "Invalid host interpolation run");
+    const Point shift = Point::Basis(0, a_offset);
+    const Point last = Point::Basis(0, a_count - 1);
+    auto& dstPatch = m_dst.srcPatch(a_dst);
+    const Point dstPoint = m_dst.dstPoint() + shift;
+    PROTO_ASSERT(dstPatch.box().containsPoint(dstPoint)
+            && dstPatch.box().containsPoint(dstPoint + last),
+            "Interpolation run is outside the destination patch");
+    auto dst = dstPatch.var(dstPoint);
+    // Preserve the empty-stencil behavior of apply().
+    if (m_srcs.empty()) { return; }
+    for (int cc = 0; cc < C; ++cc)
+    {
+        T* output = &dst(cc);
+        for (int rr = 0; rr < a_count; ++rr) { output[rr] = 0.0; }
+    }
+    for (int ii = 0; ii < size(); ++ii)
+    {
+        auto& patch = m_srcs[ii].srcPatch(a_src);
+        const Point srcPoint = m_srcs[ii].dstPoint() + shift;
+        PROTO_ASSERT(patch.box().containsPoint(srcPoint)
+                && patch.box().containsPoint(srcPoint + last),
+                "Interpolation run is outside a source patch");
+        auto src = patch.var(srcPoint);
+        const double coefficient = m_coefs[ii];
+        for (int cc = 0; cc < C; ++cc)
+        {
+            T* output = &dst(cc);
+            const T* input = &src(cc);
+            for (int rr = 0; rr < a_count; ++rr)
+            {
+                output[rr] += coefficient * input[rr];
+            }
+        }
+    }
 }
 
 void MBPointInterpOp::print() const
