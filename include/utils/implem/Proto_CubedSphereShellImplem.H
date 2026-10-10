@@ -1154,7 +1154,9 @@ CubedSphereShell::consToSemiSphVecNG(
   Box vsphbx3 = a_bx.grow(Point::Ones(3) - Point::Basis(0,2)) & a_blockBox;
   Box vsphbx2 = a_bx.grow(Point::Ones(2) - Point::Basis(0,1)) & a_blockBox;
   Box vsphbx1 = a_bx.grow(Point::Ones()) & a_blockBox;
-  BoxData<T,DIM,MEM> USph(vsphbx2, T(0));
+  // The quotient initializes its full output.
+  BoxData<T,DIM,MEM> USph;
+  USph.defineForOverwrite(vsphbx2);
   cellMatrixQuotientMatAndInv(USph,a_AdetA,a_invAdetA,a_JUVec,vsphbx2,a_blockBox,a_debug);
   // if (a_debug)
   //   {
@@ -1163,7 +1165,9 @@ CubedSphereShell::consToSemiSphVecNG(
   BoxData<T,1,MEM> uRadial = slice(USph,0);  
   uRadial.copyTo(a_uRadial);
   uRadial.setToZero();
-  BoxData<T,DIM,MEM> JUCart(vsphbx1, T(0));
+  // The matrix product writes every component on vsphbx1.
+  BoxData<T,DIM,MEM> JUCart;
+  JUCart.defineForOverwrite(vsphbx1);
   cellMatrixVectorProd(JUCart,a_AdetA,USph,vsphbx1,a_blockBox);  
   // if (a_debug)
   //   {
@@ -1278,7 +1282,7 @@ consToSemiSphNGEuler(
       
   BoxData<T,DIM,MEM> JUMom = slice<T,C,DIM,MEM>(a_JU,1);
   BoxData<T,DIM,MEM> USphMom = slice<T,C+2,DIM,MEM>(a_USemiSph,1);
-  USphMom.setToZero();
+  // consToSemiSphVecNG clears the entire perpendicular-vector output.
   BoxData<T,1,MEM> URadial = slice<T,C+2,1,MEM>(a_USemiSph,C);
   URadial.setToZero();
 // if ((a_block == 0) && (a_bx.low() == Point(0,0,0)))
@@ -1309,7 +1313,6 @@ consToSemiSphNGEuler(
   
   BoxData<T,DIM,MEM> JUB = slice<T,C,DIM,MEM>(a_JU,DIM+2);
   BoxData<T,DIM,MEM> USphB = slice<T,C+2,DIM,MEM>(a_USemiSph,DIM+2);
-  USphB.setToZero();
   BoxData<T,1,MEM> BRadial = slice<T,C+2,1,MEM>(a_USemiSph,C+1);
   BRadial.setToZero();
   consToSemiSphVecNG(USphB,BRadial,JUB,
@@ -1317,6 +1320,42 @@ consToSemiSphNGEuler(
                      amat,deta,detaInv,
                      bx,a_blockBox);
   
+  if constexpr (MEM == HOST)
+  {
+    // Centered differences need one radial neighbor; block-edge differences
+    // need two. No angular ghost values feed this radial-only operation.
+    const Box quotientBox = a_bx.grow(0,2);
+    if (a_USemiSph.box().containsBox(quotientBox)
+        && a_dVolr.box().containsBox(quotientBox))
+    {
+      auto inverseVolume = forallOverwrite<T,1,MEM>([] PROTO_LAMBDA(
+          Var<T,1,MEM>& out,const Var<T,1,MEM>& volume)
+      {
+        out(0) = 1.0/volume(0);
+      },quotientBox,a_dVolr);
+      // This geometry derivative is identical for every conserved component.
+      BoxData<T,1,MEM> Dvolume = Stencil<T>::Derivative(1,0)(a_dVolr,a_bx);
+      // All components use the same radial stencil and volume derivative.
+      // Form every derivative before updating the semispherical state in place.
+      auto quotientBar = forallOverwrite<T,C+2,MEM>([] PROTO_LAMBDA(
+          Var<T,C+2,MEM>& out,const Var<T,C+2,MEM>& numerator,
+          const Var<T,1,MEM>& inverse)
+      {
+        for (int comp = 0; comp < C+2; ++comp)
+          out(comp) = inverse(0)*numerator(comp);
+      },quotientBox,a_USemiSph,inverseVolume);
+      auto Dquotient = deriv3case(quotientBar,a_bx,a_blockBox,0);
+      forallInPlace([] PROTO_LAMBDA(
+          Var<T,C+2,MEM>& state,const Var<T,1,MEM>& inverse,
+          const Var<T,C+2,MEM>& dq,const Var<T,1,MEM>& dv)
+      {
+        T twelveth = -1.0/12.0;
+        for (int comp = 0; comp < C+2; ++comp)
+          state(comp) = (state(comp) + twelveth*dq(comp)*dv(0))*inverse(0);
+      },a_bx,a_USemiSph,inverseVolume,Dquotient,Dvolume);
+      return;
+    }
+  }
   BoxData<T,1,MEM> dVolrInv = forallOverwrite<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
@@ -1698,9 +1737,25 @@ cellMatrixQuotientMatAndInv(
   // Note that we do not compute correction in the z ero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
-      BoxData<T,DIM,MEM,1> Dquotbar = Stencil<T>::Derivative(1,dir)(a_quotBar);
-      BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,DIM,MEM,1> prod(Ddenom.box());
+      auto derivative = Stencil<T>::Derivative(1,dir);
+      Box quotientRange = derivative.range(a_quotBar.box());
+      Box metricRange = derivative.range(a_denominator.box());
+      if constexpr (MEM == HOST)
+      {
+        // Only derivatives on the output box contribute to corr.
+        // Keep inferred-range behavior when their intersection is empty.
+        quotientRange &= bx;
+        metricRange &= bx;
+      }
+      BoxData<T,DIM,MEM,1> Dquotbar = quotientRange.empty()
+          ? derivative(a_quotBar) : derivative(a_quotBar,quotientRange);
+      BoxData<T,DIM,MEM,DIM> Ddenom = metricRange.empty()
+          ? derivative(a_denominator) : derivative(a_denominator,metricRange);
+      BoxData<T,DIM,MEM,1> prod;
+      if (Dquotbar.box().containsBox(Ddenom.box()))
+        prod.defineForOverwrite(Ddenom.box());
+      else
+        prod.define(Ddenom.box());
       T twelveth = -1.0/12.0;
       forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
       corr += prod;
@@ -1730,7 +1785,23 @@ cellMatrixQuotientMatAndInv(
 {
   PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
-  BoxData<T,DIM,MEM,1> quotBar(a_numerator.box());
+  Box quotientRange = a_numerator.box();
+  bool bounded = false;
+  if constexpr (MEM == HOST && DIM == 3)
+  {
+    Box required = a_quotBox.grow(Point::Ones() - Point::Basis(0)) & a_blockBox;
+    // One-sided differences need two inward neighbors at a block edge.
+    // Short or partially covered boxes retain the original allocation.
+    bounded = a_quotBox.size(1) >= 2 && a_quotBox.size(2) >= 2
+        && a_blockBox.size(1) >= 3 && a_blockBox.size(2) >= 3
+        && a_blockBox.containsBox(a_quotBox)
+        && a_numerator.box().containsBox(required)
+        && a_denomInv.box().containsBox(required);
+    if (bounded) quotientRange = required;
+  }
+  BoxData<T,DIM,MEM,1> quotBar;
+  if (bounded) quotBar.defineForOverwrite(quotientRange);
+  else quotBar.define(quotientRange);
   BoxData<T,DIM,MEM,1> corr(a_quotBox, T(0));
  
   forallInPlace(f_matVecProd,quotBar,a_denomInv,a_numerator,one);
@@ -1748,8 +1819,16 @@ cellMatrixQuotientMatAndInv(
     {
       BoxData<T,DIM,MEM,1> Dquotbar =
         CubedSphereShell::deriv3case(quotBar,a_quotBox,a_blockBox,dir,a_debug);
-      BoxData<T,DIM,MEM,DIM> Ddenom = Stencil<T>::Derivative(1,dir)(a_denominator);
-      BoxData<T,DIM,MEM,1> prod(a_quotBox);
+      auto derivative = Stencil<T>::Derivative(1,dir);
+      Box metricRange = derivative.range(a_denominator.box());
+      if constexpr (MEM == HOST) metricRange &= a_quotBox;
+      BoxData<T,DIM,MEM,DIM> Ddenom = metricRange.empty()
+          ? derivative(a_denominator) : derivative(a_denominator,metricRange);
+      BoxData<T,DIM,MEM,1> prod;
+      if (Ddenom.box().containsBox(a_quotBox))
+        prod.defineForOverwrite(a_quotBox);
+      else
+        prod.define(a_quotBox);
       
       T twelveth = -1.0/12.0;
       forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);
@@ -1944,7 +2023,11 @@ cellMatrixVectorProd(
 {
   PR_TIMERS("CubedSphereShell::cellMatrixVectorProd()");
   T one = 1.0;
-  BoxData<T,DIM,MEM,1> qvecBar(a_qBox);
+  BoxData<T,DIM,MEM,1> qvecBar;
+  if (a_Amat.box().containsBox(a_qBox) && a_qvecIn.box().containsBox(a_qBox))
+    qvecBar.defineForOverwrite(a_qBox);
+  else
+    qvecBar.define(a_qBox);
   BoxData<T,DIM,MEM,1> corr(a_qBox, T(0));
   forallInPlace(f_matVecProd,qvecBar,a_Amat,a_qvecIn,one);
   //qvecBar.copyTo(a_qvecOut);
@@ -1953,8 +2036,16 @@ cellMatrixVectorProd(
     {
       BoxData<T,DIM,MEM,1> Dqvec =
         CubedSphereShell::deriv3case(a_qvecIn,a_qBox,a_blockBox,dir);
-      BoxData<T,DIM,MEM,DIM> DAmat = Stencil<T>::Derivative(1,dir,2)(a_Amat);
-      BoxData<T,DIM,MEM,1> prod(Dqvec.box());
+      auto derivative = Stencil<T>::Derivative(1,dir,2);
+      Box metricRange = derivative.range(a_Amat.box());
+      if constexpr (MEM == HOST) metricRange &= a_qBox;
+      BoxData<T,DIM,MEM,DIM> DAmat = metricRange.empty()
+          ? derivative(a_Amat) : derivative(a_Amat,metricRange);
+      BoxData<T,DIM,MEM,1> prod;
+      if (DAmat.box().containsBox(Dqvec.box()))
+        prod.defineForOverwrite(Dqvec.box());
+      else
+        prod.define(Dqvec.box());
       T twelveth = 1.0/12.0;
       forallInPlace(f_matVecProd,prod,DAmat,Dqvec,twelveth);      
       corr += prod;
