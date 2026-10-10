@@ -1258,8 +1258,7 @@ consToSemiSphNGEuler(
     CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0);
   BoxData<T,DIM,MEM,DIM> amat =
     CubedSphereShell::AMatrix<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
-  BoxData<T,DIM,MEM,DIM> invcoef(bxMetric, T(0));
-  forallInPlace(f_matinv3by3,invcoef,deta_amat);
+  auto invcoef = forall<T,DIM,MEM,DIM>(f_matinv3by3,deta_amat);
   bool debugflag = false;
   // if ((a_block == 0) && (bx.low() == Point(0,0,0)))
   //   {
@@ -1354,23 +1353,14 @@ void CubedSphereShell::semiSphToSph(
   // The matrix quotient differentiates this product, so retain one extra
   // angular layer. Forming the product itself consumes another layer.
   Box productBox = bx.grow(Point(0,1,1));
-  BoxData<T,DIM,MEM> tmp(productBox, T(0));
   BoxData<T,DIM,MEM> VecSemiSph = slice<T,C+2,DIM,MEM>(a_VSemiSph,a_compvec);
   BoxData<T,DIM,MEM> VecSph = slice<T,C,DIM,MEM>(a_VSph,a_compvec);
   BoxData<T,DIM,MEM> VecSphBar(productBox);
-  
-  for (int dir = 0; dir < DIM; dir++)
-    {
-      BoxData<T,1,MEM> tmpComp = slice(tmp,dir);
-      BoxData<T,1,MEM> VecSemiSphComp = slice(VecSemiSph,dir);
-      // Both factors are cell averages. detA has no radial variation, so
-      // the face product normal to direction 0 supplies the angular covariance.
-      auto product = Operator::_faceProduct(
-          VecSemiSphComp,a_detA,VecSemiSphComp,a_detA,0);
-      PROTO_ASSERT((product.box() & productBox) == productBox,
-          "semiSphToSph: insufficient angular padding for averaged product");
-      product.copyTo(tmpComp);
-    }
+  // The same scalar metric multiplies all three components. The tensor
+  // product shares its derivatives and retains each component's operation order.
+  auto tmp = Operator::_faceTensorProduct(VecSemiSph,a_detA,VecSemiSph,a_detA,0);
+  PROTO_ASSERT(tmp.box().containsBox(productBox),
+      "semiSphToSph: insufficient angular padding for averaged product");
   bool debug = false;
   cellMatrixQuotientMatAndInv(VecSph,VecSphBar,a_ADetA,a_invADetA,tmp,debug);
   BoxData<T,1,MEM> VSphRadial = slice<T,C+2,1,MEM>(a_VSemiSph,a_compradial);
@@ -1578,8 +1568,7 @@ consToSphInterpEuler(
          ,deta);
       BoxData<T,DIM,MEM,DIM> ADetA =
         CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
-      BoxData<T,DIM,MEM,DIM> invADetA(bxMetric, T(0));
-      forallInPlace(f_matinv3by3,invADetA,ADetA);
+      auto invADetA = forall<T,DIM,MEM,DIM>(f_matinv3by3,ADetA);
       CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,deta,
                                        invDetA,1,2*DIM+2);
       CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,
