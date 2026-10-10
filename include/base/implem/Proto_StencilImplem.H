@@ -75,12 +75,24 @@ Stencil<T> Stencil<T>::operator* (const Stencil<T>& a_stencil) const
     rtn.m_destRefratio = m_destRefratio;
     rtn.m_srcRefratio  = m_srcRefratio;
     rtn.m_destShift    = m_destShift;
+    if (!m_coefs.empty() && !a_stencil.m_coefs.empty())
+    {
+        // Preserve the compatibility checks previously made by operator+=
+        // against each temporary, which had default ratios and shift.
+        PROTO_ASSERT(m_srcRefratio == Point::Ones(),
+            "Stencil composition requires unit source refinement ratio");
+        PROTO_ASSERT(m_destRefratio == Point::Ones(),
+            "Stencil composition requires unit destination refinement ratio");
+        PROTO_ASSERT(m_destShift == Point::Zeros(),
+            "Stencil composition requires zero destination shift");
+    }
     for(int i=0; i<m_coefs.size(); ++i)
     for(int j=0; j<a_stencil.m_coefs.size(); ++j)
     {
-        rtn+=Stencil<T>(Shift(m_offsets[i]+a_stencil.m_offsets[j]),
-                        m_coefs[i]*a_stencil.m_coefs[j]);
-                            
+        // Insert directly instead of allocating a one-term Stencil for every
+        // pair. Retain insertion order and the original multiply/add sequence.
+        T coefficient = m_coefs[i]*a_stencil.m_coefs[j];
+        rtn.addCoef(coefficient, m_offsets[i]+a_stencil.m_offsets[j]);
     }
     return rtn;
 }
@@ -754,6 +766,42 @@ inline void hostStencilPencil(T* __restrict a_dst,
         }
     }
 }
+// Dispatch once for all rows and components of a patch. Integer row offsets
+// avoid reconstructing Points and doing an indirect call for every pencil.
+template<int N, typename T>
+inline void hostStencilPatch(T* __restrict a_dst,
+        const T* __restrict a_src, const T* a_coefs, const int* a_offsets,
+        int a_count, bool a_initialize, unsigned int a_components,
+        size_t a_srcPlane, size_t a_dstPlane, const Point& a_sizes,
+        const std::array<ptrdiff_t, DIM>& a_srcStrides,
+        const std::array<ptrdiff_t, DIM>& a_dstStrides)
+{
+    size_t rows = 1;
+    for (int dir = 1; dir < DIM; ++dir) { rows *= a_sizes[dir]; }
+    for (unsigned int cc = 0; cc < a_components; ++cc)
+    {
+        std::array<int, DIM> coordinate{};
+        ptrdiff_t srcOffset = 0, dstOffset = 0;
+        for (size_t row = 0; row < rows; ++row)
+        {
+            hostStencilPencil<N>(a_dst + cc*a_dstPlane + dstOffset,
+                a_src + cc*a_srcPlane + srcOffset, a_coefs, a_offsets,
+                a_count, a_initialize);
+            for (int dir = 1; dir < DIM; ++dir)
+            {
+                if (++coordinate[dir] < a_sizes[dir])
+                {
+                    srcOffset += a_srcStrides[dir];
+                    dstOffset += a_dstStrides[dir];
+                    break;
+                }
+                coordinate[dir] = 0;
+                srcOffset -= (a_sizes[dir] - 1)*a_srcStrides[dir];
+                dstOffset -= (a_sizes[dir] - 1)*a_dstStrides[dir];
+            }
+        }
+    }
+}
 } // namespace detail
 
 template <typename T>
@@ -847,25 +895,30 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
         }
     }
 
-    using PencilKernel = void (*)(T*, const T*, const T*, const int*, int, bool);
+    using PencilKernel = void (*)(T*, const T*, const T*, const int*, int, bool,
+        unsigned int, size_t, size_t, const Point&,
+        const std::array<ptrdiff_t, DIM>&, const std::array<ptrdiff_t, DIM>&);
     PencilKernel pencilKernel = nullptr;
-    if (separateStorage && m_srcRefratio[0] == 1 && m_destRefratio[0] == 1)
+    if (C*D*E > 0 && !a_box.empty() && separateStorage &&
+        m_srcRefratio[0] == 1 && m_destRefratio[0] == 1 &&
+        a_dest.box().containsPoint(a_box.low()*m_destRefratio + m_destShift) &&
+        a_dest.box().containsPoint(a_box.high()*m_destRefratio + m_destShift))
     {
         switch (this->size())
         {
-            case 1: pencilKernel = &detail::hostStencilPencil<1, T>; break;
-            case 2: pencilKernel = &detail::hostStencilPencil<2, T>; break;
-            case 3: pencilKernel = &detail::hostStencilPencil<3, T>; break;
-            case 4: pencilKernel = &detail::hostStencilPencil<4, T>; break;
-            case 5: pencilKernel = &detail::hostStencilPencil<5, T>; break;
-            case 6: pencilKernel = &detail::hostStencilPencil<6, T>; break;
-            case 7: pencilKernel = &detail::hostStencilPencil<7, T>; break;
-            case 8: pencilKernel = &detail::hostStencilPencil<8, T>; break;
-            case 9: pencilKernel = &detail::hostStencilPencil<9, T>; break;
-            case 10: pencilKernel = &detail::hostStencilPencil<10, T>; break;
-            case 11: pencilKernel = &detail::hostStencilPencil<11, T>; break;
-            case 12: pencilKernel = &detail::hostStencilPencil<12, T>; break;
-            case 13: pencilKernel = &detail::hostStencilPencil<13, T>; break;
+            case 1: pencilKernel = &detail::hostStencilPatch<1, T>; break;
+            case 2: pencilKernel = &detail::hostStencilPatch<2, T>; break;
+            case 3: pencilKernel = &detail::hostStencilPatch<3, T>; break;
+            case 4: pencilKernel = &detail::hostStencilPatch<4, T>; break;
+            case 5: pencilKernel = &detail::hostStencilPatch<5, T>; break;
+            case 6: pencilKernel = &detail::hostStencilPatch<6, T>; break;
+            case 7: pencilKernel = &detail::hostStencilPatch<7, T>; break;
+            case 8: pencilKernel = &detail::hostStencilPatch<8, T>; break;
+            case 9: pencilKernel = &detail::hostStencilPatch<9, T>; break;
+            case 10: pencilKernel = &detail::hostStencilPatch<10, T>; break;
+            case 11: pencilKernel = &detail::hostStencilPatch<11, T>; break;
+            case 12: pencilKernel = &detail::hostStencilPatch<12, T>; break;
+            case 13: pencilKernel = &detail::hostStencilPatch<13, T>; break;
         }
     }
 
@@ -873,6 +926,27 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
 
     {
         PR_TIME("Stencil::hostApply::applyStencil");
+        if (pencilKernel)
+        {
+            // The first source point is checked by data() below. Check the
+            // last row too, preserving the former per-pencil bounds checks.
+            PROTO_ASSERT(a_src.box().containsPoint(a_box.flatten(0).high()*m_srcRefratio),
+                "Stencil::hostApply | Source pencil is outside the source box");
+            std::array<ptrdiff_t, DIM> srcStrides{}, dstStrides{};
+            ptrdiff_t srcPitch = 1, dstPitch = 1;
+            for (int dir = 0; dir < DIM; ++dir)
+            {
+                srcStrides[dir] = srcPitch*m_srcRefratio[dir];
+                dstStrides[dir] = dstPitch*m_destRefratio[dir];
+                srcPitch *= a_src.box().size(dir);
+                dstPitch *= a_dest.box().size(dir);
+            }
+            pencilKernel(a_dest.data(a_box.low()*m_destRefratio + m_destShift),
+                a_src.data(a_box.low()*m_srcRefratio), coefs.data(), offsets.data(),
+                npencil, fusedInit, C*D*E, a_src.box().size(), a_dest.box().size(),
+                a_box.sizes(), srcStrides, dstStrides);
+            return;
+        }
         for (int ee = 0; ee < E; ee++)
         for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++)
@@ -883,12 +957,6 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
                 if (!a_dest.box().containsPoint(dpt)){continue;} //can happen when destShift is non-trivial
                 Point spt = (*iter)*m_srcRefratio;
                 T* destVal = a_dest.data(dpt,cc,dd,ee);
-                if (pencilKernel)
-                {
-                    pencilKernel(destVal, a_src.data(spt,cc,dd,ee), coefs.data(),
-                                 offsets.data(), npencil, fusedInit);
-                    continue;
-                }
                 int firstTerm = 0;
                 if (fusedInit)
                 {

@@ -110,8 +110,8 @@ template<class OP, typename P_SRC, typename P_DST, MemType SRC_MEM, MemType DST_
 void
 Copier<OP, P_SRC, P_DST, SRC_MEM, DST_MEM>::execute()
 {
-    // HOST packing is synchronous. writeToSendBuffers still supplies the
-    // collective barrier before any sends, so no entry barrier is needed.
+    // HOST packing is synchronous; MPI requests complete before buffer reuse.
+    // The optional HOST packing barrier is controlled in writeToSendBuffers.
     if constexpr (SRC_MEM != HOST || DST_MEM != HOST) { barrier(); }
     // execute() and makeItSo() are aliases of eachother.
     // "makeItSo" is maintained for the sake of posterity
@@ -301,7 +301,17 @@ Copier<OP, P_SRC, P_DST, SRC_MEM, DST_MEM>::writeToSendBuffers()
         auto item = m_fromMe[ii];
         m_op.linearOut(item.buffer, *item.item);
     }
+    // HOST packing barriers are enabled unless explicitly disabled at build time.
+    // Use the same flag for all translation units and ranks; rebuild when changing it.
+    // Accelerator synchronization and MPI completion waits are always retained.
+#ifdef PR_DISABLE_HOST_COPIER_BARRIERS
+    if constexpr (SRC_MEM != HOST || DST_MEM != HOST)
+    {
+        barrier();
+    }
+#else
     barrier();
+#endif
 #endif
 }
 
