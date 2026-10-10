@@ -192,6 +192,53 @@ BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   //
   return ret;
 }
 
+// Explicit overwrite contract. Keep ordinary forall initialization unchanged.
+namespace detail
+{
+    template<typename Arg>
+    void overwriteDomain(Box&, bool&, const Arg&) {}
+
+    template<typename T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+    void overwriteDomain(Box& a_box, bool& a_hasData,
+                         const BoxData<T,C,MEM,D,E>& a_data)
+    {
+        if (a_hasData) { a_box &= a_data.box(); }
+        else { a_box = a_data.box(); a_hasData = true; }
+    }
+}
+
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E,
+    typename Func, typename... Srcs>
+BoxData<T,C,MEMTYPE,D,E> forallOverwrite(const Func& a_F, Box a_box, Srcs&&... a_srcs)
+{
+#ifndef NDEBUG
+    Box sourceBox;
+    bool hasData = false;
+    (detail::overwriteDomain(sourceBox,hasData,a_srcs), ...);
+    PROTO_ASSERT(a_box.empty() || !hasData || sourceBox.containsBox(a_box),
+        "forallOverwrite: inputs must cover the complete output box");
+#endif
+    BoxData<T,C,MEMTYPE,D,E> output;
+    // Scratch allocation does not accept a zero-sized allocation.
+    if (a_box.empty()) { return output; }
+    output.defineForOverwrite(a_box);
+    forallInPlaceBase(a_F,a_box,output,std::forward<Srcs>(a_srcs)...);
+    PROTO_ASSERT(!output.containsUninitialized(),
+        "forallOverwrite: kernel left output components unassigned");
+    return output;
+}
+
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned int D, unsigned int E,
+    typename Func, typename... Srcs>
+BoxData<T,C,MEMTYPE,D,E> forallOverwrite(const Func& a_F, Srcs&&... a_srcs)
+{
+    Box domain;
+    bool hasData = false;
+    (detail::overwriteDomain(domain,hasData,a_srcs), ...);
+    PROTO_ASSERT(hasData,"forallOverwrite: inferred output needs a BoxData input");
+    return forallOverwrite<T,C,MEMTYPE,D,E>(a_F,domain,std::forward<Srcs>(a_srcs)...);
+}
+
 // Main Forall
 template<typename T, unsigned int C,  MemType MEMTYPE,unsigned int D, unsigned int E,
          typename Func, typename... Srcs>

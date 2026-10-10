@@ -1463,7 +1463,7 @@ _faceMatrixProductAB(
             bx &= a_qr2.box().grow(dir,-1);
         }
     }
-    BoxData<T,CL,MEM,DR,E> prod(bx);
+    BoxData<T,CL,MEM,DR,E> prod(bx, T(0));
     if constexpr (MEM == HOST && DIM == 3 && CL == 3 && DL == 3 && CR == 3 && DR == 1 && E == 1)
     {
         // The same vector derivatives serve every matrix row. Form each
@@ -1490,7 +1490,6 @@ _faceMatrixProductAB(
         BoxData<T,CR,MEM,DR,E> rightSecond = secondDiff(a_qr2);
         const Box termBox = (a_ql2.box() & a_qr2.box()).grow(-1).grow(a_dir,1);
         BoxData<T,1,MEM> term(termBox);
-        prod.setToZero();
         for (int ii = 0; ii < 3; ++ii)
         for (int kk = 0; kk < 3; ++kk)
         {
@@ -1503,7 +1502,6 @@ _faceMatrixProductAB(
         }
         return prod;
     }
-    prod.setToZero();
     for (int ee = 0; ee < E;ee++)
     for (int i = 0; i < CL; i++)
     for (int j = 0; j < DR; j++)

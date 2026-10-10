@@ -67,6 +67,20 @@ namespace Proto {
         typename Func, typename... Srcs>
     inline BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
 
+    /// Pointwise outputs that are completely assigned by the kernel.
+    /** Unlike forall, these opt-in variants may omit output initialization.
+        The kernel must assign every output component at each cell and must not
+        read an output value before assigning it. Explicit boxes must be covered
+        by every BoxData input; inferred boxes are their intersection.
+        Empty boxes return an empty output without invoking the kernel.
+        Debug builds initialize and check output coverage. */
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
+        unsigned int D=1, unsigned int E=1, typename Func, typename... Srcs>
+    inline BoxData<T,C,MEMTYPE,D,E> forallOverwrite(const Func& a_F, Srcs&&... a_srcs);
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
+        unsigned int D=1, unsigned int E=1, typename Func, typename... Srcs>
+    inline BoxData<T,C,MEMTYPE,D,E> forallOverwrite(const Func& a_F, Box a_box, Srcs&&... a_srcs);
+
     /// Pointwise Operator (Instrumented)
     /**
       Overload of the pointwise operator with additional instrumentation inputs

@@ -374,6 +374,13 @@ namespace Proto
         /// Allocate and initialize every component to a_init in one pass.
         void define(const Box& a_box, T a_init);
 
+        /// Allocate storage that the caller will fully assign before reading.
+        /** Every cell and tensor component must be written without reading its
+            previous value. Optimized HOST builds omit the initial fill; debug
+            and accelerator builds retain the diagnostic initialization.
+            Ordinary constructors and define() keep their existing behavior. */
+        void defineForOverwrite(const Box& a_box);
+
 
         /// Alias Define
         /**@private */

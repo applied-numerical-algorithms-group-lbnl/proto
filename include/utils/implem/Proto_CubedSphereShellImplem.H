@@ -1154,10 +1154,7 @@ CubedSphereShell::consToSemiSphVecNG(
   Box vsphbx3 = a_bx.grow(Point::Ones(3) - Point::Basis(0,2)) & a_blockBox;
   Box vsphbx2 = a_bx.grow(Point::Ones(2) - Point::Basis(0,1)) & a_blockBox;
   Box vsphbx1 = a_bx.grow(Point::Ones()) & a_blockBox;
-  BoxData<T,DIM,MEM> USph(vsphbx2);
-  USph.setVal(0.);
-  BoxData<T,DIM,MEM> USphRadial(a_bx);
-  USph.setToZero();
+  BoxData<T,DIM,MEM> USph(vsphbx2, T(0));
   cellMatrixQuotientMatAndInv(USph,a_AdetA,a_invAdetA,a_JUVec,vsphbx2,a_blockBox,a_debug);
   // if (a_debug)
   //   {
@@ -1166,8 +1163,7 @@ CubedSphereShell::consToSemiSphVecNG(
   BoxData<T,1,MEM> uRadial = slice(USph,0);  
   uRadial.copyTo(a_uRadial);
   uRadial.setToZero();
-  BoxData<T,DIM,MEM> JUCart(vsphbx1);
-  JUCart.setVal(0.);
+  BoxData<T,DIM,MEM> JUCart(vsphbx1, T(0));
   cellMatrixVectorProd(JUCart,a_AdetA,USph,vsphbx1,a_blockBox);  
   // if (a_debug)
   //   {
@@ -1246,7 +1242,7 @@ consToSemiSphNGEuler(
   // Get geometric data on box one cell larger in the tangential directions.
   Box bxMetric = bx.grow(Point::Ones(3) - Point::Basis(0,2));
   BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
-  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+  BoxData<T,1,MEM> detaInv = forallOverwrite<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
      {
@@ -1258,7 +1254,7 @@ consToSemiSphNGEuler(
     CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0);
   BoxData<T,DIM,MEM,DIM> amat =
     CubedSphereShell::AMatrix<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
-  auto invcoef = forall<T,DIM,MEM,DIM>(f_matinv3by3,deta_amat);
+  auto invcoef = forallOverwrite<T,DIM,MEM,DIM>(f_matinv3by3,deta_amat);
   bool debugflag = false;
   // if ((a_block == 0) && (bx.low() == Point(0,0,0)))
   //   {
@@ -1321,7 +1317,7 @@ consToSemiSphNGEuler(
                      amat,deta,detaInv,
                      bx,a_blockBox);
   
-  BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
+  BoxData<T,1,MEM> dVolrInv = forallOverwrite<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
      {
@@ -1559,7 +1555,7 @@ consToSphInterpEuler(
       Box bxMetric = bxIn;
       BoxData<T,1,MEM> deta = CubedSphereShell::detA<T,MEM>(bxMetric,dxiPerp,0);
       
-      BoxData<T,1,MEM> invDetA = forall<T,1,MEM>
+      BoxData<T,1,MEM> invDetA = forallOverwrite<T,1,MEM>
         ([ ] PROTO_LAMBDA
          (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
          {
@@ -1568,7 +1564,7 @@ consToSphInterpEuler(
          ,deta);
       BoxData<T,DIM,MEM,DIM> ADetA =
         CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
-      auto invADetA = forall<T,DIM,MEM,DIM>(f_matinv3by3,ADetA);
+      auto invADetA = forallOverwrite<T,DIM,MEM,DIM>(f_matinv3by3,ADetA);
       CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,deta,
                                        invDetA,1,2*DIM+2);
       CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,
@@ -1604,7 +1600,7 @@ consToCartNGEuler(
   // Get geometric data.
   Box bxMetric = a_bx.grow(1);
   BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
-  BoxData<T,1,MEM> detaInv = forall<T,1,MEM>
+  BoxData<T,1,MEM> detaInv = forallOverwrite<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_deta)
      {
@@ -1619,7 +1615,7 @@ consToCartNGEuler(
     BoxData<T,1,MEM> Cart = slice(UCart,comp);      
     cellQuotientValAndInv(Cart,deta,detaInv,JCart,a_bx,a_blockBox);
   }
-  BoxData<T,1,MEM> dVolrInv = forall<T,1,MEM>
+  BoxData<T,1,MEM> dVolrInv = forallOverwrite<T,1,MEM>
     ([ ] PROTO_LAMBDA
      (Var<T,1,MEM>& a_output, const Var<T,1,MEM>& a_dvolr)
      {
@@ -1709,7 +1705,7 @@ cellMatrixQuotientMatAndInv(
       forallInPlace(f_matVecProd,prod,Ddenom,Dquotbar,twelveth);      
       corr += prod;
     }
-  BoxData<T,DIM,MEM> temp2 = forall<T,DIM,MEM>
+  BoxData<T,DIM,MEM> temp2 = forallOverwrite<T,DIM,MEM>
     ([ ] PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
                       const Var<T,DIM,MEM>& a_num,
                       const Var<T,DIM,MEM>& a_corr)
@@ -1735,10 +1731,9 @@ cellMatrixQuotientMatAndInv(
   PR_TIMERS("CubedSphereShell::cellMatrixQuotientMatAndInv()");
   T one = 1.0;
   BoxData<T,DIM,MEM,1> quotBar(a_numerator.box());
-  BoxData<T,DIM,MEM,1> corr(a_quotBox);
+  BoxData<T,DIM,MEM,1> corr(a_quotBox, T(0));
  
   forallInPlace(f_matVecProd,quotBar,a_denomInv,a_numerator,one);
-  corr.setToZero();
   // Note that we do not compute a correction in the zero direction.
   // if ((a_debug) && (procID()==0))
   //       {
@@ -1786,7 +1781,7 @@ cellMatrixQuotientMatAndInv(
       //   }
       corr += prod;
     }
-  BoxData<T,DIM,MEM> temp2 = forall<T,DIM,MEM>
+  BoxData<T,DIM,MEM> temp2 = forallOverwrite<T,DIM,MEM>
     ([ ] PROTO_LAMBDA(Var<T,DIM,MEM>& a_output,
                       const Var<T,DIM,MEM>& a_num,
                       const Var<T,DIM,MEM>& a_corr)
@@ -1950,10 +1945,9 @@ cellMatrixVectorProd(
   PR_TIMERS("CubedSphereShell::cellMatrixVectorProd()");
   T one = 1.0;
   BoxData<T,DIM,MEM,1> qvecBar(a_qBox);
-  BoxData<T,DIM,MEM,1> corr(a_qBox);
+  BoxData<T,DIM,MEM,1> corr(a_qBox, T(0));
   forallInPlace(f_matVecProd,qvecBar,a_Amat,a_qvecIn,one);
   //qvecBar.copyTo(a_qvecOut);
-  corr.setToZero();
   // Note that we do not compute correction in the zero direction.
   for (int dir = 1; dir < DIM; dir++)
     {

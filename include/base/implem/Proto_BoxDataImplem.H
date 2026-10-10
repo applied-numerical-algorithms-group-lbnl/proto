@@ -64,6 +64,19 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box, T a_init)
     setVal(a_init);
 }
 
+template <class T, unsigned int C, MemType MEM, unsigned int D, unsigned int E>
+void BoxData<T,C,MEM,D,E>::defineForOverwrite(const Box& a_box)
+{
+#if defined(NDEBUG) && !defined(PROTO_ACCEL)
+    if constexpr (MEM == HOST)
+    {
+        defineStorage(a_box);
+        return;
+    }
+#endif
+    define(a_box);
+}
+
 template <class T, unsigned int C,MemType MEM, unsigned int D, unsigned int E>
 void BoxData<T,C,MEM,D,E>::defineStorage(const Box& a_box)
 {
