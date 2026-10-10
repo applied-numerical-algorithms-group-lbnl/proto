@@ -1243,8 +1243,6 @@ consToSemiSphNGEuler(
   PR_TIMERS("CubedSphereShell::consToSemiSphNGEuler()");
   Box bx = a_bx.grow(Point::Basis(0))&a_blockBox;
   // cout << "input box " << bx <<", blockbox" << a_blockBox << endl;
-  BoxData<T,C,MEM> USph(bx);
-  USph.setVal(0.);
   // Get geometric data on box one cell larger in the tangential directions.
   Box bxMetric = bx.grow(Point::Ones(3) - Point::Basis(0,2));
   BoxData<T,1,MEM> deta = detA<T,MEM>(bxMetric,a_dxiPerp,0); 
@@ -1260,8 +1258,7 @@ consToSemiSphNGEuler(
     CubedSphereShell::detA_A<T,MEM>(bxMetric,a_dxiPerp,a_block,0);
   BoxData<T,DIM,MEM,DIM> amat =
     CubedSphereShell::AMatrix<T,MEM>(bxMetric,a_dxiPerp,a_block,0); 
-  BoxData<T,DIM,MEM,DIM> invcoef(bxMetric);
-  invcoef.setToZero();
+  BoxData<T,DIM,MEM,DIM> invcoef(bxMetric, T(0));
   forallInPlace(f_matinv3by3,invcoef,deta_amat);
   bool debugflag = false;
   // if ((a_block == 0) && (bx.low() == Point(0,0,0)))
@@ -1357,8 +1354,7 @@ void CubedSphereShell::semiSphToSph(
   // The matrix quotient differentiates this product, so retain one extra
   // angular layer. Forming the product itself consumes another layer.
   Box productBox = bx.grow(Point(0,1,1));
-  BoxData<T,DIM,MEM> tmp(productBox);
-  tmp.setToZero();
+  BoxData<T,DIM,MEM> tmp(productBox, T(0));
   BoxData<T,DIM,MEM> VecSemiSph = slice<T,C+2,DIM,MEM>(a_VSemiSph,a_compvec);
   BoxData<T,DIM,MEM> VecSph = slice<T,C,DIM,MEM>(a_VSph,a_compvec);
   BoxData<T,DIM,MEM> VecSphBar(productBox);
@@ -1404,14 +1400,78 @@ consToSphInterpEuler(
   
   Array<Point,DIM+1> ghostTemp =
     {Point::Ones(3),Point::Zeros(),Point::Zeros(),Point::Zeros()};
-  MBLevelBoxData<T,C,MEM> JUTemp(layout,ghostTemp);  
-  // Transform JU to USemiSph.
+  // Reuse HOST conversion storage and communication plans on a fixed layout.
+  // Define PR_DISABLE_CUBED_SPHERE_CONVERSION_CACHE to use temporary storage
+  // instead when retaining these three levels would exceed the memory budget.
+  // Keep one layout alive so its partition identity cannot be recycled.
+  struct ConversionWorkspace
+  {
+    MBLevelBoxData<T,C,MEM> ju;
+    MBLevelBoxData<T,C+2,MEM> input, output;
+    std::vector<std::shared_ptr<BoxData<T,C+2,MEM>>> boundaries;
+    static Array<Point,DIM+1> patchGhosts(const Array<Point,DIM+1>& a_ghost)
+    {
+      Array<Point,DIM+1> result;
+      result.fill(Point::Zeros());
+      result[0] = a_ghost[0];
+      return result;
+    }
+    ConversionWorkspace(const MBDisjointBoxLayout& a_layout,
+        const Array<Point,DIM+1>& a_juGhost, const Array<Point,DIM+1>& a_ghost)
+      : ju(a_layout,a_juGhost), input(a_layout,a_ghost+Point(0,2,2)),
+        output(a_layout,patchGhosts(a_ghost))
+    {
+#ifndef PR_DISABLE_CUBED_SPHERE_CONVERSION_CACHE
+      if constexpr (MEM == HOST)
+      if (!Stack<MEM>::getStack().enabled())
+      for (auto* data : {&input, &output})
+        for (auto index : a_layout)
+          for (auto dir : Box::Kernel(1))
+            for (const auto& bound : data->bounds(index,dir))
+            {
+              boundaries.push_back(bound.localData);
+              boundaries.push_back(bound.adjData);
+            }
+#endif
+    }
+  };
+#ifndef PR_DISABLE_CUBED_SPHERE_CONVERSION_CACHE
+  static thread_local std::unique_ptr<ConversionWorkspace> cached;
+#endif
+  std::unique_ptr<ConversionWorkspace> local;
+  ConversionWorkspace* workspace = nullptr;
+#ifndef PR_DISABLE_CUBED_SPHERE_CONVERSION_CACHE
+  if constexpr (MEM == HOST)
+  {
+    if (!Stack<MEM>::getStack().enabled())
+    {
+      if (!cached || &cached->ju.layout().partition() != &layout.partition()
+          || cached->input.ghost() != (ghost+Point(0,2,2)))
+      {
+        cached.reset();
+        cached = std::make_unique<ConversionWorkspace>(layout,ghostTemp,ghost);
+      }
+      else
+      {
+        // Match fresh boundary-buffer initialization, including unused corners.
+        for (auto& buffer : cached->boundaries) { buffer->setVal(T(7)); }
+      }
+      workspace = cached.get();
+    }
+  }
+#endif
+  if (!workspace)
+  {
+    local = std::make_unique<ConversionWorkspace>(layout,ghostTemp,ghost);
+    workspace = local.get();
+  }
+  auto& JUTemp = workspace->ju;
+  auto& USemiSphIn = workspace->input;
+  auto& USemiSph = workspace->output;
+  // Every patch buffer is explicitly reset before its previous values are read.
   JUTemp.setVal(0.);
   a_JU.copyTo(JUTemp);
   JUTemp.exchange0();
-  Point offset = Point(0,2,2);
-  MBLevelBoxData<T,C+2,MEM> USemiSphIn(layout,ghost+offset);
-  MBLevelBoxData<T,C+2,MEM> USemiSph(layout,ghost);
   
   Point size = layout.domain().getBlock(0).sizes();
   T dxiPerp = 1.0/size[1];
@@ -1424,14 +1484,20 @@ consToSphInterpEuler(
       Box blockBox = JUTemp.layout().getBlock(block).domain().box();
       auto& JU_i = JUTemp[dit];
       auto& USemiSph_i = USemiSphIn[dit];
-      USemiSph_i.setToZero();
+      if constexpr (C == 2*DIM+2)
+      {
+        // The vector conversion clears momentum, magnetic, and radial slots.
+        // Clear the two scalar slots here so each component is reset once.
+        slice(USemiSph_i,0).setToZero();
+        slice(USemiSph_i,DIM+1).setToZero();
+      }
+      else { USemiSph_i.setToZero(); }
       USemiSph[dit].setVal(0.);
       auto& dVolr_i = a_dVolr[dit];
       Box bx_i = JUTemp.layout()[dit]; 
       CubedSphereShell::
         consToSemiSphNGEuler(USemiSph_i,JU_i,dVolr_i,bx_i,
                              blockBox,dxiPerp,block,4);
-      USemiSph_i.copyTo(USemiSph[dit],layout[dit]);    
     }
 #if 0
   if ((a_counter > 0) && debugpre)
@@ -1512,8 +1578,7 @@ consToSphInterpEuler(
          ,deta);
       BoxData<T,DIM,MEM,DIM> ADetA =
         CubedSphereShell::detA_A<T,MEM>(bxMetric,dxiPerp,block,0); 
-      BoxData<T,DIM,MEM,DIM> invADetA(bxMetric);
-      invADetA.setToZero();
+      BoxData<T,DIM,MEM,DIM> invADetA(bxMetric, T(0));
       forallInPlace(f_matinv3by3,invADetA,ADetA);
       CubedSphereShell::semiSphToSph(USphere_i,USemiSph_i,ADetA,invADetA,deta,
                                        invDetA,1,2*DIM+2);
@@ -1644,9 +1709,7 @@ cellMatrixQuotientMatAndInv(
   
   forallInPlace(f_matVecProd,a_quotBar,a_denomInv,a_numerator,one);
   Box bx = a_quot.box();
-  BoxData<T,DIM,MEM,1> corr(bx);
-  
-  corr.setToZero();
+  BoxData<T,DIM,MEM,1> corr(bx, T(0));
   // Note that we do not compute correction in the z ero direction.
   for (int dir = 1; dir < DIM; dir++)
     {
@@ -1944,8 +2007,7 @@ void CubedSphereShell::cellQuotientValAndInv(
                 {
                   l_quotBar(0) = l_denomInv(0)*l_num(0);
                 },a_quotBar,a_numerator,a_denomInv);
-  BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1));
-  corr.setToZero();
+  BoxData<T,1,MEM> corr(a_quotBar.box().grow(-1), T(0));
   // T twelveth = -1.0/12.0;
   // Note that we do not compute correction in the zero direction.
   for (int dir = 1; dir < DIM; dir++)
@@ -2004,8 +2066,7 @@ void CubedSphereShell::cellQuotientValAndInv(
                 {
                   l_quotBar(0) = l_denomInv(0)*l_num(0);
                 },quotBar,a_numerator,a_denomInv);
-  BoxData<T,1,MEM> corr(a_quotBox);
-  corr.setToZero();
+  BoxData<T,1,MEM> corr(a_quotBox, T(0));
   // T twelveth = -1.0/12.0;
   for (int dir = 1; dir < DIM; dir++)
     {
@@ -2166,8 +2227,7 @@ CubedSphereShell::detA_A(
   Operator::spreadSlice(output);
   if (a_centering == 0)
     {
-      BoxData<T,DIM,MEM,1> outcol(a_bx);
-      outcol.setToZero();
+      BoxData<T,DIM,MEM,1> outcol(a_bx, T(0));
       Box bx2 = a_bx.extrude(Point::Basis(2));
       Box bx1 = a_bx.extrude(Point::Basis(1));
       BoxData<T,DIM,MEM> d1n_x_n(bx2);

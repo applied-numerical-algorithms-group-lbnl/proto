@@ -203,7 +203,8 @@ Copier<OP, P_SRC, P_DST, SRC_MEM, DST_MEM>::completePendingSends() const
     {
         m_sendStatus.resize(m_numSends);
     }
-    int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
+    // MPI permits zero requests; data() is valid even for an empty vector.
+    int result = MPI_Waitall(m_numSends, m_sendRequests.data(), m_sendStatus.data());
     if (result != MPI_SUCCESS)
     {
         // TODO: Figure out what to do here. 

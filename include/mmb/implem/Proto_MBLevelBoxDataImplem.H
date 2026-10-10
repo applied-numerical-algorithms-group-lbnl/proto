@@ -85,9 +85,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
             boundsKey_t key(patch.point, patch.block, patchConnectivity);
 
-            MBBoundaryData<T, C, MEM> boundData(a_layout,
-                iter, adjIter, patchBoundary, adjPatchBoundary,
-                R.inverse(), a_boundGhost);
+            // Construct the retained buffers once, directly in the boundary list.
             m_bounds[key].emplace_back(a_layout, iter, adjIter, patchBoundary, adjPatchBoundary, R.inverse(), a_boundGhost);
         }    
     }
