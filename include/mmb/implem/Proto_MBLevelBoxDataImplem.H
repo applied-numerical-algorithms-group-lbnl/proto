@@ -54,6 +54,22 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     const Array<Point, DIM+1>& a_ghost,
     Point                      a_boundGhost)
 {
+    defineImpl(a_layout, a_ghost, a_boundGhost, false);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::defineForOverwrite(
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost, Point a_boundGhost)
+{
+    defineImpl(a_layout, a_ghost, a_boundGhost, true);
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::defineImpl(
+    const MBDisjointBoxLayout& a_layout,
+    const Array<Point, DIM+1>& a_ghost, Point a_boundGhost, bool a_overwrite)
+{
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
     m_ghost = a_ghost;
@@ -62,8 +78,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     m_data.resize(a_layout.numBlocks());
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
-        m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
-            a_layout.getBlock(bi), a_ghost[0]);
+        m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>();
+        if (a_overwrite)
+        {
+            m_data[bi]->defineForOverwrite(a_layout.getBlock(bi), a_ghost[0]);
+        }
+        else { m_data[bi]->define(a_layout.getBlock(bi), a_ghost[0]); }
     }
     for (auto iter : a_layout)
     {

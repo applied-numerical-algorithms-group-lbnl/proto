@@ -64,6 +64,20 @@ void LevelBoxData<T, C, MEM, CTR>::define(
                  const DisjointBoxLayout& a_layout, 
                  const Point& a_ghost)
 {
+    defineImpl(a_layout, a_ghost, false);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void LevelBoxData<T, C, MEM, CTR>::defineForOverwrite(
+    const DisjointBoxLayout& a_layout, const Point& a_ghost)
+{
+    defineImpl(a_layout, a_ghost, true);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void LevelBoxData<T, C, MEM, CTR>::defineImpl(
+    const DisjointBoxLayout& a_layout, const Point& a_ghost, bool a_overwrite)
+{
     m_isDefined = true;
     m_ghost = a_ghost;
     m_layout = a_layout;
@@ -78,7 +92,9 @@ void LevelBoxData<T, C, MEM, CTR>::define(
                 for (int dir = 0; dir < DIM; dir++)
                 {
                     Box bi = m_layout[iter].grow((Centering)dir).grow(m_ghost);
-                    auto patch = std::make_shared<BoxData<T,C,MEM>>(bi);
+                    auto patch = std::make_shared<BoxData<T,C,MEM>>();
+                    if (a_overwrite) { patch->defineForOverwrite(bi); }
+                    else { patch->define(bi); }
                     m_data[iter].push_back(patch);
                 }
                 break;
@@ -89,14 +105,18 @@ void LevelBoxData<T, C, MEM, CTR>::define(
                 {
                     Box bi = m_layout[iter].extrude(Point::Ones(), 1);
                     bi = bi.extrude(Point::Basis(dir), -1);
-                    auto patch = std::make_shared<BoxData<T,C,MEM>>(bi);
+                    auto patch = std::make_shared<BoxData<T,C,MEM>>();
+                    if (a_overwrite) { patch->defineForOverwrite(bi); }
+                    else { patch->define(bi); }
                     m_data[iter].push_back(patch);
                 }
                 break;
             }
             default:
             {
-                auto patch = std::make_shared<BoxData<T,C,MEM>>(b.grow(m_ghost));
+                auto patch = std::make_shared<BoxData<T,C,MEM>>();
+                if (a_overwrite) { patch->defineForOverwrite(b.grow(m_ghost)); }
+                else { patch->define(b.grow(m_ghost)); }
                 m_data[iter].push_back(patch);
                 break;
             }

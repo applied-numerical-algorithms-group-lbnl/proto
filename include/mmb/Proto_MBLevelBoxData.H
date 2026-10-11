@@ -176,6 +176,15 @@ namespace Proto
                 Point                         a_ghost,
                 Point                         a_boundGhost = Point::Zeros());
       
+        /// Allocate patch arrays for complete overwrite; initialize boundary buffers normally.
+        /** All patch components and ghosts must be assigned before any read or
+            exchange. Separate interblock boundary-buffer initialization is
+            unchanged. Debug and accelerator diagnostic fills are retained. */
+        inline void defineForOverwrite(
+                const MBDisjointBoxLayout& a_layout,
+                const Array<Point, DIM+1>& a_ghost,
+                Point a_boundGhost = Point::Zeros());
+
         /// Initialize FIXME (NOT CURRENTLY WORKING)
         /** Initialize the data in this using forall-style syntax. Func should
          *  be a valid forall kernel with the following signature:
@@ -387,6 +396,9 @@ namespace Proto
         inline const MBIterator begin() const;
         inline const MBIterator end() const;
         private:
+        inline void defineImpl(const MBDisjointBoxLayout& a_layout,
+                               const Array<Point, DIM+1>& a_ghost,
+                               Point a_boundGhost, bool a_overwrite);
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;

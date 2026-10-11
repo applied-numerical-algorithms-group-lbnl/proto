@@ -1443,9 +1443,12 @@ consToSphInterpEuler(
     }
     ConversionWorkspace(const MBDisjointBoxLayout& a_layout,
         const Array<Point,DIM+1>& a_juGhost, const Array<Point,DIM+1>& a_ghost)
-      : ju(a_layout,a_juGhost), input(a_layout,a_ghost+Point(0,2,2)),
-        output(a_layout,patchGhosts(a_ghost))
     {
+      // Patch arrays are completely reset below before their first read.
+      // Preserve normal initialization of the separate seam buffers.
+      ju.defineForOverwrite(a_layout,a_juGhost);
+      input.defineForOverwrite(a_layout,a_ghost+Point(0,2,2));
+      output.defineForOverwrite(a_layout,patchGhosts(a_ghost));
 #ifndef PR_DISABLE_CUBED_SPHERE_CONVERSION_CACHE
       if constexpr (MEM == HOST)
       if (!Stack<MEM>::getStack().enabled())

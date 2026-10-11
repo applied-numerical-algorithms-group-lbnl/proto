@@ -51,6 +51,12 @@ namespace Proto
 
         inline void define(const DisjointBoxLayout& a_layout, const Point& a_ghostRegionSizes);
 
+        /// Allocate patch storage for complete overwrite before any read.
+        /** Every component, including patch ghosts, must be assigned before
+            exchange or evaluation. Debug and accelerator fills are retained. */
+        inline void defineForOverwrite(const DisjointBoxLayout& a_layout,
+                                       const Point& a_ghostRegionSizes);
+
         inline unsigned int numBoxes() const;
 
         inline void setToZero(int a_comp = -1);
@@ -327,7 +333,9 @@ namespace Proto
         /// For debugging purposes.
         int s_verbosity = 0;
         
-        private: 
+        private:
+        inline void defineImpl(const DisjointBoxLayout& a_layout,
+                               const Point& a_ghost, bool a_overwrite);
 
         std::vector<std::vector<shared_ptr<BoxData<T, C, MEM> > >> m_data;
         Point                                   m_ghost;
