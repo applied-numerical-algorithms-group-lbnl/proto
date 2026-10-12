@@ -157,17 +157,6 @@ advance(
     m_delta.setVal(0.);
     m_blockreg.clear();
     
-    // StageLevel registers dt*weight times each panel's face flux. Reconcile
-    // that stage before using its derivative in another RK stage; correcting
-    // only the final sum leaves the interface coupling first order in time.
-    // Reuse a derivative buffer whose previous value is no longer needed.
-    auto refluxStage = [&](LevelStateData& scratch, T weight)
-    {
-        scratch.setVal(0.);
-        m_blockreg.reflux(scratch);
-        m_blockreg.clear();
-        if (a_dt != T(0)) m_k.increment(scratch, T(1)/(a_dt*weight));
-    };
     bool flagi = true; 
     
     if (a_order == 1)
@@ -198,10 +187,6 @@ advance(
         OP::preStageLevel(m_stageState, m_k, a_dVolrLev, *m_stageInterp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage, true);
         a_state.increment(m_k, a_dt);
-        // The split viscosity step must also be reconciled before the
-        // inviscid stages see it. Its registered flux already includes dt.
-        m_blockreg.reflux(a_state);
-        m_blockreg.clear();
 
         // Now doing the RK3 steps
         a_state.copyTo(m_stageState);
@@ -214,7 +199,6 @@ advance(
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_0");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
               m_k.copyTo(m_k1);
             }
@@ -234,7 +218,6 @@ advance(
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_1");
-              refluxStage(m_k2, weight);
               m_delta.increment(m_k, a_dt*weight);
               m_k.copyTo(m_k2);
             }
@@ -254,7 +237,6 @@ advance(
                a_time, a_dt, weight, kstage);
            {
               PR_TIMERS("block_increment_2");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
             }
           }
@@ -270,10 +252,6 @@ advance(
         OP::preStageLevel(m_stageState, m_k, a_dVolrLev, *m_stageInterp, m_blockreg, m_consSum,
                           a_time, a_dt, weight, kstage, true);
         a_state.increment(m_k, a_dt);
-        // The split viscosity step must also be reconciled before the
-        // inviscid stages see it. Its registered flux already includes dt.
-        m_blockreg.reflux(a_state);
-        m_blockreg.clear();
 
         // Now doing the RK4 steps
         a_state.copyTo(m_stageState);
@@ -286,7 +264,6 @@ advance(
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_0");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
             }
           }
@@ -305,7 +282,6 @@ advance(
                a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_1");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
             }
           }
@@ -323,7 +299,6 @@ advance(
                a_time, a_dt, weight, kstage);
            {
               PR_TIMERS("block_increment_2");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
             }
           }
@@ -340,7 +315,6 @@ advance(
               (m_k, m_stageState, m_blockreg, m_consSum, a_time, a_dt, weight, kstage);
             {
               PR_TIMERS("block_increment_3");
-              refluxStage(m_k1, weight);
               m_delta.increment(m_k, a_dt*weight);
             }
           }
