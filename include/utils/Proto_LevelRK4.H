@@ -4,8 +4,9 @@
 
 #include "Proto.H"
 
-int LEVELRK4_STAGE;
-int LEVELRK4_ITER;
+// Header-defined diagnostics must share one definition across translation units.
+inline int LEVELRK4_STAGE = 0;
+inline int LEVELRK4_ITER = 0;
 
 namespace Proto {
 
