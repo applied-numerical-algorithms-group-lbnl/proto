@@ -396,6 +396,55 @@ reflux(MBLevelBoxData<T,C,MEM,Centering::PR_CELL>& a_rhsTotal)
             int dp = adjNormal.dot(adjBasis);
             Box bxfaces = bx.extrude(Point::Basis(dir));
             Box bxedge = bxfaces.face(dir,side);
+            if constexpr (MEM == HOST && DIM == 3)
+            {
+#ifdef __clang__
+#pragma clang fp contract(off)
+#endif
+                // Preserve boundary order and stored-product rounding while
+                // traversing contiguous radial rows one component at a time.
+                const Point adjShift = dp*(2*side-1)==1
+                    ? Point::Basis(dir) : Point::Zeros();
+                const Point cellShift = side==Side::LoHiSide::Hi
+                    ? Point::Basis(dir) : Point::Zeros();
+                const T coefficient = side==Side::LoHiSide::Lo ? T(1) : T(-1);
+                const T wgt = -1.0/dx;
+                const Box outBox=a_rhsTotal_i.box(),localBox=mb.localData->box(),adjBox=mb.adjData->box();
+                const Box active=bxedge & localBox & outBox.shift(cellShift);
+                if (active.empty()) continue;
+                PROTO_ASSERT(adjBox.containsBox(active.shift(-adjShift)),
+                    "Boundary reflux adjacent data do not cover face");
+                const auto lo=active.low(),hi=active.high();
+                const auto ol=outBox.low(),ll=localBox.low(),al=adjBox.low();
+                const auto os=outBox.sizes(),ls=localBox.sizes(),as=adjBox.sizes();
+                for (unsigned c=0; c<C; ++c)
+                {
+                    T* output=a_rhsTotal_i.data()+c*outBox.size();
+                    const T* local=mb.localData->data()+c*localBox.size();
+                    const T* adjacent=mb.adjData->data()+c*adjBox.size();
+                    for (int k=lo[2];k<=hi[2];++k) for (int j=lo[1];j<=hi[1];++j)
+                    {
+                        size_t oi=(lo[0]-cellShift[0]-ol[0])+size_t(os[0])*
+                            ((j-cellShift[1]-ol[1])+size_t(os[1])*(k-cellShift[2]-ol[2]));
+                        size_t li=(lo[0]-ll[0])+size_t(ls[0])*((j-ll[1])+size_t(ls[1])*(k-ll[2]));
+                        size_t ai=(lo[0]-adjShift[0]-al[0])+size_t(as[0])*
+                            ((j-adjShift[1]-al[1])+size_t(as[1])*(k-adjShift[2]-al[2]));
+                        for (int i=lo[0];i<=hi[0];++i,++oi,++li,++ai)
+                        {
+                            const T correction=.5*(local[li]-signflipArray[c]*adjacent[ai]);
+                            T contribution=0;
+                            contribution+=(coefficient*wgt)*correction;
+#ifdef __clang__
+                            output[oi]+=contribution;
+#else
+                            volatile T roundedContribution=contribution;
+                            output[oi]+=roundedContribution;
+#endif
+                        }
+                    }
+                }
+                continue;
+            }
             BoxData<double,C,HOST> adjCopy(bxedge);
             if (dp*(2*side-1) == 1)
             {

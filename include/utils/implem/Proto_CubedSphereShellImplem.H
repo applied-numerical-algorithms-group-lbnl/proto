@@ -1197,6 +1197,41 @@ radialCons(
            )
 {
   PR_TIMERS("CubedSphereShell::radialCons()");
+  if constexpr (MEM == HOST && DIM == 3)
+  {
+    // Preserve each component's summation order and incoming accumulator.
+    // A small product buffer replaces the copied/scaled face-sized arrays.
+    const auto storage=a_flux.box();
+    const auto origin=storage.low(),sizes=storage.sizes();
+    const size_t stride=storage.size();
+    auto accumulate=[&](const Box& face,int radialShift,T factor)
+    {
+      if (face.empty()) return;
+      const auto lo=face.low(),hi=face.high();
+      for (unsigned c=0; c<C; ++c)
+      {
+        T products[64];
+        size_t count=0;
+        const T* source=a_flux.data()+c*stride;
+        for (int k=lo[2]; k<=hi[2]; ++k) for (int j=lo[1]; j<=hi[1]; ++j)
+        {
+          size_t offset=(lo[0]+radialShift-origin[0])+size_t(sizes[0])*
+              ((j-origin[1])+size_t(sizes[1])*(k-origin[2]));
+          for (int i=lo[0]; i<=hi[0]; ++i,++offset)
+          {
+            products[count++]=source[offset]*factor;
+            if (count==64) {a_rxn[c].reduce(products,count);count=0;}
+          }
+        }
+        if (count) a_rxn[c].reduce(products,count);
+      }
+    };
+    const Box lowBox=a_validBox.face(0,Side::Lo)&a_flux.box();
+    accumulate(lowBox,0,a_weight/a_dxi0);
+    const Box highBox=a_validBox.face(0,Side::Hi)&a_flux.box().shift(Point::Basis(0,-1));
+    accumulate(highBox,1,-a_weight/a_dxi0);
+    return;
+  }
   Box lowBox =
     a_validBox.face(0,Side::Lo)&a_flux.box();
   if (!lowBox.empty())
