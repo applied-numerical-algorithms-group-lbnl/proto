@@ -445,6 +445,12 @@ void MBBoundaryRegister<T,C,MEM,CTR>::exchange()
 {
     PR_TIME("MBBoundaryRegister::exchange");
 #ifdef PR_MPI
+    // HOST packing is synchronous, and execute() completes MPI requests
+    // before the registers can be reused. Match the Copiers' HOST opt-out;
+    // accelerator synchronization and all MPI completion waits remain.
+#ifdef PR_DISABLE_HOST_COPIER_BARRIERS
+    if constexpr (MEM != HOST)
+#endif
     {
         PR_TIME("MBBoundaryRegister::exchange (MPI barrier)");
         barrier();

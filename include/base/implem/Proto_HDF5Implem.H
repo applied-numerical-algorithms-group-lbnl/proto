@@ -251,6 +251,7 @@ void HDF5Handler::writeHeader(
     auto att_num_levels =     H5Acreate2(g_root, "num_levels", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
 
     std::string filetype = "VanillaAMRFileType";
+    filetype.resize(H5Tget_size(H5T_PROTO_STRING()), '\0');
     int numComponents = C;
 
     PR_HDF5_CHECK(H5Awrite(att_filetype, H5T_PROTO_STRING(), filetype.c_str()) >= 0);
@@ -282,6 +283,7 @@ void HDF5Handler::writeHeader(
 
         auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
         std::string c = a_varNames[ii];
+        c.resize(H5Tget_size(H5T_PROTO_STRING()), '\0');
         PR_HDF5_CHECK(H5Awrite(att_component, H5T_PROTO_STRING(), c.c_str()) >= 0);
         PR_HDF5_CHECK(H5Aclose(att_component) >= 0);
     }
@@ -594,19 +596,30 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     Box* blockData = (Box*)malloc(numBlocks*sizeof(Box));
     T* rawData = (T*)malloc(numData_local*sizeof(T));
     
+    // Match linearOut/offset(proc): rank order, then partition order.
+    // Every rank writes this global table, so every entry must be initialized
+    // identically even when only a subset of patches is local.
     offsetData[0] = 0;
-    int offset = 0;
+    long int offset = 0;
+    unsigned int global = 0;
+    for (unsigned int proc = 0; proc < numProc(); proc++)
+    {
+        for (const auto& pdata : a_data.layout().partition().partition())
+        {
+            if (pdata.second == proc)
+            {
+                offset += a_data.patchSize(pdata.first.block);
+                offsetData[++global] = offset;
+            }
+        }
+    }
+    PROTO_ASSERT(global == numPatches, "HDF5 multiblock patch count mismatch");
     int ii = 0;
     for (auto iter : a_data.layout())
     {
         auto block = a_data.layout().block(iter);
         Box bi = a_data.layout()[iter].shift(boxShift*block);
-        boxData[ii] = bi;
-
-        ii++;
-        // this being after the increment is not a bug
-        offset += a_data.getBlock(block).patchSize();
-        offsetData[ii] = offset;
+        boxData[ii++] = bi;
     }
     for (int bi = 0; bi < numBlocks; bi++)
     {
@@ -674,7 +687,9 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
 
     PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    std::string objectType = "FArrayBox";
+    objectType.resize(H5Tget_size(H5T_PROTO_STRING()), '\0');
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), objectType.data()) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
@@ -1084,7 +1099,9 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    std::string objectType = "FArrayBox";
+    objectType.resize(H5Tget_size(H5T_PROTO_STRING()), '\0');
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), objectType.data()) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
@@ -1235,7 +1252,9 @@ void HDF5Handler::addPatch(hid_t* a_file,
 
     PR_HDF5_CHECK(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_ghost, H5T_PROTO_POINT(), &ghost) >= 0);
-    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), "FArrayBox") >= 0);
+    std::string objectType = "FArrayBox";
+    objectType.resize(H5Tget_size(H5T_PROTO_STRING()), '\0');
+    PR_HDF5_CHECK(H5Awrite(att_object_type, H5T_PROTO_STRING(), objectType.data()) >= 0);
     PR_HDF5_CHECK(H5Awrite(att_outputGhost, H5T_PROTO_POINT(), &outputGhost) >= 0);
 
     PR_HDF5_CHECK(H5Aclose(att_comps) >= 0);
