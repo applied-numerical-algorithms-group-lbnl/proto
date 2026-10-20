@@ -484,8 +484,8 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     unsigned int numBlocks = a_data.layout().numBlocks();
     unsigned int numPatches = a_data.layout().numBoxes();
     unsigned int numPatches_local = a_data.layout().numBoxes(procID());
-    unsigned int numData = 0;
-    unsigned int numData_local = 0;
+    hsize_t numData = 0;
+    hsize_t numData_local = 0;
     for (auto iter : a_data.layout())
     {
         auto block = a_data.layout().block(iter);
@@ -495,7 +495,7 @@ void HDF5Handler::addMBLevel(hid_t* a_file,
     {
         const auto& blockLayout = a_data.layout().getBlock(bi);
         const auto& blockData = a_data.getBlock(bi);
-        numData += blockLayout.size()*blockData.patchSize();
+        numData += static_cast<hsize_t>(blockLayout.size())*blockData.patchSize();
     }
 
     // COMPUTE DOMAIN
@@ -847,13 +847,11 @@ void HDF5Handler::readMBLevel(
     H5Sget_simple_extent_dims(s_boxes, &n_boxes, nullptr);
     H5Sget_simple_extent_dims(s_data, &n_data, nullptr);
     
-    PROTO_ASSERT(n_blocks == a_data.layout().numBlocks(),
-            "HDF5Handler::readMBLevel | Error: Mismatched number of blocks");
-    PROTO_ASSERT(n_boxes == a_data.layout().numBoxes(),
-            "HDF5Handler::readMBLevel | Error: Mismatchned number of patches");
+    PR_HDF5_CHECK(n_blocks == a_data.layout().numBlocks());
+    PR_HDF5_CHECK(n_boxes == a_data.layout().numBoxes());
     
-    unsigned int n_data_local = 0;
-    unsigned int n_data_input = 0;
+    hsize_t n_data_local = 0;
+    hsize_t n_data_input = 0;
     for (auto iter : a_data.layout())
     {
         n_data_local += a_data.patchSize(a_data.layout().block(iter)); 
@@ -862,10 +860,9 @@ void HDF5Handler::readMBLevel(
     {
         const auto& blockLayout = a_data.layout().getBlock(bi);
         const auto& blockData = a_data.getBlock(bi);
-        n_data_input += blockLayout.size()*blockData.patchSize();
+        n_data_input += static_cast<hsize_t>(blockLayout.size())*blockData.patchSize();
     }
-    PROTO_ASSERT(n_data == n_data_input,
-            "HDF5Handler::readMBLevel | Error: Mismatchned number of data");
+    PR_HDF5_CHECK(n_data == n_data_input);
 
     T* rawData = (T*)malloc(n_data_local*sizeof(T));
 #ifdef PR_MPI
