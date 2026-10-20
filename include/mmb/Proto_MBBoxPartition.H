@@ -141,7 +141,7 @@ namespace Proto
         inline bool isRefinementBoundary(
                 MBPoint patch,
                 Point dir) const;
-        inline const MBPatchInfo& patchInfo(MBPoint patchID) const { return m_patchAdjacencies[patchID]; }
+        inline const MBPatchInfo& patchInfo(MBPoint patchID) const;
         inline const std::vector<std::pair<MBPoint, unsigned int>>& partition() const
         { return m_partition; }
         inline std::shared_ptr<BoxPartition> blockPartition(BlockIndex a_block) const;
@@ -158,8 +158,8 @@ namespace Proto
         inline void buildLocalMaps();
         inline void buildGlobalMaps();
         inline void findAdjacencies();
-        inline void getBoundaryInfo(MBPatchInfo& patchInfo);
-        inline void updateRefinementBoundaries();
+        inline void getBoundaryInfo(MBPatchInfo& patchInfo) const;
+        inline const MBPatchBoundInfo& boundaryInfo(MBPoint patch,Point dir) const;
 
         MBProblemDomain m_patchDomain;
         mutable std::map<MBPoint, uint64_t> m_indexMap; ///< Maps local to global

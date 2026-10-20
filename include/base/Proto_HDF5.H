@@ -355,6 +355,28 @@ namespace Proto
                         Args... a_params);
 
 #ifdef PR_AMR
+        /// Write an existing multiblock hierarchy without redistributing it.
+        /// Level pointers are borrowed for the duration of the call. Ratios
+        /// describe cell refinement, including when patch sizes differ.
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const std::vector<const MBLevelBoxData<T, C, MEM, CTR>*>& a_levels,
+                const std::vector<Point>& a_refRatios,
+                std::string a_filename,
+                Args... a_params);
+
+        /// Write matching hierarchy data and node-centered map files.
+        template<typename MAP, typename T, unsigned int C,
+            MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBAMRData(
+                std::vector<std::string> a_varNames,
+                const std::vector<const MBLevelMap<MAP, MEM>*>& a_maps,
+                const std::vector<const MBLevelBoxData<T, C, MEM, CTR>*>& a_levels,
+                const std::vector<Point>& a_refRatios,
+                std::string a_filename,
+                Args... a_params);
+
         template<typename MAP, typename T, unsigned int C,
             MemType MEM, Centering CTR, typename... Args>
         inline void writeMBAMRData(

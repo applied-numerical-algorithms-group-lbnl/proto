@@ -24,7 +24,9 @@ void MBBoxPartition::define(
         for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
         {
             const auto& domain = a_patchDomain.getBlock(bi);
-            m_blockPartitions.push_back(std::make_shared<BoxPartition>(domain));
+            // The single-block domain-only constructor fills the entire domain.
+            // These partitions will receive the explicit sparse patches below.
+            m_blockPartitions.push_back(std::make_shared<BoxPartition>(domain,std::vector<Point>{}));
         }
     }
     define(a_patches);
@@ -115,31 +117,33 @@ void MBBoxPartition::loadBalance()
     buildGlobalMaps();
 }
 
-void MBBoxPartition::findAdjacencies() {
-    
+void MBBoxPartition::findAdjacencies()
+{
     m_patchAdjacencies.clear();
-    //std::cout << "MBBoxPartition::findAdjacencies\n";
-    for (BlockIndex block = 0; block < numBlocks(); block++)
-    {
-        for (PatchID pi : m_patchDomain.getBlock(block).box())
-        {
-            MBPoint patch(pi, block);
-            bool exists = contains(pi, block);
-            MBPatchInfo patchInfo(patch, exists);
-
-            getBoundaryInfo(patchInfo);
-            // std::cout << "\tpatch: " << pi << " | block: " << block << "\n";
-            // for (auto dir : Point::Directions())
-            // {
-            //     std::cout << "\t\tBoundary: " << dir << " ==> " << patchInfo.boundaries[dir].typeString() << "\n";
-            // }
-            m_patchAdjacencies[patch] = patchInfo;
-        }
-    }
-    updateRefinementBoundaries();
+    // A sparse hierarchy can have an enormous logical patch domain. Cache
+    // active patches here; unrefined neighbors are constructed on demand.
+    for(const auto& entry : m_partition) patchInfo(entry.first);
 }
 
-void MBBoxPartition::getBoundaryInfo(MBPatchInfo& patchInfo)
+const MBPatchInfo& MBBoxPartition::patchInfo(MBPoint patch) const
+{
+    auto entry=m_patchAdjacencies.find(patch);
+    if(entry!=m_patchAdjacencies.end()) return entry->second;
+    MBPatchInfo info(patch,contains(patch.point,patch.block));
+    if(m_patchDomain.getBlock(patch.block).box().containsPoint(patch.point))
+        getBoundaryInfo(info);
+    return m_patchAdjacencies.emplace(patch,std::move(info)).first->second;
+}
+
+const MBPatchBoundInfo& MBBoxPartition::boundaryInfo(MBPoint patch,Point dir) const
+{
+    const auto& boundaries=patchInfo(patch).boundaries;
+    auto entry=boundaries.find(dir);
+    static const MBPatchBoundInfo empty;
+    return entry==boundaries.end() ? empty : entry->second;
+}
+
+void MBBoxPartition::getBoundaryInfo(MBPatchInfo& patchInfo) const
 {
     BlockIndex block = patchInfo.patch.block;
     Point pi = patchInfo.patch.point;
@@ -170,31 +174,9 @@ void MBBoxPartition::getBoundaryInfo(MBPatchInfo& patchInfo)
                 boundInfo.boundaryType = PR_DOMAIN_BOUNDARY;
             }
         }
-        boundInfo.isRefinementBoundary = false; //this information is updated in updateRefinementBoundaries
+        for(const auto& adjacent : boundInfo.adjacentPatches)
+            boundInfo.isRefinementBoundary |= patchInfo.exists != contains(adjacent.point,adjacent.block);
         patchInfo.boundaries[dir] = boundInfo;
-    }
-}
-
-void MBBoxPartition::updateRefinementBoundaries()
-{
-    for (auto& [patch, patchInfo] : m_patchAdjacencies)
-    {
-        bool patchExists = contains(patch.point, patch.block);
-        for (auto& [dir, boundInfo] : patchInfo.boundaries)
-        {
-            for (auto adjPatch : boundInfo.adjacentPatches)
-            {
-                bool adjPatchExists = contains(adjPatch.point, adjPatch.block);
-
-                // once we have found at least one pair of patches which constitute a
-                // refinement boundary, we stop looking. Otherwise, we update here.
-                if (!boundInfo.isRefinementBoundary) 
-                {
-                    boundInfo.isRefinementBoundary = (patchExists ^ adjPatchExists);
-                }
-            }
-        }
-        patchInfo.exists = patchExists;
     }
 }
 
@@ -226,7 +208,11 @@ unsigned int MBBoxPartition::numBoxes() const
 }
 unsigned int MBBoxPartition::numBoxes(unsigned int a_proc)
 {
-    return m_procMap[a_proc].second - m_procMap[a_proc].first;
+    // Querying an empty rank must not insert (0,0): that would change its
+    // iterator start from the global end sentinel to somebody else's patch 0.
+    auto entry = m_procMap.find(a_proc);
+    if (entry == m_procMap.end()) { return 0; }
+    return entry->second.second - entry->second.first;
 }
 
 BlockIndex MBBoxPartition::numBlocks() const
@@ -300,7 +286,7 @@ Point MBBoxPartition::connectivity(const MBPoint& src, const MBPoint& dst) const
 {
     validatePatch(src, "MBBoxPartition::connectivity");
     validatePatch(dst, "MBBoxPartition::connectivity");
-    for (auto& [dir, boundInfo] : m_patchAdjacencies[src].boundaries)
+    for (auto& [dir, boundInfo] : patchInfo(src).boundaries)
     {
         if (boundInfo.adjacentPatches.count(dst) > 0)
         {
@@ -329,7 +315,7 @@ unsigned int MBBoxPartition::getProc(uint64_t globalIndex) const {
 std::set<MBPoint> MBBoxPartition::adjacentPatches(const MBPoint& patch) const {
     validatePatch(patch, "MBBoxPartition::adjacentPatches");
     std::set<MBPoint> adjacent;
-    for (auto& [dir, boundInfo] : m_patchAdjacencies[patch].boundaries)
+    for (auto& [dir, boundInfo] : patchInfo(patch).boundaries)
     {
         for (auto adjPatch : boundInfo.adjacentPatches)
         adjacent.insert(adjPatch);
@@ -341,7 +327,7 @@ bool MBBoxPartition::isBlockBoundary(
         MBPoint patch,
         Point dir) const
 {
-    return m_patchAdjacencies[patch].boundaries[dir].boundaryType == PR_BLOCK_BOUNDARY;
+    return boundaryInfo(patch,dir).boundaryType == PR_BLOCK_BOUNDARY;
 }
 
 bool MBBoxPartition::isBlockBoundary(
@@ -349,7 +335,7 @@ bool MBBoxPartition::isBlockBoundary(
         Point dir,
         BlockIndex adjBlock) const
 {
-    auto boundInfo = m_patchAdjacencies[patch].boundaries[dir];
+    auto boundInfo = boundaryInfo(patch,dir);
     if (boundInfo.boundaryType != PR_BLOCK_BOUNDARY) { return false; }
     for (auto adjPatch : boundInfo.adjacentPatches)
     {
@@ -361,21 +347,21 @@ bool MBBoxPartition::isDomainBoundary(
         MBPoint patch,
         Point dir) const
 {
-    return m_patchAdjacencies[patch].boundaries[dir].boundaryType == PR_DOMAIN_BOUNDARY;
+    return boundaryInfo(patch,dir).boundaryType == PR_DOMAIN_BOUNDARY;
 }
 
 bool MBBoxPartition::isInteriorBoundary(
         MBPoint patch,
         Point dir) const
 {
-    return m_patchAdjacencies[patch].boundaries[dir].boundaryType == PR_INTERIOR_BOUNDARY;
+    return boundaryInfo(patch,dir).boundaryType == PR_INTERIOR_BOUNDARY;
 }
 
 bool MBBoxPartition::isRefinementBoundary(
     MBPoint patch,
     Point dir) const
 {
-    return m_patchAdjacencies[patch].boundaries[dir].isRefinementBoundary;
+    return boundaryInfo(patch,dir).isRefinementBoundary;
 }
 
 void MBBoxPartition::print()

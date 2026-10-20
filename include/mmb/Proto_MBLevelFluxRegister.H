@@ -146,7 +146,7 @@ namespace Proto
         bool adjacentInProblemDomain(MBIndex a_fineIndex, Point a_dir) const;
         void addCoarseRegisterFromAdjacent(PatchID a_finePatch, MBIndex a_coarseIndex, Point a_dir, MBIndex a_fineIndexAdj);
         void addFineRegisterFromAdjacent(MBIndex a_fineIndex, Point a_dir);
-        int computeTileIndex(const Box& a_bx,const MBIndex& a_di);
+        uint64_t computeTileIndex(const Box& a_bx,const MBIndex& a_di);
         void defineFine();
         void defineAverageStencils();
         
@@ -167,7 +167,7 @@ namespace Proto
         // Registers for fine data
         std::vector<std::vector<Register<T, C, MEM>>> m_fineRegisters;
         // crseIndices is a map because there are in general multiple registers for each (dir, side)
-        std::vector<unordered_map<unsigned int, unsigned int>> m_crseIndices;
+        std::vector<unordered_map<uint64_t, unsigned int>> m_crseIndices;
         // fineIndices are not a map because there is at most one register for each (dir, side)
         std::vector<Array<Array<int, 2>, DIM>> m_fineIndices;
         std::vector<Array<Array<Stencil<T>, 2>, DIM>> m_avgFlux;

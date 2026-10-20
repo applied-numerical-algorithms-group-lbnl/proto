@@ -3,6 +3,8 @@
 #define _PROTO_BOX_
 
 #include <cstdlib> //for size_t
+#include <cstddef>
+#include <limits>
 #include <iostream> //pretty printing
 #include <sstream> //pretty printing
 #include <cmath>
@@ -139,7 +141,7 @@ namespace Proto
           \param a_high   The high Point of a Box
           */
         ACCEL_DECORATION
-            inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
+            inline static std::size_t sindex(Point a_pt, Point a_low, Point a_high);
 
         /// Stencil Offset
         /**
@@ -290,7 +292,7 @@ namespace Proto
           \param a_pt     a Point inside *this
           */
         ACCEL_DECORATION
-            inline unsigned int index(const Point& a_pt) const;
+            inline std::size_t index(const Point& a_pt) const;
 
         /// Access Point by Index
         /**
@@ -300,7 +302,7 @@ namespace Proto
           \param a_index  an index in <code>[0,this->size())</code>
           */
         ACCEL_DECORATION
-            inline Point operator[](unsigned int a_index) const;
+            inline Point operator[](std::size_t a_index) const;
 
 
         ACCEL_DECORATION
@@ -946,7 +948,7 @@ namespace Proto
 
         Point m_low;  ///< Point object containing the lower bounds of the Box.
         Point m_high; ///< Point object containing the upper bounds of the Box.
-        int   m_size; ///< "Volume" of the box.
+        std::size_t m_size; ///< "Volume" of the box.
 
     }; //end class Box
 
@@ -995,7 +997,7 @@ namespace Proto
             inline BoxIterator() : m_pos(0) {};
 
             /// Index Constructor
-            inline BoxIterator(const Box& a_box, int a_pos = 0);
+            inline BoxIterator(const Box& a_box, std::ptrdiff_t a_pos = 0);
 
             /// Point Constructor
             inline BoxIterator(const Box& a_box, const Point& a_pos);
@@ -1030,7 +1032,7 @@ namespace Proto
             /**
               Returns the current index of the point *(*this).  
             */
-            inline int operator()() const { return m_pos; };
+            inline std::ptrdiff_t operator()() const { return m_pos; };
 
             /// Prefix Increment Iterator
             inline BoxIterator& operator++();
@@ -1046,7 +1048,7 @@ namespace Proto
 
         private:
             Box m_box;
-            int m_pos;
+            std::ptrdiff_t m_pos;
             Point m_point; // Cached coordinates avoid division on each dereference.
     }; //end class BoxIterator
 

@@ -798,7 +798,6 @@ void HDF5Handler::readMBLevel(
 {
     PR_TIME("HDF5Handler::readMBLevel");
     // PARSE THE FILE NAME
-    char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
     {
         a_filename += ".hdf5";
@@ -807,7 +806,18 @@ void HDF5Handler::readMBLevel(
     // The following pragmas suppress some GCC warnings that are overly conservative
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
-    sprintf(fname, a_filename.c_str(), a_params...);
+    // AMR checkpoint manifests may refer to long absolute paths.
+    // Keep no-argument filenames literal and size formatted names exactly.
+    std::string filename = a_filename;
+    if constexpr (sizeof...(Args) > 0)
+    {
+        const int length = snprintf(nullptr, 0, a_filename.c_str(), a_params...);
+        PR_HDF5_CHECK(length >= 0);
+        std::vector<char> buffer(size_t(length) + 1);
+        snprintf(buffer.data(), buffer.size(), a_filename.c_str(), a_params...);
+        filename.assign(buffer.data(), size_t(length));
+    }
+    const char* fname = filename.c_str();
 #pragma GCC diagnostic pop
     
     // OPEN THE FILE
@@ -1498,7 +1508,6 @@ void HDF5Handler::writeMBLevel(
         Args... a_params)
 {
     PR_TIME("HDF5Handler::writeMBLevel");
-    char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
     {
         a_filename += ".hdf5";
@@ -1507,7 +1516,18 @@ void HDF5Handler::writeMBLevel(
     // The following pragmas suppress some GCC warnings that are overly conservative
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
-    sprintf(fname, a_filename.c_str(), a_params...);
+    // AMR checkpoint manifests may refer to long absolute paths.
+    // Keep no-argument filenames literal and size formatted names exactly.
+    std::string filename = a_filename;
+    if constexpr (sizeof...(Args) > 0)
+    {
+        const int length = snprintf(nullptr, 0, a_filename.c_str(), a_params...);
+        PR_HDF5_CHECK(length >= 0);
+        std::vector<char> buffer(size_t(length) + 1);
+        snprintf(buffer.data(), buffer.size(), a_filename.c_str(), a_params...);
+        filename.assign(buffer.data(), size_t(length));
+    }
+    const char* fname = filename.c_str();
 #pragma GCC diagnostic pop
    
     // CREATE THE FILE
@@ -1600,48 +1620,96 @@ void HDF5Handler::writeMBAMRData(
         std::string a_filename,
         Args... a_params)
 {
-    PR_TIME("HDF5Handler::writeMBLevel");
-    char fname[100];
-    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
-    {
-        a_filename += ".hdf5";
-    }
-    
-    // The following pragmas suppress some GCC warnings that are overly conservative
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-    sprintf(fname, a_filename.c_str(), a_params...);
-#pragma GCC diagnostic pop
-   
-    // CREATE THE FILE
-#ifdef PR_MPI
-    auto mpi_comm = MPI_COMM_WORLD;
-    auto mpi_info = MPI_INFO_NULL;
+    std::vector<const MBLevelBoxData<T, C, MEM, CTR>*> levels;
+    for (int li = 0; li < a_data.numLevels(); ++li)
+        levels.push_back(&a_data.getLevel(li));
+    writeMBAMRData(a_varNames, levels, a_data.grid().refRatios(), a_filename, a_params...);
+}
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBAMRData(
+        std::vector<std::string> a_varNames,
+        const std::vector<const MBLevelBoxData<T, C, MEM, CTR>*>& a_levels,
+        const std::vector<Point>& a_refRatios,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeMBAMRData");
+    PROTO_ASSERT(!a_levels.empty(), "Cannot write an empty multiblock AMR hierarchy");
+    PROTO_ASSERT(a_refRatios.size()+1 == a_levels.size(),
+            "Multiblock AMR output requires one refinement ratio per level interface");
+    if (a_filename.substr(a_filename.find_last_of(".")+1) != "hdf5")
+        a_filename += ".hdf5";
+    std::string filename = a_filename;
+    if constexpr (sizeof...(Args) > 0)
+    {
+        const int length = snprintf(nullptr, 0, a_filename.c_str(), a_params...);
+        PR_HDF5_CHECK(length >= 0);
+        std::vector<char> buffer(size_t(length)+1);
+        snprintf(buffer.data(), buffer.size(), a_filename.c_str(), a_params...);
+        filename.assign(buffer.data(), size_t(length));
+    }
+
+#ifdef PR_MPI
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    PR_HDF5_CHECK(H5Pset_fapl_mpio(p_access, MPI_COMM_WORLD, MPI_INFO_NULL) >= 0);
+    auto file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
     PR_HDF5_CHECK(H5Pclose(p_access) >= 0);
 #else
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    auto file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
-    writeHeader<C,CTR>(&file, a_data.numLevels(), a_varNames);
-    
+    PR_HDF5_CHECK(file >= 0);
+    writeHeader<C,CTR>(&file, a_levels.size(), a_varNames);
+    // Chombo readers look for cycle/time at the root of a hierarchy.
+    auto scalar = H5Screate(H5S_SCALAR);
+    auto timeAttr = H5Acreate2(file, "time", H5T_NATIVE_DOUBLE, scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto iterAttr = H5Acreate2(file, "iteration", H5T_NATIVE_INT, scalar, H5P_DEFAULT, H5P_DEFAULT);
+    PR_HDF5_CHECK(H5Awrite(timeAttr, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    PR_HDF5_CHECK(H5Awrite(iterAttr, H5T_NATIVE_INT, &m_iter) >= 0);
+    PR_HDF5_CHECK(H5Aclose(timeAttr) >= 0);
+    PR_HDF5_CHECK(H5Aclose(iterAttr) >= 0);
+    PR_HDF5_CHECK(H5Sclose(scalar) >= 0);
     Array<double, DIM> dx;
     dx.fill(1.0);
-    for (int li = 0; li < a_data.numLevels(); li++)
+    for (unsigned li = 0; li < a_levels.size(); ++li)
     {
-        Point refRatio = Point::Ones();
-        if (li < a_data.numLevels()-1)
-        {
-            refRatio = a_data.grid().refRatios()[li];
-        }
-        addMBLevel(&file, a_data.getLevel(li), dx, refRatio, li);
-        Array<double, DIM> r = refRatio;
-        dx /= r;
+        PROTO_ASSERT(a_levels[li], "Null level in multiblock AMR output");
+        const Point ratio = li+1 < a_levels.size() ? a_refRatios[li] : Point::Ones();
+        addMBLevel(&file, *a_levels[li], dx, ratio, li);
+        for (int d = 0; d < DIM; ++d) dx[d] /= ratio[d];
     }
     PR_HDF5_CHECK(H5Fclose(file) >= 0);
+}
 
+template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBAMRData(
+        std::vector<std::string> a_varNames,
+        const std::vector<const MBLevelMap<MAP, MEM>*>& a_maps,
+        const std::vector<const MBLevelBoxData<T, C, MEM, CTR>*>& a_levels,
+        const std::vector<Point>& a_refRatios,
+        std::string a_filename,
+        Args... a_params)
+{
+    PROTO_ASSERT(a_maps.size() == a_levels.size(),
+            "Multiblock AMR data and map level counts differ");
+    std::vector<std::string> mapNames;
+    const char* names[] = {"x", "y", "z"};
+    for (int d = 0; d < DIM; ++d) mapNames.push_back(names[d]);
+    using NodeLevel = MBLevelBoxData<double, DIM, MEM, PR_NODE>;
+    std::vector<std::unique_ptr<NodeLevel>> storage;
+    std::vector<const NodeLevel*> coordinates;
+    for (unsigned li = 0; li < a_levels.size(); ++li)
+    {
+        PROTO_ASSERT(a_maps[li] && a_levels[li], "Null AMR map or data level");
+        PROTO_ASSERT(a_maps[li]->layout().compatible(a_levels[li]->layout()),
+                "Multiblock AMR data and map layouts differ");
+        storage.push_back(std::make_unique<NodeLevel>(a_levels[li]->layout(), a_levels[li]->ghost()));
+        for (auto index : a_levels[li]->layout())
+            a_maps[li]->map()[index].copyTo((*storage.back())[index]);
+        coordinates.push_back(storage.back().get());
+    }
+    writeMBAMRData(mapNames, coordinates, a_refRatios, a_filename+".map", a_params...);
+    writeMBAMRData(a_varNames, a_levels, a_refRatios, a_filename, a_params...);
 }
 
 template<typename MAP, typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
@@ -1652,27 +1720,14 @@ void HDF5Handler::writeMBAMRData(
         std::string a_filename,
         Args... a_params)
 {
-
-    std::vector<std::string> a_mapVarNames;
-#if DIM > 0
-    a_mapVarNames.push_back("x");
-#endif
-#if DIM > 1
-    a_mapVarNames.push_back("y");
-#endif
-#if DIM > 2
-    a_mapVarNames.push_back("z");
-#endif
-    MBAMRData<T, DIM, MEM, PR_NODE> tmpMap(a_data.grid(), a_data.ghost());
-    for (int li = 0; li < a_data.grid().numLevels(); li++)
+    std::vector<const MBLevelMap<MAP, MEM>*> maps;
+    std::vector<const MBLevelBoxData<T, C, MEM, CTR>*> levels;
+    for (int li = 0; li < a_data.numLevels(); ++li)
     {
-        for (auto iter : a_data.grid().getLevel(li))
-        {
-            a_map.map()[li][iter].copyTo(tmpMap[li][iter]);
-        }
+        maps.push_back(&a_map.getLevel(li));
+        levels.push_back(&a_data.getLevel(li));
     }
-    writeMBAMRData(a_mapVarNames, tmpMap, a_filename + std::string(".map"), a_params...);
-    writeMBAMRData(a_varNames, a_data, a_filename, a_params...);
+    writeMBAMRData(a_varNames, maps, levels, a_data.grid().refRatios(), a_filename, a_params...);
 }
 #endif
 #endif

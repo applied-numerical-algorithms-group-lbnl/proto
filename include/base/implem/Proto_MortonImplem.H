@@ -8,9 +8,26 @@ uint64_t Morton::index(const Point& a_pt)
 {
     uint64_t retval = 0;
 #if DIM > 1
-    for (int d = 0; d < DIM; d++)
+    bool cached=true;
+    for(int d=0;d<DIM;++d)
+        if(a_pt[d]<0 || a_pt[d]>=MORTONSIZE) cached=false;
+    if(cached)
     {
-        retval += instance().m_morton1D[d][a_pt[d]];
+        for(int d=0;d<DIM;++d) retval+=instance().m_morton1D[d][a_pt[d]];
+    }
+    else
+    {
+        // Sparse AMR can reach large logical patch coordinates without
+        // allocating a large mesh. Keep the small-coordinate lookup fast.
+        constexpr unsigned bits=64/DIM;
+        for(unsigned d=0;d<DIM;++d)
+        {
+            PROTO_ASSERT(a_pt[d]>=0 && uint64_t(a_pt[d])<(uint64_t(1)<<bits),
+                "Morton::index | Patch coordinate exceeds the 64-bit Morton range");
+            const uint64_t coordinate=a_pt[d];
+            for(unsigned bit=0;bit<bits;++bit)
+                retval|=((coordinate>>bit)&1)<<(DIM*bit+d);
+        }
     }
 #else
     retval = a_pt[0];

@@ -73,10 +73,10 @@ Box Box::Kernel(int a_radius)
 }
 
 ACCEL_DECORATION
-inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
+inline std::size_t Box::sindex(Point a_pt, Point a_low, Point a_high)
 {
-    unsigned int factor = 1;
-    unsigned int linIndex = a_pt[0] - a_low[0];
+    std::size_t factor = 1;
+    std::size_t linIndex = a_pt[0] - a_low[0];
     for (unsigned int i = 1;i < DIM;i++)
     { 
         factor = factor*(a_high[i-1] - a_low[i-1] + 1);
@@ -196,7 +196,7 @@ Point Box::whichBoundaryContains(const Point& a_point) const
 }
 
 ACCEL_DECORATION
-inline unsigned int Box::index(const Point& a_pt) const
+inline std::size_t Box::index(const Point& a_pt) const
 {
     PROTO_ASSERT(containsPoint(a_pt),
         "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
@@ -205,12 +205,12 @@ inline unsigned int Box::index(const Point& a_pt) const
 
 
 ACCEL_DECORATION
-inline Point Box::operator[](unsigned int a_index) const
+inline Point Box::operator[](std::size_t a_index) const
 {
     PROTO_ASSERT(!empty(),
             "Box::operator[] | Error: Box is empty.");
     PROTO_ASSERT(a_index < m_size,
-            "Box::operator[] | Error: argument %i invalid. a_index should be in [0,%i).",
+            "Box::operator[] | Error: argument %zu invalid. a_index should be in [0,%zu).",
             a_index, m_size);
     
     int tuple[DIM];
@@ -813,7 +813,9 @@ void Box::linearIn(const char* a_buf)
     charsiz += m_high.linearSize();
 
     int* intbuf = (int* ) charbuf;
-    m_size = *intbuf;
+    // The cached 32-bit size is retained in the wire format for compatibility.
+    // Derive the full size from the bounds instead of trusting that cache.
+    recomputeSize();
     charsiz += sizeof(int);
     charbuf += sizeof(int);
 }
@@ -832,7 +834,7 @@ void Box::linearOut(char* a_buf) const
     charsiz += m_high.linearSize();
 
     int* intbuf = (int* ) charbuf;
-    *intbuf = m_size;
+    *intbuf = m_size<=std::size_t(std::numeric_limits<int>::max()) ? int(m_size) : 0;
     charsiz += sizeof(int);
     charbuf += sizeof(int);
 }
@@ -841,7 +843,7 @@ void Box::linearOut(char* a_buf) const
 // BoxIterator ||
 //=============++ 
 
-BoxIterator::BoxIterator(const Box& a_box, int a_pos)
+BoxIterator::BoxIterator(const Box& a_box, std::ptrdiff_t a_pos)
 {
     m_box = a_box;
     m_pos = a_pos;

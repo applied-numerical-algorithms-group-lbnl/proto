@@ -1333,7 +1333,9 @@ void MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
 
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
 
-        Box srcPatches = bx.coarsen(srcBoxSize);
+        // Source ghosts can overlap the destination even when the source
+        // valid box does not. Match the twice-grown sender search below.
+        Box srcPatches = bx.grow(minGhost).coarsen(srcBoxSize);
         // Iterate over the possible source patches to contruct MotionItems.
 
         for (auto pt : srcPatches)

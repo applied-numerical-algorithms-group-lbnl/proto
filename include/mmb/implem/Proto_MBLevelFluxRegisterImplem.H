@@ -203,8 +203,11 @@ MBIndex MBFluxRegisterCopier<T,C,MEM>::getCoarseIndex(
 
     PatchID finePatch = fineLayout.point(a_fineIndex);
     PatchID adjFinePatch = finePatch + a_dir;
-    PatchID coarsePatch = finePatch / refRatio;
-    PatchID adjCoarsePatch = adjFinePatch / refRatio;
+    // Patch indices refine by the number of fine patches per coarse patch,
+    // which differs from the cell refinement ratio for unequal patch sizes.
+    const Point patchRatio = coarseLayout.boxSize(block)*refRatio/fineLayout.boxSize(block);
+    PatchID coarsePatch = finePatch / patchRatio;
+    PatchID adjCoarsePatch = adjFinePatch / patchRatio;
     MBIndex coarseIndex = coarseLayout.find(coarsePatch, block);
     if (coarsePatch == adjCoarsePatch)
     {
@@ -438,13 +441,13 @@ void MBLevelFluxRegister<T,C,MEM>::addCoarseRegisterFromAdjacent(
     shared_ptr<BoxData<T, C, MEM>> crseIncrementDataPtr(new BoxData<T, C, MEM>(destBox));
     m_crseIncrement[a_coarseIndex].push_back(crseIncrementDataPtr);
 
-    int tileID = computeTileIndex(destBox, a_coarseIndex);
+    uint64_t tileID = computeTileIndex(destBox, a_coarseIndex);
     m_crseIndices[a_coarseIndex][tileID] = numCoarseRegisters;
 }
 
 // a_bx is the coarse box updated by refluxing
 template<typename T, unsigned int C, MemType MEM>
-int MBLevelFluxRegister<T,C,MEM>::computeTileIndex(const Box& a_bx, const MBIndex& a_di)
+uint64_t MBLevelFluxRegister<T,C,MEM>::computeTileIndex(const Box& a_bx, const MBIndex& a_di)
 {
     // Find which direction is normal to the register. We use the fact that the register
     // is of size 1 only in the normal direction.
@@ -454,8 +457,10 @@ int MBLevelFluxRegister<T,C,MEM>::computeTileIndex(const Box& a_bx, const MBInde
     Box tileBox = a_bx.shift(-origin);
     Point sizes = crseBox.high() - crseBox.low() + Point::Ones();
 
-    int k = tileBox.low()[0];
-    int p = 1;
+    // The key encodes two cell indices and scales as the square of the
+    // coarse patch's cell count. A 59x30x30 patch produces keys > INT_MAX.
+    uint64_t k = tileBox.low()[0];
+    uint64_t p = 1;
     for (int ii = 1; ii < DIM; ii++)
     {
         p *= sizes[ii-1];
@@ -759,7 +764,7 @@ BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::findFineRegisterData(const Box& 
 template<typename T, unsigned int C, MemType MEM>
 BoxData<T,C,MEM>& MBLevelFluxRegister<T,C,MEM>::findCoarseRegisterData(const Box& a_bx, const MBIndex& a_crseIndex)
 {
-    int crseKey       = computeTileIndex(a_bx, a_crseIndex);
+    uint64_t crseKey  = computeTileIndex(a_bx, a_crseIndex);
     int mapIndex      = m_crseIndices[a_crseIndex][crseKey];
     return *(m_crseIncrement[a_crseIndex][mapIndex]);
 }
