@@ -364,6 +364,26 @@ void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyToFull(MBLevelBoxData<T, C, DST_MEM
     }
 }
 
+template <typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template <MemType DST_MEM>
+void MBLevelBoxData<T, C, SRC_MEM, CTR>::copyToFullUnique(MBLevelBoxData<T, C, DST_MEM, CTR> &a_rhs) const
+{
+    PR_TIME("MBLevelBoxData::copyToFull");
+    if (SRC_MEM == DST_MEM)
+    {
+        auto mutableSrc = const_cast<MBLevelBoxData<T, C, SRC_MEM, CTR> *>(this);
+        MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR> op(*mutableSrc, a_rhs);
+        op.m_uniqueDonors = true;
+        MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR> copier;
+        copier.define(op);
+        copier.execute();
+    }
+    else
+    {
+        MayDay<void>::Abort("MBLevelBoxData::copyToFull is not implemented for SRC_MEM != DST_MEM");
+    }
+}
+
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM> &
 MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
@@ -1306,6 +1326,7 @@ template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centerin
 void MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR> &a_op)
 {
+    if (a_op.m_uniqueDonors) {buildUniqueMotionPlans(a_op); return;}
     PROTO_ASSERT(SRC_MEM == DST_MEM,
                  "MBLevelFullCopier::buildMotionPlans | Error: \
         Copy operations between HOST and DEVICE are not yet implemented.");
@@ -1415,4 +1436,112 @@ void MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
     } // end src loop
     this->sort();
 }
+template <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void MBLevelFullCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildUniqueMotionPlans(
+    MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op)
+{
+    PROTO_ASSERT(SRC_MEM == DST_MEM, "Full copies require matching memory types");
+    const auto& srcLayout = a_op.m_src->layout();
+    const auto& dstLayout = a_op.m_dst->layout();
+    const auto srcGhost = a_op.m_src->ghost()[0], dstGhost = a_op.m_dst->ghost()[0];
+    Point ghost;
+    for (int d = 0; d < DIM; ++d) ghost[d] = std::min(srcGhost[d], dstGhost[d]);
+    // Only this opt-in path assigns a unique donor. The existing full-copy
+    // motion plans retain their original behavior for all other callers.
+    auto core = [&](const MBIndex& index)
+    {
+        const Box valid = srcLayout[index];
+        const Box physical = srcLayout.domain().getBlock(srcLayout.block(index)).box();
+        Point low = valid.low(), high = valid.high();
+        for (int d = 0; d < DIM; ++d)
+        {
+            if (low[d] == physical.low()[d]) low[d] -= ghost[d];
+            if (high[d] == physical.high()[d]) high[d] += ghost[d];
+        }
+        return Box(low, high);
+    };
+    auto subtract = [](std::vector<Box>& boxes, const Box& remove)
+    {
+        std::vector<Box> result;
+        for (const Box& box : boxes)
+        {
+            const Box overlap = box & remove;
+            if (overlap.empty()) {result.push_back(box); continue;}
+            Point low = box.low(), high = box.high();
+            for (int d = 0; d < DIM; ++d)
+            {
+                if (low[d] < overlap.low()[d])
+                {
+                    Point end = high; end[d] = overlap.low()[d] - 1;
+                    result.emplace_back(low, end); low[d] = overlap.low()[d];
+                }
+                if (high[d] > overlap.high()[d])
+                {
+                    Point begin = low; begin[d] = overlap.high()[d] + 1;
+                    result.emplace_back(begin, high); high[d] = overlap.high()[d];
+                }
+            }
+        }
+        boxes.swap(result);
+    };
+    auto regions = [&](const MBIndex& source, const Box& destination)
+    {
+        const BlockIndex block = srcLayout.block(source);
+        const Point boxSize = srcLayout.getBlock(block).boxSize();
+        const Box candidate = srcLayout[source].grow(ghost) & destination;
+        std::vector<Box> pieces;
+        if (candidate.empty()) return pieces;
+        const Box preferred = core(source) & destination;
+        pieces.push_back(candidate);
+        subtract(pieces, core(source));
+        for (auto point : candidate.grow(ghost).coarsen(boxSize))
+        {
+            const auto other = srcLayout.find(point, block);
+            if (other == *srcLayout.end() || other == source) continue;
+            subtract(pieces, core(other));
+            if (other.global() < source.global()) subtract(pieces, srcLayout[other].grow(ghost));
+            if (pieces.empty()) break;
+        }
+        if (!preferred.empty()) pieces.push_back(preferred);
+        return pieces;
+    };
+    for (auto destination : dstLayout)
+    {
+        const BlockIndex block = dstLayout.block(destination);
+        const Box box = dstLayout[destination].grow(ghost);
+        const Point sourceSize = srcLayout.getBlock(block).boxSize();
+        for (auto point : box.grow(ghost).coarsen(sourceSize))
+        {
+            const auto source = srcLayout.find(point, block);
+            if (source == *srcLayout.end()) continue;
+            const int owner = srcLayout.procID(source);
+            for (const Box& region : regions(source, box))
+            {
+                MBMotionItem item(source, destination, region, region);
+                if (owner == procID()) this->m_localMotionPlan.push_back(item);
+                else {item.procID = owner; this->m_toMotionPlan.push_back(item);}
+            }
+        }
+    }
+    for (auto source : srcLayout)
+    {
+        const BlockIndex block = srcLayout.block(source);
+        const Point destinationSize = dstLayout.getBlock(block).boxSize();
+        const Box destinations = srcLayout[source].grow(ghost).grow(ghost).coarsen(destinationSize);
+        for (auto point : destinations)
+        {
+            const auto destination = dstLayout.find(point, block);
+            if (destination == *dstLayout.end() || dstLayout.procID(destination) == procID()) continue;
+            const Box box = dstLayout[destination].grow(ghost);
+            for (const Box& region : regions(source, box))
+            {
+                MBMotionItem item(source, destination, region, region);
+                item.procID = dstLayout.procID(destination);
+                this->m_fromMotionPlan.push_back(item);
+            }
+        }
+    }
+    this->sort();
+}
+
 #endif

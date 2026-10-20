@@ -58,6 +58,7 @@ namespace Proto
         public:
         MBLevelBoxData<T, C, SRC_MEM, CTR>* m_src;
         MBLevelBoxData<T, C, DST_MEM, CTR>* m_dst;
+        bool m_uniqueDonors = false;
         
         inline MBLevelFullCopierOp(){};
         inline MBLevelFullCopierOp(
@@ -78,6 +79,8 @@ namespace Proto
         public:
         inline MBLevelFullCopier(){};
         inline void buildMotionPlans(
+                MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
+        inline void buildUniqueMotionPlans(
                 MBLevelFullCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
     };
 #endif
@@ -247,6 +250,12 @@ namespace Proto
 
         template<MemType DST_MEM>
         inline void copyToFull(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
+
+        /// Full copy with nonoverlapping, rank-independent donor selection.
+        /// Prefer owned cells and their extensions outside each block; use a
+        /// stable global-index priority for remaining overlapping ghosts.
+        template<MemType DST_MEM>
+        inline void copyToFullUnique(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
 
         /// Get Ghost Size Array
         Array<Point, DIM+1> ghost() const;
