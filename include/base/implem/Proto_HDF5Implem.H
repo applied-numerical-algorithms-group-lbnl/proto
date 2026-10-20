@@ -14,6 +14,8 @@ inline void checkHDF5(bool a_success, const char* a_operation,
 #define PR_HDF5_CHECK(operation) \
     ::Proto::detail::checkHDF5((operation), #operation, __FILE__, __LINE__)
 
+#define PR_HDF5_ORDERED_PARTITION_READ 1
+
 HDF5Handler::HDF5Handler()
 {
  
@@ -123,26 +125,23 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     
     PR_HDF5_CHECK(H5Gclose(g_level) >= 0);
     
-    // COMPUTE BOX SIZE (ASSUMING FIXED BOX SIZE)
-    Point boxSize = boxData[0].high() - boxData[0].low() + Point::Ones();
-
-    // BUILD DISJOINT BOX LAYOUT
-    Array<bool, DIM> periodicity;
-    for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
-    ProblemDomain domain(domainBox, periodicity);
-    DistributedSet<Point> patchSet;
-    for (int ii = 0; ii < numPatches_local; ii++)
+    // The caller supplies the layout used for the local file slab above.
+    // Check its exact ordered boxes against that slab. Reconstructing a
+    // Morton layout here rejects valid explicit rank assignments and can
+    // accept a wrong local box order before linearIn assigns the raw bytes.
+    const Point boxSize = numPatches_local ? boxData[0].sizes() : a_data.layout().boxSize();
+    unsigned int localBox = 0;
+    for (auto index : a_data.layout())
     {
-        patchSet.insert(boxData[ii].coarsen(boxSize).low());
+        const Box& expected = a_data.layout()[index];
+        PROTO_ASSERT(expected.low() == boxData[localBox].low() &&
+                     expected.high() == boxData[localBox].high(),
+            "HDF5Handler::readLevel | Error: stored local boxes do not match the input partition");
+        ++localBox;
     }
-    patchSet.exchange();
-    auto patchSetData = patchSet.data();
-    std::vector<Point> patches(patchSetData.begin(), patchSetData.end());
-    DisjointBoxLayout layout(domain, patches, boxSize);
+    PROTO_ASSERT(localBox == numPatches_local,
+        "HDF5Handler::readLevel | Error: local patch count differs from the input partition");
 
-    // VALIDATION
-    PROTO_ASSERT(a_data.layout().compatible(layout),
-        "HDF5Handler::readLevel | Error: input data has incompatible layout");
     // PROTO_ASSERT forwards these values to fprintf. The %s conversion requires
     // C-string pointers; passing std::string objects through varargs is invalid.
     PROTO_ASSERT(a_data.layout().boxSize() == boxSize,
