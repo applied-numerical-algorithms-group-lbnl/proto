@@ -430,7 +430,8 @@ namespace Proto
       static char* retval = new char[1024];
       if(!init)
       {
-        sprintf(retval, "0");
+        retval[0] = '0';
+        retval[1] = '\0';
       }
       init = true;
       return retval;

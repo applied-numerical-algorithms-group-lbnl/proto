@@ -76,7 +76,7 @@ template <typename T>
     exit(exit_code);
 }
 template <typename T>
-void MayDay<T>::Abort(const char * const a_msg)
+[[noreturn]] void MayDay<T>::Abort(const char * const a_msg)
 {
     bool maydayabortFlag = true; //used by registerDebugger, that is listening for SIGABORT
     write_to_stderr_without_buffering(a_msg);

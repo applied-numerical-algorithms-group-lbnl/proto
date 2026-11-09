@@ -670,6 +670,7 @@ Box Box::face(Point a_dir, int a_dist) const
             return face(ii, Side::Hi, a_dist);
         }
     }
+    MayDay<void>::Abort("Box::face | Error: direction must be nonzero");
 }
 
 Box Box::flatten(const int a_dir, bool a_upper) const

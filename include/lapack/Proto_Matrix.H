@@ -3,6 +3,8 @@
 #define _PROTO_MATRIX_H_
 
 #include "Proto.H"
+#include <cstdio>
+#include <vector>
 #ifdef PR_BLIS
 #include "blis.h"
 #endif
@@ -320,8 +322,9 @@ class MatrixValue
     inline MatrixValue(Matrix<T>& a_matrix, unsigned int a_i, unsigned int a_j)
     : m_matrix(&a_matrix), m_i(a_i), m_j(a_j) {}
 
-    inline T& operator=(T a_value) { m_matrix->set(m_i, m_j, a_value); return a_value;}
-    inline T& operator=(MatrixValue<T>& a_value) { m_matrix->set(m_i, m_j, (double)a_value); return a_value;}
+    // Return the assigned value: both the argument and the proxy can be temporaries.
+    inline T operator=(T a_value) { m_matrix->set(m_i, m_j, a_value); return a_value;}
+    inline T operator=(const MatrixValue<T>& a_value) { return (*this = static_cast<T>(static_cast<double>(a_value)));}
     
     inline operator double() const { return (double)m_matrix->get(m_i, m_j); }
 

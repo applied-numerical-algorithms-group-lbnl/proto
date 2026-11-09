@@ -38,13 +38,13 @@ void FluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const LevelMotionItem&
 template<typename T, unsigned int C, MemType MEM>
 void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) const
 {
-#define noLinearizationTest 1
+#define PR_LEVEL_FLUX_REGISTER_NO_LINEARIZATION_TEST 1
     const auto& srcIndex =  a_info.fromIndex;
     const auto& domain =    a_info.fromRegion;
     const auto& dstIndex =  a_info.toIndex;
     const auto& range =     a_info.toRegion;
     
-#if noLinearizationTest
+#if PR_LEVEL_FLUX_REGISTER_NO_LINEARIZATION_TEST
 
     PR_TIMERS("LOP_localCopy_1");
     auto& src = m_register->sourceData(domain, srcIndex);
@@ -69,6 +69,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) con
         linearIn (b, a_info);
     }
 #endif
+#undef PR_LEVEL_FLUX_REGISTER_NO_LINEARIZATION_TEST
 }
 
 template<typename T, unsigned int C, MemType MEM>

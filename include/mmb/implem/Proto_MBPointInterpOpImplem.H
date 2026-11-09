@@ -104,9 +104,7 @@ void MBPointInterpOp::validateMatrixDimensions() const
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
         pr_out() << "\tDst Point: " << m_dst << std::endl;
         pr_out() << "====================================================================" << std::endl;
-        char errorMsg[100];
-        sprintf(errorMsg, "Invalid system detected: N = 0 (no exponents computed). See pout for details.");
-        throw std::runtime_error(std::string(errorMsg));
+        throw std::runtime_error("Invalid system detected: N = 0 (no exponents computed). See pout for details.");
     }
     if (M == 0)
     {
@@ -116,9 +114,7 @@ void MBPointInterpOp::validateMatrixDimensions() const
         pr_out() << "\tN = " << N << ", M = " << M << std::endl;
         pr_out() << "\tDst Point: " << m_dst << std::endl;
         pr_out() << "====================================================================" << std::endl;
-        char errorMsg[100];
-        sprintf(errorMsg, "Invalid system detected: M = 0 (no source data points found). See pout for details.");
-        throw std::runtime_error(std::string(errorMsg));
+        throw std::runtime_error("Invalid system detected: M = 0 (no source data points found). See pout for details.");
     }
     if (N > M)
     {
@@ -145,9 +141,7 @@ void MBPointInterpOp::validateMatrixDimensions() const
         }
 #endif
         pr_out() << "====================================================================" << std::endl;
-        char errorMsg[100];
-        sprintf(errorMsg, "Underdetermined system detected: N > M (not enough source data points found). See pout for details.");
-        throw std::runtime_error(std::string(errorMsg));
+        throw std::runtime_error("Underdetermined system detected: N > M (not enough source data points found). See pout for details.");
     }
 }
 
@@ -269,8 +263,8 @@ void MBPointInterpOp::computeCoefficients(
         }
         pr_out() << "\tCoefficients sum to " << coefSum << std::endl;
         #endif
-        char errorMsg[100];
-        sprintf(errorMsg, "Coefficients must sum to 1. Error: %.2e for target point %s in block %i.", error, m_dst.dstPoint().str().c_str(), m_dst.dstBlock());
+        char errorMsg[256];
+        std::snprintf(errorMsg, sizeof(errorMsg), "Coefficients must sum to 1. Error: %.2e for target point %s in block %i.", error, m_dst.dstPoint().str().c_str(), m_dst.dstBlock());
         throw std::runtime_error(std::string(errorMsg));
     }
     PROTO_ASSERT(error < 1e-1,

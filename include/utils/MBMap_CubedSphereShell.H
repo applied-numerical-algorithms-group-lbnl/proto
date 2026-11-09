@@ -517,7 +517,7 @@ public:
     inline void apply(
             BoxData<double, DIM, MEM>& a_X,
             BoxData<double, 1, MEM>& a_J,
-            FluxBoxData<double, DIM, MEM>& a_NT)
+            FluxBoxData<double, DIM, MEM>& a_NT) override
     {
         PROTO_ASSERT(a_X.box() == a_J.box(),
                 "MBMap_CubedSphereShell::apply | Error: J and X should both have the same (node centered) box");
@@ -656,7 +656,7 @@ public:
         return retval;
       }
   }
-    inline Array<double, DIM> apply(const Array<double, DIM>& a_Xi)
+    inline Array<double, DIM> apply(const Array<double, DIM>& a_Xi) override
     {
         Array<double, DIM> Xc;
         Array<double, DIM> X;
@@ -670,7 +670,7 @@ public:
 
     inline void inverse(
         BoxData<double, DIM, MEM>& a_XMap,
-        const BoxData<double, DIM, MEM>& a_R)
+        const BoxData<double, DIM, MEM>& a_R) override
     {
         auto block = this->block();
         auto focus = this->focalBlock();
@@ -699,7 +699,7 @@ public:
             }, a_XMap, XCart, block, cubedSphereShellGeometry());
     }
     
-    inline Array<double, DIM> inverse(const Array<double, DIM>& a_R)
+    inline Array<double, DIM> inverse(const Array<double, DIM>& a_R) override
     {
         Array<double, DIM> XMap;
         Array<double, DIM> X;

@@ -278,7 +278,7 @@ void HDF5Handler::writeHeader(
     for (int ii = 0; ii < C; ii++)
     {
         char compName[100];
-        sprintf(compName, "component_%i", ii);
+        std::snprintf(compName, sizeof(compName), "component_%i", ii);
 
         auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING(), s_scalar, H5P_DEFAULT, H5P_DEFAULT);
         std::string c = a_varNames[ii];
@@ -1399,17 +1399,21 @@ void HDF5Handler::writePatch(
         Args... a_params)
 {
     PR_TIME("HDF5Handler::writePatch");
-    char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
     {
         a_filename += ".hdf5";
     }
-    
-    // The following pragmas suppress some GCC warnings that are overly conservative
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-    sprintf(fname, a_filename.c_str(), a_params...);
-#pragma GCC diagnostic pop
+
+    std::string filename = a_filename;
+    if constexpr (sizeof...(Args) > 0)
+    {
+        const int length = std::snprintf(nullptr, 0, a_filename.c_str(), a_params...);
+        PR_HDF5_CHECK(length >= 0);
+        std::vector<char> buffer(static_cast<size_t>(length) + 1);
+        std::snprintf(buffer.data(), buffer.size(), a_filename.c_str(), a_params...);
+        filename.assign(buffer.data(), static_cast<size_t>(length));
+    }
+    const char* fname = filename.c_str();
    
     // CREATE THE FILE
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);

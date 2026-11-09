@@ -944,14 +944,12 @@ Matrix<T>::print(std::string a_format) const
         Proto::pr_out() << std::endl;
         for (int jj = 0; jj < N(); jj++)
         {
-            char buffer[50];
-            if (a_format == "")
-            {
-                std::sprintf(buffer, "%4.2f", get(ii,jj));
-            } else {
-                std::sprintf(buffer, a_format.c_str(), get(ii,jj));
-            }
-            Proto::pr_out() << buffer;
+            const char* format = a_format.empty() ? "%4.2f" : a_format.c_str();
+            const int length = std::snprintf(nullptr, 0, format, get(ii,jj));
+            if (length < 0) { MayDay<void>::Abort("Matrix::print | Error: invalid format"); }
+            std::vector<char> buffer(static_cast<size_t>(length) + 1);
+            std::snprintf(buffer.data(), buffer.size(), format, get(ii,jj));
+            Proto::pr_out() << buffer.data();
             if (jj != N()-1) {Proto::pr_out() << ", "; }
         }
     }

@@ -36,7 +36,7 @@ namespace Proto
       
     /// Print out message to cerr and exit via abort() (if serial) or MPI_Abort() (if parallel).
     /** The exit code depends on the compiler and MPI implementation. */
-    inline static void Abort(const char * const a_msg = m_nullString);
+    [[noreturn]] inline static void Abort(const char * const a_msg = m_nullString);
 
     /// Print out message to cerr and continue
     inline static void Warning(const char * const a_msg = m_nullString);

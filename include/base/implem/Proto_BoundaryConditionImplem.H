@@ -5,6 +5,8 @@ Box BoundaryCondition::Boundary(Box a_domainBox, Face a_face)
     {
         case Side::Lo: return a_domainBox.edge(dir, 1);
         case Side::Hi: return a_domainBox.adjacent(dir, 1);
+        default:
+            MayDay<void>::Abort("BoundaryCondition::Boundary | Error: invalid side");
     }
 }
 

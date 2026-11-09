@@ -27,7 +27,9 @@
 #include "iostream" // Use for CHECK(X)
 // #include "Proto_MemInfo.H"
 
+#if defined(PROTO_CUDA) || defined(PROTO_HIP)
 #define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
+#endif
 
 /// Data Types / classes
 #if defined PROTO_HIP
